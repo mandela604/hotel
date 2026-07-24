@@ -12,6 +12,7 @@ const BookingShell = (function () {
     { key: 'dashboard', label: 'Dashboard',        href: 'booking-dashboard.html', icon: '◈' },
     { key: 'rooms',     label: 'Rooms',             href: 'booking-rooms.html',     icon: '🛏' },
     { key: 'bookings',  label: 'All Bookings',      href: 'booking-list.html',      icon: '📋' },
+    { key: 'guests',    label: 'Guests',            href: 'guests.html',             icon: '👤' }, 
     { key: 'reports',   label: 'Reports & Revenue', href: 'booking-reports.html',   icon: '📊' },
   ];
 

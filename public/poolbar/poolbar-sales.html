@@ -33,10 +33,11 @@
   .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-.content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; }   @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; }
+  @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
   @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
-.kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; flex-shrink:0; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; flex-shrink:0; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
@@ -61,7 +62,8 @@
   .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
-.toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
   .toolbar-row.top{ justify-content:space-between; }
   .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
   .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
@@ -100,7 +102,7 @@
     .btn-ghost{ align-self:flex-start; }
   }
 
-.panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; min-width:0; flex-shrink:0; } 
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; min-width:0; flex-shrink:0; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
   .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
   .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
@@ -177,57 +179,6 @@
   @media (max-width:560px){ .sb-item:nth-child(2){ border-right:none; } }
   .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
   .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
-
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
-  .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
-  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
-  .modal.status-completed::before{ background:var(--green); }
-  .modal.status-voided::before{ background:var(--red); }
-  .modal-sm{ width:min(400px,96vw); }
-  @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
-  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
-  .modal-title.void-title{ color:var(--red); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
-  .modal-close:hover{ color:var(--text); }
-  .modal-meta{ font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.6; }
-  .ov-item{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12.5px; gap:8px; }
-  .ov-item:last-child{ border-bottom:none; }
-  .ov-item .oi-name{ color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ov-item .oi-qty{ color:var(--text3); flex-shrink:0; margin:0 10px; }
-  .ov-item .oi-total{ color:var(--gold); font-weight:600; flex-shrink:0; }
-  .ov-totals{ background:var(--surface2); border-radius:10px; padding:12px 14px; margin-top:12px; }
-  .ot-row{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--text2); margin-bottom:4px; }
-  .ot-row.total{ font-size:15px; font-weight:600; color:var(--text); margin-top:6px; padding-top:6px; border-top:1px solid var(--border); }
-  .ot-row.total span:last-child{ color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:18px; }
-
-  /* Rich void-info card shown inside the detail modal for voided sales */
-  .void-info-card{ background:var(--red-bg); border:1px solid rgba(248,113,113,0.3); border-radius:12px; padding:14px 16px; margin-top:14px; }
-  .void-info-head{ display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:.6px; margin-bottom:10px; }
-  .void-info-row{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; padding:5px 0; color:var(--text2); }
-  .void-info-row .vlbl{ color:var(--text3); flex-shrink:0; }
-  .void-info-row .vval{ color:var(--text); font-weight:600; text-align:right; }
-  .void-info-note{ margin-top:8px; padding-top:8px; border-top:1px dashed rgba(248,113,113,0.3); font-size:12px; color:var(--text2); line-height:1.5; font-style:italic; }
-
-  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
-  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
-  .val-note strong{ color:var(--text); }
-  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
-  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
-  .form-label.req::after{ content:' *'; color:var(--red); }
-  .form-textarea, .form-input{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
-  .form-textarea{ resize:vertical; min-height:60px; }
-  .form-textarea:focus, .form-input:focus{ border-color:var(--gold-border); }
-  .form-input.err, .form-textarea.err{ border-color:var(--red); }
-  .field-error{ font-size:11px; color:var(--red); margin-top:2px; display:none; }
-  .field-error.show{ display:block; }
-  .auth-divider{ display:flex; align-items:center; gap:10px; margin:16px 0 12px; }
-  .auth-divider::before, .auth-divider::after{ content:''; flex:1; height:1px; background:var(--border); }
-  .auth-divider span{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; white-space:nowrap; }
-  .auth-hint{ font-size:11px; color:var(--text3); margin-top:6px; line-height:1.5; display:flex; gap:6px; align-items:flex-start; }
-  .auth-hint .ico{ flex-shrink:0; }
 
   .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
   .toast.success{ border-left:3px solid var(--green); }
@@ -361,62 +312,12 @@
   </div>
 </div>
 
-<!-- SALE DETAILS MODAL -->
-<div class="modal-overlay" id="detailModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="dTitle">Sale Details</div>
-      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
-    </div>
-    <div class="modal-meta" id="dMeta"></div>
-    <div id="dItems"></div>
-    <div class="ov-totals" id="dTotals"></div>
-    <div id="dVoidInfo"></div>
-    <div class="modal-footer" id="dFooter">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- VOID SALE MODAL — now with full audit trail + manager/admin authorization -->
-<div class="modal-overlay" id="voidModal">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <div class="modal-title void-title">✕ Void Sale</div>
-      <button class="modal-close" onclick="closeModal('voidModal')">✕</button>
-    </div>
-    <div class="val-note">Voiding <strong id="vName"></strong> will restore its items to Pool Bar Stock, remove it from revenue totals, and be permanently logged with the details below.</div>
-
-    <div class="form-group">
-      <label class="form-label req">Reason for Void</label>
-      <textarea class="form-textarea" id="vReason" placeholder="e.g. Wrong order, customer changed mind, duplicate entry…"></textarea>
-      <div class="field-error" id="vReasonErr">Please enter a reason for the void.</div>
-    </div>
-
-    <div class="auth-divider"><span>Manager / Admin Authorization</span></div>
-
-    <div class="form-group">
-      <label class="form-label req">Authorizing Name</label>
-      <input class="form-input" type="text" id="vAuthName" list="authStaffList" placeholder="Full name of Manager/Admin approving this void" autocomplete="off">
-      <datalist id="authStaffList"></datalist>
-      <div class="field-error" id="vAuthNameErr">Enter the name of the Manager/Admin authorizing this void.</div>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label req">Authorization Password</label>
-      <input class="form-input" type="password" id="vAuthPass" placeholder="Enter authorization password" autocomplete="off">
-      <div class="field-error" id="vAuthPassErr">Incorrect name/password combination. Only an authorized Manager or Admin may void a sale.</div>
-      <div class="auth-hint"><span class="ico">🔒</span><span>This action is logged. Only staff with Manager or Admin authorization can void a completed sale.</span></div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('voidModal')">Cancel</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmVoid()">✕ Confirm Void</button>
-    </div>
-  </div>
-</div>
+<!-- No inline modals — "View" opens SalesDetail, "Void" opens VoidSale.
+     Both are reusable components (component/sales-detail.js, component/void-sale.js). -->
 
 <script src="../component/poolbar-shell.js"></script>
+<script src="../component/sales-detail.js"></script>
+<script src="../component/void-sale.js"></script>
 <script>
 const shell = PoolBarShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -426,6 +327,41 @@ const shell = PoolBarShell.attach({
   pageSubtitle:  'Completed transactions — synced with Pool Bar Stock',
   apiMode:       'Demo',
   user:          { name: 'Pool Bar Manager', initials: 'PB' },
+});
+
+/* ═══════════════════════════════════════════
+   THEME BRIDGE — sales-detail.js / void-sale.js follow a shared
+   'aurum-theme' localStorage key + 'aurum:themechange' event. If
+   poolbar-shell.js uses its own key/toggle (no shared event), this
+   re-broadcasts the shell's actual applied theme on every toggle so
+   both components stay in sync, without touching the shell itself.
+═══════════════════════════════════════════ */
+function currentShellTheme(){ return document.documentElement.getAttribute('data-theme') || 'dark'; }
+const _pbsThemeBtn = document.getElementById('pbs-themeBtn');
+if (_pbsThemeBtn) {
+  _pbsThemeBtn.addEventListener('click', () => {
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent('aurum:themechange', { detail: { theme: currentShellTheme() } }));
+    }, 0);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   REUSABLE DETAIL + VOID COMPONENTS
+   No more manual manager-name/password entry — VoidSale now shows
+   whoever the session says is logged in. currentUser is the demo
+   default for today; swap in getCurrentUser later to hit a real
+   session/auth endpoint, and nothing else here needs to change.
+═══════════════════════════════════════════ */
+const salesDetail = SalesDetail.create({
+  theme: currentShellTheme(),
+  onVoid: (saleShape) => voidSale.open(saleShape),
+});
+const voidSale = VoidSale.create({
+  theme: currentShellTheme(),
+  currentUser: { name: 'Adaeze Nwankwo', role: 'Duty Manager' }, // demo default — replace with getCurrentUser when session auth exists
+  // getCurrentUser: async () => { const r = await fetch('/api/session/me'); const me = await r.json(); return { name: me.name, role: me.role }; },
+  onConfirm: (saleShape, reason, voidedBy) => performVoid(saleShape.id, reason, voidedBy),
 });
 
 const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
@@ -463,18 +399,6 @@ async function saveShared(key, value){
   try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
 }
 
-/* ═══════════════════════════════════════════
-   AUTHORIZED STAFF — demo credential list used to gate the Void
-   action. In a real deployment this check must happen server-side
-   (never trust a client-side password match); this is a UI-level
-   gate to demonstrate the flow and keep the demo self-contained.
-═══════════════════════════════════════════ */
-const AUTHORIZED_STAFF = [
-  { name:'Adaeze Nwankwo', role:'Duty Manager',   password:'manager123' },
-  { name:'Chinedu Obi',    role:'General Manager', password:'admin456'  },
-  { name:'Grace Umeh',     role:'Admin',           password:'grace789'  },
-];
-
 const DEMO_SALES = [
   { id:'PBS-1012', items:[{name:'Heineken',qty:3,price:1500}], subtotal:4500, discount:0, total:4500, method:'Cash', staff:'Emeka S.', table:'Pool Deck 2', notes:'', date:'17/07/26 11:05 AM', status:'completed' },
   { id:'PBS-1011', items:[{name:'Chapman',qty:2,price:2500},{name:'Guinness',qty:2,price:1600}], subtotal:8200, discount:0, total:8200, method:'POS', staff:'Amaka O.', table:'Pool Lounge', notes:'', date:'17/07/26 10:40 AM', status:'completed' },
@@ -490,7 +414,6 @@ const DEMO_STOCK = [
 let sales     = [];
 let stock     = [];
 let movements = [];
-let activeId  = null;
 let page = 1;
 let sortKey = 'date', sortDir = 'desc';
 let _filteredCache = [];
@@ -518,6 +441,27 @@ function itemsSummary(s){
   const names = s.items.map(i => `${i.name} ×${i.qty}`);
   if (names.length <= 2) return names.join(', ');
   return `${names.slice(0,2).join(', ')} <span class="more">+${names.length-2} more</span>`;
+}
+
+/* Pool Bar's sale.items are already { name, qty, price } — the exact
+   shape SalesDetail/VoidSale expect — so this only needs to convert
+   discount from a % to a naira amount and label the department. */
+function buildDetailSale(s){
+  const discountAmt = s.subtotal * (s.discount || 0) / 100;
+  return {
+    id: s.id,
+    dept: 'Pool Bar',
+    table: s.table,
+    staff: s.staff,
+    date: s.date,
+    method: s.method,
+    items: s.items,
+    discount: discountAmt,
+    total: s.total,
+    status: s.status,
+    voidReason: s.voidReason,
+    notes: s.notes,
+  };
 }
 
 function renderKPIs(rows){
@@ -706,7 +650,7 @@ function renderTable(){
         <td class="no-print nowrap" data-label="Actions" onclick="event.stopPropagation()">
           <div class="act-btns">
             <button class="act-btn" onclick="openDetail('${s.id}')">👁 View</button>
-            ${s.status === 'completed' ? `<button class="act-btn void" onclick="openVoid('${s.id}')">✕ Void</button>` : ''}
+            ${s.status === 'completed' ? `<button class="act-btn void" onclick="openVoidDirect('${s.id}')">✕ Void</button>` : ''}
           </div>
         </td>
       </tr>`).join('');
@@ -740,107 +684,27 @@ function bindHeaderSort(){
 }
 
 /* ═══════════════════════════════════════════
-   SALE DETAILS — now richer: shows a dedicated
-   Void Information card (who voided it, when,
-   and why) whenever the sale has been voided.
+   VIEW / VOID — wired to the reusable components. openDetail() feeds
+   SalesDetail; openVoidDirect() skips straight to VoidSale (used by
+   the row's own Void button, so it doesn't require the detail modal
+   first). Either path ends up in performVoid() for the actual mutation.
 ═══════════════════════════════════════════ */
 function openDetail(id){
   const s = sales.find(x => x.id === id);
   if (!s) return;
-  activeId = id;
-  const statusClass = s.status === 'completed' ? 'status-completed' : 'status-voided';
-  const modalEl = document.querySelector('#detailModal .modal');
-  modalEl.classList.remove('status-completed', 'status-voided');
-  modalEl.classList.add(statusClass);
-
-  document.getElementById('dTitle').textContent = `Sale ${s.id}`;
-  document.getElementById('dMeta').innerHTML = `
-    <span class="chip chip-pay">${s.method}</span> &nbsp;
-    ${s.table || '—'} &nbsp;·&nbsp; ${s.date} &nbsp;·&nbsp; ${s.staff || '—'}
-    ${s.notes ? `<br><em style="color:var(--text3);">"${s.notes}"</em>` : ''}`;
-
-  document.getElementById('dItems').innerHTML = s.items.map(i => `
-    <div class="ov-item">
-      <span class="oi-name">${i.name}</span>
-      <span class="oi-qty">× ${i.qty}</span>
-      <span class="oi-total">${fmtN(i.price * i.qty)}</span>
-    </div>`).join('');
-
-  const discAmt = s.subtotal * (s.discount || 0) / 100;
-  document.getElementById('dTotals').innerHTML = `
-    <div class="ot-row"><span>Subtotal</span><span>${fmtN(s.subtotal)}</span></div>
-    ${s.discount ? `<div class="ot-row"><span>Discount (${s.discount}%)</span><span style="color:var(--red);">−${fmtN(discAmt)}</span></div>` : ''}
-    <div class="ot-row total"><span>Total</span><span>${fmtN(s.total)}</span></div>`;
-
-  const voidInfoEl = document.getElementById('dVoidInfo');
-  if (s.status === 'voided') {
-    voidInfoEl.innerHTML = `
-      <div class="void-info-card">
-        <div class="void-info-head">🚫 Void Information</div>
-        <div class="void-info-row"><span class="vlbl">Voided By</span><span class="vval">${s.voidedBy || 'Unrecorded'}</span></div>
-        <div class="void-info-row"><span class="vlbl">Voided On</span><span class="vval">${s.voidDate || '—'}</span></div>
-        <div class="void-info-row"><span class="vlbl">Original Amount</span><span class="vval">${fmtN(s.total)}</span></div>
-        <div class="void-info-note">"${s.voidReason || 'No reason recorded.'}"</div>
-      </div>`;
-  } else {
-    voidInfoEl.innerHTML = '';
-  }
-
-  const footer = document.getElementById('dFooter');
-  footer.innerHTML = `<button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>` +
-    (s.status === 'completed' ? `<button class="btn btn-danger btn-sm" onclick="closeModal('detailModal');openVoid('${s.id}')">✕ Void Sale</button>` : '');
-
-  document.getElementById('detailModal').classList.add('show');
+  salesDetail.open(buildDetailSale(s));
 }
-
-/* ═══════════════════════════════════════════
-   VOID FLOW — requires a reason + Manager/Admin
-   name & password match against AUTHORIZED_STAFF
-   before the void is allowed to proceed.
-═══════════════════════════════════════════ */
-function openVoid(id){
-  activeId = id;
+function openVoidDirect(id){
   const s = sales.find(x => x.id === id);
   if (!s) return;
-  document.getElementById('vName').textContent = `${s.id} — ${fmtN(s.total)}`;
-  document.getElementById('vReason').value = '';
-  document.getElementById('vAuthName').value = '';
-  document.getElementById('vAuthPass').value = '';
-  ['vReason','vAuthName','vAuthPass'].forEach(id => document.getElementById(id).classList.remove('err'));
-  ['vReasonErr','vAuthNameErr','vAuthPassErr'].forEach(id => document.getElementById(id).classList.remove('show'));
-  document.getElementById('authStaffList').innerHTML = AUTHORIZED_STAFF.map(a => `<option value="${a.name}">`).join('');
-  document.getElementById('voidModal').classList.add('show');
+  voidSale.open(buildDetailSale(s));
 }
 
-function setFieldError(fieldId, errId, hasError){
-  document.getElementById(fieldId).classList.toggle('err', hasError);
-  document.getElementById(errId).classList.toggle('show', hasError);
-}
-
-async function confirmVoid(){
-  const s = sales.find(x => x.id === activeId);
+async function performVoid(id, reason, voidedBy){
+  const s = sales.find(x => x.id === id);
   if (!s) return;
-
-  const reason   = document.getElementById('vReason').value.trim();
-  const authName = document.getElementById('vAuthName').value.trim();
-  const authPass = document.getElementById('vAuthPass').value;
-
-  const reasonMissing = !reason;
-  setFieldError('vReason', 'vReasonErr', reasonMissing);
-
-  const match = AUTHORIZED_STAFF.find(a =>
-    a.name.toLowerCase() === authName.toLowerCase() && a.password === authPass
-  );
-  const nameMissing = !authName;
-  setFieldError('vAuthName', 'vAuthNameErr', nameMissing);
-  const authFailed = !nameMissing && !match;
-  setFieldError('vAuthPass', 'vAuthPassErr', authFailed || (!authPass && !nameMissing));
-
-  if (reasonMissing) { showToast('Please enter a reason for the void.', 'error'); return; }
-  if (nameMissing || !authPass) { showToast('Enter the authorizing Manager/Admin name and password.', 'error'); return; }
-  if (!match) { showToast('Incorrect authorization credentials. Void cancelled.', 'error'); return; }
-
   const stamp = nowStamp();
+
   s.items.forEach(item => {
     const inv = stock.find(i => i.name === item.name);
     if (inv) { inv.qty += item.qty; movements.unshift({ date: stamp, item: item.name, qtyIn: item.qty, qtyOut: 0, balance: inv.qty, reason: `Voided Sale (${s.id})` }); }
@@ -849,20 +713,14 @@ async function confirmVoid(){
   s.status = 'voided';
   s.voidReason = reason;
   s.voidDate = stamp;
-  s.voidedBy = `${match.name} (${match.role})`;
+  s.voidedBy = voidedBy;
 
   await Promise.all([ saveShared(KEY_SALES, sales), saveShared(KEY_STOCK, stock), saveShared(KEY_MOVEMENTS, movements) ]);
-  apiSave('PATCH', `/api/poolbar/sales/${s.id}/void`, { reason, voidedBy: s.voidedBy });
+  apiSave('PATCH', `/api/poolbar/sales/${s.id}/void`, { reason, voidedBy });
 
-  closeModal('voidModal');
-  showToast(`${s.id} voided by ${match.name} — stock restored to Pool Bar Stock.`, 'error');
+  showToast(`${s.id} voided by ${voidedBy} — stock restored to Pool Bar Stock.`, 'error');
   render();
 }
-
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-['detailModal','voidModal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
-});
 
 function printSales(){
   document.getElementById('printSub').textContent = `Printed: ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${document.getElementById('tblCount').textContent}`;
