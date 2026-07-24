@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PO History | Aurum Procurement</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+    --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+  }
+  [data-theme="dark"]{
+    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  }
+  [data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  }
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; margin-bottom:2px; }
+
+  /* Demo banner */
+  .demo-banner{ background:linear-gradient(90deg,var(--gold-dim),var(--surface2)); border:1px solid var(--gold-border); border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:10px; animation:fadeUp .4s ease both; }
+  .demo-icon{ font-size:20px; }
+  .demo-text{ flex:1; }
+  .demo-title{ font-size:12px; font-weight:600; color:var(--gold); margin-bottom:2px; }
+  .demo-desc{ font-size:11px; color:var(--text3); }
+  .demo-btn{ padding:6px 12px; background:var(--gold); color:#0a1520; border:none; border-radius:8px; font-family:'Outfit',sans-serif; font-size:11px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; }
+  .demo-btn:hover{ background:var(--gold-light); transform:translateY(-1px); }
+
+  /* KPI */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; text-decoration:none; display:block; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:50px; opacity:.07; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+
+  /* Panel */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); min-width:0; }
+  @media (max-width:420px){ .panel{ padding:14px; } }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
+  .panel-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:.8px; text-transform:uppercase; }
+  .panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:500; white-space:nowrap; background:none; border:none; font-family:'Outfit',sans-serif; cursor:pointer; }
+  .panel-action:hover{ color:var(--gold-light); }
+  .empty-note{ font-size:12.5px; color:var(--text3); padding:14px 0; text-align:center; }
+
+  /* Toolbar */
+  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .search-wrap{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; flex:1; min-width:180px; max-width:260px; }
+  .search-wrap:focus-within{ border-color:var(--gold-border); }
+  .search-wrap input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-wrap input::placeholder{ color:var(--text3); }
+  .filter-sel{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; }
+  .filter-sel:focus{ border-color:var(--gold-border); }
+
+  /* Table */
+  .tbl-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.center{ text-align:center; }
+  tbody tr{ cursor:pointer; border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:10px 14px; vertical-align:middle; white-space:nowrap; color:var(--text); }
+  tbody td.center{ text-align:center; }
+  .empty-row td{ text-align:center; padding:30px; color:var(--text3); white-space:normal; cursor:default; }
+  .pr-no{ color:var(--gold-light); font-weight:600; }
+  .dept-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); }
+  .dept-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--purple); }
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-pending{ background:var(--amber-bg); color:var(--amber); } .chip-pending::before{ background:var(--amber); }
+  .chip-approved{ background:var(--green-bg); color:var(--green); } .chip-approved::before{ background:var(--green); }
+  .chip-fulfilled{ background:var(--purple-bg); color:var(--purple); } .chip-fulfilled::before{ background:var(--purple); }
+  .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
+  .chip-accountant{ background:var(--blue-bg); color:var(--blue); } .chip-accountant::before{ background:var(--blue); }
+  .chip-gm{ background:var(--green-bg); color:var(--green); } .chip-gm::before{ background:var(--green); }
+  .chip-md{ background:var(--purple-bg); color:var(--purple); } .chip-md::before{ background:var(--purple); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  ::-webkit-scrollbar{ width:5px; height:5px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:5px; }
+
+  @media print{
+    #prc-sidebar, #prc-topbar, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar rendered here by procurement-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar rendered here by procurement-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+      <!-- Demo Mode Banner -->
+      <div class="demo-banner">
+        <span class="demo-icon">🎬</span>
+        <div class="demo-text">
+          <div class="demo-title">Demo Mode Active</div>
+          <div class="demo-desc">Click any PO row to view details and linked requisition.</div>
+        </div>
+        <button class="demo-btn" onclick="resetDemoData()">🔄 Reset Demo</button>
+      </div>
+
+      <div>
+        <div class="section-title">Purchase Order History</div>
+        <div class="kpi-row" id="kpiRow"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">All Purchase Orders</div>
+          <div class="toolbar-left" style="flex:1;min-width:0;">
+            <div class="search-wrap">
+              <span style="color:var(--text3);font-size:13px;">🔍</span>
+              <input type="text" placeholder="PO no., supplier…" id="poSearch" oninput="poPage=1;renderPOs()">
+            </div>
+            <select class="filter-sel" id="poSort" onchange="poPage=1;renderPOs()">
+              <option value="date_desc">Newest First</option>
+              <option value="date_asc">Oldest First</option>
+              <option value="amount_desc">Amount (High → Low)</option>
+              <option value="amount_asc">Amount (Low → High)</option>
+            </select>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>PO No.</th><th>PR Ref.</th><th>Supplier</th><th>Department</th><th>Date Issued</th>
+                <th class="center">Amount (₦)</th><th>Approval Stage</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="poBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="poPaginLabel">—</span>
+          <div class="page-btns" id="poPageBtns"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="procurement-shell.js"></script>
+<script src="procurement-api.js"></script>
+<script src="procurement-modals.js"></script>
+<script>
+const shell = ProcurementShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'po-history.html',
+  pageTitle:     'PO History',
+  pageSubtitle:  'Purchase order tracking',
+  apiMode:       ProcurementAPI.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  user:          { name: 'Procurement Officer', initials: 'PO' },
+});
+
+let poPage = 1;
+const PO_PAGE_SIZE = 10;
+let filteredPO = [];
+
+function getStatusLabel(status){
+  const labels = { pending:'Pending', accountant:'Accountant Review', gm:'GM Review', md:'MD Review', approved:'Approved', fulfilled:'Fulfilled', rejected:'Rejected' };
+  return labels[status] || status;
+}
+
+const STATUS_CHIP = { pending:'chip-pending', accountant:'chip-accountant', gm:'chip-gm', md:'chip-md', approved:'chip-approved', fulfilled:'chip-fulfilled', rejected:'chip-rejected' };
+
+function renderPagination(btnId,labelId,page,total,size,cb){
+  const totalPages=Math.max(1,Math.ceil(total/size));
+  const from=total===0?0:(page-1)*size+1, to=Math.min(page*size,total);
+  document.getElementById(labelId).textContent = total===0?'No records':`${from}–${to} of ${total}`;
+  const wrap=document.getElementById(btnId); wrap.innerHTML='';
+  const mk=(txt,pg,dis,active)=>{const b=document.createElement('button');b.className='page-btn'+(active?' active':'');b.textContent=txt;b.disabled=dis;b.onclick=()=>cb(pg);return b;};
+  wrap.appendChild(mk('‹',page-1,page===1));
+  let s=Math.max(1,page-2), e=Math.min(totalPages,s+4); s=Math.max(1,e-4);
+  for(let i=s;i<=e;i++) wrap.appendChild(mk(i,i,false,i===page));
+  wrap.appendChild(mk('›',page+1,page>=totalPages));
+}
+
+function renderKpis(){
+  const prs = ProcurementAPI.DEMO_PR;
+  const withPO = prs.filter(p=>p.poNo).length;
+  const totalValue = prs.filter(p=>p.poNo).reduce((s,p)=>s+p.totalAmount,0);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card"><div class="kpi-accent">📋</div>
+      <div class="kpi-label">Total POs</div><div class="kpi-value">${withPO}</div>
+      <div class="kpi-trend neutral">Issued</div></div>
+    <div class="kpi-card"><div class="kpi-accent">💰</div>
+      <div class="kpi-label">Total PO Value</div><div class="kpi-value" style="font-size:22px;">${fmtN(totalValue)}</div>
+      <div class="kpi-trend up">Committed spend</div></div>
+    <div class="kpi-card"><div class="kpi-accent">✓</div>
+      <div class="kpi-label">Fulfilled</div><div class="kpi-value" style="color:var(--green);">${prs.filter(p=>p.approvalStage==='fulfilled').length}</div>
+      <div class="kpi-trend up">Completed</div></div>
+    <div class="kpi-card"><div class="kpi-accent">⏳</div>
+      <div class="kpi-label">Pending</div><div class="kpi-value" style="color:var(--amber);">${prs.filter(p=>p.approvalStage==='pending'||p.approvalStage==='accountant'||p.approvalStage==='gm'||p.approvalStage==='md').length}</div>
+      <div class="kpi-trend warn">Awaiting approval</div></div>`;
+}
+
+function renderPOs(){
+  const q = (document.getElementById('poSearch').value||'').toLowerCase();
+  const sort = document.getElementById('poSort').value;
+
+  filteredPO = ProcurementAPI.DEMO_PR.filter(p=>p.poNo).filter(p=>{
+    const mq = !q || p.poNo.toLowerCase().includes(q) || p.supplier.toLowerCase().includes(q);
+    return mq;
+  });
+
+  if (sort==='date_desc') filteredPO.sort((a,b)=>b.date.localeCompare(a.date));
+  else if (sort==='date_asc') filteredPO.sort((a,b)=>a.date.localeCompare(b.date));
+  else if (sort==='amount_desc') filteredPO.sort((a,b)=>(b.totalAmount)-(a.totalAmount));
+  else if (sort==='amount_asc') filteredPO.sort((a,b)=>(a.totalAmount)-(b.totalAmount));
+
+  renderPOPage();
+  renderKpis();
+}
+
+function renderPOPage(){
+  const total = filteredPO.length;
+  const start = (poPage-1)*PO_PAGE_SIZE;
+  const rows = filteredPO.slice(start, start+PO_PAGE_SIZE);
+  document.getElementById('poBody').innerHTML = rows.length===0
+    ? `<tr class="empty-row"><td colspan="8">No purchase orders found.</td></tr>`
+    : rows.map(p => `
+      <tr onclick="ProcurementModals.showPRDetail(ProcurementAPI.DEMO_PR.find(pr=>pr.id==='${p.id}'))">
+        <td class="pr-no">${p.poNo}</td>
+        <td>${p.prNo}</td>
+        <td>${p.supplier || '—'}</td>
+        <td><span class="dept-chip"><span class="dept-dot"></span>${p.dept}</span></td>
+        <td>${fmtDate(p.date)}</td>
+        <td class="center" style="font-weight:600;color:var(--gold);">${fmtN(p.totalAmount)}</td>
+        <td><span class="chip ${STATUS_CHIP[p.approvalStage]}">${getStatusLabel(p.approvalStage)}</span></td>
+        <td><span class="chip ${STATUS_CHIP[p.approvalStage]}">${getStatusLabel(p.approvalStage)}</span></td>
+      </tr>`).join('');
+  renderPagination('poPageBtns','poPaginLabel',poPage,total,PO_PAGE_SIZE,p=>{poPage=p;renderPOPage();});
+}
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+
+async function resetDemoData(){
+  const confirmed = await ProcurementModals.confirm('Reset all procurement data to demo defaults? This will clear any changes you made.', 'Reset Demo Data');
+  if (!confirmed) return;
+  
+  localStorage.setItem('hotel-procurement', JSON.stringify(ProcurementAPI.DEMO_PR));
+  localStorage.setItem('hotel-suppliers', JSON.stringify(ProcurementAPI.DEMO_SUPPLIERS));
+  ProcurementModals.alert('Demo data reset successfully!', 'Success');
+  location.reload();
+}
+
+// Init
+renderKpis();
+renderPOs();
+</script>
+</body>
+</html>

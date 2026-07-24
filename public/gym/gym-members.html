@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Members | Gym & Fitness — Aurum Hotel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ height:auto; visibility:hidden; }
+  html.gym-ready{ visibility:visible; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+    --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+  }
+  [data-theme="dark"]{
+    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+    --sidebar-bg:#0a1520;
+  }
+  [data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --sidebar-bg:#ffffff;
+  }
+  .section-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
+  .section-title{ font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; }
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; max-width:160px; }
+  .filter-select:focus{ border-color:var(--gold-border); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .guest-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; padding:16px; }
+  .guest-card{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:16px; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; }
+  .guest-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .guest-card:hover{ transform:translateY(-2px); border-color:var(--gold-border); box-shadow:0 6px 20px rgba(201,168,76,.1); }
+  .gc-top{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .gc-avatar{ width:38px; height:38px; border-radius:50%; background:var(--gold-dim); border:2px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--gold); flex-shrink:0; }
+  .gc-name{ font-size:13.5px; font-weight:600; color:var(--text); }
+  .gc-phone{ font-size:11px; color:var(--text3); }
+  .gc-meta{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-active{ background:var(--green-bg); color:var(--green); } .chip-active::before{ background:var(--green); }
+  .chip-expiring{ background:var(--amber-bg); color:var(--amber); } .chip-expiring::before{ background:var(--amber); }
+  .chip-expired{ background:var(--red-bg); color:var(--red); } .chip-expired::before{ background:var(--red); }
+  .chip-frozen{ background:var(--blue-bg); color:var(--blue); } .chip-frozen::before{ background:var(--blue); }
+  .plan-chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .plan-dot{ width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .gc-stats{ display:flex; justify-content:space-between; font-size:11px; color:var(--text3); border-top:1px solid var(--border); padding-top:9px; }
+  .gc-stats b{ color:var(--text); font-weight:600; }
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+  .empty-note{ font-size:12.5px; color:var(--text3); padding:40px; text-align:center; }
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(640px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal-sm{ width:min(420px,96vw); }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
+  .modal-close:hover{ color:var(--text); }
+  .detail-head{ display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+  .detail-avatar{ width:54px; height:54px; border-radius:50%; background:var(--gold-dim); border:2px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:var(--gold); flex-shrink:0; }
+  .detail-name{ font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:700; color:var(--text); line-height:1.2; }
+  .detail-subline{ display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
+  @media (max-width:480px){ .detail-grid{ grid-template-columns:1fr 1fr; } }
+  .detail-stat{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .detail-stat-label{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:600; margin-bottom:4px; }
+  .detail-stat-val{ font-size:12.5px; color:var(--text); font-weight:600; line-height:1.4; }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+      <div class="section-header">
+        <div class="section-title">All Gym Members</div>
+        <button class="btn btn-primary btn-sm" onclick="location.href='gym-dashboard.html'">＋ New Member</button>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box">
+            <span style="color:var(--text3);font-size:12px;">🔍</span>
+            <input type="text" id="fSearch" placeholder="Search members…" oninput="gPage=1;renderMembers()">
+          </div>
+          <select class="filter-select" id="fFilter" onchange="gPage=1;renderMembers()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="expiring">Expiring</option>
+            <option value="expired">Expired</option>
+            <option value="frozen">Inactive</option>
+          </select>
+        </div>
+        <span style="font-size:11.5px;color:var(--text3);" id="memCount">—</span>
+      </div>
+      <div class="panel">
+        <div class="guest-grid" id="guestGrid"></div>
+        <div class="pagination">
+          <span id="gPaginLabel">—</span>
+          <div class="page-btns" id="gPageBtns"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER PROFILE (DETAIL) MODAL — this element was missing entirely in the
+     previous version. The script referenced #detailModal at the top level
+     (document.getElementById('detailModal').addEventListener(...)), and since
+     the element didn't exist, that call threw immediately and stopped the
+     whole script before init() ever ran — which is why the page rendered
+     blank. -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Member Profile</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<script src="../component/gym-shell.js"></script>
+<script>
+const shell = GymShell.attach({
+  sidebarTarget: '#sidebarSlot', topbarTarget: '#topbarSlot',
+  activeFile: 'gym-members.html', pageTitle: 'Members', pageSubtitle: 'All gym members at a glance',
+  apiMode: 'Demo', user: { name: 'Gym Attendant', initials: 'GA' },
+});
+document.documentElement.classList.add('gym-ready');
+
+const storage = window.storage || { async get(k,s){const v=localStorage.getItem(k);return v==null?null:{key:k,value:v,shared:s};}, async set(k,v,s){localStorage.setItem(k,v);return{key:k,value:v,shared:s};}, async delete(k){localStorage.removeItem(k);return{key:k,deleted:true};}, async list(p){const keys=Object.keys(localStorage).filter(k=>!p||k.startsWith(p));return{keys,prefix:p};} };
+const KEY_MEMBERS='gym-members', KEY_PLANS='gym-plans', KEY_CHECKINS='gym-checkins';
+async function load(k,f){ try{const r=await storage.get(k,true);if(r&&r.value){const p=JSON.parse(r.value);if(Array.isArray(p))return p;}}catch(e){} return f;}
+async function save(k,v){ try{await storage.set(k,JSON.stringify(v),true);}catch(e){console.warn(e);} }
+
+let members=[], plans=[], checkins=[], gPage=1, gFilter='', detailMemberId=null;
+const PAGE=12;
+const COLOR_TOKENS={gold:{bg:'var(--gold-dim)',fg:'var(--gold-light)',dot:'var(--gold)'},blue:{bg:'var(--blue-bg)',fg:'var(--blue)',dot:'var(--blue)'},purple:{bg:'var(--purple-bg)',fg:'var(--purple)',dot:'var(--purple)'},green:{bg:'var(--green-bg)',fg:'var(--green)',dot:'var(--green)'},amber:{bg:'var(--amber-bg)',fg:'var(--amber)',dot:'var(--amber)'}};
+function _esc(s){return(s==null?'':String(s)).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');}
+function fmtN(n){return'₦'+Math.round(n||0).toLocaleString('en-NG');}
+function fmtDate(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
+function initials(n){return(n||'').split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function daysUntil(s){if(!s)return null;const d=new Date(s+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
+
+/* Status logic matches gym-dashboard.html: a plan is mandatory on every
+   member, so "no plan" can't legitimately occur — treat any legacy record
+   without one as expired rather than silently active. Four statuses only:
+   active, expiring, expired, frozen (displayed as "Inactive"). */
+function computeStatus(m){
+  if(!m.planId) return 'expired';
+  if(m.status==='frozen') return 'frozen';
+  const days=daysUntil(m.expiry);
+  if(days===null) return 'active';
+  if(days<0) return 'expired';
+  if(days<=7) return 'expiring';
+  return 'active';
+}
+const STATUS_LABEL={active:'Active',expiring:'Expiring',expired:'Expired',frozen:'Inactive'};
+const STATUS_CHIP={active:'chip-active',expiring:'chip-expiring',expired:'chip-expired',frozen:'chip-frozen'};
+function planById(id){return plans.find(p=>p.id===id)||{id:null,name:'No Plan',price:0,durationDays:0,notes:'',color:'blue'};}
+function planChipHtml(plan){const c=COLOR_TOKENS[plan.color]||COLOR_TOKENS.blue;return'<span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(plan.name)+'</span>';}
+
+function renderMembers(){
+  const q=document.getElementById('fSearch').value.toLowerCase();
+  gFilter=document.getElementById('fFilter').value;
+  let rows=members.map(m=>({...m,_s:computeStatus(m)})).filter(m=>{
+    const mq=!q||m.name.toLowerCase().includes(q)||(m.room||'').toLowerCase().includes(q);
+    const ms=!gFilter||m._s===gFilter;
+    return mq&&ms;
+  });
+  rows.sort((a,b)=>(b.joined||'').localeCompare(a.joined||''));
+  document.getElementById('memCount').textContent=rows.length+' member'+(rows.length!==1?'s':'');
+  const start=(gPage-1)*PAGE,pageRows=rows.slice(start,start+PAGE);
+  const grid=document.getElementById('guestGrid');
+  grid.innerHTML=pageRows.length===0?'<div class="empty-note">No members found.</div>':pageRows.map(m=>{
+    const plan=planById(m.planId);const s=m._s;
+    return '<div class="guest-card" onclick="openDetail(\''+m.id+'\')">'+
+      '<div class="gc-top"><span class="gc-avatar">'+initials(m.name)+'</span><div><div class="gc-name">'+_esc(m.name)+'</div>'+(_esc(m.phone)?'<div class="gc-phone">'+_esc(m.phone)+'</div>':'')+'</div></div>'+
+      '<div class="gc-meta"><span class="chip '+STATUS_CHIP[s]+'">'+STATUS_LABEL[s]+'</span>'+(_esc(m.room)?'<span style="font-size:11px;color:var(--text3);">'+_esc(m.room)+'</span>':'')+'</div>'+
+      '<div class="gc-meta" style="font-size:11px;color:var(--text2);">'+(!m.planId?'<span style="color:var(--text3);">Not set</span>':planChipHtml(plan))+'</div>'+
+      '<div class="gc-stats"><span><b>'+(m.checkins||0)+'</b> check-ins</span><span>Joined '+fmtDate(m.joined)+'</span></div>'+
+      '</div>';
+  }).join('');
+  const tp=Math.max(1,Math.ceil(rows.length/PAGE));if(gPage>tp)gPage=tp;
+  const from=rows.length===0?0:(gPage-1)*PAGE+1,to=Math.min(gPage*PAGE,rows.length);
+  document.getElementById('gPaginLabel').textContent=rows.length===0?'No records':from+'\u2013'+to+' of '+rows.length;
+  const w=document.getElementById('gPageBtns');w.innerHTML='';
+  const mk=(l,p,d,ac)=>{const b=document.createElement('button');b.className='page-btn'+(ac?' active':'');b.textContent=l;b.disabled=!!d;b.onclick=()=>{gPage=p;renderMembers();};return b;};
+  w.appendChild(mk('\u2039',gPage-1,gPage===1));let s2=Math.max(1,gPage-2),e2=Math.min(tp,s2+4);s2=Math.max(1,e2-4);
+  for(let i=s2;i<=e2;i++)w.appendChild(mk(String(i),i,false,i===gPage));
+  w.appendChild(mk('\u203a',gPage+1,gPage>=tp));
+}
+function openDetail(id){detailMemberId=id;renderDetail();document.getElementById('detailModal').classList.add('show');}
+function renderDetail(){
+  const m=members.find(x=>x.id===detailMemberId);if(!m)return;
+  const plan=planById(m.planId);const s=computeStatus(m);
+  document.getElementById('detailBody').innerHTML='<div class="detail-head"><span class="detail-avatar">'+initials(m.name)+'</span><div><div class="detail-name">'+_esc(m.name)+'</div><div class="detail-subline"><span class="chip '+STATUS_CHIP[s]+'">'+STATUS_LABEL[s]+'</span>'+(m.planId?planChipHtml(plan):'<span style="color:var(--text3);font-size:11px;margin-left:6px;">Not set</span>')+'</div></div></div>'+
+    '<div class="detail-grid"><div class="detail-stat"><div class="detail-stat-label">Room / Contact</div><div class="detail-stat-val">'+_esc(m.room||'\u2014')+'<br>'+_esc(m.phone||'')+'</div></div><div class="detail-stat"><div class="detail-stat-label">Joined</div><div class="detail-stat-val">'+fmtDate(m.joined)+'</div></div><div class="detail-stat"><div class="detail-stat-label">Expiry</div><div class="detail-stat-val">'+fmtDate(m.expiry)+'</div></div><div class="detail-stat"><div class="detail-stat-label">Check-ins</div><div class="detail-stat-val">'+(m.checkins||0)+'</div></div><div class="detail-stat"><div class="detail-stat-label">Last Visit</div><div class="detail-stat-val">'+(m.lastCheckin?new Date(m.lastCheckin).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Never')+'</div></div><div class="detail-stat"><div class="detail-stat-label">Status</div><div class="detail-stat-val">'+STATUS_LABEL[s]+'</div></div></div>'+
+    '<div class="modal-footer"><button class="btn btn-outline btn-sm" onclick="closeModal(\'detailModal\')">Close</button><button class="btn btn-primary btn-sm" onclick="location.href=\'gym-dashboard.html\'">✏ Edit on Dashboard</button></div>';
+  document.getElementById('detailBody').innerHTML+=m.notes?'<div style="margin-top:10px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);font-weight:700;margin-bottom:6px;">Notes</div><div style="font-size:12px;color:var(--text2);">'+_esc(m.notes)+'</div></div>':'';
+}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function showToast(msg,t){const d=document.createElement('div');d.className='toast '+(t||'success');d.textContent=(t==='success'?'\u2713 ':'\u2715 ')+msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
+document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeModal('detailModal');});
+
+function isoAgo(d){const x=new Date();x.setDate(x.getDate()-d);return x.toISOString().split('T')[0];}
+function isoIn(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOString().split('T')[0];}
+function isoAgoHours(h){const x=new Date();x.setHours(x.getHours()-h);return x.toISOString();}
+
+async function init(){
+  plans=await load(KEY_PLANS,[
+    {id:'pl01',name:'Basic',price:15000,durationDays:30,notes:'Full gym floor access. Locker included.',color:'blue'},
+    {id:'pl02',name:'Premium',price:35000,durationDays:30,notes:'Everything in Basic, plus classes, sauna & PT consult.',color:'gold'},
+    {id:'pl03',name:'Day Pass',price:5000,durationDays:1,notes:'Single-day access for hotel guests.',color:'purple'},
+    {id:'pl04',name:'Annual',price:120000,durationDays:365,notes:'Full year unlimited access. Best value.',color:'green'},
+    {id:'pl05',name:'Student',price:8000,durationDays:30,notes:'Discounted plan for students with valid ID.',color:'amber'},
+  ]);
+  members=await load(KEY_MEMBERS,[
+    {id:'gm01',name:'Chidi Nwankwo',planId:'pl02',room:'Room 204',phone:'+234 801 234 5671',joined:isoAgo(120),expiry:isoIn(18),checkins:34,lastCheckin:isoAgoHours(5),status:'active',notes:'',amountPaid:35000,totalDue:35000},
+    {id:'gm02',name:'Fatima Bello',planId:'pl01',room:'Room 118',phone:'+234 802 345 6782',joined:isoAgo(60),expiry:isoIn(4),checkins:12,lastCheckin:isoAgoHours(30),status:'active',notes:'',amountPaid:15000,totalDue:15000},
+    {id:'gm03',name:'Segun Johnson',planId:'pl03',room:'Walk-in',phone:'+234 803 456 7893',joined:isoAgo(1),expiry:isoAgo(0),checkins:1,lastCheckin:isoAgoHours(1),status:'active',notes:'',amountPaid:5000,totalDue:5000},
+    {id:'gm04',name:'Ada Williams',planId:'pl02',room:'Room 204 (Suite)',phone:'+234 804 567 8904',joined:isoAgo(200),expiry:isoAgo(10),checkins:88,lastCheckin:isoAgo(10),status:'active',notes:'VIP guest',amountPaid:20000,totalDue:35000},
+    {id:'gm05',name:'Ibrahim Musa',planId:'pl01',room:'Staff',phone:'+234 805 678 9015',joined:isoAgo(300),expiry:isoIn(90),checkins:150,lastCheckin:isoAgo(45),status:'frozen',notes:'On medical leave',amountPaid:15000,totalDue:15000},
+    {id:'gm06',name:'Ngozi Okafor',planId:'pl04',room:'Room 301',phone:'+234 806 789 0126',joined:isoAgo(10),expiry:isoIn(50),checkins:6,lastCheckin:isoAgoHours(20),status:'active',notes:'',amountPaid:60000,totalDue:120000},
+    {id:'gm07',name:'Emeka Obi',planId:'pl02',room:'Room 105',phone:'+234 807 890 1234',joined:isoAgo(90),expiry:isoAgo(5),checkins:45,lastCheckin:isoAgo(6),status:'active',notes:'Expired plan',amountPaid:0,totalDue:35000},
+  ]);
+  checkins=await load(KEY_CHECKINS,[
+    {id:'ci01',memberId:'gm01',memberName:'Chidi Nwankwo',time:isoAgoHours(1)},
+    {id:'ci02',memberId:'gm02',memberName:'Fatima Bello',time:isoAgoHours(5)},
+    {id:'ci03',memberId:'gm06',memberName:'Ngozi Okafor',time:isoAgoHours(20)},
+    {id:'ci04',memberId:'gm03',memberName:'Segun Johnson',time:isoAgoHours(30)},
+    {id:'ci05',memberId:'gm01',memberName:'Chidi Nwankwo',time:isoAgoHours(48)},
+  ]);
+  renderMembers();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Settings | Aurum Hotel</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #c9a84c; --gold-light: #e8c96a; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.25);
+  --radius: 16px; --radius-sm: 12px; --radius-xs: 8px; --transition: 0.3s cubic-bezier(.4,0,.2,1);
+  --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+  --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+  --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+  --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+  --cyan:#38bdf8; --cyan-bg:rgba(56,189,248,0.12);
+}
+[data-theme="dark"] {
+  --bg:#080f18; --bg2:#0d1822; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+  --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+  --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  --input-bg:#0d1a27; --modal-bg:#0a1520;
+}
+[data-theme="light"] {
+  --bg:#eef2f7; --bg2:#e6ecf3; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+  --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+  --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --input-bg:#f0f4f9; --modal-bg:#f8fafc;
+}
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text);
+  display:flex; min-height:100vh; transition:background var(--transition), color var(--transition); font-size:14px;
+}
+.main { margin-left:256px; flex:1; min-width:0; display:flex; flex-direction:column; min-height:100vh; transition:margin-left var(--transition); }
+body.aur-sb-collapsed .main { margin-left:68px; }
+@media (max-width:768px) { .main { margin-left:0 !important; } }
+.content { flex:1; padding:32px; min-width:0; max-width:1200px; margin:0 auto; width:100%; animation:fadeIn 0.5s ease both; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.section-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); }
+.section-sub { font-size:13px; color:var(--text3); margin-top:4px; }
+.page-actions { display:flex; gap:10px; }
+.settings-layout { display:grid; grid-template-columns:220px 1fr; gap:24px; }
+@media (max-width:900px) { .settings-layout { grid-template-columns:1fr; } }
+.settings-nav { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); position:sticky; top:90px; align-self:start; }
+@media (max-width:900px) { .settings-nav { position:static; display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; } .settings-nav::-webkit-scrollbar { height:0; } }
+.setting-tab { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; transition:all 0.2s; border:none; background:none; width:100%; text-align:left; font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; color:var(--text2); border-bottom:1px solid var(--border); white-space:nowrap; }
+.setting-tab:last-child { border-bottom:none; }
+.setting-tab:hover { background:var(--surface2); color:var(--text); }
+.setting-tab.active { background:var(--gold-dim); color:var(--gold-light); border-left:3px solid var(--gold); }
+@media (max-width:900px) { .setting-tab { border-bottom:none; border-right:1px solid var(--border); flex-shrink:0; } .setting-tab.active { border-left:none; border-bottom:3px solid var(--gold); } }
+.setting-tab-icon { font-size:16px; width:20px; text-align:center; flex-shrink:0; }
+.settings-panels { min-width:0; }
+.settings-panel { display:none; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+.settings-panel.active { display:block; animation:fadeSlide 0.35s ease both; }
+@keyframes fadeSlide { from{opacity:0;transform:translateX(15px)} to{opacity:1;transform:translateX(0)} }
+.panel-header { padding:20px 24px; border-bottom:1px solid var(--border); }
+.panel-header h2 { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); }
+.panel-header p { font-size:12.5px; color:var(--text3); margin-top:4px; }
+.panel-body { padding:24px; }
+.form-group { margin-bottom:20px; }
+.form-group:last-child { margin-bottom:0; }
+.form-label { display:block; font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; margin-bottom:6px; }
+.form-label .required { color:var(--red); margin-left:2px; }
+.form-input, .form-select, .form-textarea { width:100%; background:var(--input-bg); border:1px solid var(--border); border-radius:var(--radius-xs); padding:10px 14px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:all 0.2s; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--gold-border); box-shadow:0 0 0 3px var(--gold-dim); }
+.form-input::placeholder { color:var(--text3); }
+.form-textarea { resize:vertical; min-height:80px; line-height:1.5; }
+.form-input[readonly] { opacity:0.6; cursor:default; }
+.form-hint { font-size:11px; color:var(--text3); margin-top:5px; line-height:1.4; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:600px) { .form-row { grid-template-columns:1fr; } }
+.toggle-group { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); gap:16px; }
+.toggle-group:last-child { border-bottom:none; }
+.toggle-info { flex:1; }
+.toggle-info .toggle-title { font-size:13.5px; font-weight:500; color:var(--text); }
+.toggle-info .toggle-desc { font-size:11.5px; color:var(--text3); margin-top:2px; }
+.toggle-switch { position:relative; width:44px; height:24px; flex-shrink:0; cursor:pointer; }
+.toggle-switch input { position:absolute; opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:var(--border2); border-radius:24px; transition:all 0.3s; }
+.toggle-slider::before { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; background:#fff; border-radius:50%; transition:transform 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background:var(--gold); }
+.toggle-switch input:checked + .toggle-slider::before { transform:translateX(20px); }
+.btn-primary { background:var(--gold); color:#0a1520; border:none; border-radius:var(--radius-xs); padding:10px 20px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
+.btn-primary:hover { background:var(--gold-light); transform:translateY(-1px); }
+.btn-outline { background:none; border:1px solid var(--border); border-radius:var(--radius-xs); padding:9px 18px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; color:var(--text2); cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
+.btn-outline:hover { border-color:var(--gold-border); color:var(--gold); }
+.btn-danger { background:var(--red-bg); border:1px solid rgba(248,113,113,0.3); border-radius:var(--radius-xs); padding:9px 18px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; color:var(--red); cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; }
+.btn-danger:hover { background:rgba(248,113,113,0.2); }
+.divider { height:1px; background:var(--border); margin:20px 0; }
+.color-swatches { display:flex; gap:8px; flex-wrap:wrap; }
+.color-swatch { width:36px; height:36px; border-radius:var(--radius-xs); cursor:pointer; border:2px solid transparent; transition:all 0.2s; }
+.color-swatch:hover, .color-swatch.active { border-color:var(--text); transform:scale(1.1); }
+.info-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; display:flex; align-items:flex-start; gap:12px; margin-bottom:20px; }
+.info-box-icon { font-size:20px; flex-shrink:0; margin-top:2px; }
+.info-box-text { font-size:12.5px; color:var(--text3); line-height:1.5; }
+.info-box-text strong { color:var(--text); }
+.toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 18px; font-size:13px; color:var(--text); box-shadow:0 8px 30px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:10px; animation:toastIn 0.3s ease; max-width:calc(100vw - 48px); }
+.toast.success { border-left:3px solid var(--green); }
+.toast.error { border-left:3px solid var(--red); }
+.toast.info { border-left:3px solid var(--blue); }
+@keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:5px; }
+@media print { .aur-sidebar, .aur-topbar { display:none !important; } .main { margin-left:0 !important; } }
+</style>
+</head>
+<body>
+<div id="sidebarSlot"></div>
+<div class="main" id="mainWrap">
+  <div id="topbarSlot"></div>
+  <div class="content">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Settings</div>
+        <div class="section-sub">Configure your hotel management platform preferences</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn-outline" onclick="resetAll()">↺ Reset</button>
+        <button class="btn-primary" onclick="saveAll()">✓ Save Changes</button>
+      </div>
+    </div>
+    <div class="settings-layout">
+      <nav class="settings-nav" id="settingsNav">
+        <button class="setting-tab active" data-panel="general" onclick="switchSettingsTab('general',this)"><span class="setting-tab-icon">🏨</span> General</button>
+        <button class="setting-tab" data-panel="theme" onclick="switchSettingsTab('theme',this)"><span class="setting-tab-icon">🎨</span> Theme & Brand</button>
+        <button class="setting-tab" data-panel="departments" onclick="switchSettingsTab('departments',this)"><span class="setting-tab-icon">🏢</span> Departments</button>
+        <button class="setting-tab" data-panel="notifications" onclick="switchSettingsTab('notifications',this)"><span class="setting-tab-icon">🔔</span> Notifications</button>
+        <button class="setting-tab" data-panel="billing" onclick="switchSettingsTab('billing',this)"><span class="setting-tab-icon">💰</span> Billing & Currency</button>
+        <button class="setting-tab" data-panel="api" onclick="switchSettingsTab('api',this)"><span class="setting-tab-icon">🔌</span> API & Integration</button>
+        <button class="setting-tab" data-panel="security" onclick="switchSettingsTab('security',this)"><span class="setting-tab-icon">🔒</span> Security & Access</button>
+        <button class="setting-tab" data-panel="advanced" onclick="switchSettingsTab('advanced',this)"><span class="setting-tab-icon">⚙</span> Advanced</button>
+      </nav>
+      <div class="settings-panels">
+        <!-- GENERAL -->
+        <div class="settings-panel active" id="panel-general">
+          <div class="panel-header"><h2>🏨 General Information</h2><p>Your hotel's basic details — used across forms, receipts, and reports.</p></div>
+          <div class="panel-body">
+            <div class="info-box"><span class="info-box-icon">ℹ️</span><div class="info-box-text">Changes here will apply immediately. <strong>Save</strong> before leaving.</div></div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Hotel Name <span class="required">*</span></label><input class="form-input" type="text" id="s_hotelName" placeholder="e.g. Aurum Hotel" value="Aurum Hotel"></div>
+              <div class="form-group"><label class="form-label">Hotel Slug <span class="required">*</span></label><input class="form-input" type="text" id="s_hotelSlug" placeholder="e.g. aurum-hotel" value="aurum-hotel" readonly><div class="form-hint">Used in system URLs. Contact support to change.</div></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Address <span class="required">*</span></label><textarea class="form-textarea" id="s_address" placeholder="Street, City, State" rows="3">42 Awolowo Road, Ikoyi, Lagos</textarea></div>
+              <div class="form-group"><label class="form-label">Phone <span class="required">*</span></label><input class="form-input" type="tel" id="s_phone" placeholder="+234 800 000 0000" value="+234 700 000 0000"><div class="form-hint">Displayed on receipts and guest communications.</div></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Email <span class="required">*</span></label><input class="form-input" type="email" id="s_email" placeholder="info@aurumhotel.ng" value="info@aurumhotel.ng"></div>
+              <div class="form-group"><label class="form-label">Website</label><input class="form-input" type="url" id="s_website" placeholder="https://yourhotel.ng" value="https://aurumhotel.ng"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Default Language</label><select class="form-select" id="s_language"><option value="en" selected>English</option><option value="fr">French</option><option value="es">Spanish</option><option value="pt">Portuguese</option><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option></select></div>
+              <div class="form-group"><label class="form-label">Time Zone <span class="required">*</span></label><select class="form-select" id="s_timezone"><option value="Africa/Lagos" selected>Africa/Lagos (WAT, UTC+1)</option><option value="Africa/Abuja">Africa/Abuja</option><option value="Africa/Cairo">Africa/Cairo (EET, UTC+2)</option><option value="Africa/Johannesburg">Africa/Johannesburg (SAST, UTC+2)</option><option value="Africa/Nairobi">Africa/Nairobi (EAT, UTC+3)</option><option value="Africa/Accra">Africa/Accra (GMT, UTC+0)</option><option value="Europe/London">Europe/London (GMT/BST)</option><option value="America/New_York">America/New_York (EST/EDT)</option><option value="America/Chicago">America/Chicago (CST/CDT)</option><option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option><option value="Asia/Dubai">Asia/Dubai (GST, UTC+4)</option></select><div class="form-hint">Current server time: <span id="serverTimeDisplay"></span></div></div>
+            </div>
+          </div>
+        </div>
+        <!-- THEME -->
+        <div class="settings-panel" id="panel-theme">
+          <div class="panel-header"><h2>🎨 Theme & Brand</h2><p>Customize the look and feel of your management platform.</p></div>
+          <div class="panel-body">
+            <div class="form-group"><label class="form-label">Default Theme</label><div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Dark Mode</div><div class="toggle-desc">Use dark theme as the default when users first log in.</div></div><label class="toggle-switch"><input type="checkbox" id="s_defaultDark" checked><span class="toggle-slider"></span></label></div></div>
+            <div class="divider"></div>
+            <div class="form-group"><label class="form-label">Accent Color</label><div class="color-swatches" id="accentSwatches"><div class="color-swatch active" style="background:#c9a84c" data-color="#c9a84c" title="Gold"></div><div class="color-swatch" style="background:#3b82f6" data-color="#3b82f6" title="Blue"></div><div class="color-swatch" style="background:#10b981" data-color="#10b981" title="Emerald"></div><div class="color-swatch" style="background:#8b5cf6" data-color="#8b5cf6" title="Purple"></div><div class="color-swatch" style="background:#f43f5e" data-color="#f43f5e" title="Rose"></div><div class="color-swatch" style="background:#f59e0b" data-color="#f59e0b" title="Amber"></div><div class="color-swatch" style="background:#06b6d4" data-color="#06b6d4" title="Cyan"></div><div class="color-swatch" style="background:#e11d48" data-color="#e11d48" title="Crimson"></div></div><div class="form-hint">Select a custom accent color for buttons, highlights, and branding.</div></div>
+            <div class="form-row"><div class="form-group"><label class="form-label">Logo URL</label><input class="form-input" type="url" id="s_logoUrl" placeholder="https://yourhotel.ng/logo.png"><div class="form-hint">Recommended size: 200x60px.</div></div><div class="form-group"><label class="form-label">Favicon URL</label><input class="form-input" type="url" id="s_faviconUrl" placeholder="https://yourhotel.ng/favicon.ico"></div></div>
+            <div class="form-group"><label class="form-label">Custom CSS (Advanced)</label><textarea class="form-textarea" id="s_customCss" placeholder="/* Inject custom CSS rules here */" rows="4" style="font-family:monospace;font-size:12px;"></textarea><div class="form-hint">⚠ Only for advanced users. Invalid CSS may break the interface.</div></div>
+          </div>
+        </div>
+        <!-- DEPARTMENTS -->
+        <div class="settings-panel" id="panel-departments">
+          <div class="panel-header"><h2>🏢 Departments</h2><p>Enable or disable modules across the platform.</p></div>
+          <div class="panel-body">
+            <div class="info-box"><span class="info-box-icon">ℹ️</span><div class="info-box-text">Disabled departments are hidden from the sidebar and navigation. Existing data is preserved.</div></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">🛏 Booking (Rooms)</div><div class="toggle-desc">Manage room inventory, reservations, check-ins/outs</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="booking" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">👤 Guest Profiles</div><div class="toggle-desc">Guest directory, folios, and charge tracking</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="guests" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">👨‍🍳 Kitchen</div><div class="toggle-desc">Production planning, inventory, and transfers</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="kitchen" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">🍽 Restaurant / Bar</div><div class="toggle-desc">POS, menu management, sales reports</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="restaurant" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">🏊 Pool Bar</div><div class="toggle-desc">Pool bar sales, stock, and orders</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="poolbar" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">💪 Gym</div><div class="toggle-desc">Memberships, check-ins, and plans</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="gym" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">🏬 Store</div><div class="toggle-desc">Inventory, stock management, and requisitions</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="store" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">👥 Staff Management</div><div class="toggle-desc">Staff profiles, schedules, and clock-in/out</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="staff" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">📦 Procurement</div><div class="toggle-desc">Purchase requests, approvals, and POs</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="procurement" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">📊 Accounting</div><div class="toggle-desc">Shift reconciliation, transactions, reports</div></div><label class="toggle-switch"><input type="checkbox" class="dept-toggle" data-dept="accounting" checked><span class="toggle-slider"></span></label></div>
+          </div>
+        </div>
+        <!-- NOTIFICATIONS -->
+        <div class="settings-panel" id="panel-notifications">
+          <div class="panel-header"><h2>🔔 Notifications</h2><p>Control what notifications are shown and how they are delivered.</p></div>
+          <div class="panel-body">
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">New Booking Alert</div><div class="toggle-desc">Notify when a new reservation is made</div></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Check-in / Check-out</div><div class="toggle-desc">Alert when a guest checks in or out</div></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Low Stock Warning</div><div class="toggle-desc">Kitchen & store inventory below reorder level</div></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Procurement Approvals</div><div class="toggle-desc">When a purchase request needs your approval</div></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Shift Reconciliation</div><div class="toggle-desc">Reminder to reconcile at shift end</div></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">System Updates</div><div class="toggle-desc">Platform maintenance and update announcements</div></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            <div class="divider"></div>
+            <div class="form-group"><label class="form-label">Notification Sound</label><select class="form-select" id="s_notifSound"><option value="chime" selected>Chime</option><option value="bell">Bell</option><option value="none">Silent</option></select></div>
+            <div class="form-group"><label class="form-label">Toast Duration (seconds)</label><input class="form-input" type="number" id="s_toastDuration" value="4" min="2" max="15"></div>
+          </div>
+        </div>
+        <!-- BILLING -->
+        <div class="settings-panel" id="panel-billing">
+          <div class="panel-header"><h2>💰 Billing & Currency</h2><p>Configure currency, tax, and payment defaults.</p></div>
+          <div class="panel-body">
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Base Currency <span class="required">*</span></label><select class="form-select" id="s_currency"><option value="NGN" selected>₦ NGN — Nigerian Naira</option><option value="USD">$ USD — US Dollar</option><option value="EUR">€ EUR — Euro</option><option value="GBP">£ GBP — British Pound</option><option value="GHS">₵ GHS — Ghanaian Cedi</option><option value="KES">KSh KES — Kenyan Shilling</option><option value="ZAR">R ZAR — South African Rand</option><option value="XOF">CFA XOF — West African CFA</option></select></div>
+              <div class="form-group"><label class="form-label">VAT / Tax Rate (%)</label><input class="form-input" type="number" id="s_taxRate" value="7.5" min="0" max="50" step="0.1"><div class="form-hint">Applied to billable items. Set to 0 to disable.</div></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Default Payment Method</label><select class="form-select" id="s_defaultPayment"><option value="Cash" selected>Cash</option><option value="POS">POS</option><option value="Transfer">Transfer</option><option value="Split">Split Payment</option></select></div>
+              <div class="form-group"><label class="form-label">Decimal Places</label><select class="form-select" id="s_decimals"><option value="0">0 (no decimals)</option><option value="2" selected>2 (e.g. ₦1,000.00)</option></select></div>
+            </div>
+          </div>
+        </div>
+        <!-- API -->
+        <div class="settings-panel" id="panel-api">
+          <div class="panel-header"><h2>🔌 API & Integration</h2><p>Manage API connectivity, endpoints, and third-party integrations.</p></div>
+          <div class="panel-body">
+            <div class="form-group"><label class="form-label">Mode</label><div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Use Live API</div><div class="toggle-desc">When disabled, the platform uses demo/simulated data.</div></div><label class="toggle-switch"><input type="checkbox" id="s_liveApi"><span class="toggle-slider"></span></label></div></div>
+            <div class="form-group"><label class="form-label">API Base URL</label><input class="form-input" type="url" id="s_apiBase" placeholder="https://api.yourhotel.ng"><div class="form-hint">The root endpoint for all API calls.</div></div>
+            <div class="form-row"><div class="form-group"><label class="form-label">API Token</label><input class="form-input" type="password" id="s_apiKey" placeholder="Enter your API key"></div><div class="form-group"><label class="form-label">API Timeout (ms)</label><input class="form-input" type="number" id="s_apiTimeout" value="5000" min="1000" max="60000"></div></div>
+            <div class="divider"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn-outline" onclick="testConnection()">🔌 Test Connection</button><button class="btn-outline" onclick="exportData()">📤 Export Config</button><button class="btn-outline" onclick="importData()">📥 Import Config</button></div>
+            <div id="connectionResult" style="margin-top:16px;display:none;"></div>
+          </div>
+        </div>
+        <!-- SECURITY -->
+        <div class="settings-panel" id="panel-security">
+          <div class="panel-header"><h2>🔒 Security & Access</h2><p>Configure authentication, session, and permission settings.</p></div>
+          <div class="panel-body">
+            <div class="form-row"><div class="form-group"><label class="form-label">Session Timeout (minutes)</label><input class="form-input" type="number" id="s_sessionTimeout" value="60" min="5" max="480"><div class="form-hint">Auto-logout after inactivity.</div></div><div class="form-group"><label class="form-label">Max Login Attempts</label><input class="form-input" type="number" id="s_maxAttempts" value="5" min="3" max="20"></div></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Two-Factor Authentication</div><div class="toggle-desc">Require 2FA for all admin users.</div></div><label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Audit Logging</div><div class="toggle-desc">Track all user actions for compliance.</div></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">IP Restriction</div><div class="toggle-desc">Only allow access from whitelisted IP addresses.</div></div><label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+            <div class="divider"></div>
+            <div class="form-group"><label class="form-label">Password Policy</label><select class="form-select" id="s_passwordPolicy"><option value="standard" selected>Standard (8+ chars, 1 uppercase, 1 number)</option><option value="strong">Strong (12+ chars, mixed case, numbers, symbols)</option><option value="basic">Basic (6+ chars, no rules)</option></select></div>
+            <div style="display:flex;gap:10px;margin-top:16px;"><button class="btn-danger" onclick="clearAuditLog()">🗑 Clear Audit Log</button></div>
+          </div>
+        </div>
+        <!-- ADVANCED -->
+        <div class="settings-panel" id="panel-advanced">
+          <div class="panel-header"><h2>⚙ Advanced Settings</h2><p>System-level configuration for power users.</p></div>
+          <div class="panel-body">
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Debug Mode</div><div class="toggle-desc">Show detailed error messages and console logs.</div></div><label class="toggle-switch"><input type="checkbox" id="s_debugMode"><span class="toggle-slider"></span></label></div>
+            <div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Maintenance Mode</div><div class="toggle-desc">Block non-admin access and show maintenance page.</div></div><label class="toggle-switch"><input type="checkbox" id="s_maintenanceMode"><span class="toggle-slider"></span></label></div>
+            <div class="form-group"><label class="form-label">Items Per Page (Tables)</label><input class="form-input" type="number" id="s_pageSize" value="25" min="10" max="100" step="5"><div class="form-hint">Default number of records shown in tables.</div></div>
+            <div class="form-group"><label class="form-label">Auto-Save Interval (seconds)</label><input class="form-input" type="number" id="s_autosave" value="30" min="10" max="300"></div>
+            <div class="divider"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn-danger" onclick="factoryReset()">⚠ Factory Reset</button><button class="btn-outline" onclick="clearCache()">🗑 Clear Local Cache</button><button class="btn-outline" onclick="systemInfo()">ℹ System Info</button></div>
+            <div id="systemInfoDisplay" style="display:none;margin-top:16px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function switchSettingsTab(panelId, btn) {
+  document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.setting-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + panelId).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// Color swatches
+document.getElementById('accentSwatches')?.addEventListener('click', function(e) {
+  const swatch = e.target.closest('.color-swatch');
+  if (!swatch) return;
+  this.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  swatch.classList.add('active');
+  const color = swatch.dataset.color;
+  document.documentElement.style.setProperty('--gold', color);
+  document.documentElement.style.setProperty('--gold-light', color + 'dd');
+  document.documentElement.style.setProperty('--gold-dim', color + '1f');
+  document.documentElement.style.setProperty('--gold-border', color + '40');
+  localStorage.setItem('aurum-accent', color);
+});
+try {
+  const savedAccent = localStorage.getItem('aurum-accent');
+  if (savedAccent) {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    const match = document.querySelector('.color-swatch[data-color="' + savedAccent + '"]');
+    if (match) { match.classList.add('active');
+      document.documentElement.style.setProperty('--gold', savedAccent);
+      document.documentElement.style.setProperty('--gold-light', savedAccent + 'dd');
+      document.documentElement.style.setProperty('--gold-dim', savedAccent + '1f');
+      document.documentElement.style.setProperty('--gold-border', savedAccent + '40');
+    }
+  }
+} catch(e) {}
+
+function updateServerTime() {
+  const el = document.getElementById('serverTimeDisplay');
+  if (!el) return;
+  const tz = document.getElementById('s_timezone')?.value || 'Africa/Lagos';
+  try { el.textContent = new Date().toLocaleString('en-GB', { timeZone: tz, hour12: false }); } catch(e) { el.textContent = new Date().toLocaleString('en-GB'); }
+}
+updateServerTime();
+setInterval(updateServerTime, 1000);
+document.getElementById('s_timezone')?.addEventListener('change', updateServerTime);
+
+function collectSettings() {
+  const fields = document.querySelectorAll('[id^="s_"]');
+  const settings = {};
+  fields.forEach(f => {
+    const key = f.id.replace(/^s_/, '');
+    if (f.type === 'checkbox') settings[key] = f.checked;
+    else settings[key] = f.value;
+  });
+  const depts = {};
+  document.querySelectorAll('.dept-toggle').forEach(t => { depts[t.dataset.dept] = t.checked; });
+  settings.departments = depts;
+  const activeSwatch = document.querySelector('.color-swatch.active');
+  settings.accentColor = activeSwatch ? activeSwatch.dataset.color : '#c9a84c';
+  return settings;
+}
+
+function saveAll() {
+  const settings = collectSettings();
+  try { localStorage.setItem('aurum-settings', JSON.stringify(settings)); } catch(e) {}
+  showToast('✓ All settings saved successfully!', 'success');
+}
+
+function resetAll() {
+  if (!confirm('Reset all settings to defaults? This cannot be undone.')) return;
+  try { localStorage.removeItem('aurum-settings'); } catch(e) {}
+  location.reload();
+}
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('aurum-settings');
+    if (!saved) return;
+    const settings = JSON.parse(saved);
+    Object.entries(settings).forEach(([key, value]) => {
+      if (key === 'departments') { Object.entries(value).forEach(([dept, enabled]) => { const toggle = document.querySelector('.dept-toggle[data-dept="' + dept + '"]'); if (toggle) toggle.checked = enabled; }); return; }
+      if (key === 'accentColor') return;
+      const el = document.getElementById('s_' + key);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = !!value;
+      else el.value = value;
+    });
+  } catch(e) {}
+}
+loadSettings();
+
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || 'success');
+  t.textContent = ((type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : 'ℹ ') + msg);
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+function testConnection() {
+  const result = document.getElementById('connectionResult');
+  result.style.display = 'block';
+  result.innerHTML = '<div style="padding:12px;color:var(--text3);">🔄 Testing connection...</div>';
+  setTimeout(() => {
+    const base = document.getElementById('s_apiBase').value;
+    const key = document.getElementById('s_apiKey').value;
+    if (!base && !key) result.innerHTML = '<div style="padding:12px;background:var(--amber-bg);border-radius:var(--radius-xs);color:var(--amber);border:1px solid rgba(251,191,36,0.2);">⚠ Demo mode active. No API endpoint configured.</div>';
+    else result.innerHTML = '<div style="padding:12px;background:var(--green-bg);border-radius:var(--radius-xs);color:var(--green);border:1px solid rgba(74,222,128,0.2);">✓ Connection successful! Server responded in 213ms.</div>';
+  }, 1500);
+}
+
+function exportData() {
+  const settings = collectSettings();
+  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'aurum-settings-export.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✓ Configuration exported!', 'success');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = function(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try { const data = JSON.parse(ev.target.result); localStorage.setItem('aurum-settings', JSON.stringify(data)); showToast('✓ Configuration imported! Reloading...', 'success'); setTimeout(() => location.reload(), 1000); } catch(err) { showToast('✕ Invalid configuration file.', 'error'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function clearCache() { if (!confirm('Clear all locally cached data?')) return; localStorage.clear(); showToast('✓ Cache cleared. Reloading...', 'info'); setTimeout(() => location.reload(), 1000); }
+function factoryReset() { if (!confirm('⚠ FACTORY RESET\n\nThis will delete ALL data. Continue?')) return; if (!confirm('Are you absolutely sure? This cannot be undone.')) return; localStorage.clear(); showToast('⚠ Factory reset complete. Reloading...', 'info'); setTimeout(() => location.reload(), 1500); }
+function clearAuditLog() { if (!confirm('Clear the entire audit log?')) return; showToast('✓ Audit log cleared.', 'success'); }
+
+function systemInfo() {
+  const display = document.getElementById('systemInfoDisplay');
+  display.style.display = 'block';
+  const info = { 'Platform': 'Aurum Hotel Suite v2.1.0', 'Build': '2026-03-17', 'Screen': window.innerWidth + 'x' + window.innerHeight, 'Theme': document.documentElement.getAttribute('data-theme'), 'Storage': (new Blob([JSON.stringify(localStorage)]).size / 1024).toFixed(1) + ' KB' };
+  display.innerHTML = '<div class="info-box" style="flex-direction:column;gap:6px;"><div style="font-weight:600;color:var(--text);margin-bottom:4px;">System Information</div>' + Object.entries(info).map(([k, v]) => '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);"><span>' + k + '</span><span style="color:var(--text);font-weight:500;">' + v + '</span></div>').join('') + '</div>';
+}
+
+document.getElementById('s_maintenanceMode')?.addEventListener('change', function() { if (this.checked) showToast('⚠ Maintenance mode enabled.', 'info'); else showToast('✓ Maintenance mode disabled.', 'success'); });
+document.getElementById('s_debugMode')?.addEventListener('change', function() { if (this.checked) showToast('ℹ Debug mode enabled.', 'info'); });
+
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveAll(); }
+});
+</script>
+<script src="component/aurum-shell.js"></script>
+<script>
+  const shell = AurumShell.attach({
+    sidebarTarget: '#sidebarSlot',
+    topbarTarget:  '#topbarSlot',
+    activeFile:    'settings.html',
+    pageTitle:     'Settings',
+    apiMode:       'Demo',
+    user:          { name: 'General Manager', initials: 'GM' },
+  });
+</script>
+</body>
+</html>

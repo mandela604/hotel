@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" style="background:#080f18;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>Transfers | Aurum Kitchen</title>
+<style>html,body{background:#080f18;margin:0;}</style>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+    --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+  }
+  [data-theme="dark"]{
+    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6); --input-bg:#0d1a26; --modal-bg:#0c1824;
+  }
+  [data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10); --input-bg:#eef1f6; --modal-bg:#f8fafc;
+  }
+  html, body{ height:100%; overflow-x:hidden; }
+  body{ font-family:'Outfit', system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:768px){ .content{ padding:16px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:106px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.14; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:250px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; }
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.sent{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); }
+  .status-pill.on.accepted{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .status-pill.on.cancelled{ background:var(--surface3); border-color:var(--border2); color:var(--text2); }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  @media (max-width:900px){ .toolbar-row.top{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .flt-group{ width:100%; } .search-box{ max-width:100%; } .filter-select{ width:100%; } .toolbar-row.top > .btns-right{ width:100%; } .toolbar-row.top > .btns-right .btn{ flex:1; justify-content:center; } }
+
+  .btns-right{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
+
+  @media (max-width:920px){
+    .tbl-wrap{ overflow-x:visible; }
+    table{ min-width:0; width:100%; }
+    thead{ display:none; }
+    table, tbody, tr, td{ display:block; width:100%; }
+    tbody tr{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; margin:0 0 10px; padding:6px 14px; }
+    tbody tr:last-child{ margin-bottom:0; }
+    tbody td{ border:none; padding:8px 0; white-space:normal !important; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; text-align:right; }
+    tbody td:not(:last-child){ border-bottom:1px dashed var(--border); }
+    tbody td::before{ content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; flex-shrink:0; text-align:left; }
+    .empty-row{ display:block; } .empty-row td{ display:block; text-align:center; } .empty-row td::before{ content:none; }
+  }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
+  .chip-accepted{ background:var(--green-bg); color:var(--green); } .chip-accepted::before{ background:var(--green); }
+  .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
+  .chip-cancelled{ background:var(--surface3); color:var(--text2); } .chip-cancelled::before{ background:var(--text3); }
+  .link-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; }
+  .link-chip:hover{ background:rgba(201,168,76,0.22); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; padding:0 7px; font-family:'Outfit',sans-serif; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-danger{ background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:var(--red); font-weight:700; }
+  .btn-danger:hover{ background:rgba(248,113,113,0.18); }
+  .btn-info{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); font-weight:700; }
+  .btn-info:hover{ background:rgba(96,165,250,.22); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 30px 80px rgba(0,0,0,0.6); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
+  .modal-sm{ max-width:440px; }
+  @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:10px; }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
+  .modal-close:hover{ color:var(--text); }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note strong{ color:var(--text); }
+
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; margin-bottom:14px; }
+  @media (max-width:480px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-item{ display:flex; flex-direction:column; gap:3px; }
+  .detail-item.span2{ grid-column:span 2; }
+  @media (max-width:480px){ .detail-item.span2{ grid-column:span 1; } }
+  .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; }
+  .detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
+  .detail-value.muted{ color:var(--text3); font-weight:400; font-style:italic; }
+  .modal-sub-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin:16px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
+  .reason-box{ background:var(--surface2); border-left:3px solid var(--red); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--text2); line-height:1.5; }
+  .reason-box.cancelled{ border-left-color:var(--text3); }
+
+  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-input,.form-select,.form-textarea{ background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus,.form-select:focus,.form-textarea:focus{ border-color:var(--gold); }
+  .form-textarea{ resize:vertical; min-height:60px; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @media (max-width:480px){ .toast{ left:12px; right:12px; bottom:12px; max-width:none; } }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    #kit-sidebar, #kit-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill sent" data-status="sent"><span class="pdot" style="background:var(--blue)"></span>Sent</div>
+                <div class="status-pill accepted" data-status="accepted"><span class="pdot" style="background:var(--green)"></span>Accepted</div>
+                <div class="status-pill rejected" data-status="rejected"><span class="pdot" style="background:var(--red)"></span>Rejected</div>
+                <div class="status-pill cancelled" data-status="cancelled"><span class="pdot" style="background:var(--text3)"></span>Cancelled</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:240px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" id="fSearch" placeholder="Transfer #, meal, production #…" oninput="page=1;render()"></div>
+            </div>
+            <div class="flt-group"><span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="page=1;render()">
+                <option value="date_desc">Date Sent (Newest)</option>
+                <option value="date_asc">Date Sent (Oldest)</option>
+                <option value="qty_desc">Quantity (High → Low)</option>
+              </select>
+            </div>
+            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+          </div>
+          <div class="btns-right">
+            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+            <button class="btn btn-primary btn-sm" onclick="openNewTransferModal()">＋ New Transfer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">All Transfers to Restaurant</div><span style="font-size:11px;color:var(--text3);" id="tblCount">—</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Transfer No.</th><th>Meal</th><th>Qty</th><th>Production No.</th>
+                <th>Sent By</th><th>Date Sent</th><th>Received By</th><th>Date Received</th>
+                <th>Status</th><th class="no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="paginLabel">—</span><div class="page-btns" id="pageBtns"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DETAIL MODAL ═══ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🚚 <span id="dmTitle">Transfer Details</span></div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item"><span class="detail-label">Transfer No.</span><span class="detail-value" id="dmNo">—</span></div>
+      <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value" id="dmStatus">—</span></div>
+      <div class="detail-item"><span class="detail-label">Meal</span><span class="detail-value" id="dmMeal">—</span></div>
+      <div class="detail-item"><span class="detail-label">Quantity</span><span class="detail-value" id="dmQty">—</span></div>
+      <div class="detail-item"><span class="detail-label">From Kitchen</span><span class="detail-value" id="dmKitchen">—</span></div>
+      <div class="detail-item"><span class="detail-label">To</span><span class="detail-value" id="dmRestaurant">—</span></div>
+      <div class="detail-item"><span class="detail-label">Sent By</span><span class="detail-value" id="dmSentBy">—</span></div>
+      <div class="detail-item"><span class="detail-label">Date Sent</span><span class="detail-value" id="dmDateSent">—</span></div>
+      <div class="detail-item"><span class="detail-label">Received By</span><span class="detail-value" id="dmReceivedBy">—</span></div>
+      <div class="detail-item"><span class="detail-label">Date Received</span><span class="detail-value" id="dmDateReceived">—</span></div>
+      <div class="detail-item span2"><span class="detail-label">Remarks</span><span class="detail-value" id="dmRemarks">—</span></div>
+    </div>
+    <div id="dmLinkWrap" style="margin-bottom:10px;display:none;">
+      <div class="modal-sub-title" style="margin-top:0;">Linked Production</div>
+      <span class="link-chip" id="dmLink" onclick="jumpToProduction()">🍲 View Production →</span>
+    </div>
+    <div id="dmReasonWrap" style="display:none;">
+      <div class="modal-sub-title" style="margin-top:0;">Reason</div>
+      <div class="reason-box" id="dmReasonBox"></div>
+    </div>
+    <div class="modal-footer" id="dmFooter"></div>
+  </div>
+</div>
+
+<!-- ═══ NEW TRANSFER MODAL ═══ -->
+<div class="modal-overlay" id="newModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">＋ New Transfer</div>
+      <button class="modal-close" onclick="closeModal('newModal')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Meal</label><input class="form-input" type="text" id="nMeal" placeholder="e.g. Fried Rice"></div>
+      <div class="form-group"><label class="form-label">Quantity</label>
+        <div style="display:flex;gap:6px;">
+          <input class="form-input" type="number" id="nQty" min="1" placeholder="0">
+          <select class="form-select" id="nUnit" style="max-width:110px;"><option>Plates</option><option>Portions</option><option>Pieces</option><option>Trays</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Link to Production (optional)</label>
+        <select class="form-select" id="nProdLink"><option value="">— None —</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Sent By</label><input class="form-input" type="text" id="nSentBy" placeholder="Staff name"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Remarks</label><textarea class="form-textarea" id="nRemarks" placeholder="Optional notes for the restaurant…"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('newModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="createTransfer()">✓ Send Transfer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CANCEL / RESEND CONFIRM MODAL ═══ -->
+<div class="modal-overlay" id="actionModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" id="actionTitle">Cancel Transfer</div>
+      <button class="modal-close" onclick="closeModal('actionModal')">✕</button>
+    </div>
+    <p class="val-note" id="actionMsg"></p>
+    <div class="form-group" id="actionReasonWrap">
+      <label class="form-label">Reason</label>
+      <textarea class="form-textarea" id="actionReason" placeholder="Why is this being cancelled…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('actionModal')">Back</button>
+      <button class="btn btn-danger btn-sm" id="actionConfirmBtn" onclick="confirmAction()">✕ Confirm Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/kitchen-shell.js"></script>
+<script>
+const shell = KitchenShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'kitchen-transfers.html',
+  pageTitle:     'Transfers',
+  pageSubtitle:  'Every meal sent from the Kitchen to the Restaurant, and its status',
+  apiMode:       'Demo',
+  user:          { name: 'Head Chef', initials: 'HC' },
+});
+
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+};
+async function loadShared(key, fallback){
+  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){ try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); } }
+
+const KEY_TRANSFERS   = 'kitchen-transfers';
+const KEY_PRODUCTIONS = 'kitchen-productions';
+const KITCHEN_NAME = 'Main Kitchen';
+const RESTAURANT_NAME = 'Main Restaurant / POS';
+
+/* Demo seed — mirrors the transferNo values already referenced by the
+   demo productions on kitchen-production-history.html, so following a
+   "View Transfer →" link from there lands on a record that actually
+   exists here. */
+const DEMO_TRANSFERS = [
+  { transferNo:'KTN-00045', productionNo:'PROD-00096', meal:'Fried Rice',  quantity:30, unit:'Plates',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Head Chef', receivedBy:'', dateSent:'17/07/26 10:30 AM', dateReceived:'',
+    status:'sent', remarks:'Lunch preparation' },
+  { transferNo:'KTN-00044', productionNo:'PROD-00095', meal:'Jollof Rice', quantity:20, unit:'Plates',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Head Chef', receivedBy:'Ada, Front of House', dateSent:'17/07/26 09:15 AM', dateReceived:'17/07/26 09:40 AM',
+    status:'accepted', remarks:'' },
+  { transferNo:'KTN-00043', productionNo:'PROD-00094', meal:'Egusi Soup',  quantity:15, unit:'Portions',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Sous Chef', receivedBy:'Tunde, Waitstaff', dateSent:'16/07/26 08:40 PM', dateReceived:'16/07/26 09:05 PM',
+    status:'accepted', remarks:'' },
+  { transferNo:'KTN-00042', productionNo:'PROD-00092', meal:'Moi Moi',     quantity:25, unit:'Pieces',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Sous Chef', receivedBy:'', dateSent:'15/07/26 08:50 AM', dateReceived:'',
+    status:'rejected', remarks:'', rejectReason:'Wrong batch — texture off, sent back.' },
+  { transferNo:'KTN-00041', productionNo:'', meal:'Fried Rice', quantity:10, unit:'Plates',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Head Chef', receivedBy:'', dateSent:'14/07/26 09:10 AM', dateReceived:'',
+    status:'cancelled', remarks:'', cancelReason:'Duplicate entry — meal was combined with KTN-00042.' },
+];
+
+let transfers = [];
+let productions = [];
+let page = 1;
+const PAGE_SIZE = 10;
+let statusFilter = '';
+let filtered = [];
+let activeTransferNo = null;
+let actionMode = null; // 'cancel' | 'resend'
+
+const STATUS_LBL = { sent:'Sent', accepted:'Accepted', rejected:'Rejected', cancelled:'Cancelled' };
+function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
+function nowFull(){ return new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',',''); }
+function nextTransferNo(){ let max=41; transfers.forEach(t=>{ const n=parseInt((t.transferNo||'').replace('KTN-',''),10); if(!isNaN(n)&&n>max) max=n; }); return 'KTN-'+String(max+1).padStart(5,'0'); }
+
+/* ═══════════════════════════════════════
+   KPIs
+═══════════════════════════════════════ */
+function renderKPIs(){
+  const total = transfers.length;
+  const sent = transfers.filter(t=>t.status==='sent').length;
+  const accepted = transfers.filter(t=>t.status==='accepted').length;
+  const needsAttention = transfers.filter(t=>t.status==='rejected'||t.status==='cancelled').length;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card" onclick="setStatus('')"><div class="kpi-accent">🚚</div>
+      <div class="kpi-label">Total Transfers</div><div class="kpi-value">${total}</div>
+      <div class="kpi-trend neutral">All-time record</div></div>
+    <div class="kpi-card" onclick="setStatus('sent')"><div class="kpi-accent">⏳</div>
+      <div class="kpi-label">Awaiting Restaurant</div><div class="kpi-value" style="color:var(--blue);">${sent}</div>
+      <div class="kpi-trend ${sent>0?'warn':'up'}">${sent>0?'Not yet actioned':'✓ All clear'}</div></div>
+    <div class="kpi-card" onclick="setStatus('accepted')"><div class="kpi-accent">✓</div>
+      <div class="kpi-label">Accepted</div><div class="kpi-value" style="color:var(--green);">${accepted}</div>
+      <div class="kpi-trend up">Into Restaurant stock</div></div>
+    <div class="kpi-card"><div class="kpi-accent">⚠️</div>
+      <div class="kpi-label">Rejected / Cancelled</div><div class="kpi-value" style="color:${needsAttention>0?'var(--red)':'var(--text)'};">${needsAttention}</div>
+      <div class="kpi-trend ${needsAttention>0?'warn':'up'}">${needsAttention>0?'May need resending':'None on record'}</div></div>`;
+
+  shell.setPendingBadge && shell.setPendingBadge(sent);
+}
+
+/* ═══════════════════════════════════════
+   FILTER / SORT / TABLE
+═══════════════════════════════════════ */
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p=>{
+    p.addEventListener('click', ()=>setStatus(p.dataset.status));
+  });
+}
+function setStatus(v){
+  statusFilter = v;
+  document.querySelectorAll('.status-pill').forEach(x=>x.classList.remove('on'));
+  const t = document.querySelector(`.status-pill[data-status="${v}"]`);
+  if (t) t.classList.add('on');
+  page = 1;
+  render();
+}
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  setStatus('');
+}
+function getFiltered(){
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const sort = document.getElementById('fSort').value;
+  let rows = transfers.filter(t=>{
+    const mq = !q || t.transferNo.toLowerCase().includes(q) || t.meal.toLowerCase().includes(q) || (t.productionNo||'').toLowerCase().includes(q);
+    const ms = !statusFilter || t.status === statusFilter;
+    return mq && ms;
+  });
+  if (sort==='date_desc') rows.sort((a,b)=>b.transferNo.localeCompare(a.transferNo));
+  else if (sort==='date_asc') rows.sort((a,b)=>a.transferNo.localeCompare(b.transferNo));
+  else if (sort==='qty_desc') rows.sort((a,b)=>b.quantity-a.quantity);
+  return rows;
+}
+function renderPagination(total){
+  const totalPg = Math.max(1, Math.ceil(total/PAGE_SIZE));
+  if (page>totalPg) page=totalPg;
+  const from = total===0?0:(page-1)*PAGE_SIZE+1, to = Math.min(page*PAGE_SIZE,total);
+  document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
+  const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
+  const mk=(l,p,d,a)=>{ const b=document.createElement('button'); b.className='page-btn'+(a?' active':''); b.textContent=l; b.disabled=!!d; b.onclick=()=>{page=p;renderTable();}; return b; };
+  wrap.appendChild(mk('‹',page-1,page===1,false));
+  let start=Math.max(1,page-2), end=Math.min(totalPg,start+4); start=Math.max(1,end-4);
+  for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
+  wrap.appendChild(mk('›',page+1,page>=totalPg,false));
+}
+function renderTable(){
+  const rows = filtered;
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+  const start=(page-1)*PAGE_SIZE;
+  const pageRows = rows.slice(start,start+PAGE_SIZE);
+  document.getElementById('tblBody').innerHTML = pageRows.length===0
+    ? `<tr class="empty-row"><td colspan="10">No transfers match your filters.</td></tr>`
+    : pageRows.map(t => `
+      <tr onclick="openDetail('${t.transferNo}')">
+        <td data-label="Transfer No." style="font-weight:600;">${t.transferNo}</td>
+        <td data-label="Meal">${t.meal}</td>
+        <td data-label="Qty">${t.quantity} ${t.unit}</td>
+        <td data-label="Production No.">${t.productionNo || '—'}</td>
+        <td data-label="Sent By">${t.sentBy || '—'}</td>
+        <td data-label="Date Sent">${t.dateSent || '—'}</td>
+        <td data-label="Received By">${t.receivedBy || '—'}</td>
+        <td data-label="Date Received">${t.dateReceived || '—'}</td>
+        <td data-label="Status"><span class="chip chip-${t.status}">${STATUS_LBL[t.status]}</span></td>
+        <td data-label="" class="no-print" onclick="event.stopPropagation()"><button class="act-btn" onclick="openDetail('${t.transferNo}')">👁 View</button></td>
+      </tr>`).join('');
+  renderPagination(rows.length);
+}
+function render(){ filtered = getFiltered(); renderKPIs(); renderTable(); }
+
+/* ═══════════════════════════════════════
+   DETAIL MODAL
+═══════════════════════════════════════ */
+function openDetail(no){
+  const t = transfers.find(x=>x.transferNo===no); if (!t) return;
+  activeTransferNo = no;
+  document.getElementById('dmTitle').textContent = `Transfer ${t.transferNo}`;
+  document.getElementById('dmNo').textContent = t.transferNo;
+  document.getElementById('dmStatus').innerHTML = `<span class="chip chip-${t.status}">${STATUS_LBL[t.status]}</span>`;
+  document.getElementById('dmMeal').textContent = t.meal;
+  document.getElementById('dmQty').textContent = `${t.quantity} ${t.unit}`;
+  document.getElementById('dmKitchen').textContent = t.kitchen || KITCHEN_NAME;
+  document.getElementById('dmRestaurant').textContent = t.restaurant || RESTAURANT_NAME;
+  document.getElementById('dmSentBy').textContent = t.sentBy || '—';
+  document.getElementById('dmDateSent').textContent = t.dateSent || '—';
+  document.getElementById('dmReceivedBy').textContent = t.receivedBy || (t.status==='sent' ? 'Awaiting action' : '—');
+  document.getElementById('dmDateReceived').textContent = t.dateReceived || '—';
+  const rm = document.getElementById('dmRemarks');
+  if (t.remarks) { rm.textContent = t.remarks; rm.classList.remove('muted'); } else { rm.textContent = 'No remarks recorded.'; rm.classList.add('muted'); }
+
+  const linkWrap = document.getElementById('dmLinkWrap');
+  if (t.productionNo) { linkWrap.style.display=''; document.getElementById('dmLink').textContent = `🍲 View Production ${t.productionNo} →`; }
+  else linkWrap.style.display = 'none';
+
+  const reasonWrap = document.getElementById('dmReasonWrap');
+  const reasonBox = document.getElementById('dmReasonBox');
+  if (t.status==='rejected' && t.rejectReason) {
+    reasonWrap.style.display=''; reasonBox.className='reason-box'; reasonBox.textContent = t.rejectReason;
+  } else if (t.status==='cancelled' && t.cancelReason) {
+    reasonWrap.style.display=''; reasonBox.className='reason-box cancelled'; reasonBox.textContent = t.cancelReason;
+  } else reasonWrap.style.display = 'none';
+
+  renderDetailFooter(t);
+  document.getElementById('detailModal').classList.add('show');
+}
+function renderDetailFooter(t){
+  let html = `<button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>`;
+  if (t.status==='sent') {
+    html += `<button class="btn btn-danger btn-sm" onclick="openActionModal('cancel')">✕ Cancel Transfer</button>`;
+  } else if (t.status==='rejected' || t.status==='cancelled') {
+    html += `<button class="btn btn-info btn-sm" onclick="openActionModal('resend')">↻ Resend Transfer</button>`;
+  }
+  document.getElementById('dmFooter').innerHTML = html;
+}
+function jumpToProduction(){
+  const t = transfers.find(x=>x.transferNo===activeTransferNo);
+  if (t && t.productionNo) window.location.href = `kitchen-production-history.html?open=${t.productionNo}`;
+}
+
+/* ═══════════════════════════════════════
+   CANCEL / RESEND
+═══════════════════════════════════════ */
+function openActionModal(mode){
+  actionMode = mode;
+  const t = transfers.find(x=>x.transferNo===activeTransferNo); if (!t) return;
+  if (mode==='cancel') {
+    document.getElementById('actionTitle').textContent = 'Cancel Transfer';
+    document.getElementById('actionMsg').innerHTML = `Cancel <strong>${t.transferNo}</strong> — ${t.meal} (${t.quantity} ${t.unit})? The Restaurant will no longer see this as pending.`;
+    document.getElementById('actionReasonWrap').style.display = '';
+    document.getElementById('actionReason').value = '';
+    document.getElementById('actionConfirmBtn').textContent = '✕ Confirm Cancel';
+    document.getElementById('actionConfirmBtn').className = 'btn btn-danger btn-sm';
+  } else {
+    document.getElementById('actionTitle').textContent = 'Resend Transfer';
+    document.getElementById('actionMsg').innerHTML = `Resend <strong>${t.meal}</strong> (${t.quantity} ${t.unit}) to the Restaurant as a new transfer? This creates a fresh transfer number linked to the same production.`;
+    document.getElementById('actionReasonWrap').style.display = 'none';
+    document.getElementById('actionConfirmBtn').textContent = '↻ Confirm Resend';
+    document.getElementById('actionConfirmBtn').className = 'btn btn-info btn-sm';
+  }
+  document.getElementById('actionModal').classList.add('show');
+}
+async function confirmAction(){
+  const t = transfers.find(x=>x.transferNo===activeTransferNo); if (!t) return;
+  if (actionMode==='cancel') {
+    const reason = document.getElementById('actionReason').value.trim();
+    if (!reason) { showToast('Please provide a reason for cancelling.', 'error'); return; }
+    t.status = 'cancelled';
+    t.cancelReason = reason;
+    closeModal('actionModal');
+    openDetail(t.transferNo);
+    render();
+    showToast(`${t.transferNo} cancelled.`, 'error');
+  } else {
+    const fresh = {
+      transferNo: nextTransferNo(), productionNo: t.productionNo, meal: t.meal, quantity: t.quantity, unit: t.unit,
+      kitchen: t.kitchen || KITCHEN_NAME, restaurant: t.restaurant || RESTAURANT_NAME,
+      sentBy: t.sentBy, receivedBy: '', dateSent: nowFull(), dateReceived: '',
+      status: 'sent', remarks: `Resent after ${t.status === 'rejected' ? 'rejection' : 'cancellation'} of ${t.transferNo}.`
+    };
+    transfers.unshift(fresh);
+    closeModal('actionModal');
+    openDetail(fresh.transferNo);
+    render();
+    showToast(`Resent as ${fresh.transferNo}.`, 'success');
+  }
+  await saveShared(KEY_TRANSFERS, transfers);
+}
+
+/* ═══════════════════════════════════════
+   NEW TRANSFER
+═══════════════════════════════════════ */
+function populateProdLinkSelect(){
+  const sel = document.getElementById('nProdLink');
+  const rts = productions.filter(p => p.type==='rts' && p.status !== 'draft');
+  sel.innerHTML = '<option value="">— None —</option>' + rts.map(p=>`<option value="${p.no}">${p.no} — ${p.meal} (${p.qty} ${p.unit})</option>`).join('');
+}
+function openNewTransferModal(){
+  document.getElementById('nMeal').value = '';
+  document.getElementById('nQty').value = '';
+  document.getElementById('nUnit').value = 'Plates';
+  populateProdLinkSelect();
+  document.getElementById('nProdLink').value = '';
+  document.getElementById('nSentBy').value = '';
+  document.getElementById('nRemarks').value = '';
+  document.getElementById('newModal').classList.add('show');
+}
+document.getElementById('nProdLink') && document.addEventListener('DOMContentLoaded', ()=>{});
+function onProdLinkChange(){}
+async function createTransfer(){
+  const meal = document.getElementById('nMeal').value.trim();
+  const qty = parseFloat(document.getElementById('nQty').value)||0;
+  const sentBy = document.getElementById('nSentBy').value.trim();
+  if (!meal) { showToast('Please enter a meal.', 'error'); return; }
+  if (qty<=0) { showToast('Please enter a valid quantity.', 'error'); return; }
+  if (!sentBy) { showToast('Please enter who is sending this.', 'error'); return; }
+  const entry = {
+    transferNo: nextTransferNo(),
+    productionNo: document.getElementById('nProdLink').value || '',
+    meal, quantity: qty, unit: document.getElementById('nUnit').value,
+    kitchen: KITCHEN_NAME, restaurant: RESTAURANT_NAME,
+    sentBy, receivedBy:'', dateSent: nowFull(), dateReceived:'',
+    status:'sent', remarks: document.getElementById('nRemarks').value.trim()
+  };
+  transfers.unshift(entry);
+  closeModal('newModal');
+  render();
+  showToast(`${entry.transferNo} sent to the Restaurant.`, 'success');
+  await saveShared(KEY_TRANSFERS, transfers);
+}
+
+/* ═══════════════════════════════════════
+   MODAL / TOAST UTILITIES
+═══════════════════════════════════════ */
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+['detailModal','newModal','actionModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', function(e){ if (e.target===this) closeModal(id); });
+});
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+/* ═══════════════════════════════════════
+   INIT — supports ?open=<transferNo> so links from Production History
+   (jumpToTransfer) land straight on the right record's detail modal.
+═══════════════════════════════════════ */
+async function init(){
+  transfers = await loadShared(KEY_TRANSFERS, DEMO_TRANSFERS);
+  productions = await loadShared(KEY_PRODUCTIONS, []);
+  bindStatusPills();
+  render();
+  const openNo = new URLSearchParams(location.search).get('open');
+  if (openNo && transfers.some(t=>t.transferNo===openNo)) openDetail(openNo);
+}
+init();
+</script>
+</body>
+</html>

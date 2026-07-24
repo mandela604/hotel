@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Aurum Hotel — Guest Profiles</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+  --sidebar-w:256px; --sidebar-col-w:68px; --topbar-h:62px; --radius:14px; --radius-sm:10px;
+  --transition:0.3s cubic-bezier(.4,0,.2,1);
+}
+[data-theme="dark"]{
+  --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+  --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+  --sidebar-bg:#0a1520; --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  --input-bg:#0d1a27; --modal-bg:#0a1520;
+}
+[data-theme="light"]{
+  --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+  --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+  --sidebar-bg:#ffffff; --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --input-bg:#f0f4f9; --modal-bg:#f8fafc;
+}
+html,body{height:100%;overflow-x:hidden;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;transition:background var(--transition),color var(--transition);}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:0;left:0;height:100%;width:var(--sidebar-w);background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:200;transition:width var(--transition),transform var(--transition);overflow:hidden;flex-shrink:0;}
+.sidebar.collapsed{width:var(--sidebar-col-w);}
+@media(max-width:768px){.sidebar{transform:translateX(-100%);width:var(--sidebar-w)!important;box-shadow:var(--shadow-lg);}.sidebar.open{transform:translateX(0);}.sidebar.collapsed{width:var(--sidebar-w)!important;}}
+.sidebar-head{display:flex;align-items:center;justify-content:space-between;padding:22px 18px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.logo-mark{width:36px;height:36px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:#000;flex-shrink:0;}
+.logo-text{margin-left:10px;flex:1;overflow:hidden;}
+.logo-text .name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--gold);white-space:nowrap;line-height:1.2;}
+.logo-text .sub{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-top:1px;white-space:nowrap;}
+.collapse-btn{width:28px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;flex-shrink:0;transition:all .2s;}
+.collapse-btn:hover{background:var(--gold-dim);color:var(--gold);border-color:var(--gold-border);}
+.sidebar.collapsed .logo-text,.sidebar.collapsed .sidebar-section-label,.sidebar.collapsed .nav-text,.sidebar.collapsed .nav-badge,.sidebar.collapsed .theme-label,.sidebar.collapsed .toggle-track{display:none;}
+.sidebar.collapsed .sidebar-head{justify-content:center;padding:22px 0 20px;flex-direction:column;gap:10px;}
+.sidebar.collapsed .nav-item{justify-content:center;padding:12px 0;gap:0;}
+.sidebar.collapsed .sidebar-nav{padding:8px 8px;}
+.sidebar.collapsed .sidebar-footer{padding:12px 8px;}
+.sidebar.collapsed .theme-btn{justify-content:center;padding:10px;}
+.sidebar-section-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:18px 18px 6px;}
+.sidebar-nav{flex:1;overflow-y:auto;padding:4px 10px;}
+.sidebar-nav::-webkit-scrollbar{width:3px;}
+.sidebar-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);color:var(--text2);font-size:13.5px;cursor:pointer;text-decoration:none;border:1px solid transparent;margin-bottom:2px;transition:all .2s;white-space:nowrap;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold-light);font-weight:500;}
+.nav-item.active .nav-icon{color:var(--gold);}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--gold);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;}
+.sidebar-footer{padding:12px 10px;border-top:1px solid var(--border);flex-shrink:0;}
+.theme-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+.theme-btn:hover{background:var(--surface3);color:var(--text);}
+.theme-label{flex:1;text-align:left;}
+.toggle-track{width:34px;height:18px;background:var(--border2);border-radius:20px;position:relative;flex-shrink:0;transition:background .3s;}
+.toggle-track.on{background:var(--gold);}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .3s;}
+.toggle-track.on .toggle-thumb{transform:translateX(16px);}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:199;backdrop-filter:blur(2px);}
+.overlay.show{display:block;}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh;transition:margin-left var(--transition);}
+body.sb-collapsed .main{margin-left:var(--sidebar-col-w);}
+@media(max-width:768px){.main{margin-left:0!important;}}
+.topbar{position:sticky;top:0;z-index:100;height:var(--topbar-h);background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;}
+.hamburger{display:none;background:var(--surface2);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:var(--radius-sm);align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;}
+@media(max-width:768px){.hamburger{display:flex;}}
+.topbar-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.topbar-date{font-size:12px;color:var(--text3);display:none;}
+@media(min-width:640px){.topbar-date{display:block;}}
+.notif-btn{width:36px;height:36px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;position:relative;color:var(--text2);}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--gold);border-radius:50%;border:1.5px solid var(--bg);}
+.avatar{width:36px;height:36px;background:var(--gold-dim);border:2px solid var(--gold-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--gold);cursor:pointer;}
+.api-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.2);}
+.api-badge .dot{width:5px;height:5px;border-radius:50%;background:#fbbf24;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.content{flex:1;padding:24px;min-width:0;overflow-x:hidden;}
+@media(max-width:480px){.content{padding:16px;}}
+
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-weight:500;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:480px){.kpi-grid{grid-template-columns:1fr 1fr;gap:10px;}}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;box-shadow:var(--shadow);animation:fadeUp .4s ease both;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);}
+.kpi-accent{position:absolute;bottom:-10px;right:-10px;font-size:52px;opacity:.07;line-height:1;pointer-events:none;}
+.kpi-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;font-weight:500;}
+.kpi-value{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--text);line-height:1;margin-bottom:6px;}
+@media(max-width:480px){.kpi-value{font-size:22px;}}
+.kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;}
+.kpi-trend.up{color:#4ade80;}.kpi-trend.warn{color:#facc15;}.kpi-trend.info{color:#60a5fa;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;flex-wrap:wrap;gap:8px;}
+.panel-title{font-size:13px;font-weight:600;color:var(--text);}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.toolbar-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0;}
+.search-wrap{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;flex:1;min-width:160px;max-width:280px;}
+.search-wrap:focus-within{border-color:var(--gold-border);}
+.search-wrap input{background:none;border:none;outline:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;width:100%;}
+.search-wrap input::placeholder{color:var(--text3);}
+.filter-sel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;outline:none;}
+
+.btn-primary{background:var(--gold);color:#0a1520;border:none;border-radius:var(--radius-sm);padding:9px 16px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-primary:hover{background:var(--gold-light);transform:translateY(-1px);}
+.btn-outline{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-outline:hover{border-color:var(--gold-border);color:var(--gold);}
+.btn-ghost{background:none;border:none;font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);cursor:pointer;padding:6px 10px;border-radius:var(--radius-sm);transition:all .2s;}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-danger{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:var(--radius-sm);padding:8px 14px;color:#f87171;cursor:pointer;font-family:'Outfit',sans-serif;font-size:12.5px;transition:all .2s;}
+.btn-danger:hover{background:rgba(248,113,113,.18);}
+
+.guest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:16px;}
+.guest-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.guest-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold);}
+.guest-card.new::before{background:#60a5fa;}
+.guest-card.returning::before{background:#4ade80;}
+.guest-card.vip::before{background:linear-gradient(90deg,var(--gold),var(--gold-light));}
+.guest-card:hover{transform:translateY(-2px);border-color:var(--gold-border);box-shadow:0 6px 20px rgba(201,168,76,.1);}
+.gc-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.gc-avatar{width:38px;height:38px;border-radius:50%;background:var(--gold-dim);border:2px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.gc-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gc-phone{font-size:11px;color:var(--text3);}
+.gc-badges{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;letter-spacing:.3px;}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;}
+.badge-vip{background:var(--gold-dim);color:var(--gold-light);}.badge-vip::before{background:var(--gold);}
+.badge-returning{background:rgba(74,222,128,.12);color:#4ade80;}.badge-returning::before{background:#4ade80;}
+.badge-new{background:rgba(96,165,250,.12);color:#60a5fa;}.badge-new::before{background:#60a5fa;}
+.badge-balance{background:rgba(248,113,113,.12);color:#f87171;}.badge-balance::before{background:#f87171;}
+.gc-stats{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:9px;}
+.gc-stats b{color:var(--text);font-weight:600;}
+
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+thead th{text-align:left;padding:9px 14px;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:600;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+tbody td{padding:9px 14px;vertical-align:middle;}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;white-space:nowrap;}
+.chip::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.chip-settled{background:rgba(74,222,128,.12);color:#4ade80;}.chip-settled::before{background:#4ade80;}
+.chip-pending{background:rgba(248,113,113,.12);color:#f87171;}.chip-pending::before{background:#f87171;}
+.chip-restaurant{background:rgba(52,211,153,.12);color:#34d399;}.chip-restaurant::before{background:#34d399;}
+.chip-bar{background:rgba(167,139,250,.12);color:#a78bfa;}.chip-bar::before{background:#a78bfa;}
+.chip-pool{background:rgba(96,165,250,.12);color:#60a5fa;}.chip-pool::before{background:#60a5fa;}
+.chip-other{background:rgba(251,191,36,.12);color:#fbbf24;}.chip-other::before{background:#fbbf24;}
+.chip-checkedin{background:rgba(201,168,76,.15);color:var(--gold-light);}.chip-checkedin::before{background:var(--gold);}
+.chip-checkout{background:rgba(248,113,113,.12);color:#f87171;}.chip-checkout::before{background:#f87171;}
+.chip-reserved{background:rgba(96,165,250,.12);color:#60a5fa;}.chip-reserved::before{background:#60a5fa;}
+
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-wrap:wrap;gap:8px;}
+.pagination.sub{border-top:none;padding:10px 0 0;}
+.page-btns{display:flex;gap:3px;}
+.page-btn{min-width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;padding:0 7px;}
+.page-btn:hover{border-color:var(--gold-border);color:var(--gold);}
+.page-btn.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);font-weight:600;}
+.page-btn:disabled{opacity:.3;cursor:default;pointer-events:none;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);z-index:300;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--modal-bg);border:1px solid var(--border);border-radius:18px;padding:24px;width:min(760px,96vw);box-shadow:0 30px 80px rgba(0,0,0,.6);animation:modalIn .25s cubic-bezier(.4,0,.2,1);margin:auto;}
+.modal-sm{max-width:440px;}
+@keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--text);}
+.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;line-height:1;}
+.modal-close:hover{color:var(--text);}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap;}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+@media(max-width:500px){.form-grid,.form-grid-3{grid-template-columns:1fr;}}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.span2{grid-column:span 2;}
+@media(max-width:500px){.form-group.span2{grid-column:span 1;}}
+.form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:500;}
+.form-input,.form-select,.form-textarea{background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none;transition:border-color .2s;width:100%;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold-border);}
+.form-textarea{resize:vertical;min-height:60px;}
+.checkbox-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);}
+
+/* PROFILE HEADER */
+.profile-hd{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+.profile-avatar{width:56px;height:56px;border-radius:50%;background:var(--gold-dim);border:2px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.profile-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--text);}
+.profile-meta{font-size:11.5px;color:var(--text3);margin-top:2px;}
+.profile-badges{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+@media(max-width:560px){.stat-row{grid-template-columns:1fr 1fr;}}
+.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+.stat-box .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:4px;}
+.stat-box .val{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--text);}
+
+.subtab-row{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border);}
+.subtab{background:none;border:none;padding:9px 4px;margin-right:16px;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;}
+.subtab:hover{color:var(--text2);}
+.subtab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.subtab .count-badge{background:var(--surface3);color:var(--text3);font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;}
+.subtab.active .count-badge{background:var(--gold-dim);color:var(--gold);}
+.subpane{display:none;}
+.subpane.active{display:block;}
+
+.charge-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;}
+.charge-row:last-child{border-bottom:none;}
+
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 16px;font-size:13px;color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,.3);z-index:999;display:flex;align-items:center;gap:8px;animation:toastIn .3s ease;max-width:calc(100vw - 40px);}
+.toast.success{border-left:3px solid #4ade80;}
+.toast.error{border-left:3px solid #f87171;}
+.toast.info{border-left:3px solid #60a5fa;}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.note-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12.5px;color:var(--text2);line-height:1.6;white-space:pre-wrap;min-height:60px;}
+
+.folio-hint{font-size:11.5px;color:var(--text3);}
+.folio-hint b{color:var(--text2);}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px;}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <div class="logo-mark">A</div>
+    <div class="logo-text"><div class="name">Aurum Hotel</div><div class="sub">Management Suite</div></div>
+    <button class="collapse-btn" id="collapseBtn" onclick="toggleCollapse()">◀</button>
+  </div>
+  <div class="sidebar-section-label">Modules</div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">◈</span><span class="nav-text">Overview</span></a>
+    <a class="nav-item" href="booking.html"><span class="nav-icon">🛏</span><span class="nav-text">Booking (Rooms)</span></a>
+    <a class="nav-item active" href="guests.html"><span class="nav-icon">👤</span><span class="nav-text">Guest Profiles</span></a>
+    <a class="nav-item" href="restaurant.html"><span class="nav-icon">🍽</span><span class="nav-text">Restaurant / Bar</span></a>
+    <a class="nav-item" href="pool-bar.html"><span class="nav-icon">🏊</span><span class="nav-text">Pool Bar</span></a>
+    <a class="nav-item" href="staff.html"><span class="nav-icon">👥</span><span class="nav-text">Staff Management</span></a>
+    <a class="nav-item" href="procurement.html"><span class="nav-icon">📦</span><span class="nav-text">Procurement</span><span class="nav-badge">3</span></a>
+    <a class="nav-item" href="accounting.html"><span class="nav-icon">📊</span><span class="nav-text">Accounting</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="theme-btn" onclick="toggleTheme()">
+      <span id="themeIcon">☀️</span><span class="theme-label" id="themeLabel">Light Mode</span>
+      <div class="toggle-track" id="toggleTrack"><div class="toggle-thumb"></div></div>
+    </button>
+  </div>
+</aside>
+
+<div class="main" id="mainWrap">
+  <div class="topbar">
+    <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="topbar-title">Guest Profiles</div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topDate"></div>
+      <div class="api-badge"><span class="dot"></span><span id="apiModeLabel">Demo</span></div>
+      <div class="notif-btn">🔔<div class="notif-dot"></div></div>
+      <div class="avatar">MG</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="section-header">
+      <div class="section-title">Guest Directory &amp; Folios</div>
+      <span class="section-title" style="color:var(--text2);text-transform:none;font-size:12px;letter-spacing:0;">Every charge a guest makes across the hotel, in one place</span>
+    </div>
+
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="panel" style="padding:0;">
+      <div class="panel-head">
+        <div class="panel-title">All Guests</div>
+        <div style="font-size:11.5px;color:var(--text3);" id="guestCount">—</div>
+      </div>
+      <div style="padding:0 16px 4px;">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="search-wrap">
+              <span style="color:var(--text3);font-size:13px;">🔍</span>
+              <input type="text" placeholder="Name, phone, room…" id="gSearch" oninput="gPage=1;renderGuests()">
+            </div>
+            <select class="filter-sel" id="gFilter" onchange="gPage=1;renderGuests()">
+              <option value="">All Guests</option>
+              <option value="vip">VIP</option>
+              <option value="returning">Returning</option>
+              <option value="new">New</option>
+              <option value="balance">Outstanding Balance</option>
+            </select>
+          </div>
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap;">Guests are registered from the <b style="color:var(--text2);">Booking</b> module</span>
+        </div>
+      </div>
+      <div class="guest-grid" id="guestGrid"></div>
+      <div class="pagination">
+        <span id="gPaginLabel">—</span>
+        <div class="page-btns" id="gPageBtns"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GUEST PROFILE MODAL ═══ -->
+<div class="modal-overlay" id="profileModal" onclick="backdrop(event,'profileModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Guest Profile</div>
+      <button class="modal-close" onclick="closeModal('profileModal')">✕</button>
+    </div>
+
+    <div class="profile-hd">
+      <div class="profile-avatar" id="pfAvatar">—</div>
+      <div style="flex:1;min-width:200px;">
+        <div class="profile-name" id="pfName">—</div>
+        <div class="profile-meta" id="pfMeta">—</div>
+        <div class="profile-badges" id="pfBadges"></div>
+      </div>
+      <button class="btn-outline" onclick="toggleVip()" id="pfVipBtn">☆ Mark VIP</button>
+    </div>
+
+    <div class="stat-row" id="pfStats"></div>
+
+    <div class="subtab-row">
+      <button class="subtab active" onclick="switchSub('history',this)">Stay History <span class="count-badge" id="pfHistCount">0</span></button>
+      <button class="subtab" onclick="switchSub('folio',this)">Room Charges / Folio <span class="count-badge" id="pfFolioCount">0</span></button>
+      <button class="subtab" onclick="switchSub('notes',this)">Notes</button>
+    </div>
+
+    <div class="subpane active" id="sub-history">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Room</th><th>Type</th><th>Check-in</th><th>Check-out</th><th>Total (₦)</th><th>Paid (₦)</th><th>Status</th></tr></thead>
+          <tbody id="pfStayBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination sub">
+        <span id="pfStayPaginLabel">—</span>
+        <div class="page-btns" id="pfStayPageBtns"></div>
+      </div>
+    </div>
+
+    <div class="subpane" id="sub-folio">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+        <div class="folio-hint">Charges from <b>Restaurant, Bar &amp; Pool Bar</b> can be billed straight to this guest's room, then settled at checkout.</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-outline" onclick="openAddChargeModal()">＋ Add Charge</button>
+          <button class="btn-primary" onclick="settleAllCharges()">✓ Settle All</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Source</th><th>Description</th><th>Room</th><th>Charged By</th><th>Amount (₦)</th><th>Status</th><th></th></tr></thead>
+          <tbody id="pfChargeBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="subpane" id="sub-notes">
+      <div class="note-box" id="pfNoteView"></div>
+      <div style="margin-top:10px;">
+        <textarea class="form-textarea" id="pfNoteEdit" placeholder="Preferences, allergies, special requests, VIP handling instructions…"></textarea>
+        <div style="margin-top:8px;text-align:right;">
+          <button class="btn-primary" onclick="saveNotes()">✓ Save Notes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('profileModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD CHARGE MODAL ═══ -->
+<div class="modal-overlay" id="addChargeModal" onclick="backdrop(event,'addChargeModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Add Room Charge</div>
+      <button class="modal-close" onclick="closeModal('addChargeModal')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Source</label>
+        <select class="form-select" id="acSource"><option>Restaurant</option><option>Bar</option><option>Pool Bar</option><option>Spa</option><option>Laundry</option><option>Other</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Room</label><input class="form-input" type="text" id="acRoom" placeholder="e.g. 204"></div>
+      <div class="form-group span2"><label class="form-label">Description</label><input class="form-input" type="text" id="acDesc" placeholder="e.g. Dinner for 2, 2x Heineken"></div>
+      <div class="form-group"><label class="form-label">Amount (₦)</label><input class="form-input" type="number" id="acAmount" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="acDate"></div>
+      <div class="form-group span2"><label class="form-label">Charged By</label><input class="form-input" type="text" id="acStaff" placeholder="Staff name"></div>
+      <div class="form-group span2" style="font-size:10.5px;color:var(--text3);line-height:1.5;">Auto-filled from the logged-in staff session in production — defaulted here for demo. This charge is billed to the room and stays <b style="color:#f87171;">Pending</b> (unpaid) until settled at checkout.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('addChargeModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveCharge()">✓ Charge to Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHARGE DETAIL MODAL ═══ -->
+<div class="modal-overlay" id="chargeDetailModal" onclick="backdrop(event,'chargeDetailModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Charge Details</div>
+      <button class="modal-close" onclick="closeModal('chargeDetailModal')">✕</button>
+    </div>
+    <div id="cdBody"></div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('chargeDetailModal')">Close</button>
+      <button class="btn-primary" id="cdSettleBtn" onclick="settleFromDetail()">✓ Mark as Settled</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   DEMO DATA — mirrors bookings + room-charge
+   orders already created in Booking, Restaurant
+   and Pool Bar modules, unified per guest.
+   In production, all four modules would read/write
+   the same guest + folio records via a shared API.
+
+   NOTE: Chief Dangote (g08) has 7 stays on file, specifically
+   to demonstrate the Stay History pagination below. Several
+   guests carry multiple Restaurant/Bar/Pool Bar charges so the
+   Room Charges / Folio flow (Pending → Settle → Settle All)
+   is visible without needing to add anything manually.
+═══════════════════════════════════════ */
+const TODAY = new Date().toISOString().split('T')[0];
+
+const CONFIG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
+const DEMO_SESSION = { name:'Amaka Okafor', role:'Front Desk' };
+
+async function apiCall(method, path, body=null){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(CONFIG.API_KEY) opts.headers['Authorization']=`Bearer ${CONFIG.API_KEY}`;
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(CONFIG.API_BASE+path,opts);
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+async function loadGuestsFromAPI(){
+  if(CONFIG.USE_DEMO) return;
+  try{
+    const d = await apiCall('GET','/api/guests');
+    if(Array.isArray(d) && d.length){ GUESTS = d; renderGuests(); }
+    const lbl=document.getElementById('apiModeLabel'); if(lbl) lbl.textContent='Live';
+  }catch(e){ console.warn('[API] Using demo guest data:', e.message); }
+}
+function apiSave(method, path, body){
+  if(CONFIG.USE_DEMO) return;
+  apiCall(method, path, body).catch(e=>console.warn('[API write]', e.message));
+}
+
+let GUESTS = [
+  { id:'g01', name:'Mr. Adeyemi, Tunde', phone:'+234 803 111 2233', email:'adeyemi.t@gmail.com', idType:'NIN', idNum:'12345678901', vip:false, notes:'',
+    stays:[{room:'101',type:'Standard',checkin:'2026-03-10',checkout:'2026-03-14',total:140000,paid:140000,status:'checkedin'}],
+    charges:[
+      { date:'2026-03-12', source:'Restaurant', desc:'1x Grilled Chicken, 1x Chapman', room:'101', amount:11000, by:'Tunde A.', status:'Pending' },
+    ]},
+  { id:'g02', name:'Mrs. Okafor, Ngozi', phone:'+234 806 222 4455', email:'ngozi.o@yahoo.com', idType:'Passport', idNum:'A12345678', vip:false, notes:'',
+    stays:[{room:'102',type:'Standard',checkin:'2026-03-12',checkout:'2026-03-13',total:35000,paid:35000,status:'checkout'}],
+    charges:[] },
+  { id:'g03', name:'Mr. Bello, Ibrahim', phone:'+234 701 333 6677', email:'', idType:'NIN', idNum:'98765432109', vip:false, notes:'Extra pillow requested.',
+    stays:[{room:'103',type:'Standard',checkin:'2026-03-13',checkout:'2026-03-16',total:94500,paid:50000,status:'reserved'}],
+    charges:[] },
+  { id:'g04', name:'Dr. Eze, Chukwuemeka', phone:'+234 802 444 8899', email:'ceze@hospital.ng', idType:'Passport', idNum:'B87654321', vip:false, notes:'',
+    stays:[{room:'201',type:'Deluxe',checkin:'2026-03-11',checkout:'2026-03-15',total:240000,paid:240000,status:'checkedin'}],
+    charges:[
+      { date:'2026-03-13', source:'Pool Bar', desc:'2x Hennessy VS, 2x Bottled Water', room:'201', amount:9000, by:'Amaka O.', status:'Pending' },
+      { date:'2026-03-14', source:'Restaurant', desc:'1x Pounded Yam & Egusi', room:'201', amount:7000, by:'Tunde A.', status:'Settled' },
+    ]},
+  { id:'g05', name:'Ms. Abubakar, Fatima', phone:'+234 805 555 0011', email:'fatima.a@gmail.com', idType:"Driver's Licence", idNum:'ABJ001234', vip:false, notes:'Honeymoon setup requested.',
+    stays:[{room:'202',type:'Deluxe',checkin:'2026-03-13',checkout:'2026-03-17',total:228000,paid:100000,status:'reserved'}],
+    charges:[
+      { date:'2026-03-13', source:'Pool Bar', desc:'2x Passion Fruit Daiquiri', room:'202', amount:12000, by:'Emeka S.', status:'Pending' },
+    ]},
+  { id:'g06', name:'Mr. Johnson, Segun', phone:'+234 708 666 2233', email:'', idType:'NIN', idNum:'55566677788', vip:false, notes:'',
+    stays:[{room:'203',type:'Deluxe',checkin:'2026-03-09',checkout:'2026-03-13',total:240000,paid:240000,status:'checkout'}],
+    charges:[
+      { date:'2026-03-10', source:'Bar', desc:'3x Heineken (Bottle)', room:'203', amount:4500, by:'Emeka S.', status:'Settled' },
+    ]},
+  { id:'g07', name:'Prof. Williams, Ada', phone:'+234 803 777 4455', email:'ada.williams@uni.edu.ng', idType:'NIN', idNum:'11122233344', vip:true, notes:'Vegetarian meals only. Prefers quiet rooms away from the lift.',
+    stays:[
+      {room:'204',type:'Deluxe',checkin:'2026-03-12',checkout:'2026-03-18',total:306000,paid:200000,status:'checkedin'},
+      {room:'112',type:'Standard',checkin:'2025-11-02',checkout:'2025-11-05',total:105000,paid:105000,status:'checkout'},
+    ],
+    charges:[
+      { date:'2026-03-13', source:'Restaurant', desc:'2x Jollof Rice & Chicken, 1x Chocolate Fondant', room:'204', amount:14725, by:'Amaka O.', status:'Pending' },
+      { date:'2026-03-14', source:'Restaurant', desc:'1x Prawn Cocktail, 1x Espresso', room:'204', amount:8300, by:'Tunde A.', status:'Pending' },
+      { date:'2026-03-15', source:'Pool Bar', desc:'2x Freshly Squeezed OJ', room:'204', amount:4000, by:'Emeka S.', status:'Settled' },
+    ]},
+  { id:'g08', name:'Chief Dangote, Emeka', phone:'+234 801 888 6677', email:'emeka.d@corp.ng', idType:'Passport', idNum:'C11223344', vip:true, notes:'Long-standing VIP guest — always assign Suite 301 if available. Complimentary fruit basket on arrival.',
+    stays:[
+      {room:'301',type:'Suite',checkin:'2026-03-10',checkout:'2026-03-15',total:600000,paid:600000,status:'checkedin'},
+      {room:'301',type:'Suite',checkin:'2025-12-20',checkout:'2025-12-27',total:840000,paid:840000,status:'checkout'},
+      {room:'301',type:'Suite',checkin:'2025-10-14',checkout:'2025-10-16',total:240000,paid:240000,status:'checkout'},
+      {room:'302',type:'Suite',checkin:'2025-08-01',checkout:'2025-08-05',total:480000,paid:480000,status:'checkout'},
+      {room:'301',type:'Suite',checkin:'2025-05-19',checkout:'2025-05-22',total:360000,paid:360000,status:'checkout'},
+      {room:'301',type:'Suite',checkin:'2025-02-10',checkout:'2025-02-13',total:360000,paid:360000,status:'checkout'},
+      {room:'301',type:'Suite',checkin:'2024-11-03',checkout:'2024-11-06',total:330000,paid:330000,status:'checkout'},
+    ],
+    charges:[
+      { date:'2026-03-13', source:'Bar', desc:"1x Moët & Chandon, 2x Martell VSOP (Shot)", room:'301', amount:64000, by:'Emeka S.', status:'Pending' },
+      { date:'2026-03-14', source:'Pool Bar', desc:'1x Moët & Chandon, 2x Pina Colada', room:'301', amount:60300, by:'Amaka O.', status:'Pending' },
+      { date:'2026-03-14', source:'Restaurant', desc:'1x Chef Special (Daily), 1x Asun (Goat Meat)', room:'301', amount:14500, by:'Tunde A.', status:'Pending' },
+      { date:'2025-12-22', source:'Bar', desc:'2x Hennessy VS (Shot)', room:'301', amount:8000, by:'Emeka S.', status:'Settled' },
+    ]},
+];
+
+let gPage = 1;
+const PAGE_SIZE = 8;
+let filteredGuests = [];
+let activeGuestId = null;
+
+let pfStayPage = 1;
+const STAY_PAGE_SIZE = 3;
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function initials(name){ return name.replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Chief)\s*/i,'').split(/[\s,]+/).filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function roomTotal(g){ return g.stays.reduce((s,x)=>s+x.total,0); }
+function roomPaid(g){ return g.stays.reduce((s,x)=>s+x.paid,0); }
+function chargeTotal(g){ return g.charges.reduce((s,c)=>s+c.amount,0); }
+function chargeOutstanding(g){ return g.charges.filter(c=>c.status==='Pending').reduce((s,c)=>s+c.amount,0); }
+function guestOutstanding(g){ return Math.max(0, roomTotal(g)-roomPaid(g)) + chargeOutstanding(g); }
+function guestSpend(g){ return roomTotal(g)+chargeTotal(g); }
+function isReturning(g){ return g.stays.length>1; }
+function currentRoom(g){ const active=g.stays.find(s=>s.status==='checkedin'); return active?active.room:null; }
+const SRC_CHIP = { 'Restaurant':'chip-restaurant','Bar':'chip-bar','Pool Bar':'chip-pool' };
+
+function renderPagination(btnId,labelId,page,total,size,cb,subCls){
+  const totalPages=Math.max(1,Math.ceil(total/size));
+  const from=total===0?0:(page-1)*size+1, to=Math.min(page*size,total);
+  document.getElementById(labelId).textContent = total===0?'No records':`${from}–${to} of ${total}`;
+  const wrap=document.getElementById(btnId); wrap.innerHTML='';
+  const mk=(txt,pg,dis,active)=>{const b=document.createElement('button');b.className='page-btn'+(active?' active':'');b.textContent=txt;b.disabled=dis;b.onclick=()=>cb(pg);return b;};
+  wrap.appendChild(mk('‹',page-1,page===1));
+  let s=Math.max(1,page-2), e=Math.min(totalPages,s+4); s=Math.max(1,e-4);
+  for(let i=s;i<=e;i++) wrap.appendChild(mk(i,i,false,i===page));
+  wrap.appendChild(mk('›',page+1,page>=totalPages));
+}
+
+/* ═══════════════════════════════════════
+   KPIs
+═══════════════════════════════════════ */
+function renderKpis(){
+  const total=GUESTS.length;
+  const vip=GUESTS.filter(g=>g.vip).length;
+  const returning=GUESTS.filter(isReturning).length;
+  const outstandingGuests=GUESTS.filter(g=>guestOutstanding(g)>0);
+  const outstandingSum=outstandingGuests.reduce((s,g)=>s+guestOutstanding(g),0);
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-accent">👤</div>
+      <div class="kpi-label">Total Guests</div><div class="kpi-value">${total}</div>
+      <div class="kpi-trend info">In directory</div></div>
+    <div class="kpi-card"><div class="kpi-accent">⭐</div>
+      <div class="kpi-label">VIP Guests</div><div class="kpi-value">${vip}</div>
+      <div class="kpi-trend up">Priority handling</div></div>
+    <div class="kpi-card"><div class="kpi-accent">🔁</div>
+      <div class="kpi-label">Returning Guests</div><div class="kpi-value">${returning}</div>
+      <div class="kpi-trend up">2+ stays on file</div></div>
+    <div class="kpi-card"><div class="kpi-accent">₦</div>
+      <div class="kpi-label">Outstanding Balances</div><div class="kpi-value" style="font-size:${outstandingSum>=1000000?'20px':'26px'}">${fmtN(outstandingSum)}</div>
+      <div class="kpi-trend ${outstandingGuests.length?'warn':'up'}">${outstandingGuests.length} guest${outstandingGuests.length!==1?'s':''} with a balance</div></div>`;
+}
+
+/* ═══════════════════════════════════════
+   GUEST DIRECTORY
+═══════════════════════════════════════ */
+function renderGuests(){
+  const q=(document.getElementById('gSearch').value||'').toLowerCase();
+  const f=document.getElementById('gFilter').value;
+  filteredGuests = GUESTS.filter(g=>{
+    const mq = !q || g.name.toLowerCase().includes(q) || g.phone.includes(q) || g.stays.some(s=>s.room.includes(q));
+    let mf = true;
+    if(f==='vip') mf = g.vip;
+    else if(f==='returning') mf = isReturning(g);
+    else if(f==='new') mf = !isReturning(g) && !g.vip;
+    else if(f==='balance') mf = guestOutstanding(g) > 0;
+    return mq && mf;
+  });
+  document.getElementById('guestCount').textContent = filteredGuests.length + ' guest' + (filteredGuests.length!==1?'s':'');
+  renderGuestsPage();
+  renderKpis();
+}
+
+function renderGuestsPage(){
+  const total=filteredGuests.length;
+  const start=(gPage-1)*PAGE_SIZE;
+  const page=filteredGuests.slice(start,start+PAGE_SIZE);
+  document.getElementById('guestGrid').innerHTML = page.length===0
+    ? `<div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--text3);">No guests found</div>`
+    : page.map(g=>{
+      const bal=guestOutstanding(g);
+      const cardCls = g.vip ? 'vip' : isReturning(g) ? 'returning' : 'new';
+      const room = currentRoom(g);
+      return `<div class="guest-card ${cardCls}" onclick="openProfile('${g.id}')">
+        <div class="gc-top">
+          <div class="gc-avatar">${initials(g.name)}</div>
+          <div style="min-width:0;">
+            <div class="gc-name">${g.name}</div>
+            <div class="gc-phone">${g.phone}</div>
+          </div>
+        </div>
+        <div class="gc-badges">
+          ${g.vip?'<span class="badge badge-vip">⭐ VIP</span>':''}
+          ${isReturning(g)?'<span class="badge badge-returning">Returning</span>':!g.vip?'<span class="badge badge-new">New</span>':''}
+          ${bal>0?`<span class="badge badge-balance">Owes ${fmtN(bal)}</span>`:''}
+        </div>
+        <div class="gc-stats">
+          <span>${g.stays.length} stay${g.stays.length!==1?'s':''}</span>
+          <span>${room?'Room '+room:'Not in-house'}</span>
+          <span>Spent <b>${fmtN(guestSpend(g))}</b></span>
+        </div>
+      </div>`;
+    }).join('');
+  renderPagination('gPageBtns','gPaginLabel',gPage,total,PAGE_SIZE,p=>{gPage=p;renderGuestsPage();});
+}
+
+/* ═══════════════════════════════════════
+   GUEST PROFILE MODAL
+═══════════════════════════════════════ */
+function openProfile(id){
+  activeGuestId = id;
+  pfStayPage = 1;
+  const g = GUESTS.find(x=>x.id===id); if(!g) return;
+  document.getElementById('pfAvatar').textContent = initials(g.name);
+  document.getElementById('pfName').textContent = g.name;
+  document.getElementById('pfMeta').textContent = `${g.phone}${g.email?' · '+g.email:''} · ${g.idType} ${g.idNum||'—'}`;
+  document.getElementById('pfBadges').innerHTML = `
+    ${g.vip?'<span class="badge badge-vip">⭐ VIP</span>':''}
+    ${isReturning(g)?'<span class="badge badge-returning">Returning Guest</span>':'<span class="badge badge-new">New Guest</span>'}
+    ${guestOutstanding(g)>0?`<span class="badge badge-balance">Balance Due ${fmtN(guestOutstanding(g))}</span>`:''}`;
+  document.getElementById('pfVipBtn').textContent = g.vip ? '★ Remove VIP' : '☆ Mark VIP';
+
+  document.getElementById('pfStats').innerHTML = `
+    <div class="stat-box"><div class="lbl">Room Revenue</div><div class="val">${fmtN(roomTotal(g))}</div></div>
+    <div class="stat-box"><div class="lbl">Extra Charges</div><div class="val">${fmtN(chargeTotal(g))}</div></div>
+    <div class="stat-box"><div class="lbl">Total Paid</div><div class="val" style="color:#4ade80;">${fmtN(roomPaid(g)+chargeTotal(g)-chargeOutstanding(g))}</div></div>
+    <div class="stat-box"><div class="lbl">Balance Due</div><div class="val" style="color:${guestOutstanding(g)>0?'#f87171':'#4ade80'};">${fmtN(guestOutstanding(g))}</div></div>`;
+
+  document.getElementById('pfHistCount').textContent = g.stays.length;
+  document.getElementById('pfFolioCount').textContent = g.charges.length;
+
+  renderStayHistory(g);
+  renderCharges(g);
+  document.getElementById('pfNoteView').textContent = g.notes || 'No notes on file yet.';
+  document.getElementById('pfNoteEdit').value = g.notes || '';
+
+  document.querySelectorAll('.subtab').forEach((b,i)=>b.classList.toggle('active', i===0));
+  document.querySelectorAll('.subpane').forEach((p,i)=>p.classList.toggle('active', i===0));
+
+  document.getElementById('profileModal').classList.add('show');
+}
+
+/* Stay History — newest first, paginated so long-tenured / VIP guests
+   with many visits (e.g. Chief Dangote, 7 stays) stay readable. */
+function renderStayHistory(g){
+  const stays = [...g.stays].sort((a,b)=> new Date(b.checkin) - new Date(a.checkin));
+  const total = stays.length;
+  const start = (pfStayPage-1)*STAY_PAGE_SIZE;
+  const pageRows = stays.slice(start, start+STAY_PAGE_SIZE);
+
+  document.getElementById('pfStayBody').innerHTML = pageRows.length===0
+    ? `<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text3);">No stays on file</td></tr>`
+    : pageRows.map(s=>`<tr>
+        <td style="font-weight:600;">${s.room}</td><td>${s.type}</td>
+        <td>${fmtDate(s.checkin)}</td><td>${fmtDate(s.checkout)}</td>
+        <td style="font-weight:600;">${fmtN(s.total)}</td>
+        <td style="color:#4ade80;">${fmtN(s.paid)}</td>
+        <td><span class="chip chip-${s.status}">${s.status==='checkedin'?'Checked In':s.status==='checkout'?'Checked Out':'Reserved'}</span></td>
+      </tr>`).join('');
+
+  renderPagination('pfStayPageBtns','pfStayPaginLabel',pfStayPage,total,STAY_PAGE_SIZE,p=>{pfStayPage=p;renderStayHistory(g);});
+}
+
+function renderCharges(g){
+  const charges = [...g.charges].sort((a,b)=> new Date(b.date) - new Date(a.date));
+  document.getElementById('pfChargeBody').innerHTML = charges.length===0
+    ? `<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text3);">No charges recorded. Anything this guest orders in the Restaurant, Bar or Pool Bar can be billed here.</td></tr>`
+    : charges.map((c)=>{ const i = g.charges.indexOf(c); return `<tr style="cursor:pointer;" onclick="openChargeDetail(${i})">
+        <td>${fmtDate(c.date)}</td>
+        <td><span class="chip ${SRC_CHIP[c.source]||'chip-other'}">${c.source}</span></td>
+        <td>${c.desc}</td>
+        <td>${c.room||'—'}</td>
+        <td>${c.by||'—'}</td>
+        <td style="font-weight:600;color:var(--gold);">${fmtN(c.amount)}</td>
+        <td><span class="chip ${c.status==='Settled'?'chip-settled':'chip-pending'}">${c.status}</span></td>
+        <td onclick="event.stopPropagation()">${c.status==='Pending'?`<button class="btn-ghost" style="padding:3px 8px;" onclick="settleCharge(${i})">Settle</button>`:''}</td>
+      </tr>`; }).join('');
+}
+
+function openChargeDetail(idx){
+  const g=GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+  const c=g.charges[idx]; if(!c) return;
+  document.getElementById('cdBody').innerHTML = `
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Source</span><span class="chip ${SRC_CHIP[c.source]||'chip-other'}">${c.source}</span></div>
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Room</span><span>${c.room||'—'}</span></div>
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Description</span><span>${c.desc}</span></div>
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Amount</span><span style="font-weight:700;color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:17px;">${fmtN(c.amount)}</span></div>
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Date</span><span>${fmtDate(c.date)}</span></div>
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Charged By</span><span>${c.by||'—'}</span></div>
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Status</span><span class="chip ${c.status==='Settled'?'chip-settled':'chip-pending'}">${c.status}</span></div>`;
+  document.getElementById('cdSettleBtn').style.display = c.status==='Pending' ? 'inline-flex' : 'none';
+  document.getElementById('cdSettleBtn').onclick = () => { settleCharge(idx); closeModal('chargeDetailModal'); };
+  document.getElementById('chargeDetailModal').classList.add('show');
+}
+
+function switchSub(name, btn){
+  document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.subpane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sub-'+name).classList.add('active');
+}
+
+function toggleVip(){
+  const g=GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+  g.vip=!g.vip;
+  apiSave('PATCH', `/api/guests/${g.id}`, {vip:g.vip});
+  openProfile(g.id);
+  renderGuests();
+  showToast(g.vip?`${g.name} marked as VIP`:`VIP status removed for ${g.name}`, 'success');
+}
+
+function settleCharge(idx){
+  const g=GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+  g.charges[idx].status='Settled';
+  apiSave('PATCH', `/api/guests/${g.id}/charges/${idx}`, {status:'Settled'});
+  renderCharges(g); openProfile(g.id); renderGuests();
+  showToast('Charge settled.', 'success');
+}
+function settleAllCharges(){
+  const g=GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+  const n = g.charges.filter(c=>c.status==='Pending').length;
+  if(n===0){ showToast('No pending charges to settle.', 'info'); return; }
+  g.charges.forEach(c=>c.status='Settled');
+  apiSave('PATCH', `/api/guests/${g.id}/charges/settle-all`, {});
+  renderCharges(g); openProfile(g.id); renderGuests();
+  showToast(`${n} charge${n!==1?'s':''} settled.`, 'success');
+}
+
+function saveNotes(){
+  const g=GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+  g.notes = document.getElementById('pfNoteEdit').value.trim();
+  document.getElementById('pfNoteView').textContent = g.notes || 'No notes on file yet.';
+  showToast('Notes saved.', 'success');
+}
+
+/* ═══════════════════════════════════════
+   ADD CHARGE
+═══════════════════════════════════════ */
+function openAddChargeModal(){
+  const g=GUESTS.find(x=>x.id===activeGuestId);
+  document.getElementById('acSource').value='Restaurant';
+  document.getElementById('acRoom').value = g ? (currentRoom(g)||'') : '';
+  document.getElementById('acDesc').value='';
+  document.getElementById('acAmount').value='';
+  document.getElementById('acDate').value = TODAY;
+  document.getElementById('acStaff').value = DEMO_SESSION.name;
+  document.getElementById('addChargeModal').classList.add('show');
+}
+function saveCharge(){
+  const g=GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+  const desc=document.getElementById('acDesc').value.trim();
+  const amount=parseFloat(document.getElementById('acAmount').value)||0;
+  const staff=document.getElementById('acStaff').value.trim() || DEMO_SESSION.name;
+  const room=document.getElementById('acRoom').value.trim();
+  const date=document.getElementById('acDate').value || TODAY;
+  if(!desc||!amount){ showToast('Description and amount are required.', 'error'); return; }
+  const entry = {
+    date, source:document.getElementById('acSource').value,
+    desc, room, amount, by:staff, status:'Pending'
+  };
+  g.charges.unshift(entry);
+  apiSave('POST', `/api/guests/${g.id}/charges`, entry);
+  closeModal('addChargeModal');
+  renderCharges(g); openProfile(g.id); renderGuests();
+  showToast(`${fmtN(amount)} charged to Room ${room||'—'} — pending until settled.`, 'success');
+}
+
+/* ═══════════════════════════════════════
+   MODAL / TOAST UTILITIES
+═══════════════════════════════════════ */
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function backdrop(e,id){ if(e.target===document.getElementById(id)) closeModal(id); }
+function showToast(msg,type='success'){
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.textContent=(type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ')+msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3400);
+}
+
+/* ═══════════════════════════════════════
+   SIDEBAR & THEME
+═══════════════════════════════════════ */
+let collapsed=false;
+function toggleCollapse(){
+  collapsed=!collapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed',collapsed);
+  document.body.classList.toggle('sb-collapsed',collapsed);
+  document.getElementById('collapseBtn').textContent=collapsed?'▶':'◀';
+}
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('show'); document.body.style.overflow='hidden'; }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); document.body.style.overflow=''; }
+
+let isDark=true;
+function toggleTheme(){
+  isDark=!isDark;
+  document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
+  document.getElementById('themeIcon').textContent=isDark?'☀️':'🌙';
+  document.getElementById('themeLabel').textContent=isDark?'Light Mode':'Dark Mode';
+  document.getElementById('toggleTrack').classList.toggle('on',!isDark);
+}
+
+/* INIT */
+document.getElementById('topDate').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+renderGuests();
+loadGuestsFromAPI();
+</script>
+</body>
+</html>

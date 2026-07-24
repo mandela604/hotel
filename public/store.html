@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Store Approval | Grace Hotel HMS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.25);
+    --navy:#0a1520; --green:#4ade80; --green-bg: rgba(74,222,128,0.12);
+    --amber:#fbbf24; --amber-bg: rgba(251,191,36,0.12);
+    --red:#f87171; --red-bg: rgba(248,113,113,0.12);
+    --purple:#a78bfa;
+    --text-dark:#e8f0f8; --text-mid:#a8bece; --text-light:#6a8a9e;
+    --border:#1e3045; --bg:#080f18; --white:#111e2b; --surface2:#162435; --input-bg:#0d1a27;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit','Segoe UI',Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text-dark); font-size:14px; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .sidebar{ width:230px; background:var(--navy); color:#a8bece; display:flex; flex-direction:column; flex-shrink:0; border-right:1px solid var(--border); height:100%; overflow:hidden; z-index:200; transition: transform 0.3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width: 860px){ .sidebar{ position:fixed; top:0; left:0; transform:translateX(-100%); box-shadow:0 16px 48px rgba(0,0,0,0.6); } .sidebar.open{ transform:translateX(0); } }
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:199; }
+  .overlay.show{ display:block; }
+  .brand{ display:flex; align-items:center; gap:10px; padding:20px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .brand-icon{ width:28px; height:28px; background:linear-gradient(135deg, var(--gold), var(--gold-light)); border-radius:8px; display:flex;align-items:center;justify-content:center; font-size:16px; }
+  .brand-name{ font-family:'Cormorant Garamond', serif; font-weight:700; font-size:15px; color:var(--gold); letter-spacing:0.3px; }
+  .nav-section-label{ font-size:10px; color:var(--text-light); letter-spacing:2px; text-transform:uppercase; padding:16px 18px 6px; flex-shrink:0; }
+  .nav{ overflow:hidden; padding-bottom:10px; }
+  .nav-item{ display:flex; align-items:center; gap:10px; padding:10px 18px; font-size:13.5px; color:var(--text-mid); cursor:pointer; text-decoration:none; }
+  .nav-item:hover{ background:var(--surface2); color:var(--text-dark); }
+  .nav-item.active-parent{ background:var(--gold-dim); color:var(--gold-light); font-weight:600; border-left:2px solid var(--gold); }
+  .nav-icon{ width:16px; text-align:center; opacity:0.9; font-size:13px;}
+  .badge{ background:var(--gold); color:#0a1520; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:10px; margin-left:auto; }
+
+  /* Pending requisition picker list (reads shared storage) */
+  .req-list-label{ font-size:10px; color:var(--text-light); letter-spacing:2px; text-transform:uppercase; padding:14px 18px 8px; flex-shrink:0; }
+  .req-list{ flex:1; overflow-y:auto; min-height:0; padding:0 10px 10px; }
+  .req-list-item{ padding:10px 10px; border-radius:8px; cursor:pointer; margin-bottom:4px; }
+  .req-list-item:hover{ background:var(--surface2); }
+  .req-list-item.active{ background:var(--gold-dim); border:1px solid var(--gold-border); }
+  .req-list-item .no{ font-size:12.5px; font-weight:700; color:var(--gold-light); }
+  .req-list-item .meta{ font-size:11px; color:var(--text-light); margin-top:2px; }
+  .req-list-empty{ padding:16px 18px; font-size:12px; color:var(--text-light); }
+
+  .store-box{ margin:12px; padding:12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; flex-shrink:0; }
+  .store-label{ font-size:10px; color:var(--text-light); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+  .store-name{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dark); font-weight:600; }
+
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--bg); border-bottom:1px solid var(--border); flex-shrink:0; gap:12px; flex-wrap:wrap; }
+  .topbar-left{ display:flex; align-items:center; gap:14px; min-width:0; }
+  .hamburger{ display:none; font-size:16px; color:var(--text-mid); cursor:pointer; background:var(--white); border:1px solid var(--border); width:34px; height:34px; border-radius:8px; align-items:center; justify-content:center; flex-shrink:0; }
+  @media (max-width: 860px){ .hamburger{ display:flex; } }
+  .page-title{ font-family:'Cormorant Garamond', serif; font-size:19px; font-weight:700; color:var(--text-dark); }
+  .page-subtitle{ font-size:11.5px; color:var(--text-light); margin-top:2px; }
+  .topbar-right{ display:flex; align-items:center; gap:14px; }
+  .status-block{ text-align:right; }
+  .status-label{ font-size:10px; color:var(--gold); font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+  .status-pill{ display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:12px; padding:5px 11px; border-radius:20px; }
+  .status-pill.pending{ background:var(--amber-bg); color:var(--amber); }
+  .status-pill.partial{ background:var(--amber-bg); color:var(--amber); }
+  .status-pill.full{ background:var(--green-bg); color:var(--green); }
+  .status-pill.rejected{ background:var(--red-bg); color:var(--red); }
+
+  .content{ flex:1; padding:16px 24px 24px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; min-height:0; }
+  .row{ display:flex; gap:14px; align-items:stretch; flex-shrink:0; }
+  @media (max-width: 760px){ .row{ flex-direction:column; } }
+  .card{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+  .card-header{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:12px; }
+  .card-header.green{ color:var(--green); }
+  .details-panel{ flex:1.55; } .delivery-panel{ flex:1; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; row-gap:10px; column-gap:10px; }
+  @media (max-width: 480px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-item .label{ font-size:10.5px; color:var(--text-light); margin-bottom:3px; }
+  .detail-item .value{ font-size:13px; color:var(--text-dark); font-weight:600; }
+  .detail-item .value.link{ color:var(--gold-light); }
+  .delivery-field{ margin-bottom:10px; }
+  .delivery-field .label{ font-size:10.5px; color:var(--text-light); margin-bottom:5px; }
+  .delivery-field .value{ font-size:13px; color:var(--text-dark); font-weight:600; }
+  .delivery-field .value.small{ font-weight:400; color:var(--text-mid); line-height:1.4; font-size:12.5px; }
+  .items-section{ display:flex; gap:14px; align-items:stretch; flex-shrink:0; }
+  @media (max-width: 760px){ .items-section{ flex-direction:column; } }
+  .items-card{ flex:2.5; padding:0; overflow:hidden; display:flex; flex-direction:column; min-width:0; }
+  .items-card .card-header{ padding:16px 18px 0; margin-bottom:10px; flex-shrink:0; }
+  .table-scroll{ overflow-x:auto; overflow-y:auto; max-height:360px; }
+  table{ width:100%; min-width:680px; border-collapse:collapse; }
+  thead th{ text-align:left; font-size:10.5px; color:var(--text-light); font-weight:700; letter-spacing:0.3px; text-transform:uppercase; padding:9px 12px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--surface2); white-space:nowrap; position:sticky; top:0; z-index:2; }
+  thead th.num{ text-align:center; width:36px; } thead th.center{ text-align:center; }
+  tbody td{ padding:9px 12px; font-size:12.5px; border-bottom:1px solid var(--border); color:var(--text-dark); vertical-align:middle; white-space:nowrap; }
+  td.num{ text-align:center; color:var(--text-light); } td.center{ text-align:center; }
+  td.green-text{ color:var(--green); font-weight:600; } td.red-text{ color:var(--red); font-weight:600; }
+  .qty-input{ width:88px; padding:5px 9px; border:1px solid var(--border); background:#0d1a27; border-radius:6px; font-size:12.5px; color:var(--text-dark); display:flex; align-items:center; justify-content:space-between; }
+  .qty-input input{ border:none; outline:none; width:56px; font-size:12.5px; font-family:inherit; color:var(--text-dark); background:transparent; }
+  .stepper{ display:flex; flex-direction:column; color:var(--text-light); font-size:9px; cursor:pointer; line-height:1; gap:2px; }
+  .status-tag{ display:inline-block; padding:3px 11px; border-radius:20px; font-size:10.5px; font-weight:700; letter-spacing:0.3px; }
+  .status-tag.partial{ background:var(--amber-bg); color:var(--amber); }
+  .status-tag.full{ background:var(--green-bg); color:var(--green); }
+  .status-tag.none{ background:var(--red-bg); color:var(--red); }
+  tfoot td{ padding:11px 12px; font-weight:700; font-size:12.5px; color:var(--text-dark); background:var(--surface2); border-top:1px solid var(--border); white-space:nowrap; position:sticky; bottom:0; }
+  .legend{ display:flex; gap:22px; align-items:center; padding:10px 18px; font-size:11.5px; color:var(--text-mid); border-top:1px solid var(--border); flex-wrap:wrap; flex-shrink:0; }
+  .legend .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+  .dot.green{ background:var(--green); } .dot.amber{ background:var(--amber); } .dot.red{ background:var(--red); }
+  .summary-card{ flex:1; padding:16px; overflow-y:auto; min-width:220px; }
+  .summary-header{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:12px; }
+  .summary-item{ display:flex; align-items:center; justify-content:space-between; padding:10px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; }
+  .summary-item .left{ display:flex; align-items:center; gap:10px; }
+  .summary-icon{ width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .summary-icon.blue{ background:var(--gold-dim); color:var(--gold); }
+  .summary-icon.green{ background:var(--green-bg); color:var(--green); }
+  .summary-icon.amber{ background:var(--amber-bg); color:var(--amber); }
+  .summary-icon.purple{ background:rgba(167,139,250,0.15); color:#a78bfa; }
+  .summary-item .label{ font-size:12px; color:var(--text-mid); } .summary-item .val{ font-size:14px; font-weight:700; color:var(--text-dark); }
+  .breakdown-title{ font-size:11.5px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 10px; }
+  .breakdown-row{ display:flex; align-items:center; justify-content:space-between; font-size:12.5px; color:var(--text-mid); padding:6px 0; }
+  .breakdown-row .left{ display:flex; align-items:center; gap:8px; }
+  .total-items-row{ display:flex; justify-content:space-between; padding-top:9px; border-top:1px solid var(--border); margin-top:6px; font-size:12.5px; font-weight:700; color:var(--text-dark); }
+  .bottom-row{ display:flex; gap:14px; align-items:stretch; flex-shrink:0; }
+  @media (max-width: 700px){ .bottom-row{ flex-direction:column; } }
+  @media (max-width: 480px){ .actions{ flex-direction:column; width:100%; } .actions .btn{ width:100%; justify-content:center; } }
+  .note-card{ flex:1; background:rgba(251,191,36,0.06); border:1px solid var(--amber-bg); border-radius:10px; padding:12px 16px; display:flex; gap:12px; }
+  .note-icon{ color:var(--amber); font-size:16px; margin-top:2px; }
+  .note-title{ font-size:11px; font-weight:700; color:var(--amber); text-transform:uppercase; margin-bottom:4px; letter-spacing:0.6px; }
+  .note-text{ font-size:12px; color:var(--text-mid); line-height:1.45; }
+  .actions{ display:flex; gap:10px; align-items:center; }
+  .btn{ padding:11px 20px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; white-space:nowrap; border:none; }
+  .btn-reject{ background:var(--white); border:1px solid var(--border); color:var(--text-dark); }
+  .btn-reject:hover{ border-color:var(--red); color:var(--red); }
+  .btn-approve{ background:var(--gold); border:1px solid var(--gold); color:#0a1520; }
+  .btn-approve:hover{ background:var(--gold-light); }
+  .btn:disabled{ opacity:0.5; cursor:default; }
+  .empty-state{ display:flex; align-items:center; justify-content:center; flex:1; color:var(--text-light); font-size:13px; text-align:center; padding:40px; }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="app">
+
+  <div class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-icon">🏛️</div><div class="brand-name">GRACE HOTEL HMS</div></div>
+    <div class="nav-section-label">STORE MODULE</div>
+    <div class="nav">
+      <a class="nav-item" href="#"><span class="nav-icon">⌂</span> Dashboard</a>
+      <div class="nav-item active-parent"><span class="nav-icon">📋</span> Pending Approval <span class="badge" id="pendingBadge">0</span></div>
+      <a class="nav-item" href="new-request.html"><span class="nav-icon">＋</span> New Request</a>
+    </div>
+    <div class="req-list-label">PENDING REQUISITIONS</div>
+    <div class="req-list" id="reqList"><div class="req-list-empty">Loading…</div></div>
+    <div class="store-box"><div class="store-label">STORE</div><div class="store-name">🏬 Central Store</div></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="hamburger" onclick="openSidebar()">☰</span>
+        <div><div class="page-title" id="pageTitle">Store Approval</div><div class="page-subtitle" id="pageSubtitle">Select a requisition to review</div></div>
+      </div>
+      <div class="topbar-right">
+        <div class="status-block">
+          <div class="status-label">OVERALL STATUS (AUTO)</div>
+          <div class="status-pill pending" id="overallStatus">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+      <div class="empty-state">No requisition selected. Choose one from the list on the left.<br><br>Submit one from <a href="new-request.html" style="color:var(--gold-light)">New Request</a> if the list is empty.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   Reads the same shared storage new-request.html
+   writes to: req-index (list of numbers) and
+   req:<NO> (full requisition object).
+═══════════════════════════════════════════ */
+
+// Storage shim: same fallback as new-request.html — uses window.storage when
+// available (Claude.ai preview), otherwise localStorage. Serve both pages from
+// one local server for the fallback to be shared between them.
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+// Mock stock-on-hand, standing in for the real Stock module.
+const STOCK = {
+  'Rice (Long Grain)':35, 'Palm Oil':4, 'Chicken (Frozen)':20, 'Tomatoes':15, 'Onions':20,
+  'Star Lager':240, 'Heineken':180, 'Hennessy VS':6, 'Bottled Water 1.5L':60, 'Ice Cream Tubs':12,
+  'Bleach 5L':18, 'Floor Cleaner 5L':9, 'Industrial Detergent 10kg':5, 'Glass Cleaner 1L':14,
+  'King Duvet Set':22, 'Pillow Cases (pair)':40, 'Guest Shampoo 250ml':300,
+  'Commercial Dishwasher':1, 'POS Terminal':2, 'Branded Envelopes':8,
+};
+function stockFor(name){ const k = Object.keys(STOCK).find(s => s.toLowerCase() === (name||'').trim().toLowerCase()); return k ? STOCK[k] : 0; }
+
+let allReqs = [];      // full objects, newest first
+let currentNo = null;  // currently open requisition number
+let workingItems = []; // mutable copy of current requisition's items for editing
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+function todayDisplay(){ return new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+
+async function loadAll(){
+  let idx = [];
+  try { const r = await storage.get('req-index', true); idx = r ? JSON.parse(r.value) : []; } catch(e){}
+  const reqs = [];
+  for (const no of idx) {
+    try { const r = await storage.get(`req:${no}`, true); if (r) reqs.push(JSON.parse(r.value)); } catch(e){}
+  }
+  // Only Store-issue mode requests belong on this screen — purchase requests route to Procurement.
+  allReqs = reqs.filter(r => r.mode === 'store_issue');
+  renderList();
+}
+
+function renderList(){
+  const list = document.getElementById('reqList');
+  const pending = allReqs.filter(r => r.status === 'Pending' || r.status === 'Partial');
+  document.getElementById('pendingBadge').textContent = pending.length;
+
+  if (allReqs.length === 0) {
+    list.innerHTML = `<div class="req-list-empty">No Store requisitions yet. Submit one from New Request.</div>`;
+    return;
+  }
+  list.innerHTML = allReqs.map(r => `
+    <div class="req-list-item ${r.no===currentNo?'active':''}" onclick="openReq('${r.no}')">
+      <div class="no">${r.no} ${r.priority==='Urgent'?'🔴':''}</div>
+      <div class="meta">${r.dept} · ${r.items.length} item${r.items.length!==1?'s':''} · ${r.status}</div>
+    </div>`).join('');
+}
+
+function openReq(no){
+  currentNo = no;
+  const req = allReqs.find(r => r.no === no);
+  if (!req) return;
+  workingItems = req.items.map(i => ({ ...i, issuedQty: (i.issuedQty && i.issuedQty > 0) ? i.issuedQty : Math.min(i.qty, stockFor(i.name)) }));
+  renderList();
+  renderDetail(req);
+}
+
+function statusFor(req, issued, requested){
+  if (req.status === 'Rejected') return 'rejected';
+  if (issued <= 0) return 'pending';
+  if (issued >= requested) return 'full';
+  return 'partial';
+}
+
+function renderDetail(req){
+  document.getElementById('pageTitle').textContent = `${req.dept} Requisition – Store Approval`;
+  document.getElementById('pageSubtitle').textContent = `Approve and issue items from Central Store${req.fulfillStore ? ' to ' + req.fulfillStore : ''}`;
+
+  const totalReq = workingItems.reduce((s,i) => s + i.qty, 0);
+  const totalIssued = workingItems.reduce((s,i) => s + (parseFloat(i.issuedQty)||0), 0);
+  const totalBalance = totalReq - totalIssued;
+  const overall = req.status === 'Rejected' ? 'rejected' : (totalIssued <= 0 ? 'pending' : totalIssued >= totalReq ? 'full' : 'partial');
+  const overallLabel = { rejected:'REJECTED', pending:'AWAITING ISSUE', full:'FULLY ISSUED ✓', partial:'PARTIALLY ISSUED ⟳' }[overall];
+  const pill = document.getElementById('overallStatus');
+  pill.className = `status-pill ${overall}`; pill.textContent = overallLabel;
+
+  const rowsHtml = workingItems.map((it, idx) => {
+    const avail = stockFor(it.name);
+    const st = statusFor(req, parseFloat(it.issuedQty)||0, it.qty);
+    const balance = Math.max(0, it.qty - (parseFloat(it.issuedQty)||0));
+    const tagClass = st==='full' ? 'full' : st==='partial' ? 'partial' : 'none';
+    const tagLabel = st==='full' ? 'FULL' : st==='partial' ? 'PARTIAL' : 'NOT ISSUED';
+    return `<tr>
+      <td class="num">${idx+1}</td>
+      <td>${it.name}</td>
+      <td class="center">${it.unit}</td>
+      <td class="center">${it.qty.toFixed(2)}</td>
+      <td class="center ${avail<it.qty?'red-text':'green-text'}">${avail.toFixed(2)}</td>
+      <td class="center"><div class="qty-input"><input type="text" inputmode="decimal" value="${(parseFloat(it.issuedQty)||0).toFixed(2)}" onchange="updateIssued(${idx}, this.value)" ${req.status==='Rejected'?'disabled':''}><span class="stepper"><span onclick="stepIssued(${idx},1)">▲</span><span onclick="stepIssued(${idx},-1)">▼</span></span></div></td>
+      <td class="center ${balance>0?'red-text':''}">${balance.toFixed(2)}</td>
+      <td class="center"><span class="status-tag ${tagClass}">${tagLabel}</span></td>
+      <td class="center">${it.remark ? `<span title="${it.remark}">🗨</span>` : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const fullCount = workingItems.filter(i => (parseFloat(i.issuedQty)||0) >= i.qty).length;
+  const partialCount = workingItems.filter(i => { const iss=parseFloat(i.issuedQty)||0; return iss>0 && iss<i.qty; }).length;
+  const noneCount = workingItems.length - fullCount - partialCount;
+  const totalCost = workingItems.reduce((s,i) => s + (parseFloat(i.issuedQty)||0) * (i.cost||0), 0);
+
+  document.getElementById('content').innerHTML = `
+    <div class="row">
+      <div class="card details-panel">
+        <div class="card-header">📋 REQUISITION DETAILS</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="label">Requisition No.</div><div class="value link">${req.no}</div></div>
+          <div class="detail-item"><div class="label">Requisition Date</div><div class="value">${req.dateRaisedDisplay || fmtDate(req.dateRaised)}</div></div>
+          <div class="detail-item"><div class="label">Requested By</div><div class="value">${req.by}</div></div>
+          <div class="detail-item"><div class="label">Required Date</div><div class="value">${fmtDate(req.needed)}</div></div>
+          <div class="detail-item"><div class="label">Department</div><div class="value">${req.dept}</div></div>
+          <div class="detail-item"><div class="label">Priority</div><div class="value">${req.priority}</div></div>
+          <div class="detail-item"><div class="label">Kitchen/Fulfilling Store</div><div class="value">${req.fulfillStore || '—'}</div></div>
+          <div class="detail-item"></div>
+          <div class="detail-item" style="grid-column:1/-1;"><div class="label">Purpose / Remark</div><div class="value">${req.remark || '—'}</div></div>
+        </div>
+      </div>
+      <div class="card delivery-panel">
+        <div class="card-header green">🚚 DELIVERY / ISSUE DETAILS</div>
+        <div class="delivery-field"><div class="label">Issue / Transfer Date</div><div class="value">${todayDisplay()}</div></div>
+        <div class="delivery-field"><div class="label">Prepared By</div><div class="value">Store Keeper</div></div>
+        <div class="delivery-field"><div class="label">Delivery Note No.</div><div class="value">DN-${req.no.split('-').slice(1).join('-')}</div></div>
+        <div class="delivery-field" style="margin-bottom:0;"><div class="label">Remarks</div><div class="value small">${req.status==='Rejected' ? 'Requisition rejected.' : `Items issued to ${req.fulfillStore || 'requesting department'}.`}</div></div>
+      </div>
+    </div>
+
+    <div class="items-section">
+      <div class="card items-card">
+        <div class="card-header">📦 ITEMS REQUESTED VS ISSUED</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th class="num">#</th><th>Item</th><th class="center">Unit</th><th class="center">Requested<br>Qty</th>
+              <th class="center">Available<br>in Store</th><th class="center">Issued Qty ⓘ<br><span style="font-weight:400;">(Enter Qty)</span></th>
+              <th class="center">Balance Qty<br>(Auto)</th><th class="center">Status<br>(Auto)</th><th class="center">Remarks</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+            <tfoot><tr>
+              <td class="num" style="color:var(--gold);">TOTAL</td><td></td><td class="center"></td>
+              <td class="center">${totalReq.toFixed(2)}</td>
+              <td class="center">${workingItems.reduce((s,i)=>s+stockFor(i.name),0).toFixed(2)}</td>
+              <td class="center">${totalIssued.toFixed(2)}</td>
+              <td class="center">${totalBalance.toFixed(2)}</td>
+              <td class="center"></td><td class="center"></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div class="legend">
+          <div><span class="dot green"></span>FULL: Issued Qty = Requested Qty</div>
+          <div><span class="dot amber"></span>PARTIAL: 0 &lt; Issued Qty &lt; Requested Qty</div>
+          <div><span class="dot red"></span>NOT ISSUED: Issued Qty = 0</div>
+        </div>
+      </div>
+      <div class="card summary-card">
+        <div class="summary-header">🕒 ISSUE SUMMARY (AUTO CALCULATED)</div>
+        <div class="summary-item"><div class="left"><div class="summary-icon blue">📋</div><div class="label">Total Requested Qty</div></div><div class="val">${totalReq.toFixed(2)}</div></div>
+        <div class="summary-item"><div class="left"><div class="summary-icon green">📦</div><div class="label">Total Issued Qty</div></div><div class="val">${totalIssued.toFixed(2)}</div></div>
+        <div class="summary-item"><div class="left"><div class="summary-icon amber">📄</div><div class="label">Total Balance Qty</div></div><div class="val">${totalBalance.toFixed(2)}</div></div>
+        <div class="summary-item"><div class="left"><div class="summary-icon purple">💜</div><div class="label">Total Issue Cost (₦)</div></div><div class="val">${fmtN(totalCost)}</div></div>
+        <div class="breakdown-title">ITEM STATUS BREAKDOWN</div>
+        <div class="breakdown-row"><div class="left"><span class="dot green"></span>Full Items</div><div>${fullCount} (${Math.round(fullCount/workingItems.length*100)}%)</div></div>
+        <div class="breakdown-row"><div class="left"><span class="dot amber"></span>Partial Items</div><div>${partialCount} (${Math.round(partialCount/workingItems.length*100)}%)</div></div>
+        <div class="breakdown-row"><div class="left"><span class="dot red"></span>Not Issued Items</div><div>${noneCount} (${Math.round(noneCount/workingItems.length*100)}%)</div></div>
+        <div class="total-items-row"><div>Total Items</div><div>${workingItems.length}</div></div>
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="note-card">
+        <div class="note-icon">ⓘ</div>
+        <div><div class="note-title">NOTE</div><div class="note-text">Enter the quantity issued for each item based on availability. Status and balance update automatically. Any items left with a Balance Qty above zero can be escalated to Procurement by linking this requisition number on a new Purchase request.</div></div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-reject" onclick="rejectReq()" ${req.status!=='Pending'&&req.status!=='Partial'?'disabled':''}>✕ Reject Requisition</button>
+        <button class="btn btn-approve" onclick="approveReq()" ${req.status==='Rejected'?'disabled':''}>✓ Approve &amp; Issue Items</button>
+      </div>
+    </div>
+  `;
+}
+
+function updateIssued(idx, value){
+  const it = workingItems[idx];
+  let v = parseFloat(value) || 0;
+  v = Math.max(0, Math.min(v, stockFor(it.name)));
+  it.issuedQty = v;
+  const req = allReqs.find(r => r.no === currentNo);
+  renderDetail(req);
+}
+function stepIssued(idx, delta){
+  const it = workingItems[idx];
+  const cur = parseFloat(it.issuedQty) || 0;
+  it.issuedQty = Math.max(0, Math.min(cur + delta, stockFor(it.name)));
+  const req = allReqs.find(r => r.no === currentNo);
+  renderDetail(req);
+}
+
+async function saveCurrent(newStatus){
+  const req = allReqs.find(r => r.no === currentNo);
+  if (!req) return;
+  req.items = workingItems.map(i => ({ ...i, issuedQty: parseFloat(i.issuedQty)||0 }));
+  req.status = newStatus;
+  await storage.set(`req:${req.no}`, JSON.stringify(req), true);
+  await loadAll();
+  openReq(req.no);
+}
+
+function approveReq(){
+  const totalReq = workingItems.reduce((s,i)=>s+i.qty,0);
+  const totalIssued = workingItems.reduce((s,i)=>s+(parseFloat(i.issuedQty)||0),0);
+  const status = totalIssued >= totalReq ? 'Full' : totalIssued > 0 ? 'Partial' : 'Pending';
+  saveCurrent(status);
+}
+function rejectReq(){ saveCurrent('Rejected'); }
+
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('show'); document.body.style.overflow='hidden'; }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); document.body.style.overflow=''; }
+window.addEventListener('resize', () => { if (window.innerWidth > 860) closeSidebar(); });
+
+loadAll();
+</script>
+</body>
+</html>

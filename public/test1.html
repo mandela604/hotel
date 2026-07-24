@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Aurum Hotel — Kitchen</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+  --radius:14px; --radius-sm:10px;
+}
+[data-theme="dark"]{
+  --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+  --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+  --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  --input-bg:#0d1a26; --modal-bg:#0c1824;
+  --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+  --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+  --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+  --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+}
+[data-theme="light"]{
+  --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+  --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+  --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --input-bg:#eef1f6; --modal-bg:#f8fafc;
+  --green:#22c55e; --green-bg:rgba(34,197,94,0.12);
+  --amber:#d97706; --amber-bg:rgba(217,119,6,0.12);
+  --red:#dc2626; --red-bg:rgba(220,38,38,0.12);
+  --blue:#2563eb; --blue-bg:rgba(37,99,235,0.12);
+  --purple:#7c3aed; --purple-bg:rgba(124,58,237,0.12);
+}
+html, body { height: 100%; overflow-x: hidden; }
+body { font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .3s,color .3s; }
+
+.main{ margin-left:256px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+body.aur-sb-collapsed .main{ margin-left:68px; }
+@media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+/* TABS */
+.page-tabs{ display:flex; align-items:center; gap:2px; padding:0 24px; border-bottom:1px solid var(--border); background:var(--bg); flex-shrink:0; overflow-x:auto; }
+.page-tabs::-webkit-scrollbar{ height:0; }
+.tab-btn{ background:none; border:none; padding:14px 16px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; color:var(--text3); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .2s; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.tab-btn:hover{ color:var(--text2); }
+.tab-btn.active{ color:var(--gold); border-bottom-color:var(--gold); }
+.tab-count{ background:var(--gold-dim); color:var(--gold); font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:700; }
+
+.content{ flex:1; padding:24px; min-width:0; }
+@media (max-width:480px){ .content{ padding:16px; } }
+.tab-pane{ display:none; animation:fadeUp .3s ease both; }
+.tab-pane.active{ display:block; }
+@keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.section-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+.section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; }
+.section-link{ font-size:12px; color:var(--gold); font-weight:500; cursor:pointer; background:none; border:none; font-family:'Outfit',sans-serif; }
+.section-link:hover{ color:var(--gold-light); }
+
+/* KPI */
+.kpi-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
+@media (max-width:1200px){ .kpi-grid{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:640px){ .kpi-grid{ grid-template-columns:1fr 1fr; gap:10px; } }
+.kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; position:relative; overflow:hidden; box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; display:block; text-decoration:none; }
+.kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+.kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:52px; opacity:.07; line-height:1; pointer-events:none; }
+.kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+.kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+.kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; }
+.kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+
+/* PANEL */
+.panel{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:14px; overflow:hidden; }
+.panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+.panel-title{ font-size:13px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
+.panel-action{ font-size:12px; color:var(--gold); font-weight:500; cursor:pointer; background:none; border:none; font-family:'Outfit',sans-serif; }
+.panel-action:hover{ color:var(--gold-light); }
+.panel-body{ padding:16px 20px; }
+.two-col{ display:grid; grid-template-columns:1.3fr .7fr; gap:14px; margin-bottom:14px; }
+@media (max-width:900px){ .two-col{ grid-template-columns:1fr; } }
+
+/* TABLE */
+.tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:600px; }
+thead th{ text-align:left; padding:9px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+tbody tr:last-child{ border-bottom:none; }
+tbody tr:hover{ background:var(--surface2); }
+tbody td{ padding:10px 14px; color:var(--text); vertical-align:middle; }
+
+/* CHIPS */
+.chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+.chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.chip-draft{ background:var(--surface3); color:var(--text3); } .chip-draft::before{ background:var(--text3); }
+.chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
+.chip-accepted{ background:var(--green-bg); color:var(--green); } .chip-accepted::before{ background:var(--green); }
+.chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
+.chip-completed{ background:var(--purple-bg); color:var(--purple); } .chip-completed::before{ background:var(--purple); }
+.chip-rts{ background:var(--blue-bg); color:var(--blue); } .chip-rts::before{ background:var(--blue); }
+.chip-coo{ background:var(--amber-bg); color:var(--amber); } .chip-coo::before{ background:var(--amber); }
+
+/* BUTTONS */
+.btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:var(--radius-sm); font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+.btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+.btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+.btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+.btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+.btn-danger{ background:var(--red-bg); border-color:rgba(248,113,113,0.35); color:var(--red); }
+.btn-danger:hover{ background:rgba(248,113,113,0.22); }
+.btn-sm{ padding:5px 10px; font-size:11.5px; }
+.act-btn{ background:none; border:1px solid var(--border); border-radius:6px; padding:3px 9px; font-size:10.5px; font-weight:500; color:var(--text3); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+.act-btn:hover{ border-color:var(--gold); color:var(--gold); }
+.act-btn.reject:hover{ border-color:var(--red); color:var(--red); }
+
+/* TOOLBAR */
+.toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+.search-box{ display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 12px; transition:border-color .2s; }
+.search-box:focus-within{ border-color:var(--gold); }
+.search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; width:160px; min-width:0; }
+.filter-select{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12px; cursor:pointer; outline:none; }
+
+/* FORM */
+.form-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; }
+@media (max-width:780px){ .form-row{ grid-template-columns:1fr 1fr; } }
+@media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
+.form-group{ display:flex; flex-direction:column; gap:5px; }
+.form-group.span2{ grid-column:span 2; }
+.form-group.span3{ grid-column:span 3; }
+@media (max-width:780px){ .form-group.span3{ grid-column:span 2; } }
+@media (max-width:480px){ .form-group.span2,.form-group.span3{ grid-column:span 1; } }
+.form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:500; }
+.form-input,.form-select,.form-textarea{ background:var(--input-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+.form-input:focus,.form-select:focus,.form-textarea:focus{ border-color:var(--gold); }
+.form-input[readonly]{ opacity:.6; cursor:default; }
+.form-textarea{ resize:vertical; min-height:60px; }
+.form-section-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
+
+.mode-row{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:4px; }
+.mode-card{ flex:1; min-width:220px; display:flex; align-items:center; gap:12px; padding:16px 18px; background:var(--input-bg); border:1.5px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; transition:all .18s; }
+.mode-card:hover{ border-color:var(--gold-border); }
+.mode-card.on{ background:var(--gold-dim); border-color:var(--gold); box-shadow:0 4px 16px rgba(201,168,76,.12); }
+.mode-icon{ width:38px; height:38px; border-radius:10px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.mode-card.on .mode-icon{ background:rgba(201,168,76,.2); }
+.mode-title{ font-size:14px; font-weight:700; color:var(--text); }
+.mode-sub{ font-size:11.5px; color:var(--text3); margin-top:2px; line-height:1.4; }
+.mode-card.on .mode-sub{ color:var(--text2); }
+
+/* RECIPE / DEDUCTION PREVIEW */
+.recipe-box{ background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; margin-top:4px; }
+.recipe-box-title{ font-size:10.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--gold); font-weight:600; margin-bottom:10px; }
+.ing-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+.ing-row:last-child{ border-bottom:none; }
+.ing-name{ color:var(--text2); }
+.ing-qty{ color:var(--text); font-weight:600; }
+.ing-qty.low{ color:var(--red); }
+.ing-avail{ font-size:10.5px; color:var(--text3); margin-left:8px; }
+
+/* STOCK GRID (kitchen inventory) */
+.stock-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+@media (max-width:480px){ .stock-grid{ grid-template-columns:1fr 1fr; } }
+.stock-card{ background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px; position:relative; overflow:hidden; }
+.stock-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+.stock-card.ok::before{ background:var(--green); }
+.stock-card.low::before{ background:var(--amber); }
+.stock-card.out::before{ background:var(--red); }
+.sk-name{ font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:5px; }
+.sk-qty{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:700; }
+.sk-unit{ font-size:9.5px; color:var(--text3); margin-top:1px; }
+.sk-min{ font-size:10px; color:var(--text3); margin-top:6px; }
+
+/* PAGINATION */
+.pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+.page-btns{ display:flex; gap:3px; }
+.page-btn{ min-width:28px; height:26px; border-radius:6px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 6px; }
+.page-btn:hover{ border-color:var(--gold); color:var(--gold); }
+.page-btn.active{ background:var(--gold-dim); border-color:var(--gold); color:var(--gold); font-weight:600; }
+.page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+/* LIST ROWS (dashboard) */
+.list-row{ display:flex; align-items:center; gap:10px; padding:9px 20px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+.list-row:last-child{ border-bottom:none; }
+.list-row:hover{ background:var(--surface2); }
+.list-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.list-body{ flex:1; min-width:0; }
+.list-name{ font-size:12.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.list-meta{ font-size:11px; color:var(--text3); margin-top:1px; }
+.empty-note{ font-size:12.5px; color:var(--text3); padding:16px 20px; text-align:center; }
+
+/* Quick actions */
+.quick-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media (max-width:560px){ .quick-grid{ grid-template-columns:1fr 1fr; } }
+.quick-btn{ background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; color:var(--text2); transition:all .2s; }
+.quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); }
+.quick-icon{ font-size:18px; flex-shrink:0; }
+
+/* TOAST */
+.toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:var(--shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:340px; }
+.toast.success{ border-left:3px solid var(--green); }
+.toast.error{ border-left:3px solid var(--red); }
+.toast.info{ border-left:3px solid var(--blue); }
+@keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ═══ MODAL ═══ */
+.modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+.modal-overlay.show{ display:flex; }
+.modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 30px 80px rgba(0,0,0,0.6); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
+@keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+.modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.modal-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:10px; }
+.modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+.modal-close:hover{ color:var(--text); }
+.modal-footer{ display:flex; gap:10px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+.detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; margin-bottom:14px; }
+@media (max-width:480px){ .detail-grid{ grid-template-columns:1fr; } }
+.detail-item{ display:flex; flex-direction:column; gap:3px; }
+.detail-item.span2{ grid-column:span 2; }
+@media (max-width:480px){ .detail-item.span2{ grid-column:span 1; } }
+.detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; }
+.detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
+.detail-value.muted{ color:var(--text3); font-weight:400; font-style:italic; }
+.detail-flow{ display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 16px; margin-bottom:14px; }
+.flow-node{ flex:1; text-align:center; }
+.flow-node-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); margin-bottom:3px; }
+.flow-node-value{ font-size:13px; font-weight:700; color:var(--gold-light); }
+.flow-arrow{ color:var(--text3); font-size:16px; }
+.modal-sub-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin:16px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
+.link-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; }
+.link-chip:hover{ background:rgba(201,168,76,0.22); }
+
+@media print{
+  .aur-sidebar,.aur-topbar,.page-tabs,.toolbar,.pagination,.no-print{ display:none !important; }
+  .main{ margin-left:0 !important; }
+  body{ background:#fff !important; color:#000 !important; }
+  .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+}
+::-webkit-scrollbar{ width:5px; height:4px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:5px; }
+</style>
+</head>
+<body>
+
+<div id="sidebarSlot"></div>
+
+<div class="main" id="mainWrap">
+  <div id="topbarSlot"></div>
+
+  <div class="page-tabs">
+    <button class="tab-btn active" onclick="switchTab('dash',this)">◈ Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('new',this)">＋ Production Form</button>
+    <button class="tab-btn" onclick="switchTab('history',this)">📋 Production History <span class="tab-count" id="tcProd">—</span></button>
+    <button class="tab-btn" onclick="switchTab('transfers',this)">🚚 Transfer History <span class="tab-count" id="tcXfer">—</span></button>
+    <button class="tab-btn" onclick="switchTab('inventory',this)">📦 Kitchen Inventory <span class="tab-count" id="tcLow">—</span></button>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="tab-pane active" id="tab-dash">
+      <div class="section-header">
+        <div class="section-title">Kitchen Overview</div>
+        <span class="section-link" id="dashDate"></span>
+      </div>
+      <div class="kpi-grid" id="dashKpi"></div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Recent Productions</div>
+            <button class="panel-action" onclick="switchTab('history',document.querySelectorAll('.tab-btn')[2])">View All →</button>
+          </div>
+          <div id="dashRecentProd"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Low Stock Alerts</div>
+            <button class="panel-action" onclick="switchTab('inventory',document.querySelectorAll('.tab-btn')[4])">Open Inventory →</button>
+          </div>
+          <div id="dashLowStock"></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Pending Transfers</div>
+            <button class="panel-action" onclick="switchTab('transfers',document.querySelectorAll('.tab-btn')[3])">View All →</button>
+          </div>
+          <div id="dashPendingXfer"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
+          <div class="panel-body">
+            <div class="quick-grid">
+              <button class="quick-btn" onclick="switchTab('new',document.querySelectorAll('.tab-btn')[1])"><span class="quick-icon">＋</span>New Production</button>
+              <button class="quick-btn" onclick="switchTab('history',document.querySelectorAll('.tab-btn')[2])"><span class="quick-icon">📋</span>Production History</button>
+              <button class="quick-btn" onclick="switchTab('inventory',document.querySelectorAll('.tab-btn')[4])"><span class="quick-icon">📦</span>Kitchen Inventory</button>
+              <button class="quick-btn" onclick="switchTab('transfers',document.querySelectorAll('.tab-btn')[3])"><span class="quick-icon">🚚</span>Transfer History</button>
+              <button class="quick-btn" onclick="window.print()"><span class="quick-icon">🖨</span>Print Report</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCTION FORM ═══ -->
+    <div class="tab-pane" id="tab-new">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">📋 Production Form — one form for everything</div></div>
+        <div class="panel-body">
+
+          <div class="form-section-title">Production Details</div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Production Date</label><input class="form-input" id="pDate" readonly></div>
+            <div class="form-group span2"><label class="form-label">Meal</label>
+              <select class="form-select" id="pMeal" onchange="onMealChange()"></select>
+            </div>
+            <div class="form-group"><label class="form-label">Quantity</label>
+              <div style="display:flex;gap:6px;">
+                <input class="form-input" type="number" id="pQty" value="10" min="1" oninput="renderDeductionPreview()">
+                <select class="form-select" id="pUnit" style="max-width:110px;"><option>Plates</option><option>Portions</option><option>Trays</option></select>
+              </div>
+            </div>
+            <div class="form-group"><label class="form-label">Prepared By</label><input class="form-input" id="pBy" placeholder="Chef name"></div>
+          </div>
+
+          <div class="form-section-title" style="margin-top:6px;">Destination — Ready-to-Serve or Cook-on-Order</div>
+          <div class="mode-row">
+            <div class="mode-card on" id="modeRTS" onclick="setMode('rts')">
+              <div class="mode-icon">🚚</div>
+              <div><div class="mode-title">Ready-to-Serve</div><div class="mode-sub">Finished meals transfer to Restaurant stock — sold via POS once accepted.</div></div>
+            </div>
+            <div class="mode-card" id="modeCOO" onclick="setMode('coo')">
+              <div class="mode-icon">🍽</div>
+              <div><div class="mode-title">Cook-on-Order</div><div class="mode-sub">Linked directly to a customer order — no restaurant stock involved, goes straight to the guest.</div></div>
+            </div>
+          </div>
+
+          <div class="form-row" id="linkedOrderWrap" style="display:none;margin-top:4px;">
+            <div class="form-group span2"><label class="form-label">Linked Order</label>
+              <select class="form-select" id="pLinkedOrder"></select>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:4px;">
+            <div class="form-group span3"><label class="form-label">Remarks</label><textarea class="form-textarea" id="pRemarks" placeholder="e.g. Lunch preparation"></textarea></div>
+          </div>
+
+          <div class="form-section-title" style="margin-top:6px;">📉 Inventory Deduction Preview — auto-calculated from recipe</div>
+          <div class="recipe-box" id="deductionPreview"></div>
+
+          <div class="toolbar" style="margin-top:16px;margin-bottom:0;">
+            <div class="toolbar-left" style="font-size:12px;color:var(--text3);">This will be recorded as <b id="previewProdNo" style="color:var(--gold-light);">PROD-00097</b></div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn btn-outline btn-sm" onclick="saveProduction(true)">💾 Save Draft</button>
+              <button class="btn btn-primary btn-sm" onclick="saveProduction(false)">✓ Save Production</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCTION HISTORY ═══ -->
+    <div class="tab-pane" id="tab-history">
+      <div class="toolbar no-print">
+        <div class="toolbar-left">
+          <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" placeholder="Production #, meal…" id="prodSearch" oninput="prodPage=1;filterProd()"></div>
+          <select class="filter-select" id="prodStatus" onchange="prodPage=1;filterProd()">
+            <option value="">All Statuses</option><option value="draft">Draft</option><option value="sent">Sent</option>
+            <option value="accepted">Accepted</option><option value="rejected">Rejected</option><option value="completed">Completed</option>
+          </select>
+          <select class="filter-select" id="prodType" onchange="prodPage=1;filterProd()">
+            <option value="">All Types</option><option value="rts">Ready-to-Serve</option><option value="coo">Cook-on-Order</option>
+          </select>
+        </div>
+        <div><button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">All Productions</div><span style="font-size:11px;color:var(--text3);" id="prodCount">—</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>No.</th><th>Meal</th><th>Qty</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody id="prodBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="prodPaginLabel">—</span><div class="page-btns" id="prodPageBtns"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ TRANSFER HISTORY ═══ -->
+    <div class="tab-pane" id="tab-transfers">
+      <div class="toolbar no-print">
+        <div class="toolbar-left">
+          <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" placeholder="Transfer #…" id="xferSearch" oninput="xferPage=1;filterXfer()"></div>
+          <select class="filter-select" id="xferStatus" onchange="xferPage=1;filterXfer()">
+            <option value="">All Statuses</option><option value="sent">Sent</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div><button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Kitchen → Restaurant Transfers</div><span style="font-size:11px;color:var(--text3);" id="xferCount">—</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Transfer No.</th><th>Meal</th><th>Date Sent</th><th>Items</th><th>Status</th><th class="no-print">Actions</th></tr></thead>
+            <tbody id="xferBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="xferPaginLabel">—</span><div class="page-btns" id="xferPageBtns"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ KITCHEN INVENTORY ═══ -->
+    <div class="tab-pane" id="tab-inventory">
+      <div class="toolbar no-print">
+        <div class="toolbar-left">
+          <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" placeholder="Ingredient…" id="stockSearch" oninput="renderStock()"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Kitchen Inventory — On Hand</div><span style="font-size:11px;color:var(--text3);" id="stockCount">—</span></div>
+        <div class="panel-body">
+          <div class="stock-grid" id="stockGrid"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Recent Inventory Movements</div></div>
+        <div id="movementList"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ══ PRODUCTION DETAILS MODAL ══ -->
+<div class="modal-overlay" id="productionModal" onclick="handleModalBackdrop(event,'productionModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🍲 <span id="pmTitle">Production Details</span></div>
+      <button class="modal-close" onclick="closeModal('productionModal')">✕</button>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item"><span class="detail-label">Production No.</span><span class="detail-value" id="pmNo">—</span></div>
+      <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value" id="pmStatus">—</span></div>
+      <div class="detail-item"><span class="detail-label">Meal</span><span class="detail-value" id="pmMeal">—</span></div>
+      <div class="detail-item"><span class="detail-label">Quantity</span><span class="detail-value" id="pmQty">—</span></div>
+      <div class="detail-item"><span class="detail-label">Destination Type</span><span class="detail-value" id="pmType">—</span></div>
+      <div class="detail-item"><span class="detail-label">Prepared By</span><span class="detail-value" id="pmBy">—</span></div>
+      <div class="detail-item"><span class="detail-label">Time</span><span class="detail-value" id="pmTime">—</span></div>
+      <div class="detail-item"><span class="detail-label">Linked Order</span><span class="detail-value" id="pmLinkedOrder">—</span></div>
+      <div class="detail-item span2"><span class="detail-label">Remarks</span><span class="detail-value" id="pmRemarks">—</span></div>
+    </div>
+
+    <div class="modal-sub-title">Recipe Used — Ingredients Deducted</div>
+    <div class="recipe-box" id="pmDeductions" style="margin-top:0;"></div>
+
+    <div id="pmTransferWrap" style="margin-top:14px;display:none;">
+      <div class="modal-sub-title" style="margin-top:0;">Linked Transfer</div>
+      <span class="link-chip" id="pmTransferLink" onclick="jumpToTransfer()">🚚 View Transfer →</span>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('productionModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRANSFER DETAILS MODAL ══ -->
+<div class="modal-overlay" id="transferModal" onclick="handleModalBackdrop(event,'transferModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🚚 <span id="tmTitle">Transfer Details</span></div>
+      <button class="modal-close" onclick="closeModal('transferModal')">✕</button>
+    </div>
+
+    <div class="detail-flow">
+      <div class="flow-node"><div class="flow-node-label">Kitchen</div><div class="flow-node-value" id="tmKitchen">—</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node"><div class="flow-node-label">Restaurant</div><div class="flow-node-value" id="tmRestaurant">—</div></div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item"><span class="detail-label">Transfer No.</span><span class="detail-value" id="tmNo">—</span></div>
+      <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value" id="tmStatus">—</span></div>
+      <div class="detail-item"><span class="detail-label">Meal</span><span class="detail-value" id="tmMeal">—</span></div>
+      <div class="detail-item"><span class="detail-label">Quantity</span><span class="detail-value" id="tmQty">—</span></div>
+      <div class="detail-item"><span class="detail-label">Production No.</span><span class="detail-value link-chip" id="tmProdLink" onclick="jumpToProduction()">—</span></div>
+      <div class="detail-item"><span class="detail-label">Sent By</span><span class="detail-value" id="tmSentBy">—</span></div>
+      <div class="detail-item"><span class="detail-label">Received By</span><span class="detail-value" id="tmReceivedBy">—</span></div>
+      <div class="detail-item"><span class="detail-label">Date Sent</span><span class="detail-value" id="tmDateSent">—</span></div>
+      <div class="detail-item"><span class="detail-label">Date Received</span><span class="detail-value" id="tmDateReceived">—</span></div>
+      <div class="detail-item span2"><span class="detail-label">Remarks</span><span class="detail-value" id="tmRemarks">—</span></div>
+    </div>
+
+    <div id="tmNote" style="font-size:11.5px;color:var(--text3);margin-bottom:6px;line-height:1.5;"></div>
+
+    <div class="modal-footer" id="tmActions">
+      <button class="btn btn-outline" onclick="closeModal('transferModal')">Close</button>
+      <button class="btn btn-danger" id="tmRejectBtn" onclick="rejectTransfer(currentTransferNo)">✕ Reject</button>
+      <button class="btn btn-primary" id="tmAcceptBtn" onclick="acceptTransfer(currentTransferNo)">✓ Accept</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   RECIPES — meal name -> ingredient qty per 1 unit produced
+   (matches the diagram's Fried Rice example)
+═══════════════════════════════════════ */
+const RECIPES = {
+  'Fried Rice': {
+    'Rice': 0.10,
+    'Oil': 0.01,
+    'Curry': 0.02,
+    'Green Peas': 0.015,
+    'Chicken': 0.05,
+    'Seasoning': 0.003
+  },
+  'Jollof Rice': {
+    'Rice': 0.10,
+    'Oil': 0.012,
+    'Tomato': 0.03,
+    'Pepper': 0.015,
+    'Chicken': 0.05,
+    'Seasoning': 0.003
+  },
+  'Egusi Soup': {
+    'Egusi': 0.06,
+    'Palm Oil': 0.02,
+    'Spinach': 0.04,
+    'Chicken': 0.04,
+    'Seasoning': 0.003
+  },
+  'Pepper Soup': {
+    'Chicken': 0.08,
+    'Pepper': 0.02,
+    'Seasoning': 0.004,
+    'Scent Leaf': 0.01
+  },
+  'Moi Moi': {
+    'Beans Flour': 0.08,
+    'Oil': 0.01,
+    'Egg': 0.05,
+    'Seasoning': 0.002
+  }
+};
+
+/* Kitchen & Restaurant location labels used on transfer records */
+const KITCHEN_NAME = 'Main Kitchen';
+const RESTAURANT_NAME = 'Main Restaurant / POS';
+
+/* Kitchen inventory — on-hand ingredient stock (demo) */
+let KITCHEN_STOCK = [
+  { name:'Rice',        qty:112, unit:'kg', min:30 },
+  { name:'Oil',         qty:18,  unit:'Ltr',min:10 },
+  { name:'Curry',       qty:4,   unit:'kg', min:3 },
+  { name:'Green Peas',  qty:9,   unit:'kg', min:5 },
+  { name:'Chicken',     qty:38,  unit:'kg', min:15 },
+  { name:'Seasoning',   qty:6,   unit:'kg', min:2 },
+  { name:'Tomato',      qty:22,  unit:'kg', min:10 },
+  { name:'Pepper',      qty:5,   unit:'kg', min:4 },
+  { name:'Egusi',       qty:14,  unit:'kg', min:6 },
+  { name:'Palm Oil',    qty:3,   unit:'Ltr',min:5 },
+  { name:'Spinach',     qty:8,   unit:'kg', min:4 },
+  { name:'Scent-Leaf',  qty:2,   unit:'kg', min:2 },
+  { name:'Beans Flour', qty:12,  unit:'kg', min:6 },
+  { name:'Egg',         qty:60,  unit:'pcs',min:24 },
+];
+function stockFor(name){ return KITCHEN_STOCK.find(s => s.name === name); }
+function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.min ? 'low' : 'ok'); }
+
+/* Open guest orders available to link Cook-on-Order productions to (demo) */
+const OPEN_ORDERS = [
+  { id:'ORD-1057', label:'ORD-1057 — Table 4, 2 covers' },
+  { id:'ORD-1058', label:'ORD-1058 — Table 9, 1 cover' },
+  { id:'ORD-1059', label:'ORD-1059 — Room Service, Rm 204' },
+];
+
+/* ═══════════════════════════════════════
+   DEMO DATA — productions carry a `deductions` list (ingredients used)
+   and, when Ready-to-Serve, a `transferNo` linking to the transfer record.
+═══════════════════════════════════════ */
+let productions = [
+  { no:'PROD-00096', meal:'Fried Rice',   qty:30, unit:'Plates',  type:'rts', status:'sent',      time:'10:30 AM', by:'Head Chef',  remarks:'Lunch preparation', linkedOrder:'',
+    deductions:[ {ing:'Rice',qty:3.00,unit:'kg'}, {ing:'Oil',qty:0.30,unit:'Ltr'}, {ing:'Curry',qty:0.60,unit:'kg'}, {ing:'Green Peas',qty:0.45,unit:'kg'}, {ing:'Chicken',qty:1.50,unit:'kg'}, {ing:'Seasoning',qty:0.09,unit:'kg'} ],
+    transferNo:'KTN-00045' },
+  { no:'PROD-00095', meal:'Jollof Rice',  qty:20, unit:'Plates',  type:'rts', status:'accepted',  time:'10:15 AM', by:'Head Chef',  remarks:'', linkedOrder:'',
+    deductions:[ {ing:'Rice',qty:2.00,unit:'kg'}, {ing:'Oil',qty:0.24,unit:'Ltr'}, {ing:'Tomato',qty:0.60,unit:'kg'}, {ing:'Pepper',qty:0.30,unit:'kg'}, {ing:'Chicken',qty:1.00,unit:'kg'}, {ing:'Seasoning',qty:0.06,unit:'kg'} ],
+    transferNo:'KTN-00044' },
+  { no:'PROD-00094', meal:'Egusi Soup',   qty:15, unit:'Portions',type:'rts', status:'accepted',  time:'10:00 AM', by:'Sous Chef',  remarks:'', linkedOrder:'',
+    deductions:[ {ing:'Egusi',qty:0.90,unit:'kg'}, {ing:'Palm Oil',qty:0.30,unit:'Ltr'}, {ing:'Spinach',qty:0.60,unit:'kg'}, {ing:'Chicken',qty:0.60,unit:'kg'}, {ing:'Seasoning',qty:0.045,unit:'kg'} ],
+    transferNo:'KTN-00043' },
+  { no:'PROD-00093', meal:'Pepper Soup',  qty:2,  unit:'Portions',type:'coo', status:'completed', time:'09:45 AM', by:'Head Chef',  remarks:'', linkedOrder:'ORD-1053',
+    deductions:[ {ing:'Chicken',qty:0.16,unit:'kg'}, {ing:'Pepper',qty:0.04,unit:'kg'}, {ing:'Seasoning',qty:0.008,unit:'kg'}, {ing:'Scent-Leaf',qty:0.02,unit:'kg'} ],
+    transferNo:'' },
+  { no:'PROD-00092', meal:'Moi Moi',      qty:25, unit:'Pieces',  type:'rts', status:'rejected',  time:'09:30 AM', by:'Sous Chef',  remarks:'', linkedOrder:'',
+    deductions:[ {ing:'Beans Flour',qty:2.00,unit:'kg'}, {ing:'Oil',qty:0.25,unit:'Ltr'}, {ing:'Egg',qty:1.25,unit:'pcs'}, {ing:'Seasoning',qty:0.05,unit:'kg'} ],
+    transferNo:'KTN-00042' },
+];
+
+/* Transfers now carry full Kitchen→Restaurant handoff details */
+let transfers = [
+  { transferNo:'KTN-00045', productionNo:'PROD-00096', meal:'Fried Rice', quantity:30, unit:'Plates',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Head Chef', receivedBy:'',
+    dateSent:'17/07/26 10:30 AM', dateReceived:'', status:'sent', remarks:'Lunch preparation' },
+  { transferNo:'KTN-00044', productionNo:'PROD-00095', meal:'Jollof Rice', quantity:20, unit:'Plates',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Head Chef', receivedBy:'Restaurant Manager',
+    dateSent:'17/07/26 09:15 AM', dateReceived:'17/07/26 09:20 AM', status:'accepted', remarks:'' },
+  { transferNo:'KTN-00043', productionNo:'PROD-00094', meal:'Egusi Soup', quantity:15, unit:'Portions',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Sous Chef', receivedBy:'Restaurant Manager',
+    dateSent:'16/07/26 08:40 PM', dateReceived:'16/07/26 08:50 PM', status:'accepted', remarks:'' },
+  { transferNo:'KTN-00042', productionNo:'PROD-00092', meal:'Moi Moi', quantity:25, unit:'Pieces',
+    kitchen:KITCHEN_NAME, restaurant:RESTAURANT_NAME, sentBy:'Sous Chef', receivedBy:'Restaurant Manager',
+    dateSent:'16/07/26 02:10 PM', dateReceived:'16/07/26 02:20 PM', status:'rejected', remarks:'Quality issue on arrival — reprepared' },
+];
+let movements = [
+  { type:'Production', ref:'PROD-00096', text:'Rice −3.00 kg, Oil −0.30 L, Chicken −1.50 kg, Curry/Peas/Seasoning deducted', time:'10:30 AM' },
+  { type:'Production', ref:'PROD-00095', text:'Rice −2.00 kg, Oil −0.24 L, Chicken −1.00 kg, Tomato/Pepper/Seasoning deducted', time:'10:15 AM' },
+];
+
+let prodSeq = 96, xferSeq = 45;
+let currentMode = 'rts';
+let prodPage = 1, xferPage = 1;
+let filteredProd = [], filteredXfer = [];
+const PAGE_SIZE = 8;
+let currentTransferNo = null;
+let currentProductionNo = null;
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
+const STATUS_LBL = { draft:'Draft', sent:'Sent', accepted:'Accepted', rejected:'Rejected', completed:'Completed' };
+const TYPE_LBL = { rts:'Ready-to-Serve', coo:'Cook-on-Order' };
+
+function populateMealSelect(){
+  const sel = document.getElementById('pMeal');
+  sel.innerHTML = Object.keys(RECIPES).map(m => `<option>${m}</option>`).join('');
+}
+function populateOrderSelect(){
+  const sel = document.getElementById('pLinkedOrder');
+  sel.innerHTML = OPEN_ORDERS.map(o => `<option value="${o.id}">${o.label}</option>`).join('');
+}
+
+function setMode(m){
+  currentMode = m;
+  document.getElementById('modeRTS').classList.toggle('on', m==='rts');
+  document.getElementById('modeCOO').classList.toggle('on', m==='coo');
+  document.getElementById('linkedOrderWrap').style.display = m==='coo' ? '' : 'none';
+}
+
+function onMealChange(){ renderDeductionPreview(); }
+
+function renderDeductionPreview(){
+  const meal = document.getElementById('pMeal').value;
+  const qty = parseFloat(document.getElementById('pQty').value) || 0;
+  const recipe = RECIPES[meal] || {};
+  const box = document.getElementById('deductionPreview');
+  const rows = Object.entries(recipe).map(([ing, perUnit]) => {
+    const need = perUnit * qty;
+    const stock = stockFor(ing);
+    const avail = stock ? stock.qty : 0;
+    const short = need > avail;
+    return `<div class="ing-row">
+      <span class="ing-name">${ing}</span>
+      <span><span class="ing-qty ${short?'low':''}">${fmtQty(need)} ${stock?stock.unit:''}</span><span class="ing-avail">(${fmtQty(avail)} on hand)</span></span>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div class="recipe-box-title">${meal} — recipe for ${qty || 0} ${document.getElementById('pUnit').value}</div>${rows || '<div style="font-size:12px;color:var(--text3);">No recipe mapped for this meal.</div>'}`;
+}
+
+function saveProduction(isDraft){
+  const meal = document.getElementById('pMeal').value;
+  const qty = parseFloat(document.getElementById('pQty').value) || 0;
+  const unit = document.getElementById('pUnit').value;
+  const by = document.getElementById('pBy').value.trim();
+  const remarks = document.getElementById('pRemarks').value.trim();
+  const linkedOrder = currentMode === 'coo' ? document.getElementById('pLinkedOrder').value : '';
+
+  if (!meal) { showToast('Please choose a meal.', 'error'); return; }
+  if (qty <= 0) { showToast('Please enter a valid quantity.', 'error'); return; }
+  if (!by) { showToast('Please enter who prepared this.', 'error'); return; }
+
+  prodSeq++;
+  const no = 'PROD-' + String(prodSeq).padStart(5,'0');
+  const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  const nowFull = new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
+
+  let status;
+  if (isDraft) status = 'draft';
+  else status = currentMode === 'rts' ? 'sent' : 'completed';
+
+  const deductions = [];
+  let transferNo = '';
+
+  // Deduct ingredients from kitchen inventory + build deduction list (skip for drafts)
+  if (!isDraft) {
+    const recipe = RECIPES[meal] || {};
+    const parts = [];
+    Object.entries(recipe).forEach(([ing, perUnit]) => {
+      const stock = stockFor(ing);
+      const need = perUnit * qty;
+      if (stock) {
+        stock.qty = Math.max(0, stock.qty - need);
+        deductions.push({ ing, qty: need, unit: stock.unit });
+        parts.push(`${ing} −${fmtQty(need)} ${stock.unit}`);
+      }
+    });
+    movements.unshift({ type:'Production', ref:no, text: parts.join(', ') || 'No recipe mapped', time: now });
+
+    // Ready-to-Serve also creates a transfer to Restaurant
+    if (currentMode === 'rts') {
+      xferSeq++;
+      transferNo = 'KTN-' + String(xferSeq).padStart(5,'0');
+      transfers.unshift({
+        transferNo, productionNo: no, meal, quantity: qty, unit,
+        kitchen: KITCHEN_NAME, restaurant: RESTAURANT_NAME,
+        sentBy: by, receivedBy: '', dateSent: nowFull, dateReceived: '',
+        status: 'sent', remarks
+      });
+      showToast(`${no} saved — transfer ${transferNo} sent to Restaurant.`, 'success');
+    } else {
+      showToast(`${no} saved — linked to ${linkedOrder || 'order'}, served directly to guest.`, 'success');
+    }
+  } else {
+    showToast(`${no} saved as draft.`, 'info');
+  }
+
+  productions.unshift({ no, meal, qty, unit, type: currentMode, status, time: now, by, remarks, linkedOrder, deductions, transferNo });
+
+  // reset form
+  document.getElementById('pQty').value = 10;
+  document.getElementById('pBy').value = '';
+  document.getElementById('pRemarks').value = '';
+  document.getElementById('previewProdNo').textContent = 'PROD-' + String(prodSeq+1).padStart(5,'0');
+  renderDeductionPreview();
+  refreshAll();
+}
+
+/* ═══════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════ */
+function renderDashboard(){
+  const today = productions.filter(p => p.status !== 'draft').length;
+  const lowStock = KITCHEN_STOCK.filter(s => stockLevel(s) !== 'ok').length;
+  const pendingXfer = transfers.filter(t => t.status === 'sent').length;
+  const completedToday = productions.filter(p => p.status === 'completed').length;
+  const recipeCount = Object.keys(RECIPES).length;
+
+  document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  document.getElementById('dashKpi').innerHTML = `
+    <div class="kpi-card" onclick="switchTab('history',document.querySelectorAll('.tab-btn')[2])">
+      <div class="kpi-accent">👨‍🍳</div><div class="kpi-label">Today's Production</div>
+      <div class="kpi-value">${today}</div><div class="kpi-trend neutral">runs recorded</div>
+    </div>
+    <div class="kpi-card" onclick="switchTab('inventory',document.querySelectorAll('.tab-btn')[4])">
+      <div class="kpi-accent">⚠️</div><div class="kpi-label">Low Stock Alerts</div>
+      <div class="kpi-value" style="color:var(--amber);">${lowStock}</div>
+      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'⚠ Needs restocking':'✓ All clear'}</div>
+    </div>
+    <div class="kpi-card" onclick="switchTab('transfers',document.querySelectorAll('.tab-btn')[3])">
+      <div class="kpi-accent">🚚</div><div class="kpi-label">Pending Transfers</div>
+      <div class="kpi-value" style="color:var(--blue);">${pendingXfer}</div>
+      <div class="kpi-trend ${pendingXfer>0?'warn':'up'}">${pendingXfer>0?'Awaiting Restaurant':'✓ All accepted'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent">🍽</div><div class="kpi-label">Cook-on-Order Completed</div>
+      <div class="kpi-value" style="color:var(--purple);">${completedToday}</div><div class="kpi-trend neutral">Served direct to guest</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent">📖</div><div class="kpi-label">Menu Items Mapped</div>
+      <div class="kpi-value">${recipeCount}</div><div class="kpi-trend neutral">Recipes with standard cost</div>
+    </div>`;
+
+  document.getElementById('tcProd').textContent = productions.length;
+  document.getElementById('tcXfer').textContent = pendingXfer;
+  document.getElementById('tcLow').textContent = lowStock;
+
+  const recent = productions.slice(0,6);
+  document.getElementById('dashRecentProd').innerHTML = recent.length === 0
+    ? `<div class="empty-note">No productions yet.</div>`
+    : recent.map(p => `
+      <div class="list-row" onclick="openProductionModal('${p.no}')">
+        <span class="list-dot" style="background:${{draft:'var(--text3)',sent:'var(--blue)',accepted:'var(--green)',rejected:'var(--red)',completed:'var(--purple)'}[p.status]}"></span>
+        <div class="list-body"><div class="list-name">${p.no} — ${p.meal}</div><div class="list-meta">${p.qty} ${p.unit} · ${TYPE_LBL[p.type]} · ${p.time}</div></div>
+        <span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span>
+      </div>`).join('');
+
+  const alerts = KITCHEN_STOCK.filter(s => stockLevel(s) !== 'ok').slice(0,6);
+  document.getElementById('dashLowStock').innerHTML = alerts.length === 0
+    ? `<div class="empty-note">All ingredients above their reorder level.</div>`
+    : alerts.map(s => { const lvl = stockLevel(s); return `
+      <div class="list-row" onclick="switchTab('inventory',document.querySelectorAll('.tab-btn')[4])">
+        <span class="list-dot" style="background:${lvl==='out'?'var(--red)':'var(--amber)'}"></span>
+        <div class="list-body"><div class="list-name">${s.name}</div><div class="list-meta">${fmtQty(s.qty)} ${s.unit} on hand · reorder at ${s.min}</div></div>
+        <span class="chip ${lvl==='out'?'chip-rejected':'chip-sent'}">${lvl==='out'?'OUT':'LOW'}</span>
+      </div>`; }).join('');
+
+  const pend = transfers.filter(t => t.status === 'sent').slice(0,6);
+  document.getElementById('dashPendingXfer').innerHTML = pend.length === 0
+    ? `<div class="empty-note">No transfers awaiting Restaurant action.</div>`
+    : pend.map(t => `
+      <div class="list-row" onclick="openTransferModal('${t.transferNo}')">
+        <span class="list-dot" style="background:var(--blue)"></span>
+        <div class="list-body"><div class="list-name">${t.transferNo} — ${t.meal}</div><div class="list-meta">${t.quantity} ${t.unit} · ${t.dateSent} · from ${t.productionNo}</div></div>
+        <span class="chip chip-sent">Sent</span>
+      </div>`).join('');
+}
+
+/* ═══════════════════════════════════════
+   PRODUCTION HISTORY
+═══════════════════════════════════════ */
+function filterProd(){
+  const q = document.getElementById('prodSearch').value.toLowerCase();
+  const st = document.getElementById('prodStatus').value;
+  const ty = document.getElementById('prodType').value;
+  filteredProd = productions.filter(p => {
+    const mq = !q || p.no.toLowerCase().includes(q) || p.meal.toLowerCase().includes(q);
+    return mq && (!st||p.status===st) && (!ty||p.type===ty);
+  });
+  renderProdPage();
+}
+function renderProdPage(){
+  const total = filteredProd.length;
+  const page = filteredProd.slice((prodPage-1)*PAGE_SIZE, prodPage*PAGE_SIZE);
+  document.getElementById('prodCount').textContent = total + ' record' + (total!==1?'s':'');
+  document.getElementById('prodBody').innerHTML = page.length===0
+    ? `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3);">No productions found</td></tr>`
+    : page.map(p => `<tr onclick="openProductionModal('${p.no}')">
+        <td style="font-weight:600;">${p.no}</td><td>${p.meal}</td><td>${p.qty} ${p.unit}</td>
+        <td><span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type]}</span></td>
+        <td><span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span></td>
+        <td>${p.time}</td>
+      </tr>`).join('');
+  renderPagination('prodPageBtns','prodPaginLabel',prodPage,total,PAGE_SIZE,p=>{prodPage=p;renderProdPage();});
+}
+
+/* ═══════════════════════════════════════
+   TRANSFER HISTORY
+═══════════════════════════════════════ */
+function filterXfer(){
+  const q = document.getElementById('xferSearch').value.toLowerCase();
+  const st = document.getElementById('xferStatus').value;
+  filteredXfer = transfers.filter(t => {
+    const mq = !q || t.transferNo.toLowerCase().includes(q);
+    return mq && (!st||t.status===st);
+  });
+  renderXferPage();
+}
+function renderXferPage(){
+  const total = filteredXfer.length;
+  const page = filteredXfer.slice((xferPage-1)*PAGE_SIZE, xferPage*PAGE_SIZE);
+  document.getElementById('xferCount').textContent = total + ' record' + (total!==1?'s':'');
+  document.getElementById('xferBody').innerHTML = page.length===0
+    ? `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3);">No transfers found</td></tr>`
+    : page.map(t => `<tr onclick="openTransferModal('${t.transferNo}')">
+        <td style="font-weight:600;">${t.transferNo}</td><td>${t.meal}</td><td>${t.dateSent}</td><td>${t.quantity} ${t.unit}</td>
+        <td><span class="chip chip-${t.status}">${STATUS_LBL[t.status]}</span></td>
+        <td class="no-print" onclick="event.stopPropagation()">
+          ${t.status==='sent' ? `<button class="act-btn" onclick="acceptTransfer('${t.transferNo}')">Accept</button> <button class="act-btn reject" onclick="rejectTransfer('${t.transferNo}')">Reject</button>` : ''}
+        </td>
+      </tr>`).join('');
+  renderPagination('xferPageBtns','xferPaginLabel',xferPage,total,PAGE_SIZE,p=>{xferPage=p;renderXferPage();});
+}
+
+/* ═══════════════════════════════════════
+   PRODUCTION DETAILS MODAL
+═══════════════════════════════════════ */
+function openProductionModal(no){
+  const p = productions.find(x => x.no === no);
+  if (!p) return;
+  currentProductionNo = no;
+  document.getElementById('pmTitle').textContent = `Production ${p.no}`;
+  document.getElementById('pmNo').textContent = p.no;
+  document.getElementById('pmStatus').innerHTML = `<span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span>`;
+  document.getElementById('pmMeal').textContent = p.meal;
+  document.getElementById('pmQty').textContent = `${p.qty} ${p.unit}`;
+  document.getElementById('pmType').innerHTML = `<span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type]}</span>`;
+  document.getElementById('pmBy').textContent = p.by || '—';
+  document.getElementById('pmTime').textContent = p.time || '—';
+  const lo = document.getElementById('pmLinkedOrder');
+  if (p.type === 'coo' && p.linkedOrder) { lo.textContent = p.linkedOrder; lo.classList.remove('muted'); }
+  else { lo.textContent = 'Not applicable'; lo.classList.add('muted'); }
+  const rm = document.getElementById('pmRemarks');
+  if (p.remarks) { rm.textContent = p.remarks; rm.classList.remove('muted'); }
+  else { rm.textContent = 'No remarks recorded.'; rm.classList.add('muted'); }
+
+  const ded = p.deductions || [];
+  document.getElementById('pmDeductions').innerHTML = ded.length === 0
+    ? `<div style="font-size:12px;color:var(--text3);">No inventory deduction recorded (draft or unmapped recipe).</div>`
+    : `<div class="recipe-box-title">Deducted from Kitchen Inventory</div>` + ded.map(d => `
+        <div class="ing-row"><span class="ing-name">${d.ing}</span><span class="ing-qty">−${fmtQty(d.qty)} ${d.unit}</span></div>`).join('');
+
+  const xferWrap = document.getElementById('pmTransferWrap');
+  if (p.transferNo) {
+    xferWrap.style.display = '';
+    document.getElementById('pmTransferLink').textContent = `🚚 View Transfer ${p.transferNo} →`;
+  } else {
+    xferWrap.style.display = 'none';
+  }
+
+  document.getElementById('productionModal').classList.add('show');
+}
+function jumpToTransfer(){
+  const p = productions.find(x => x.no === currentProductionNo);
+  if (p && p.transferNo) { closeModal('productionModal'); openTransferModal(p.transferNo); }
+}
+
+/* ═══════════════════════════════════════
+   TRANSFER DETAILS MODAL
+═══════════════════════════════════════ */
+function openTransferModal(no){
+  const t = transfers.find(x => x.transferNo === no);
+  if (!t) return;
+  currentTransferNo = no;
+  document.getElementById('tmTitle').textContent = `Transfer ${t.transferNo}`;
+  document.getElementById('tmKitchen').textContent = t.kitchen;
+  document.getElementById('tmRestaurant').textContent = t.restaurant;
+  document.getElementById('tmNo').textContent = t.transferNo;
+  document.getElementById('tmStatus').innerHTML = `<span class="chip chip-${t.status}">${STATUS_LBL[t.status]}</span>`;
+  document.getElementById('tmMeal').textContent = t.meal;
+  document.getElementById('tmQty').textContent = `${t.quantity} ${t.unit}`;
+  document.getElementById('tmProdLink').textContent = t.productionNo;
+  document.getElementById('tmSentBy').textContent = t.sentBy || '—';
+  const rb = document.getElementById('tmReceivedBy');
+  rb.textContent = t.receivedBy || 'Awaiting action'; rb.classList.toggle('muted', !t.receivedBy);
+  document.getElementById('tmDateSent').textContent = t.dateSent || '—';
+  const dr = document.getElementById('tmDateReceived');
+  dr.textContent = t.dateReceived || 'Not yet received'; dr.classList.toggle('muted', !t.dateReceived);
+  const rm = document.getElementById('tmRemarks');
+  if (t.remarks) { rm.textContent = t.remarks; rm.classList.remove('muted'); }
+  else { rm.textContent = 'No remarks recorded.'; rm.classList.add('muted'); }
+
+  const isPending = t.status === 'sent';
+  document.getElementById('tmAcceptBtn').style.display = isPending ? '' : 'none';
+  document.getElementById('tmRejectBtn').style.display = isPending ? '' : 'none';
+  document.getElementById('tmNote').textContent = isPending
+    ? 'Accept/Reject is normally actioned from the Restaurant module — shown here for visibility. Using it will also update the linked production status.'
+    : (t.status === 'accepted'
+        ? 'This transfer has been accepted into Restaurant stock.'
+        : 'This transfer was rejected by the Restaurant.');
+
+  document.getElementById('transferModal').classList.add('show');
+}
+function jumpToProduction(){
+  const t = transfers.find(x => x.transferNo === currentTransferNo);
+  if (t) { closeModal('transferModal'); openProductionModal(t.productionNo); }
+}
+
+function acceptTransfer(no){
+  const t = transfers.find(x=>x.transferNo===no); if(!t) return;
+  const nowFull = new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
+  t.status = 'accepted';
+  t.receivedBy = 'Restaurant Manager';
+  t.dateReceived = nowFull;
+  const p = productions.find(x=>x.no===t.productionNo); if(p) p.status = 'accepted';
+  showToast(`${no} accepted by Restaurant — stock updated there.`, 'success');
+  if (document.getElementById('transferModal').classList.contains('show')) openTransferModal(no);
+  refreshAll();
+}
+function rejectTransfer(no){
+  const t = transfers.find(x=>x.transferNo===no); if(!t) return;
+  const nowFull = new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',','');
+  t.status = 'rejected';
+  t.receivedBy = 'Restaurant Manager';
+  t.dateReceived = nowFull;
+  const p = productions.find(x=>x.no===t.productionNo); if(p) p.status = 'rejected';
+  showToast(`${no} rejected by Restaurant.`, 'error');
+  if (document.getElementById('transferModal').classList.contains('show')) openTransferModal(no);
+  refreshAll();
+}
+
+/* ═══════════════════════════════════════
+   KITCHEN INVENTORY
+═══════════════════════════════════════ */
+function renderStock(){
+  const q = (document.getElementById('stockSearch').value||'').toLowerCase();
+  const rows = KITCHEN_STOCK.filter(s => !q || s.name.toLowerCase().includes(q));
+  document.getElementById('stockCount').textContent = rows.length + ' ingredients';
+  document.getElementById('stockGrid').innerHTML = rows.map(s => {
+    const lvl = stockLevel(s);
+    return `<div class="stock-card ${lvl}">
+      <div class="sk-name">${s.name}</div>
+      <div class="sk-qty" style="color:${lvl==='ok'?'var(--green)':lvl==='low'?'var(--amber)':'var(--red)'};">${fmtQty(s.qty)}</div>
+      <div class="sk-unit">${s.unit}</div>
+      <div class="sk-min">Reorder at ${s.min}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('movementList').innerHTML = movements.length === 0
+    ? `<div class="empty-note">No movements recorded yet.</div>`
+    : movements.slice(0,10).map(m => `
+      <div class="list-row">
+        <span class="list-dot" style="background:var(--gold)"></span>
+        <div class="list-body"><div class="list-name">${m.ref} — ${m.type}</div><div class="list-meta">${m.text}</div></div>
+        <span style="font-size:11px;color:var(--text3);">${m.time}</span>
+      </div>`).join('');
+}
+
+/* ═══════════════════════════════════════
+   PAGINATION HELPER
+═══════════════════════════════════════ */
+function renderPagination(btnId, labelId, page, total, size, cb) {
+  const totalPg = Math.max(1, Math.ceil(total/size));
+  const from = total===0 ? 0 : (page-1)*size+1;
+  const to   = Math.min(page*size, total);
+  document.getElementById(labelId).textContent = total===0 ? 'No records' : `${from}–${to} of ${total}`;
+  const wrap = document.getElementById(btnId); wrap.innerHTML = '';
+  const prev = document.createElement('button'); prev.className='page-btn'; prev.textContent='‹'; prev.disabled=(page===1); prev.onclick=()=>cb(page-1); wrap.appendChild(prev);
+  let start=Math.max(1,page-2), end=Math.min(totalPg,start+4); start=Math.max(1,end-4);
+  for(let i=start;i<=end;i++){ const b=document.createElement('button'); b.className='page-btn'+(i===page?' active':''); b.textContent=i; b.onclick=(p=>()=>cb(p))(i); wrap.appendChild(b); }
+  const next = document.createElement('button'); next.className='page-btn'; next.textContent='›'; next.disabled=(page>=totalPg); next.onclick=()=>cb(page+1); wrap.appendChild(next);
+}
+
+/* ═══════════════════════════════════════
+   TABS
+═══════════════════════════════════════ */
+function switchTab(name, btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name==='dash') renderDashboard();
+  if(name==='new') renderDeductionPreview();
+  if(name==='history'){ prodPage=1; filterProd(); }
+  if(name==='transfers'){ xferPage=1; filterXfer(); }
+  if(name==='inventory') renderStock();
+}
+
+/* ═══════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════ */
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function handleModalBackdrop(e, id){ if (e.target === document.getElementById(id)) closeModal(id); }
+
+/* ═══════════════════════════════════════
+   TOAST
+═══════════════════════════════════════ */
+function showToast(msg, type='success'){
+  const t = document.createElement('div'); t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),3400);
+}
+
+function refreshAll(){
+  renderDashboard();
+  if(document.getElementById('tab-history').classList.contains('active')) filterProd();
+  if(document.getElementById('tab-transfers').classList.contains('active')) filterXfer();
+  if(document.getElementById('tab-inventory').classList.contains('active')) renderStock();
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+document.getElementById('pDate').value = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+document.getElementById('previewProdNo').textContent = 'PROD-' + String(prodSeq+1).padStart(5,'0');
+populateMealSelect();
+populateOrderSelect();
+setMode('rts');
+renderDeductionPreview();
+renderDashboard();
+filterProd();
+filterXfer();
+renderStock();
+</script>
+
+<!-- Platform menu shell — shared sidebar + topbar across all Aurum Hotel pages -->
+<script src="component/aurum-shell.js"></script>
+<script>
+  const shell = AurumShell.attach({
+    sidebarTarget: '#sidebarSlot',
+    topbarTarget:  '#topbarSlot',
+    activeFile:    'kitchen.html',
+    pageTitle:     'Kitchen',
+    apiMode:       'Demo',
+    user:          { name: 'Head Chef', initials: 'HC' },
+    // Kitchen inserted into the shared nav — once this list is added to
+    // aurum-shell.js's DEFAULT_NAV, every page picks it up automatically.
+    navItems: [
+      { label: 'Overview',          href: 'index.html',       icon: '◈' },
+      { label: 'Booking (Rooms)',   href: 'booking.html',     icon: '🛏' },
+      { label: 'Kitchen',           href: 'kitchen.html',     icon: '👨‍🍳' },
+      { label: 'Restaurant / Bar',  href: 'restaurant.html',  icon: '🍽' },
+      { label: 'Pool Bar',          href: 'pool-bar.html',    icon: '🏊' },
+      { label: 'Staff Management',  href: 'staff.html',       icon: '👥' },
+      { label: 'Procurement',       href: 'procurement.html', icon: '📦', badge: 3 },
+      { label: 'Accounting',        href: 'accounting.html',  icon: '📊' },
+    ],
+  });
+</script>
+</body>
+</html>

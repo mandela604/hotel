@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>New Request | Grace Hotel HMS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.25);
+    --navy:#0a1520; --green:#4ade80; --green-bg: rgba(74,222,128,0.12);
+    --amber:#fbbf24; --amber-bg: rgba(251,191,36,0.12);
+    --red:#f87171; --red-bg: rgba(248,113,113,0.12);
+    --blue:#60a5fa; --blue-bg: rgba(96,165,250,0.12);
+    --purple:#a78bfa; --purple-bg: rgba(167,139,250,0.12);
+    --text-dark:#e8f0f8; --text-mid:#a8bece; --text-light:#6a8a9e;
+    --border:#1e3045; --bg:#080f18; --white:#111e2b; --surface2:#162435; --input-bg:#0d1a27;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit','Segoe UI',Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text-dark); font-size:14px; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .sidebar{ width:230px; background:var(--navy); color:#a8bece; display:flex; flex-direction:column; flex-shrink:0; border-right:1px solid var(--border); height:100%; overflow:hidden; z-index:200; transition: transform 0.3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width: 860px){ .sidebar{ position:fixed; top:0; left:0; transform:translateX(-100%); box-shadow:0 16px 48px rgba(0,0,0,0.6); } .sidebar.open{ transform:translateX(0); } }
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:199; }
+  .overlay.show{ display:block; }
+  .brand{ display:flex; align-items:center; gap:10px; padding:20px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .brand-icon{ width:28px; height:28px; background:linear-gradient(135deg, var(--gold), var(--gold-light)); border-radius:8px; display:flex;align-items:center;justify-content:center; font-size:16px; }
+  .brand-name{ font-family:'Cormorant Garamond', serif; font-weight:700; font-size:15px; color:var(--gold); letter-spacing:0.3px; }
+  .nav-section-label{ font-size:10px; color:var(--text-light); letter-spacing:2px; text-transform:uppercase; padding:16px 18px 6px; flex-shrink:0; }
+  .nav{ flex:1; overflow:hidden; padding-bottom:10px; min-height:0; }
+  .nav-item{ display:flex; align-items:center; gap:10px; padding:10px 18px; font-size:13.5px; color:var(--text-mid); cursor:pointer; text-decoration:none; }
+  .nav-item:hover{ background:var(--surface2); color:var(--text-dark); }
+  .nav-item.active-parent{ background:var(--gold-dim); color:var(--gold-light); font-weight:600; border-left:2px solid var(--gold); }
+  .nav-icon{ width:16px; text-align:center; opacity:0.9; font-size:13px;}
+  .store-box{ margin:12px; padding:12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; flex-shrink:0; }
+  .store-label{ font-size:10px; color:var(--text-light); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+  .store-name{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dark); font-weight:600; }
+  .copyright{ font-size:11px; color:var(--text-light); padding:12px 18px 18px; flex-shrink:0; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; }
+  @media (max-width: 860px){ .main{ width:100%; } }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--bg); border-bottom:1px solid var(--border); flex-shrink:0; gap:12px; flex-wrap:wrap; }
+  @media (max-width: 640px){ .topbar{ padding:12px 14px; } }
+  .topbar-left{ display:flex; align-items:center; gap:14px; min-width:0; }
+  .hamburger{ display:none; font-size:16px; color:var(--text-mid); cursor:pointer; background:var(--white); border:1px solid var(--border); width:34px; height:34px; border-radius:8px; align-items:center; justify-content:center; flex-shrink:0; }
+  @media (max-width: 860px){ .hamburger{ display:flex; } }
+  .page-title{ font-family:'Cormorant Garamond', serif; font-size:19px; font-weight:700; color:var(--text-dark); }
+  .page-subtitle{ font-size:11.5px; color:var(--text-light); margin-top:2px; }
+  @media (max-width: 480px){ .page-subtitle{ display:none; } }
+  .topbar-right{ display:flex; align-items:center; gap:12px; }
+  .btn-ghost-top{ background:none; border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; color:var(--text-mid); cursor:pointer; transition:all .2s; }
+  .btn-ghost-top:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .content{ flex:1; padding:16px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  @media (max-width: 640px){ .content{ padding:14px 14px 22px; } }
+  .card{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+  .card-header{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:14px; }
+  .mode-row{ display:flex; gap:12px; flex-wrap:wrap; }
+  .mode-card{ flex:1; min-width:220px; display:flex; align-items:center; gap:12px; padding:16px 18px; background:var(--input-bg); border:1.5px solid var(--border); border-radius:12px; cursor:pointer; transition: all .18s; }
+  .mode-card:hover{ border-color:var(--gold-border); }
+  .mode-card.on{ background:var(--gold-dim); border-color:var(--gold); box-shadow:0 4px 16px rgba(201,168,76,0.12); }
+  .mode-icon{ width:38px; height:38px; border-radius:10px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .mode-card.on .mode-icon{ background:rgba(201,168,76,0.2); }
+  .mode-title{ font-size:14px; font-weight:700; color:var(--text-dark); }
+  .mode-sub{ font-size:11.5px; color:var(--text-light); margin-top:2px; line-height:1.4; }
+  .mode-card.on .mode-sub{ color:var(--text-mid); }
+  .form-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; }
+  @media (max-width: 780px){ .form-row{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 480px){ .form-row{ grid-template-columns:1fr; } }
+  .form-group{ display:flex; flex-direction:column; gap:5px; }
+  .form-group.span2{ grid-column:span 2; } .form-group.span3{ grid-column:span 3; }
+  @media (max-width: 780px){ .form-group.span3{ grid-column:span 2; } }
+  @media (max-width: 480px){ .form-group.span2, .form-group.span3{ grid-column:span 1; } }
+  .form-label{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-light); font-weight:500; display:flex; align-items:center; gap:6px; }
+  .form-label .opt{ font-size:9px; color:var(--text-light); text-transform:none; letter-spacing:0; font-weight:400; }
+  .form-input, .form-select, .form-textarea{ background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text-dark); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:var(--gold-border); }
+  .form-input[readonly]{ opacity:0.6; cursor:default; }
+  .form-textarea{ resize:vertical; min-height:58px; }
+  .priority-row{ display:flex; gap:8px; }
+  .prio-btn{ flex:1; text-align:center; padding:9px 8px; border:1px solid var(--border); border-radius:8px; font-size:12.5px; font-weight:600; color:var(--text-mid); cursor:pointer; transition:all .15s; background:var(--input-bg); }
+  .prio-btn.on.normal{ background:var(--blue-bg); border-color:rgba(96,165,250,0.4); color:var(--blue); }
+  .prio-btn.on.urgent{ background:var(--red-bg); border-color:rgba(248,113,113,0.4); color:var(--red); }
+  .link-note{ display:flex; align-items:flex-start; gap:8px; background:rgba(251,191,36,0.06); border:1px solid var(--amber-bg); border-radius:8px; padding:9px 12px; font-size:11.5px; color:var(--text-mid); line-height:1.5; margin-top:4px; }
+  .link-note b{ color:var(--amber); }
+  .items-card{ padding:18px 20px 20px; }
+  .items-card .card-header{ padding:0; margin-bottom:14px; }
+  .item-card{ background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:14px 16px 16px; margin-bottom:12px; position:relative; }
+  .item-card-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .item-index{ font-size:10.5px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:1.2px; }
+  .item-remove{ background:none; border:1px solid var(--border); border-radius:6px; width:26px; height:26px; color:var(--text-light); cursor:pointer; font-size:12px; transition:all .15s; flex-shrink:0; }
+  .item-remove:hover{ border-color:var(--red); color:var(--red); }
+  .item-fields{ display:grid; grid-template-columns:2.2fr 1fr 1fr 2fr; gap:12px; }
+  .item-fields.purchase{ grid-template-columns:2fr 1fr 1fr 1fr 1fr 2fr; }
+  @media (max-width: 900px){ .item-fields, .item-fields.purchase{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 480px){ .item-fields, .item-fields.purchase{ grid-template-columns:1fr; } }
+  .item-unknown-flag{ font-size:9.5px; margin-top:5px; }
+  .qty-input{ padding:5px 9px; border:1px solid var(--border); background:var(--white); border-radius:6px; font-size:12.5px; color:var(--text-dark); display:flex; align-items:center; justify-content:space-between; transition:border-color .15s; }
+  .qty-input:focus-within{ border-color:var(--gold-border); }
+  .qty-input input{ border:none; outline:none; flex:1; min-width:0; font-size:12.5px; font-family:inherit; color:var(--text-dark); background:transparent; text-align:center; }
+  .stepper{ display:flex; flex-direction:column; color:var(--text-light); font-size:9px; cursor:pointer; line-height:1; gap:2px; user-select:none; }
+  .stepper span:hover{ color:var(--gold); }
+  .add-row-wrap{ padding-top:2px; }
+  .add-row-btn{ background:none; border:1px dashed var(--border); border-radius:8px; padding:8px 16px; font-size:12.5px; font-weight:600; color:var(--gold); cursor:pointer; transition:all .15s; width:100%; text-align:center; }
+  .add-row-btn:hover{ border-color:var(--gold-border); background:var(--gold-dim); }
+  .items-summary{ display:flex; gap:20px; flex-wrap:wrap; padding-top:14px; margin-top:12px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-mid); }
+  .items-summary b{ color:var(--text-dark); }
+  .submit-bar{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .preview-block{ font-size:12.5px; color:var(--text-mid); }
+  .preview-block b{ color:var(--gold-light); font-family:'Cormorant Garamond',serif; font-size:15px; }
+  .actions{ display:flex; gap:10px; }
+  .btn{ padding:11px 20px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; white-space:nowrap; border:none; }
+  .btn-reset{ background:var(--white); border:1px solid var(--border); color:var(--text-dark); }
+  .btn-reset:hover{ border-color:var(--red); color:var(--red); }
+  .btn-submit{ background:var(--gold); color:#0a1520; }
+  .btn-submit:hover{ background:var(--gold-light); }
+  .btn-submit:disabled{ opacity:0.6; cursor:default; }
+  .sub-table-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:12px; }
+  .table-scroll{ overflow-x:auto; }
+  table{ width:100%; min-width:600px; border-collapse:collapse; }
+  thead th{ text-align:left; font-size:10.5px; color:var(--text-light); font-weight:700; letter-spacing:0.3px; text-transform:uppercase; padding:9px 12px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--surface2); white-space:nowrap; }
+  thead th.center{ text-align:center; }
+  tbody td{ padding:9px 12px; font-size:12.5px; border-bottom:1px solid var(--border); color:var(--text-dark); vertical-align:middle; white-space:nowrap; }
+  tbody td.center{ text-align:center; }
+  .req-link{ color:var(--gold-light); font-weight:600; cursor:pointer; }
+  .type-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .type-chip::before{ content:''; width:6px; height:6px; border-radius:50%; }
+  .chip-store{ background:var(--blue-bg); color:var(--blue); } .chip-store::before{ background:var(--blue); }
+  .chip-purchase{ background:var(--purple-bg); color:var(--purple); } .chip-purchase::before{ background:var(--purple); }
+  .status-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:700; }
+  .status-chip::before{ content:''; width:6px; height:6px; border-radius:50%; }
+  .status-chip.pending{ background:var(--amber-bg); color:var(--amber); } .status-chip.pending::before{ background:var(--amber); }
+  .status-chip.partial{ background:var(--amber-bg); color:var(--amber); } .status-chip.partial::before{ background:var(--amber); }
+  .status-chip.full,.status-chip.completed{ background:var(--green-bg); color:var(--green); } .status-chip.full::before,.status-chip.completed::before{ background:var(--green); }
+  .status-chip.rejected{ background:var(--red-bg); color:var(--red); } .status-chip.rejected::before{ background:var(--red); }
+  .empty-row td{ text-align:center; padding:26px; color:var(--text-light); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--white); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text-dark); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn 0.3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="app">
+  <div class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-icon">🏛️</div><div class="brand-name">GRACE HOTEL HMS</div></div>
+    <div class="nav-section-label">STORE MODULE</div>
+    <div class="nav">
+      <a class="nav-item" href="#"><span class="nav-icon">⌂</span> Dashboard</a>
+      <a class="nav-item" href="#"><span class="nav-icon">📋</span> Requisitions</a>
+      <div class="nav-item active-parent"><span class="nav-icon">＋</span> New Request</div>
+      <div class="nav-item"><span class="nav-icon">⏱</span> Issues</div>
+      <div class="nav-item"><span class="nav-icon">🧾</span> Receipts</div>
+      <a class="nav-item" href="#"><span class="nav-icon">📦</span> Stock</a>
+      <div class="nav-item"><span class="nav-icon">🔢</span> Stock Count</div>
+      <div class="nav-item"><span class="nav-icon">📊</span> Reports</div>
+      <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
+    </div>
+    <div class="store-box"><div class="store-label">STORE</div><div class="store-name">🏬 Central Store</div></div>
+    <div class="copyright">© 2025 Grace Hotel HMS</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="hamburger" onclick="openSidebar()">☰</span>
+        <div><div class="page-title">New Request</div><div class="page-subtitle">One form for a Store issue or a Procurement purchase request</div></div>
+      </div>
+      <div class="topbar-right"><a class="btn-ghost-top" href="store-approval.html" target="_blank">📋 Open Store Approval →</a></div>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <div class="card-header">📨 Requesting From</div>
+        <div class="mode-row">
+          <div class="mode-card on" id="modeStoreCard" onclick="setMode('store_issue')">
+            <div class="mode-icon">🏬</div>
+            <div><div class="mode-title">Store</div><div class="mode-sub">Issue items already held in stock — the classic department requisition.</div></div>
+          </div>
+          <div class="mode-card" id="modePurchaseCard" onclick="setMode('purchase')">
+            <div class="mode-icon">🛒</div>
+            <div><div class="mode-title">Procurement</div><div class="mode-sub">Buy something new or restock from a supplier — routed to Procurement.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">📋 Request Details</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Requested By</label><input class="form-input" id="fBy" placeholder="Your name"></div>
+          <div class="form-group"><label class="form-label">Department</label>
+            <select class="form-select" id="fDept" onchange="updatePreview()">
+              <option>Kitchen</option><option>Housekeeping</option><option>Bar</option><option>Front Desk</option><option>Maintenance</option><option>Store</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Date Raised</label><input class="form-input" id="fDateRaised" readonly></div>
+          <div class="form-group"><label class="form-label">Needed By</label><input class="form-input" type="date" id="fNeeded"></div>
+          <div class="form-group" id="fulfillWrap"><label class="form-label">Fulfilling Store</label>
+            <select class="form-select" id="fFulfillStore"><option>Central Store</option><option>Main Kitchen Store</option><option>Housekeeping Store</option></select>
+          </div>
+          <div class="form-group" id="supplierWrap" style="display:none;"><label class="form-label">Preferred Supplier <span class="opt">(optional)</span></label><input class="form-input" id="fSupplier" placeholder="e.g. Zenith Foods Ltd."></div>
+          <div class="form-group"><label class="form-label">Priority</label>
+            <div class="priority-row"><div class="prio-btn on normal" id="prioNormal" onclick="setPriority('Normal')">Normal</div><div class="prio-btn urgent" id="prioUrgent" onclick="setPriority('Urgent')">Urgent</div></div>
+          </div>
+          <div class="form-group span2" id="linkedWrap" style="display:none;"><label class="form-label">Linked Requisition <span class="opt">(optional — e.g. escalating a stock shortfall)</span></label><input class="form-input" id="fLinked" placeholder="e.g. KREQ-2025-00045"></div>
+          <div class="form-group span3"><label class="form-label">Purpose / Remark</label><textarea class="form-textarea" id="fRemark" placeholder="What is this request for?"></textarea></div>
+        </div>
+        <div class="link-note" id="linkNote" style="display:none;">
+          <span>🔗</span><div>If Store couldn't fully issue an item on a requisition, reference that requisition number above — the shortfall stays traceable back to where it started instead of becoming a disconnected purchase request.</div>
+        </div>
+      </div>
+
+      <div class="card items-card">
+        <div class="card-header">📦 Items — enter the item name, unit, and quantity requested for each line</div>
+        <div id="itemsList"></div>
+        <datalist id="itemCatalog"></datalist>
+        <div class="add-row-wrap"><button class="add-row-btn" onclick="addItemRow()">＋ Add Item</button></div>
+        <div class="items-summary" id="itemsSummary"></div>
+      </div>
+
+      <div class="card">
+        <div class="submit-bar">
+          <div class="preview-block">This will be raised as <b id="previewNumber">KREQ-2025-00046</b> · routed to <b id="previewRoute">Store</b></div>
+          <div class="actions">
+            <button class="btn btn-reset" onclick="resetForm()">↺ Reset</button>
+            <button class="btn btn-submit" id="submitBtn" onclick="submitRequest()">✓ Submit Request</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sub-table-title">Recently Submitted</div>
+        <div class="table-scroll">
+          <table style="min-width:600px;">
+            <thead><tr><th>Req. No.</th><th>Type</th><th>Department</th><th class="center">Items</th><th>Needed By</th><th>Status</th></tr></thead>
+            <tbody id="submittedBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   CONFIG — this + store-approval.html share data
+   through window.storage (shared:true) using the
+   key pattern:
+     req:<REQ_NO>      -> full requisition JSON
+     req-index         -> JSON array of all REQ_NO strings ever created
+   Whatever gets submitted here is what the Store
+   Approval page will read and render.
+═══════════════════════════════════════════ */
+// Storage shim: uses Claude.ai's window.storage when present (artifact preview),
+// otherwise falls back to plain localStorage so the pages work standalone in any
+// browser. Same async interface either way, so nothing else below needs to change.
+// NOTE: for the localStorage fallback to be *shared* between new-request.html and
+// store-approval.html, serve them from one local server (e.g. VS Code "Live Server",
+// or `python -m http.server`) and open via http://localhost — opening the files
+// directly (file://...) gives each page its own isolated storage.
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const DEPT_PREFIX = { Kitchen:'KREQ', Housekeeping:'HREQ', Bar:'BREQ', 'Front Desk':'FREQ', Maintenance:'MREQ', Store:'PR' };
+
+const CATALOG = [
+  { name:'Rice (Long Grain)', unit:'kg' }, { name:'Palm Oil', unit:'Ltr' },
+  { name:'Chicken (Frozen)', unit:'kg' }, { name:'Tomatoes', unit:'kg' }, { name:'Onions', unit:'kg' },
+  { name:'Star Lager', unit:'Bottles' }, { name:'Heineken', unit:'Bottles' }, { name:'Hennessy VS', unit:'Bottles' },
+  { name:'Bottled Water 1.5L', unit:'Cartons' }, { name:'Ice Cream Tubs', unit:'Pieces' },
+  { name:'Bleach 5L', unit:'Ltr' }, { name:'Floor Cleaner 5L', unit:'Ltr' }, { name:'Industrial Detergent 10kg', unit:'Bags' },
+  { name:'Glass Cleaner 1L', unit:'Ltr' }, { name:'King Duvet Set', unit:'Pieces' }, { name:'Pillow Cases (pair)', unit:'Pieces' },
+  { name:'Guest Shampoo 250ml', unit:'Pieces' }, { name:'Commercial Dishwasher', unit:'Pieces' },
+  { name:'POS Terminal', unit:'Pieces' }, { name:'Branded Envelopes', unit:'Packs' },
+];
+function findCatalogItem(name){ const n=(name||'').trim().toLowerCase(); return CATALOG.find(c=>c.name.toLowerCase()===n) || null; }
+function populateCatalog(){ document.getElementById('itemCatalog').innerHTML = CATALOG.map(c => `<option value="${c.name}">`).join(''); }
+
+let mode = 'store_issue', priority = 'Normal', items = [], itemSeq = 0;
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function todayISO(){ return new Date().toISOString().split('T')[0]; }
+function todayDisplay(){ return new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+function escAttr(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function newItemRow(){ itemSeq++; return { rid: itemSeq, name:'', unit:'kg', qty:'', cost:'', remark:'' }; }
+
+function setMode(m){
+  mode = m;
+  document.getElementById('modeStoreCard').classList.toggle('on', m==='store_issue');
+  document.getElementById('modePurchaseCard').classList.toggle('on', m==='purchase');
+  document.getElementById('fulfillWrap').style.display  = m==='store_issue' ? '' : 'none';
+  document.getElementById('supplierWrap').style.display = m==='purchase' ? '' : 'none';
+  document.getElementById('linkedWrap').style.display   = m==='purchase' ? '' : 'none';
+  document.getElementById('linkNote').style.display      = m==='purchase' ? 'flex' : 'none';
+  if (m==='purchase') document.getElementById('fDept').value = 'Store';
+  else if (document.getElementById('fDept').value === 'Store') document.getElementById('fDept').value = 'Kitchen';
+  renderItems(); updatePreview();
+}
+function setPriority(p){
+  priority = p;
+  document.getElementById('prioNormal').classList.toggle('on', p==='Normal');
+  document.getElementById('prioUrgent').classList.toggle('on', p==='Urgent');
+}
+
+function addItemRow(){ items.push(newItemRow()); renderItems(); }
+function removeItemRow(rid){ items = items.filter(i => i.rid !== rid); renderItems(); }
+function updateItemField(rid, field, value){ const it = items.find(i => i.rid === rid); if (it) it[field] = value; if (field==='qty'||field==='cost') renderItems(true); }
+function stepField(rid, field, delta){ const it = items.find(i => i.rid === rid); if (!it) return; const cur = parseFloat(it[field]) || 0; it[field] = Math.max(0, cur + delta); renderItems(); }
+function onItemNameInput(rid, value){ const it = items.find(i => i.rid === rid); if (!it) return; it.name = value; const m = findCatalogItem(value); if (m) it.unit = m.unit; renderItems(); }
+
+function renderItems(quiet){
+  const list = document.getElementById('itemsList');
+  list.innerHTML = items.map((it, idx) => {
+    const qty = parseFloat(it.qty) || 0, cost = parseFloat(it.cost) || 0, total = qty*cost;
+    const known = findCatalogItem(it.name);
+    const unknownFlag = (!known && it.name.trim())
+      ? `<div class="item-unknown-flag" style="color:${mode==='purchase'?'var(--purple)':'var(--red)'};">${mode==='purchase'?'🆕 New item — not yet in Store catalog':'⚠ Not a recognized stock item'}</div>` : '';
+    const costFields = mode==='purchase' ? `
+      <div class="form-group"><label class="form-label">Est. Unit Cost (₦)</label><div class="qty-input"><input type="text" inputmode="decimal" placeholder="0" value="${escAttr(it.cost)}" oninput="updateItemField(${it.rid},'cost',this.value)"><span class="stepper"><span onclick="stepField(${it.rid},'cost',100)">▲</span><span onclick="stepField(${it.rid},'cost',-100)">▼</span></span></div></div>
+      <div class="form-group"><label class="form-label">Est. Total (₦)</label><input class="form-input" readonly value="${fmtN(total)}"></div>` : '';
+    return `<div class="item-card">
+      <div class="item-card-top"><span class="item-index">Item ${idx+1}</span><button class="item-remove" onclick="removeItemRow(${it.rid})" title="Remove this item">✕</button></div>
+      <div class="item-fields${mode==='purchase'?' purchase':''}">
+        <div class="form-group"><label class="form-label">Item Name</label><input class="form-input" list="itemCatalog" placeholder="Type or pick a stock item…" value="${escAttr(it.name)}" oninput="onItemNameInput(${it.rid},this.value)">${unknownFlag}</div>
+        <div class="form-group"><label class="form-label">Unit</label><input class="form-input" placeholder="kg, Ltr, Pieces…" value="${escAttr(it.unit)}" oninput="updateItemField(${it.rid},'unit',this.value)"></div>
+        <div class="form-group"><label class="form-label">Qty Requested</label><div class="qty-input"><input type="text" inputmode="decimal" placeholder="0" value="${escAttr(it.qty)}" oninput="updateItemField(${it.rid},'qty',this.value)"><span class="stepper"><span onclick="stepField(${it.rid},'qty',1)">▲</span><span onclick="stepField(${it.rid},'qty',-1)">▼</span></span></div></div>
+        ${costFields}
+        <div class="form-group"><label class="form-label">Remarks <span class="opt">(optional)</span></label><input class="form-input" placeholder="Optional note" value="${escAttr(it.remark)}" oninput="updateItemField(${it.rid},'remark',this.value)"></div>
+      </div></div>`;
+  }).join('') || `<div class="item-unknown-flag" style="text-align:center;padding:16px;color:var(--text-light);font-size:12.5px;">No items yet — click "＋ Add Item" below.</div>`;
+  const totalCost = items.reduce((s,i) => s + (parseFloat(i.qty)||0)*(parseFloat(i.cost)||0), 0);
+  document.getElementById('itemsSummary').innerHTML = mode==='purchase'
+    ? `<span><b>${items.length}</b> item${items.length!==1?'s':''}</span><span>Est. total cost: <b>${fmtN(totalCost)}</b></span>`
+    : `<span><b>${items.length}</b> item${items.length!==1?'s':''} requested</span>`;
+  if (!quiet) updatePreview();
+}
+
+/* ═══════════════════════════════════════════
+   NUMBERING — reads/writes a shared counter so
+   numbers stay unique across sessions/pages.
+═══════════════════════════════════════════ */
+function previewPrefix(){ return mode==='purchase' ? 'PR' : (DEPT_PREFIX[document.getElementById('fDept').value] || 'REQ'); }
+async function peekNextNumber(){
+  const prefix = previewPrefix();
+  let n = 45; // fallback seed matching the sample requisition
+  try { const r = await storage.get(`counter:${prefix}`, true); n = r ? parseInt(r.value,10) : n; } catch(e){}
+  return `${prefix}-2025-${String(n+1).padStart(5,'0')}`;
+}
+async function updatePreview(){
+  document.getElementById('previewNumber').textContent = await peekNextNumber();
+  document.getElementById('previewRoute').textContent = mode==='purchase' ? 'Procurement' : 'Store';
+}
+async function nextNumber(){
+  const prefix = previewPrefix();
+  let n = 45;
+  try { const r = await storage.get(`counter:${prefix}`, true); n = r ? parseInt(r.value,10) : n; } catch(e){}
+  n += 1;
+  await storage.set(`counter:${prefix}`, String(n), true);
+  return `${prefix}-2025-${String(n).padStart(5,'0')}`;
+}
+
+/* ═══════════════════════════════════════════
+   RESET / SUBMIT / LOAD (shared storage)
+═══════════════════════════════════════════ */
+function resetForm(){
+  document.getElementById('fBy').value = '';
+  document.getElementById('fDept').value = mode==='purchase' ? 'Store' : 'Kitchen';
+  document.getElementById('fNeeded').value = '';
+  document.getElementById('fSupplier').value = '';
+  document.getElementById('fLinked').value = '';
+  document.getElementById('fRemark').value = '';
+  document.getElementById('fFulfillStore').value = 'Central Store';
+  setPriority('Normal');
+  items = [newItemRow()];
+  renderItems();
+}
+
+async function submitRequest(){
+  const by = document.getElementById('fBy').value.trim();
+  const dept = document.getElementById('fDept').value;
+  const needed = document.getElementById('fNeeded').value;
+  const validItems = items.filter(i => i.name.trim() && (parseFloat(i.qty)||0) > 0);
+
+  if (!by) { showToast('Please enter who is requesting.', 'error'); return; }
+  if (!needed) { showToast('Please choose a needed-by date.', 'error'); return; }
+  if (validItems.length === 0) { showToast('Add at least one item with a name and quantity.', 'error'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  try {
+    const num = await nextNumber();
+    const entry = {
+      no: num, mode, by, dept, needed, priority,
+      remark: document.getElementById('fRemark').value.trim(),
+      fulfillStore: mode==='store_issue' ? document.getElementById('fFulfillStore').value : null,
+      supplier: mode==='purchase' ? document.getElementById('fSupplier').value.trim() : null,
+      linked: mode==='purchase' ? document.getElementById('fLinked').value.trim() : null,
+      items: validItems.map(i => ({ name:i.name, unit:i.unit, qty:parseFloat(i.qty)||0, cost:parseFloat(i.cost)||0, remark:i.remark, issuedQty:0 })),
+      status: 'Pending',
+      dateRaised: todayISO(),
+      dateRaisedDisplay: todayDisplay(),
+    };
+
+    // Save the requisition itself, then add its number to the shared index
+    // so the Store Approval page can list it.
+    await storage.set(`req:${num}`, JSON.stringify(entry), true);
+    const idxRes = await storage.get('req-index', true).catch(() => null);
+    const idx = idxRes ? JSON.parse(idxRes.value) : [];
+    idx.unshift(num);
+    await storage.set('req-index', JSON.stringify(idx), true);
+
+    showToast(`${num} submitted to ${mode==='purchase'?'Procurement':'Store'}.`, 'success');
+    resetForm();
+    loadRecent();
+  } catch (e) {
+    showToast('Could not save this request — please try again.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Submit Request';
+  }
+}
+
+async function loadRecent(){
+  const body = document.getElementById('submittedBody');
+  let idx = [];
+  try { const r = await storage.get('req-index', true); idx = r ? JSON.parse(r.value) : []; } catch(e){}
+  if (idx.length === 0) { body.innerHTML = `<tr class="empty-row"><td colspan="6">No requests submitted yet.</td></tr>`; return; }
+
+  const rows = [];
+  for (const no of idx.slice(0, 15)) {
+    try {
+      const r = await storage.get(`req:${no}`, true);
+      if (r) rows.push(JSON.parse(r.value));
+    } catch(e){}
+  }
+  body.innerHTML = rows.map(e => `
+    <tr>
+      <td class="req-link">${e.no}</td>
+      <td><span class="type-chip ${e.mode==='purchase'?'chip-purchase':'chip-store'}">${e.mode==='purchase'?'Procurement':'Store'}</span></td>
+      <td>${e.dept}</td>
+      <td class="center">${e.items.length}</td>
+      <td>${fmtDate(e.needed)}</td>
+      <td><span class="status-chip ${e.status.toLowerCase()}">${e.status}</span></td>
+    </tr>`).join('') || `<tr class="empty-row"><td colspan="6">No requests submitted yet.</td></tr>`;
+}
+
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':'✕ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('show'); document.body.style.overflow='hidden'; }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); document.body.style.overflow=''; }
+window.addEventListener('resize', () => { if (window.innerWidth > 860) closeSidebar(); });
+
+/* INIT */
+document.getElementById('fDateRaised').value = todayDisplay();
+populateCatalog();
+items = [newItemRow()];
+setMode('store_issue');
+renderItems();
+loadRecent();
+</script>
+</body>
+</html>

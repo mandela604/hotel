@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Pending Transfers | Aurum Restaurant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  /* restaurant-shell.js defines --gold/--text/--border/--surface etc,
+     but never defines status colors — every green/red/amber/blue
+     reference on this page depends on THESE being defined right here,
+     exactly as on restaurant-transfer-history.html, so the two pages
+     always read as one family. */
+  :root{
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  /* This page only owns layout + its own content. Sidebar + topbar
+     look/markup live entirely in restaurant-shell.js. */
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  /* ═══ KPI (same component pattern as Transfer History) ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.pending{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
+  .kpi-card.pending::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.variety{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
+  .kpi-card.variety::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.waiting{ background:linear-gradient(160deg, rgba(251,191,36,.07), var(--surface) 60%); border-color:rgba(251,191,36,.22); }
+  .kpi-card.waiting::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-card.pending .kpi-label{ color:var(--blue); }
+  .kpi-card.variety .kpi-label{ color:var(--green); }
+  .kpi-card.waiting .kpi-label{ color:var(--amber); }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  /* Pagination */
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  /* ═══ Toolbar / filter bar — same structure as Transfer History ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
+  .filter-date{ cursor:default; color-scheme:dark; }
+  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
+  .active-chip button{ background:none; border:none; color:var(--gold-light); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
+  .active-chip button:hover{ color:#fff; }
+  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
+
+  @media (max-width:700px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select, .filter-date{ width:100%; }
+    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .btn-ghost{ align-self:flex-start; }
+  }
+
+  /* ═══ Panel / table ═══ */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:820px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th[data-sortkey]:hover{ color:var(--gold); }
+  thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
+  thead th.no-sort{ cursor:default; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .meal-badge{ display:inline-flex; align-items:center; gap:6px; }
+  .meal-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-success{ background:rgba(74,222,128,0.14); border-color:rgba(74,222,128,0.4); color:var(--green); font-weight:700; }
+  .btn-success:hover{ background:rgba(74,222,128,0.24); }
+  .btn-danger{ background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:var(--red); font-weight:700; }
+  .btn-danger:hover{ background:rgba(248,113,113,0.18); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .act-btn.accept{ border-color:rgba(74,222,128,0.35); color:var(--green); background:var(--green-bg); font-weight:600; }
+  .act-btn.accept:hover{ border-color:var(--green); background:rgba(74,222,128,0.2); color:var(--green); }
+  .act-btn.reject{ border-color:rgba(248,113,113,0.35); color:var(--red); background:var(--red-bg); font-weight:600; }
+  .act-btn.reject:hover{ border-color:var(--red); background:rgba(248,113,113,0.2); color:var(--red); }
+
+  /* Modal — same shell as Transfer History, with a blue accent since
+     everything shown here is, by definition, still pending. */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal.status-pending::before{ background:var(--blue); }
+  .modal-sm{ width:min(400px,96vw); }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-title.accept-title{ color:var(--green); }
+  .modal-title.reject-title{ color:var(--red); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+  .modal-close:hover{ color:var(--text); }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-bottom:16px; }
+  @media (max-width:460px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-item{ display:flex; flex-direction:column; gap:3px; }
+  .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
+  .detail-remarks{ background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--blue); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--text2); line-height:1.5; margin-bottom:16px; }
+
+  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-input, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-textarea:focus{ border-color:var(--gold-border); }
+  .form-textarea{ resize:vertical; min-height:60px; }
+
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note strong{ color:var(--text); }
+
+  /* Toast */
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    #rst-sidebar, #rst-topbar, .toolbar, .act-btns, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by restaurant-shell.js — Restaurant nav only -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by restaurant-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ═══ FILTER BAR ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <input type="text" id="fSearch" placeholder="Transfer #, meal, staff…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Meal</span>
+              <select class="filter-select" id="fMeal" onchange="page=1;render()">
+                <option value="">All Meals</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">From Kitchen</span>
+              <select class="filter-select" id="fKitchen" onchange="page=1;render()">
+                <option value="">All Kitchens</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Date Sent — From</span>
+              <input type="date" class="filter-date" id="fDateFrom" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Date Sent — To</span>
+              <input type="date" class="filter-date" id="fDateTo" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="page=1;render()">
+                <option value="date_desc">Date Sent (Newest)</option>
+                <option value="date_asc">Date Sent (Oldest)</option>
+                <option value="qty_desc">Quantity (High → Low)</option>
+                <option value="qty_asc">Quantity (Low → High)</option>
+                <option value="meal_asc">Meal (A → Z)</option>
+              </select>
+            </div>
+            <button class="btn-ghost" id="clearFiltersBtn" onclick="clearFilters()">✕ Clear Filters</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+        </div>
+        <div class="toolbar-row" id="chipsRow" style="display:none;">
+          <div class="active-chips" id="activeChips"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Pending Transfers</div>
+          <span class="toolbar-count" id="tblCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="no-sort">Transfer No.</th>
+                <th data-sortkey="meal">Meal <span class="sort-arrow" id="arrow-meal"></span></th>
+                <th data-sortkey="qty">Qty <span class="sort-arrow" id="arrow-qty"></span></th>
+                <th class="no-sort">From Kitchen</th>
+                <th class="no-sort">Sent By</th>
+                <th data-sortkey="date">Date Sent <span class="sort-arrow" id="arrow-date"></span></th>
+                <th class="no-sort">Status</th>
+                <th class="no-print no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TRANSFER DETAILS MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal status-pending">
+    <div class="modal-header">
+      <div class="modal-title" id="dTitle">Transfer Details</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="detail-grid" id="dGrid"></div>
+    <div class="detail-remarks" id="dRemarks"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>
+      <button class="btn btn-danger btn-sm" id="dRejectBtn">✕ Reject</button>
+      <button class="btn btn-success btn-sm" id="dAcceptBtn">✓ Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCEPT MODAL -->
+<div class="modal-overlay" id="acceptModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title accept-title">✓ Accept Transfer</div>
+      <button class="modal-close" onclick="closeModal('acceptModal')">✕</button>
+    </div>
+    <div class="val-note">Accepting <strong id="acName"></strong> will add <strong id="acQty"></strong> to Restaurant Inventory and log the movement.</div>
+    <div class="form-group">
+      <label class="form-label">Received By</label>
+      <input class="form-input" type="text" id="acReceivedBy" placeholder="Staff name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Remarks (optional)</label>
+      <textarea class="form-textarea" id="acRemarks" placeholder="Condition on arrival, notes…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('acceptModal')">Cancel</button>
+      <button class="btn btn-success btn-sm" onclick="confirmAccept()">✓ Confirm Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title reject-title">✕ Reject Transfer</div>
+      <button class="modal-close" onclick="closeModal('rejectModal')">✕</button>
+    </div>
+    <div class="val-note">Rejecting <strong id="rjName"></strong> will send it back to Kitchen history — no inventory will be added.</div>
+    <div class="form-group">
+      <label class="form-label">Reason for Rejection</label>
+      <textarea class="form-textarea" id="rjReason" placeholder="e.g. Short delivery, wrong meal, quality issue…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('rejectModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmReject()">✕ Confirm Reject</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/restaurant-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar, restaurant nav only.
+═══════════════════════════════════════════ */
+const shell = RestaurantShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'restaurant-transfers.html',
+  pageTitle:     'Pending Transfers',
+  pageSubtitle:  'Awaiting Accept or Reject from the Kitchen',
+  apiMode:       'Demo',
+  user:          { name: 'Restaurant Manager', initials: 'RM' },
+});
+
+/* ═══════════════════════════════════════════
+   CONFIG, API LAYER & STORAGE
+   Set CFG.API_BASE and CFG.USE_DEMO=false to call a real backend.
+   On any failure (or in demo mode) this falls back to shared
+   storage (window.storage, or localStorage outside the Claude.ai
+   preview), and finally to the hardcoded demo seed below — so the
+   page always renders something.
+
+   NOTE: this page ONLY ever displays rows that are still pending.
+   The moment a transfer is accepted or rejected it is written to
+   KEY_HISTORY and removed from KEY_TRANSFERS — so it disappears
+   from here for good and shows up on Transfer History instead.
+═══════════════════════════════════════════ */
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
+
+async function apiFetch(method, path, body=null){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_TRANSFERS = 'restaurant-pending-transfers';
+const KEY_INVENTORY = 'restaurant-inventory';
+const KEY_HISTORY    = 'restaurant-transfer-history';
+const KEY_MOVEMENTS  = 'restaurant-movements';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+}
+
+/* Demo seed — only used the very first time, before anything syncs */
+const DEMO_TRANSFERS = [
+  { no:'KTN-00045', meal:'Fried Rice',  qty:30, unit:'Plates',   from:'Main Kitchen',    restaurant:'Main Restaurant', sentBy:'Head Chef', date:'17/07/26 10:30 AM', prodNo:'PROD-00096', remarks:'Lunch preparation' },
+  { no:'KTN-00044', meal:'Jollof Rice', qty:20, unit:'Plates',   from:'Main Kitchen',    restaurant:'Main Restaurant', sentBy:'Head Chef', date:'17/07/26 09:15 AM', prodNo:'PROD-00095', remarks:'' },
+  { no:'KTN-00046', meal:'Moi Moi',     qty:12, unit:'Pieces',   from:'Banquet Kitchen', restaurant:'Main Restaurant', sentBy:'Sous Chef', date:'17/07/26 11:50 AM', prodNo:'PROD-00097', remarks:'' },
+];
+const DEMO_INVENTORY = [
+  { meal:'Egusi Soup',  qty:15, unit:'Portions', batch:'PROD-00094', received:'17/07/26', min:8 },
+  { meal:'Moi Moi',     qty:4,  unit:'Pieces',   batch:'PROD-00090', received:'16/07/26', min:8 },
+  { meal:'Jollof Rice', qty:0,  unit:'Plates',   batch:'PROD-00088', received:'16/07/26', min:6 },
+  { meal:'Fried Rice',  qty:18, unit:'Plates',   batch:'PROD-00085', received:'16/07/26', min:6 },
+];
+const DEMO_HISTORY = [
+  { no:'KTN-00041', meal:'Egusi Soup', qty:10, unit:'Portions', from:'Main Kitchen', restaurant:'Main Restaurant', sentBy:'Head Chef', date:'17/07/26 07:40 AM', prodNo:'PROD-00092', remarks:'', status:'accepted', receivedBy:'Amaka O.', actionRemarks:'', actionDate:'17/07/26 08:00 AM' },
+  { no:'KTN-00040', meal:'Pounded Yam', qty:8,  unit:'Portions', from:'Main Kitchen', restaurant:'Main Restaurant', sentBy:'Sous Chef', date:'16/07/26 06:15 PM', prodNo:'PROD-00089', remarks:'', status:'rejected', receivedBy:'', actionRemarks:'Short delivery — only 6 arrived', actionDate:'16/07/26 06:30 PM' },
+];
+
+/* ═══════════════════════════════════════════
+   STATE — transfers[] is the ONLY thing rendered in the table.
+   inventory/history/movements are still loaded because Accept and
+   Reject need to write to them, but they never appear on this page.
+═══════════════════════════════════════════ */
+let transfers = [];
+let inventory = [];
+let history   = [];
+let movements = [];
+let activeNo  = null;
+let page = 1;
+let sortKey = 'date', sortDir = 'desc';
+let _filteredCache = [];
+
+function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
+
+function parseTransferDate(str){
+  if (!str) return null;
+  const [datePart, timePart, ampm] = str.split(' ');
+  const [d, m, y] = datePart.split('/').map(n => parseInt(n, 10));
+  let hh = 0, mm = 0;
+  if (timePart) { const [h, mi] = timePart.split(':').map(n => parseInt(n, 10)); hh = h; mm = mi || 0; }
+  if (ampm) {
+    const upper = ampm.toUpperCase();
+    if (upper === 'PM' && hh < 12) hh += 12;
+    if (upper === 'AM' && hh === 12) hh = 0;
+  }
+  const fullYear = y < 100 ? 2000 + y : y;
+  return new Date(fullYear, m - 1, d, hh, mm);
+}
+
+/* ═══════════════════════════════════════════
+   FILTER OPTIONS
+═══════════════════════════════════════════ */
+function populateFilterOptions(){
+  const mealSel = document.getElementById('fMeal');
+  const curMeal = mealSel.value;
+  const meals = [...new Set(transfers.map(t => t.meal))].sort();
+  mealSel.innerHTML = '<option value="">All Meals</option>' + meals.map(m => `<option${m===curMeal?' selected':''}>${m}</option>`).join('');
+
+  const kitchenSel = document.getElementById('fKitchen');
+  const curKitchen = kitchenSel.value;
+  const kitchens = [...new Set(transfers.map(t => t.from))].sort();
+  kitchenSel.innerHTML = '<option value="">All Kitchens</option>' + kitchens.map(k => `<option${k===curKitchen?' selected':''}>${k}</option>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   KPIs — same colorful component as Transfer History,
+   built entirely from the pending-only data set.
+═══════════════════════════════════════════ */
+function renderKPIs(rows){
+  const totalUnits = rows.reduce((s,t)=>s+t.qty,0);
+  const mealsInvolved = new Set(rows.map(t => t.meal)).size;
+  let oldest = null;
+  rows.forEach(t => { const d = parseTransferDate(t.date); if (d && (!oldest || d < oldest)) oldest = d; });
+  let waitHrs = 0;
+  if (oldest) waitHrs = Math.max(0, Math.round((Date.now() - oldest.getTime()) / 36e5));
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card pending">
+      <div class="kpi-accent" style="color:var(--blue)">🚚</div>
+      <div class="kpi-label">Pending Transfers</div>
+      <div class="kpi-value" style="color:var(--blue);">${rows.length}</div>
+      <div class="kpi-trend ${rows.length>0?'warn':'up'}">${rows.length>0?'Awaiting review':'All clear'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent">📦</div>
+      <div class="kpi-label">Units Awaiting Acceptance</div>
+      <div class="kpi-value" style="color:var(--gold);">${totalUnits}</div>
+      <div class="kpi-trend neutral">Across ${rows.length} transfer${rows.length!==1?'s':''}</div>
+    </div>
+    <div class="kpi-card variety">
+      <div class="kpi-accent" style="color:var(--green)">🍽</div>
+      <div class="kpi-label">Meals Involved</div>
+      <div class="kpi-value" style="color:var(--green);">${mealsInvolved}</div>
+      <div class="kpi-trend up">Distinct meals waiting</div>
+    </div>
+    <div class="kpi-card waiting">
+      <div class="kpi-accent" style="color:var(--amber)">⏳</div>
+      <div class="kpi-label">Longest Waiting</div>
+      <div class="kpi-value" style="color:var(--amber);">${oldest ? waitHrs + 'h' : '—'}</div>
+      <div class="kpi-trend ${waitHrs>=4?'warn':'neutral'}">${oldest ? (waitHrs>=4?'Needs attention':'Within range') : 'Nothing pending'}</div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   FILTER + SORT + PAGINATE — pending rows only
+═══════════════════════════════════════════ */
+function getFiltered(){
+  const q       = document.getElementById('fSearch').value.toLowerCase();
+  const meal    = document.getElementById('fMeal').value;
+  const kitchen = document.getElementById('fKitchen').value;
+  const dFrom   = document.getElementById('fDateFrom').value;
+  const dTo     = document.getElementById('fDateTo').value;
+  const sortVal = document.getElementById('fSort').value;
+  [sortKey, sortDir] = sortVal.split('_');
+
+  let rows = transfers.filter(t => {
+    const mq = !q || t.no.toLowerCase().includes(q) || t.meal.toLowerCase().includes(q) || (t.sentBy||'').toLowerCase().includes(q);
+    const mMeal = !meal || t.meal === meal;
+    const mKitchen = !kitchen || t.from === kitchen;
+    let mDate = true;
+    if (dFrom || dTo) {
+      const td = parseTransferDate(t.date);
+      const tdOnly = td ? new Date(td.getFullYear(), td.getMonth(), td.getDate()) : null;
+      if (dFrom) { const f = new Date(dFrom + 'T00:00:00'); if (!tdOnly || tdOnly < f) mDate = false; }
+      if (dTo)   { const to = new Date(dTo + 'T00:00:00'); if (!tdOnly || tdOnly > to) mDate = false; }
+    }
+    return mq && mMeal && mKitchen && mDate;
+  });
+
+  rows = rows.sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === 'date') cmp = (parseTransferDate(a.date) - parseTransferDate(b.date));
+    else if (sortKey === 'qty') cmp = a.qty - b.qty;
+    else if (sortKey === 'meal') cmp = a.meal.localeCompare(b.meal);
+    return sortDir === 'desc' ? -cmp : cmp;
+  });
+
+  return rows;
+}
+
+function renderSortArrows(){
+  ['meal','qty','date'].forEach(k => {
+    const el = document.getElementById('arrow-' + k);
+    if (!el) return;
+    el.textContent = sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : '';
+  });
+}
+
+function renderActiveChips(){
+  const chips = [];
+  const q = document.getElementById('fSearch').value;
+  const meal = document.getElementById('fMeal').value;
+  const kitchen = document.getElementById('fKitchen').value;
+  const dFrom = document.getElementById('fDateFrom').value;
+  const dTo = document.getElementById('fDateTo').value;
+
+  if (q) chips.push({ label: `Search: "${q}"`, clear: () => { document.getElementById('fSearch').value = ''; } });
+  if (meal) chips.push({ label: `Meal: ${meal}`, clear: () => { document.getElementById('fMeal').value = ''; } });
+  if (kitchen) chips.push({ label: `Kitchen: ${kitchen}`, clear: () => { document.getElementById('fKitchen').value = ''; } });
+  if (dFrom) chips.push({ label: `From: ${dFrom}`, clear: () => { document.getElementById('fDateFrom').value = ''; } });
+  if (dTo) chips.push({ label: `To: ${dTo}`, clear: () => { document.getElementById('fDateTo').value = ''; } });
+
+  const chipsRow = document.getElementById('chipsRow');
+  const wrap = document.getElementById('activeChips');
+  if (chips.length === 0) { chipsRow.style.display = 'none'; wrap.innerHTML = ''; return; }
+  chipsRow.style.display = '';
+  wrap.innerHTML = chips.map((c, i) => `<span class="active-chip">${c.label}<button data-chip="${i}">✕</button></span>`).join('');
+  wrap.querySelectorAll('[data-chip]').forEach(btn => {
+    btn.addEventListener('click', () => { chips[parseInt(btn.dataset.chip, 10)].clear(); page = 1; render(); });
+  });
+}
+
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fMeal').value = '';
+  document.getElementById('fKitchen').value = '';
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  page = 1;
+  render();
+}
+
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total === 0 ? 0 : (page - 1) * CFG.PAGE_SIZE + 1;
+  const to = Math.min(page * CFG.PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const mk = (label, p, disabled, active) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label; b.disabled = !!disabled;
+    b.addEventListener('click', () => { page = p; renderTable(); });
+    return b;
+  };
+  wrap.appendChild(mk('‹', page - 1, page === 1, false));
+  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
+  wrap.appendChild(mk('›', page + 1, page >= totalPages, false));
+}
+
+function renderTable(){
+  const rows = _filteredCache;
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+  const start = (page - 1) * CFG.PAGE_SIZE;
+  const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
+
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="8">No pending transfers match your filters.</td></tr>`
+    : pageRows.map(t => `
+      <tr onclick="openDetail('${t.no}')">
+        <td style="font-weight:600;">${t.no}</td>
+        <td>${t.meal}</td>
+        <td>${t.qty} ${t.unit}</td>
+        <td>${t.from}</td>
+        <td>${t.sentBy || '—'}</td>
+        <td>${t.date}</td>
+        <td><span class="chip chip-sent">Pending</span></td>
+        <td class="no-print" onclick="event.stopPropagation()">
+          <div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${t.no}')">👁 View</button>
+            <button class="act-btn accept" onclick="openAccept('${t.no}')">✓ Accept</button>
+            <button class="act-btn reject" onclick="openReject('${t.no}')">✕ Reject</button>
+          </div>
+        </td>
+      </tr>`).join('');
+
+  renderPagination(rows.length);
+}
+
+function render(){
+  populateFilterOptions();
+  _filteredCache = getFiltered();
+  renderKPIs(_filteredCache);
+  renderSortArrows();
+  renderActiveChips();
+  renderTable();
+  // Always keep the sidebar nav badge + topbar bell in sync with the
+  // TOTAL pending count (not the filtered view) so the notification
+  // count is accurate no matter what the user is currently filtering.
+  shell.setPendingBadge(transfers.length);
+  shell.setNotifBadge(transfers.length);
+}
+
+function bindHeaderSort(){
+  document.querySelectorAll('th[data-sortkey]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortkey;
+      if (key !== 'meal' && key !== 'qty' && key !== 'date') return;
+      const sel = document.getElementById('fSort');
+      const [curKey, curDir] = sel.value.split('_');
+      let nextDir = 'desc';
+      if (curKey === key) nextDir = curDir === 'desc' ? 'asc' : 'desc';
+      sel.value = `${key}_${nextDir}`;
+      page = 1;
+      render();
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════
+   TRANSFER DETAILS MODAL — pending-only, so the footer always
+   offers Accept + Reject alongside Close.
+═══════════════════════════════════════════ */
+function openDetail(no){
+  activeNo = no;
+  const t = transfers.find(x => x.no === no);
+  if (!t) return;
+  document.getElementById('dTitle').textContent = `Transfer ${t.no}`;
+  document.getElementById('dGrid').innerHTML = `
+    <div class="detail-item"><div class="detail-label">Meal</div><div class="detail-value">${t.meal}</div></div>
+    <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value" style="color:var(--blue);">${t.qty} ${t.unit}</div></div>
+    <div class="detail-item"><div class="detail-label">From Kitchen</div><div class="detail-value">${t.from}</div></div>
+    <div class="detail-item"><div class="detail-label">Restaurant</div><div class="detail-value">${t.restaurant || 'Main Restaurant'}</div></div>
+    <div class="detail-item"><div class="detail-label">Sent By</div><div class="detail-value">${t.sentBy || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Production No.</div><div class="detail-value">${t.prodNo || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Date Sent</div><div class="detail-value">${t.date}</div></div>
+    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-sent">Pending</span></div></div>`;
+  document.getElementById('dRemarks').textContent = t.remarks ? `Remarks: ${t.remarks}` : 'No remarks on this transfer.';
+
+  document.getElementById('dRejectBtn').onclick = () => { closeModal('detailModal'); openReject(t.no); };
+  document.getElementById('dAcceptBtn').onclick = () => { closeModal('detailModal'); openAccept(t.no); };
+  document.getElementById('detailModal').classList.add('show');
+}
+
+/* ═══════════════════════════════════════════
+   ACCEPT FLOW
+═══════════════════════════════════════════ */
+function openAccept(no){
+  activeNo = no;
+  const t = transfers.find(x => x.no === no);
+  if (!t) return;
+  document.getElementById('acName').textContent = `${t.no} — ${t.meal}`;
+  document.getElementById('acQty').textContent = `${t.qty} ${t.unit}`;
+  document.getElementById('acReceivedBy').value = '';
+  document.getElementById('acRemarks').value = '';
+  document.getElementById('acceptModal').classList.add('show');
+}
+
+async function confirmAccept(){
+  const t = transfers.find(x => x.no === activeNo);
+  if (!t) return;
+  const receivedBy = document.getElementById('acReceivedBy').value.trim();
+  if (!receivedBy) { showToast('Please enter who received the transfer.', 'error'); return; }
+  const remarks = document.getElementById('acRemarks').value.trim();
+  const stamp = nowStamp();
+
+  const existing = inventory.find(i => i.meal === t.meal);
+  if (existing) {
+    existing.qty += t.qty;
+    existing.batch = t.prodNo || existing.batch;
+    existing.received = stamp.split(' ')[0];
+  } else {
+    inventory.push({ meal: t.meal, qty: t.qty, unit: t.unit, batch: t.prodNo || '—', received: stamp.split(' ')[0], min: 6 });
+  }
+
+  const balance = inventory.find(i => i.meal === t.meal).qty;
+  movements.unshift({ date: stamp, meal: t.meal, qtyIn: t.qty, qtyOut: 0, balance, reason: `Kitchen Transfer (${t.no})` });
+
+  history.unshift({ ...t, status: 'accepted', receivedBy, actionRemarks: remarks, actionDate: stamp });
+  transfers = transfers.filter(x => x.no !== t.no);
+
+  await Promise.all([ saveShared(KEY_INVENTORY, inventory), saveShared(KEY_MOVEMENTS, movements), saveShared(KEY_HISTORY, history), saveShared(KEY_TRANSFERS, transfers) ]);
+  apiSave('PATCH', `/api/restaurant/transfers/${t.no}`, { status:'accepted', receivedBy, remarks });
+
+  closeModal('acceptModal');
+  showToast(`${t.no} accepted — ${t.qty} ${t.unit} of ${t.meal} added to Restaurant Inventory.`, 'success');
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   REJECT FLOW
+═══════════════════════════════════════════ */
+function openReject(no){
+  activeNo = no;
+  const t = transfers.find(x => x.no === no);
+  if (!t) return;
+  document.getElementById('rjName').textContent = `${t.no} — ${t.meal}`;
+  document.getElementById('rjReason').value = '';
+  document.getElementById('rejectModal').classList.add('show');
+}
+
+async function confirmReject(){
+  const t = transfers.find(x => x.no === activeNo);
+  if (!t) return;
+  const reason = document.getElementById('rjReason').value.trim();
+  if (!reason) { showToast('Please enter a reason for rejecting this transfer.', 'error'); return; }
+  const stamp = nowStamp();
+
+  history.unshift({ ...t, status: 'rejected', receivedBy: '', actionRemarks: reason, actionDate: stamp });
+  transfers = transfers.filter(x => x.no !== t.no);
+
+  await Promise.all([ saveShared(KEY_HISTORY, history), saveShared(KEY_TRANSFERS, transfers) ]);
+  apiSave('PATCH', `/api/restaurant/transfers/${t.no}`, { status:'rejected', reason });
+
+  closeModal('rejectModal');
+  showToast(`${t.no} rejected and sent back to Kitchen history.`, 'error');
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════════ */
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+['detailModal','acceptModal','rejectModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
+});
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+/* ═══════════════════════════════════════════
+   INIT — tries a real API first (when CFG.USE_DEMO=false), falls
+   back to shared storage, and finally to the hardcoded demo seed.
+═══════════════════════════════════════════ */
+async function init(){
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/restaurant/transfers');
+      transfers = data.pending || [];
+      inventory = data.inventory || [];
+      history   = data.history || [];
+      movements = data.movements || [];
+      shell.setApiMode('Live');
+      bindHeaderSort();
+      render();
+      return;
+    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+  }
+
+  transfers = await loadShared(KEY_TRANSFERS, DEMO_TRANSFERS);
+  inventory = await loadShared(KEY_INVENTORY, DEMO_INVENTORY);
+  history   = await loadShared(KEY_HISTORY, DEMO_HISTORY);
+  movements = await loadShared(KEY_MOVEMENTS, []);
+
+  // Seed shared storage the very first time so Dashboard / Inventory / History
+  // pages all read the same live data going forward.
+  await Promise.all([
+    saveShared(KEY_TRANSFERS, transfers),
+    saveShared(KEY_INVENTORY, inventory),
+    saveShared(KEY_HISTORY, history),
+    saveShared(KEY_MOVEMENTS, movements),
+  ]);
+
+  bindHeaderSort();
+  render();
+}
+init();
+</script>
+</body>
+</html>

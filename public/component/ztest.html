@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" style="background:#080f18;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>grace-sales-modal.js — Demo</title>
+<style>html,body{background:#080f18;margin:0;}</style>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<style>
+body{font-family:'Outfit',sans-serif;color:#e8f0f8;padding:40px 20px;}
+.wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+h1{font-family:'Cormorant Garamond',serif;font-size:22px;}
+p{font-size:12.5px;color:#6a8a9e;line-height:1.5;}
+button{padding:12px 16px;border-radius:10px;border:1px solid #1e3045;background:#111e2b;color:#e8f0f8;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:left;}
+button:hover{border-color:rgba(201,168,76,.4);}
+button.completed{border-left:3px solid #4ade80;}
+button.voided{border-left:3px solid #f87171;}
+code{background:#162435;padding:2px 6px;border-radius:4px;font-size:11.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>grace-sales-modal.js Demo</h1>
+  <p>Try the demo credentials below to test the void authorization flow: <br><code>Amaka O.</code> / <code>manager123</code></p>
+  <button class="completed" onclick="openSale('completed')">👁 Open: Completed Sale (PBS-1012)</button>
+  <button class="voided" onclick="openSale('voided')">👁 Open: Voided Sale (PBS-1008)</button>
+</div>
+
+<script src="grace-sales-modal.js"></script>
+<script>
+const DEMO = {
+  completed: {
+    id:'PBS-1012', status:'completed',
+    items:[{name:'Heineken',qty:3,price:1500},{name:'Chapman',qty:2,price:2500}],
+    subtotal:9500, discount:0, total:9500,
+    method:'Cash', staff:'Emeka S.', table:'Pool Deck 2',
+    date:'17/07/26 11:05 AM', notes:'Regular guest, no allergies'
+  },
+  voided: {
+    id:'PBS-1008', status:'voided',
+    items:[{name:'Guinness',qty:2,price:1600}],
+    subtotal:3200, discount:0, total:3200,
+    method:'Cash', staff:'Emeka S.', table:'Pool Deck 1',
+    date:'16/07/26 01:15 PM', notes:'Wrong order',
+    voidReason:'Customer changed mind before it was served',
+    voidDate:'16/07/26 01:20 PM',
+    voidedBy:'Adaeze Nwankwo', voidedByRole:'Duty Manager'
+  }
+};
+
+const salesModal = GraceHotelSalesModal.attach({
+  onVoid: (sale, voidInfo) => {
+    // In the real page: restore stock, save to storage, etc.
+    console.log('Voided:', sale.id, voidInfo);
+    alert(`Would void ${sale.id}\nAuthorized by: ${voidInfo.authorizedBy} (${voidInfo.authorizedByRole})\nReason: ${voidInfo.reason}`);
+  },
+});
+
+function openSale(key){ salesModal.open(DEMO[key]); }
+</script>
+</body>
+</html>

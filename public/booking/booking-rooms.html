@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Aurum Hotel — Rooms</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* This page owns layout + its own Rooms content only. Sidebar +
+   topbar look/markup live entirely in booking-shell.js — same split
+   used by booking-dashboard.html and every other module's shell. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
+
+html, body { height: 100%; overflow-x: hidden; }
+body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background var(--transition), color var(--transition); }
+
+.app { display: flex; min-height: 100vh; }
+.main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
+@media (max-width: 768px) { .main { margin-left: 0 !important; } }
+
+.content { flex: 1; padding: 24px; min-width: 0; overflow-x: hidden; }
+@media (max-width: 480px) { .content { padding: 16px; } }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ═══════════ TOOLBAR / FILTERS ═══════════ */
+.room-filters { display: flex; gap: 7px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.rf-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: 'Outfit', sans-serif; display: inline-flex; align-items: center; gap: 5px; }
+.rf-btn:hover, .rf-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+.rf-dot { width: 7px; height: 7px; border-radius: 50%; }
+.rf-right { margin-left: auto; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 700px) { .rf-right { margin-left: 0; width: 100%; } }
+
+.filter-sel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 12.5px; cursor: pointer; outline: none; transition: border-color 0.2s; }
+.filter-sel:focus { border-color: var(--gold-border); }
+.search-wrap { display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; transition: border-color 0.2s; flex: 1; min-width: 160px; max-width: 240px; }
+.search-wrap:focus-within { border-color: var(--gold-border); }
+.search-wrap input { background: none; border: none; outline: none; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 13px; width: 100%; }
+.search-wrap input::placeholder { color: var(--text3); }
+
+/* ═══════════ BUTTONS ═══════════ */
+.btn-primary { background: var(--gold); color: #0a1520; border: none; border-radius: var(--radius-sm); padding: 9px 16px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-outline { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
+
+/* ═══════════ PANEL ═══════════ */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; animation: fadeUp 0.4s ease both; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 14px; flex-wrap: wrap; gap: 8px; }
+.panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.panel-sub { font-size: 11.5px; color: var(--text3); }
+
+/* ═══════════ ROOM GRID ═══════════ */
+.room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; padding: 0 16px 16px; }
+@media (max-width: 480px) { .room-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } }
+
+.room-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+.room-card:hover { transform: translateY(-2px); border-color: var(--gold-border); box-shadow: 0 6px 20px rgba(201,168,76,0.1); }
+.room-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.room-card.available::before { background: var(--green); }
+.room-card.checkedin::before { background: var(--gold); }
+.room-card.reserved::before { background: var(--blue); }
+.room-card.checkout::before { background: var(--red); }
+.room-card.maintenance::before { background: #fb923c; }
+
+.room-num { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
+.room-type-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 7px; }
+.room-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+.room-chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+.rc-available { background: var(--green-bg); color: var(--green); } .rc-available::before { background: var(--green); }
+.rc-checkedin { background: rgba(201,168,76,0.15); color: var(--gold-light); } .rc-checkedin::before { background: var(--gold); }
+.rc-reserved { background: var(--blue-bg); color: var(--blue); } .rc-reserved::before { background: var(--blue); }
+.rc-checkout { background: var(--red-bg); color: var(--red); } .rc-checkout::before { background: var(--red); }
+.rc-maintenance { background: rgba(251,146,60,0.12); color: #fb923c; } .rc-maintenance::before { background: #fb923c; }
+
+.room-guest { font-size: 11.5px; font-weight: 500; color: var(--text); margin-top: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room-dates { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.room-rate { font-size: 10.5px; color: var(--text3); margin-top: 5px; }
+.room-acts { display: flex; gap: 4px; margin-top: 8px; }
+.room-act-btn { flex: 1; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 0; font-size: 10px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: 'Outfit', sans-serif; text-align: center; }
+.room-act-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+.room-act-btn.danger:hover { border-color: var(--red); color: var(--red); }
+.room-empty { grid-column: 1/-1; text-align: center; padding: 30px 0; color: var(--text3); font-size: 12.5px; }
+
+/* ═══════════ PAGINATION ═══════════ */
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; }
+.page-btns { display: flex; gap: 3px; flex-wrap: wrap; }
+.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; font-family: 'Outfit', sans-serif; padding: 0 7px; }
+.page-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 600; }
+.page-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+/* ═══════════ MODAL ═══════════ */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(5px); z-index: 300; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; width: min(680px, 96vw); box-shadow: 0 30px 80px rgba(0,0,0,0.6); animation: modalIn 0.25s cubic-bezier(.4,0,.2,1); margin: auto; }
+.modal-sm { max-width: 420px; }
+.confirm-modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px; width: min(380px, 90vw); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: modalIn 0.2s ease; margin: 80px auto auto; }
+@keyframes modalIn { from{opacity:0;transform:translateY(14px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--text); }
+.modal-close { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; line-height: 1; transition: color 0.2s; }
+.modal-close:hover { color: var(--text); }
+
+.form-section { margin-bottom: 16px; }
+.form-section-title { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); font-weight: 600; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--gold-border); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+@media (max-width: 500px) { .form-grid, .form-grid-3 { grid-template-columns: 1fr; } }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.span2 { grid-column: span 2; }
+@media (max-width: 500px) { .form-group.span2 { grid-column: span 1; } }
+.form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; }
+.form-input, .form-select { background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 13px; outline: none; transition: border-color 0.2s; width: 100%; }
+.form-input:focus, .form-select:focus { border-color: var(--gold-border); }
+.form-input[readonly] { opacity: 0.55; cursor: default; }
+
+.amount-box { background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: var(--radius-sm); padding: 10px 12px; }
+.amount-box.blue { background: rgba(96,165,250,0.08); border-color: rgba(96,165,250,0.2); }
+.amount-box.red  { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.2); }
+.amount-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--gold); margin-bottom: 3px; }
+.amount-box.blue .amount-label { color: var(--blue); }
+.amount-box.red  .amount-label { color: var(--red); }
+.amount-value { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--gold-light); }
+.amount-box.blue .amount-value { color: #93c5fd; }
+.amount-box.red  .amount-value { color: #fca5a5; }
+.amount-sub { font-size: 10px; color: rgba(201,168,76,0.7); margin-top: 1px; }
+.amount-box.blue .amount-sub { color: rgba(147,197,253,0.7); }
+.amount-box.red  .amount-sub { color: rgba(252,165,165,0.7); }
+
+.num-pair { display: flex; align-items: center; }
+.num-pair button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 32px; height: 38px; font-size: 14px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.num-pair button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); border-right: none; }
+.num-pair button:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
+.num-pair button:hover { background: var(--gold-dim); color: var(--gold); }
+.num-pair input { flex: 1; border-radius: 0; border-left: none; border-right: none; text-align: center; }
+
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+
+.guest-search-wrap { position: relative; }
+.guest-dropdown { position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 400; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 12px 40px rgba(0,0,0,0.35); overflow: hidden; display: none; max-height: 220px; overflow-y: auto; }
+.guest-dropdown.show { display: block; }
+.guest-opt { padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
+.guest-opt:last-child { border-bottom: none; }
+.guest-opt:hover { background: var(--surface2); }
+.guest-opt-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.guest-opt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.returning-tag { display: inline-block; font-size: 9px; background: var(--gold-dim); color: var(--gold); padding: 1px 5px; border-radius: 8px; margin-left: 5px; }
+
+/* ═══════════ TOAST ═══════════ */
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px; color: var(--text); box-shadow: 0 8px 28px rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; max-width: calc(100vw - 40px); }
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error   { border-left: 3px solid var(--red); }
+.toast.info    { border-left: 3px solid var(--blue); }
+@keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* Print */
+@media print {
+  #sidebarSlot, #topbarSlot, .room-filters, .no-print { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .content { padding: 0 !important; overflow: visible !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ccc !important; }
+  @page { margin: 16mm; }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar rendered here by booking-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar rendered here by booking-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="room-filters" id="roomFilters">
+        <button class="rf-btn active" data-f="all" onclick="filterRooms('all',this)">All Rooms</button>
+        <button class="rf-btn" data-f="available" onclick="filterRooms('available',this)"><span class="rf-dot" style="background:var(--green)"></span>Available</button>
+        <button class="rf-btn" data-f="checkedin" onclick="filterRooms('checkedin',this)"><span class="rf-dot" style="background:var(--gold)"></span>Occupied</button>
+        <button class="rf-btn" data-f="reserved" onclick="filterRooms('reserved',this)"><span class="rf-dot" style="background:var(--blue)"></span>Reserved</button>
+        <button class="rf-btn" data-f="checkout" onclick="filterRooms('checkout',this)"><span class="rf-dot" style="background:var(--red)"></span>Check-out</button>
+        <button class="rf-btn" data-f="maintenance" onclick="filterRooms('maintenance',this)"><span class="rf-dot" style="background:#fb923c"></span>Maintenance</button>
+        <div class="rf-right">
+          <div class="search-wrap">
+            <span style="color:var(--text3);font-size:13px;">🔍</span>
+            <input type="text" id="roomSearch" placeholder="Room number…" oninput="roomsPage=1;renderRoomGrid(roomFilter)">
+          </div>
+          <select class="filter-sel" id="roomTypeFilter" onchange="roomsPage=1;renderRoomGrid(roomFilter)">
+            <option value="">All Types</option>
+            <option value="Standard">Standard</option>
+            <option value="Deluxe">Deluxe</option>
+            <option value="Suite">Suite</option>
+            <option value="Conference">Conference</option>
+          </select>
+          <button class="btn-outline no-print" onclick="window.print()">🖨 Print</button>
+          <button class="btn-outline no-print" onclick="openAddRoomModal()">＋ Add Room</button>
+          <button class="btn-primary no-print" onclick="openBookingModal()">＋ New Booking</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title" id="roomsTitle">All Rooms</div>
+          <div class="panel-sub" id="roomsCount">—</div>
+        </div>
+        <div class="room-grid" id="roomGrid"></div>
+        <div class="pagination">
+          <span id="roomPaginLabel">—</span>
+          <div class="page-btns" id="roomPageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ BOOKING MODAL ══ -->
+<div class="modal-overlay" id="bookingModal" onclick="handleModalBackdrop(event,'bookingModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">New Booking</div>
+      <button class="modal-close" onclick="closeModal('bookingModal')">✕</button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">👤 Guest Information</div>
+      <div class="form-grid">
+        <div class="form-group span2">
+          <label class="form-label">Guest Full Name</label>
+          <div class="guest-search-wrap">
+            <input class="form-input" type="text" id="fName" placeholder="Type to search returning guests…" autocomplete="off" oninput="searchGuests(this.value)">
+            <div class="guest-dropdown" id="guestDrop"></div>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" type="tel" id="fPhone" placeholder="+234 800 000 0000"></div>
+        <div class="form-group"><label class="form-label">Email (optional)</label><input class="form-input" type="email" id="fEmail" placeholder="guest@email.com"></div>
+        <div class="form-group"><label class="form-label">ID Type</label>
+          <select class="form-select" id="fIdType"><option>NIN</option><option>Passport</option><option>Driver's Licence</option><option>Voter's Card</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">ID Number</label><input class="form-input" type="text" id="fIdNum" placeholder="e.g. 12345678901"></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">🛏 Room &amp; Stay</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Room Number</label>
+          <select class="form-select" id="fRoom" onchange="onRoomChange()"><option value="">Select room…</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Room Type</label><input class="form-input" type="text" id="fType" readonly placeholder="Auto-filled"></div>
+        <div class="form-group"><label class="form-label">Check-in Date</label><input class="form-input" type="date" id="fCheckin" onchange="calcAmount()"></div>
+        <div class="form-group"><label class="form-label">Check-out Date</label><input class="form-input" type="date" id="fCheckout" onchange="calcAmount()"></div>
+        <div class="form-group"><label class="form-label">Adults</label>
+          <div class="num-pair"><button type="button" onclick="adj('fAdults',-1)">−</button><input class="form-input" type="number" id="fAdults" value="1" min="1" max="50"><button type="button" onclick="adj('fAdults',1)">+</button></div>
+        </div>
+        <div class="form-group"><label class="form-label">Children</label>
+          <div class="num-pair"><button type="button" onclick="adj('fChildren',-1)">−</button><input class="form-input" type="number" id="fChildren" value="0" min="0" max="50"><button type="button" onclick="adj('fChildren',1)">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">₦ Billing &amp; Payment</div>
+      <div class="form-grid-3">
+        <div class="form-group"><label class="form-label">Rate / Night (₦)</label><input class="form-input" type="number" id="fRate" placeholder="0" oninput="calcAmount()"></div>
+        <div class="form-group"><label class="form-label">Discount (%)</label><input class="form-input" type="number" id="fDiscount" placeholder="0" min="0" max="100" oninput="calcAmount()"></div>
+        <div class="form-group"><label class="form-label">Amount Paid (₦)</label><input class="form-input" type="number" id="fPaid" placeholder="0" oninput="calcBalance()"></div>
+        <div class="amount-box"><div class="amount-label">Gross Total</div><div class="amount-value" id="dispTotal">₦0</div><div class="amount-sub" id="dispNights">0 nights</div></div>
+        <div class="amount-box blue"><div class="amount-label">After Discount</div><div class="amount-value" id="dispAfterDisc">₦0</div><div class="amount-sub" id="dispDisc">No discount</div></div>
+        <div class="amount-box red"><div class="amount-label">Balance Due</div><div class="amount-value" id="dispBalance">₦0</div><div class="amount-sub" id="dispPaidSub">₦0 paid</div></div>
+        <div class="form-group"><label class="form-label">Payment Method</label>
+          <select class="form-select" id="fPayMethod"><option>Cash</option><option>POS</option><option>Transfer</option><option>Split – Cash + POS</option><option>Split – Cash + Transfer</option><option>Complimentary</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Payment Status</label>
+          <select class="form-select" id="fPayStatus"><option>Pending</option><option>Deposit Paid</option><option>Fully Paid</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="fRecordedBy" placeholder="Staff name"></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">📝 Notes</div>
+      <div class="form-group"><textarea class="form-input" style="min-height:60px;resize:vertical;" id="fNotes" placeholder="Late check-in, dietary needs, extra bedding, special requests…"></textarea></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" id="modalDeleteBtn" style="display:none;border-color:rgba(248,113,113,0.3);color:var(--red);" onclick="openDeleteFromEdit()">🗑 Delete Booking</button>
+      <button class="btn-outline" onclick="closeModal('bookingModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveBooking()">✓ Save Booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD ROOM MODAL ══ -->
+<div class="modal-overlay" id="addRoomModal" onclick="handleModalBackdrop(event,'addRoomModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Add New Room</div>
+      <button class="modal-close" onclick="closeModal('addRoomModal')">✕</button>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">🛏 Room Details</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Room Number</label><input class="form-input" type="text" id="arNum" placeholder="e.g. 205"></div>
+        <div class="form-group"><label class="form-label">Room Type</label>
+          <select class="form-select" id="arType"><option>Standard</option><option>Deluxe</option><option>Suite</option><option>Conference</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Rate / Night (₦)</label><input class="form-input" type="number" id="arRate" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Initial Status</label>
+          <select class="form-select" id="arStatus"><option value="vacant">Available</option><option value="maintenance">Maintenance</option></select>
+        </div>
+        <div class="form-group span2"><label class="form-label">Notes (optional)</label><input class="form-input" type="text" id="arNotes" placeholder="Recently renovated, sea view…"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('addRoomModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveNewRoom()">＋ Add Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ROOM STATUS MODAL ══ -->
+<div class="modal-overlay" id="roomStatusModal" onclick="handleModalBackdrop(event,'roomStatusModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Update Room Status</div>
+      <button class="modal-close" onclick="closeModal('roomStatusModal')">✕</button>
+    </div>
+    <div style="padding:4px 0 14px;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">
+        Room <strong id="rsRoomNum" style="color:var(--text)"></strong> · <span id="rsRoomType" style="color:var(--gold)"></span> · Current: <span id="rsCurStatus" style="font-weight:600;"></span>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">New Status</label>
+        <select class="form-select" id="rsNewStatus"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reason / Note</label>
+        <input class="form-input" type="text" id="rsNote" placeholder="e.g. AC repair, deep cleaning…">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('roomStatusModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveRoomStatus()">✓ Update</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DELETE CONFIRM ══ -->
+<div class="modal-overlay" id="deleteModal" onclick="handleModalBackdrop(event,'deleteModal')">
+  <div class="confirm-modal">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--red);margin-bottom:8px;">Delete Booking</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Delete booking for <strong id="delGuest"></strong> in Room <strong id="delRoom"></strong>? This cannot be undone.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+      <button style="background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:var(--radius-sm);padding:9px 16px;color:var(--red);cursor:pointer;font-family:'Outfit',sans-serif;font-size:13px;transition:all 0.2s;" onclick="confirmDelete()">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/booking-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════════
+   Shell
+═══════════════════════════════════════════════ */
+const shell = BookingShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'booking-rooms.html',
+  pageTitle:     'Rooms',
+  pageSubtitle:  'Room inventory & live status',
+  apiMode:       'Demo',
+  user:          { name: 'Booking Manager', initials: 'MG' },
+});
+
+/* ═══════════════════════════════════════════════
+   Storage shim — same 4-method contract used across every module.
+   Reads/writes the exact same 'booking-rooms' / 'booking-bookings'
+   shared keys as booking-dashboard.html, booking-list.html and
+   booking-reports.html, so all four Booking pages stay in sync.
+═══════════════════════════════════════════════ */
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_ROOMS    = 'booking-rooms';
+const KEY_BOOKINGS = 'booking-bookings';
+
+/* Seed data — identical shape/values to booking-dashboard.html, so
+   this page never diverges from the other Booking pages on first run. */
+const DEMO_ROOMS = [
+  {num:'101',type:'Standard',   rate:35000},{num:'102',type:'Standard',   rate:35000},
+  {num:'103',type:'Standard',   rate:35000},{num:'104',type:'Standard',   rate:35000},
+  {num:'105',type:'Standard',   rate:35000},{num:'106',type:'Standard',   rate:35000},
+  {num:'201',type:'Deluxe',     rate:60000},{num:'202',type:'Deluxe',     rate:60000},
+  {num:'203',type:'Deluxe',     rate:60000},{num:'204',type:'Deluxe',     rate:60000},
+  {num:'301',type:'Suite',      rate:120000},{num:'302',type:'Suite',     rate:120000},
+  {num:'303',type:'Suite',      rate:120000},
+  {num:'401',type:'Conference', rate:200000},{num:'402',type:'Conference',rate:200000},
+];
+
+const DEMO_BOOKINGS = [
+  {room:'101',type:'Standard',  guest:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',   idType:'NIN',             idNum:'12345678901', checkin:'2026-03-10',checkout:'2026-03-14',rate:35000, discount:0,  paid:140000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:''},
+  {room:'102',type:'Standard',  guest:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',      idType:'Passport',         idNum:'A12345678',   checkin:'2026-03-12',checkout:'2026-03-13',rate:35000, discount:0,  paid:35000, payMethod:'Cash',                   payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkout',   notes:''},
+  {room:'103',type:'Standard',  guest:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                       idType:'NIN',             idNum:'98765432109', checkin:'2026-03-13',checkout:'2026-03-16',rate:35000, discount:10, paid:50000, payMethod:'POS',                    payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:1,status:'reserved',   notes:'Extra pillow'},
+  {room:'104',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'105',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'Plumbing repair'},
+  {room:'106',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'201',type:'Deluxe',    guest:'Dr. Eze, Chukwuemeka',  phone:'+234 802 444 8899',email:'ceze@hospital.ng',       idType:'Passport',         idNum:'B87654321',   checkin:'2026-03-11',checkout:'2026-03-15',rate:60000, discount:0,  paid:240000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
+  {room:'202',type:'Deluxe',    guest:'Ms. Abubakar, Fatima',  phone:'+234 805 555 0011',email:'fatima.a@gmail.com',     idType:"Driver's Licence", idNum:'ABJ001234',   checkin:'2026-03-13',checkout:'2026-03-17',rate:60000, discount:5,  paid:100000,payMethod:'Split – Cash + Transfer',payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'reserved',   notes:'Honeymoon setup'},
+  {room:'203',type:'Deluxe',    guest:'Mr. Johnson, Segun',    phone:'+234 708 666 2233',email:'',                       idType:'NIN',             idNum:'55566677788', checkin:'2026-03-09',checkout:'2026-03-13',rate:60000, discount:0,  paid:240000,payMethod:'POS',                    payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:2,status:'checkout',   notes:''},
+  {room:'204',type:'Deluxe',    guest:'Prof. Williams, Ada',   phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng',idType:'NIN',             idNum:'11122233344', checkin:'2026-03-12',checkout:'2026-03-18',rate:60000, discount:15, paid:200000,payMethod:'Transfer',              payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:'Vegetarian meals'},
+  {room:'301',type:'Suite',     guest:'Chief Dangote, Emeka',  phone:'+234 801 888 6677',email:'emeka.d@corp.ng',        idType:'Passport',         idNum:'C11223344',   checkin:'2026-03-10',checkout:'2026-03-15',rate:120000,discount:0,  paid:600000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
+  {room:'302',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'303',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'AC repair in progress'},
+  {room:'401',type:'Conference',guest:'Zenith Bank Ltd.',       phone:'+234 700 999 8877',email:'events@zenithbank.com',  idType:"Voter's Card",     idNum:'ZB00001',     checkin:'2026-03-13',checkout:'2026-03-13',rate:200000,discount:0,  paid:200000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:40,children:0,status:'checkedin',  notes:'Projector & PA system'},
+  {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+];
+
+/* Local returning-guest directory for autofill only — not a shared
+   record type across modules, so it isn't synced like rooms/bookings. */
+let guestDB = [
+  {name:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',    idType:'NIN',              idNum:'12345678901'},
+  {name:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',       idType:'Passport',         idNum:'A12345678'},
+  {name:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                        idType:'NIN',              idNum:'98765432109'},
+  {name:'Dr. Eze, Chukwuemeka', phone:'+234 802 444 8899',email:'ceze@hospital.ng',        idType:'Passport',         idNum:'B87654321'},
+  {name:'Ms. Abubakar, Fatima', phone:'+234 805 555 0011',email:'fatima.a@gmail.com',      idType:"Driver's Licence", idNum:'ABJ001234'},
+  {name:'Prof. Williams, Ada',  phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng', idType:'NIN',              idNum:'11122233344'},
+  {name:'Chief Dangote, Emeka', phone:'+234 801 888 6677',email:'emeka.d@corp.ng',         idType:'Passport',         idNum:'C11223344'},
+  {name:'Zenith Bank Ltd.',     phone:'+234 700 999 8877',email:'events@zenithbank.com',   idType:"Voter's Card",     idNum:'ZB00001'},
+];
+
+async function loadShared(key, fallback) {
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
+  } catch (e) {}
+  return fallback;
+}
+async function saveShared(key, value) {
+  try { await storage.set(key, JSON.stringify(value), true); } catch (e) { console.warn('[sync]', key, e); }
+}
+
+let allRooms = [];
+let bookings = [];
+
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+let roomFilter = 'all';
+let roomsPage  = 1;
+let editIdx    = null;
+let deleteIdx  = null;
+let statusRoom = null;
+const PAGE_ROOMS = 24;
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════ */
+function nights(ci, co) { if (!ci || !co) return 0; const n = (new Date(co) - new Date(ci)) / 86400000; return n > 0 ? n : 0; }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
+function calcTotal(b) { const n = nights(b.checkin, b.checkout) || 1; return b.rate * n * (1 - (b.discount || 0) / 100); }
+function calcBal(b) { return Math.max(0, calcTotal(b) - (b.paid || 0)); }
+function getRoomStatus(num) {
+  const b = bookings.find(r => r.room === num);
+  if (!b || !b.status) return 'available';
+  return b.status === 'vacant' ? 'available' : b.status;
+}
+
+const RC_CLS = { available:'rc-available', checkedin:'rc-checkedin', reserved:'rc-reserved', checkout:'rc-checkout', maintenance:'rc-maintenance' };
+const RC_LBL = { available:'Available', checkedin:'Occupied', reserved:'Reserved', checkout:'Check-out', maintenance:'Maintenance' };
+const STATUS_OPTS = {
+  available:   [{v:'maintenance', l:'Put Under Maintenance'}],
+  checkedin:   [{v:'checkout', l:'Check-out Guest'}],
+  reserved:    [{v:'checkedin', l:'Check In'}, {v:'vacant', l:'Cancel / Make Available'}, {v:'maintenance', l:'Put Under Maintenance'}],
+  checkout:    [{v:'vacant', l:'Mark Available'}, {v:'maintenance', l:'Put Under Maintenance'}],
+  maintenance: [{v:'vacant', l:'Mark Available'}],
+};
+
+/* ═══════════════════════════════════════════════
+   PAGINATION
+═══════════════════════════════════════════════ */
+function renderPagination(btnId, labelId, page, total, size, cb) {
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const from = total === 0 ? 0 : (page - 1) * size + 1;
+  const to   = Math.min(page * size, total);
+  document.getElementById(labelId).textContent = total === 0 ? 'No rooms' : `${from}–${to} of ${total}`;
+  const wrap = document.getElementById(btnId);
+  wrap.innerHTML = '';
+  const prev = document.createElement('button');
+  prev.className = 'page-btn'; prev.textContent = '‹'; prev.disabled = (page === 1);
+  prev.onclick = () => cb(page - 1); wrap.appendChild(prev);
+  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'page-btn' + (i === page ? ' active' : '');
+    btn.textContent = i; btn.onclick = (function(p){return () => cb(p);})(i);
+    wrap.appendChild(btn);
+  }
+  const next = document.createElement('button');
+  next.className = 'page-btn'; next.textContent = '›'; next.disabled = (page >= totalPages);
+  next.onclick = () => cb(page + 1); wrap.appendChild(next);
+}
+
+/* ═══════════════════════════════════════════════
+   ROOM GRID
+═══════════════════════════════════════════════ */
+function filterRooms(st, btn) {
+  document.querySelectorAll('.rf-btn[data-f]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  roomFilter = st || 'all';
+  roomsPage  = 1;
+  renderRoomGrid(roomFilter);
+}
+
+function renderRoomGrid(filter) {
+  const typeF = (document.getElementById('roomTypeFilter') || {}).value || '';
+  const q     = (document.getElementById('roomSearch').value || '').trim().toLowerCase();
+  const filtered = allRooms.filter(r => {
+    const st = getRoomStatus(r.num);
+    const mf = filter === 'all' || st === filter;
+    const mt = !typeF || r.type === typeF;
+    const mq = !q || r.num.toLowerCase().includes(q);
+    return mf && mt && mq;
+  });
+
+  document.getElementById('roomsTitle').textContent = filter === 'all' ? 'All Rooms' : `${RC_LBL[filter] || 'Filtered'} Rooms`;
+  document.getElementById('roomsCount').textContent  = filtered.length + ' of ' + allRooms.length + ' rooms';
+
+  const total = filtered.length;
+  const start = (roomsPage - 1) * PAGE_ROOMS;
+  const page  = filtered.slice(start, start + PAGE_ROOMS);
+  const grid  = document.getElementById('roomGrid');
+
+  grid.innerHTML = page.length === 0
+    ? `<div class="room-empty">No rooms match these filters.</div>`
+    : page.map(r => {
+        const st = getRoomStatus(r.num);
+        const bk = bookings.find(b => b.room === r.num);
+        let acts = '';
+        if (st === 'available')     acts = `<div class="room-acts"><button class="room-act-btn" onclick="event.stopPropagation();openBookingForRoom('${r.num}')">📋 Book</button><button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal('${r.num}')">⚙</button></div>`;
+        else if (st === 'checkedin') acts = `<div class="room-acts"><button class="room-act-btn danger" onclick="event.stopPropagation();openRoomStatusModal('${r.num}')">🚪 Check-out</button></div>`;
+        else if (st === 'reserved')  acts = `<div class="room-acts"><button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal('${r.num}')">⚙ Status</button><button class="room-act-btn" onclick="event.stopPropagation();openEditByRoom('${r.num}')">✏ Edit</button></div>`;
+        else                         acts = `<div class="room-acts"><button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal('${r.num}')">⚙ Status</button></div>`;
+
+        const clickable = st === 'available' ? `openBookingForRoom('${r.num}')` : (bk && bk.guest ? `openEditByRoom('${r.num}')` : '');
+
+        return `<div class="room-card ${st}" onclick="${clickable}">
+          <div class="room-num">${r.num}</div>
+          <div class="room-type-lbl">${r.type}</div>
+          <span class="room-chip ${RC_CLS[st]}">${RC_LBL[st]}</span>
+          ${bk && bk.guest ? `<div class="room-guest">${bk.guest.split(',')[0]}</div><div class="room-dates">${fmtDate(bk.checkin)} → ${fmtDate(bk.checkout)}</div>` : ''}
+          ${st === 'maintenance' && bk?.notes ? `<div class="room-dates" style="color:#fb923c;font-size:9.5px;margin-top:3px;">${bk.notes}</div>` : ''}
+          <div class="room-rate">${fmtN(r.rate)}/night</div>
+          ${acts}
+        </div>`;
+      }).join('');
+
+  renderPagination('roomPageBtns', 'roomPaginLabel', roomsPage, total, PAGE_ROOMS, p => { roomsPage = p; renderRoomGrid(roomFilter); });
+
+  // Keep sidebar's "All Bookings" badge in sync with reserved arrivals.
+  shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
+}
+
+function openEditByRoom(num) {
+  const i = bookings.findIndex(b => b.room === num);
+  if (i >= 0) openEdit(i);
+}
+
+function openBookingForRoom(num) {
+  openBookingModal();
+  setTimeout(() => {
+    const r = allRooms.find(x => x.num === num);
+    if (!r) return;
+    const sel = document.getElementById('fRoom');
+    for (let o of sel.options) { if (o.value.startsWith(num + '|')) { sel.value = o.value; break; } }
+    onRoomChange();
+  }, 60);
+}
+
+/* ═══════════════════════════════════════════════
+   GUEST AUTOFILL
+═══════════════════════════════════════════════ */
+function searchGuests(val) {
+  const drop = document.getElementById('guestDrop');
+  if (!val || val.length < 1) { drop.classList.remove('show'); return; }
+  const hits = guestDB.filter(g =>
+    g.name.toLowerCase().includes(val.toLowerCase()) ||
+    g.phone.replace(/\s/g,'').includes(val.replace(/\s/g,''))
+  );
+  if (!hits.length) { drop.classList.remove('show'); return; }
+  drop._hits = hits;
+  drop.innerHTML = hits.map((g, i) => `
+    <div class="guest-opt" onclick="autofillGuest(${i})">
+      <div class="guest-opt-name">${g.name}<span class="returning-tag">Returning</span></div>
+      <div class="guest-opt-sub">${g.phone}${g.email ? ' · ' + g.email : ''}</div>
+    </div>`).join('');
+  drop.classList.add('show');
+}
+function autofillGuest(i) {
+  const g = document.getElementById('guestDrop')._hits[i];
+  document.getElementById('fName').value   = g.name;
+  document.getElementById('fPhone').value  = g.phone;
+  document.getElementById('fEmail').value  = g.email || '';
+  document.getElementById('fIdType').value = g.idType;
+  document.getElementById('fIdNum').value  = g.idNum;
+  document.getElementById('guestDrop').classList.remove('show');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.guest-search-wrap')) document.getElementById('guestDrop').classList.remove('show');
+});
+
+/* ═══════════════════════════════════════════════
+   BOOKING MODAL
+═══════════════════════════════════════════════ */
+function populateRoomSelect(editRoomNum) {
+  const sel = document.getElementById('fRoom');
+  sel.innerHTML = '<option value="">Select room…</option>';
+  allRooms.forEach(r => {
+    const st = getRoomStatus(r.num);
+    if (st === 'available' || r.num === editRoomNum) {
+      const opt = document.createElement('option');
+      opt.value = `${r.num}|${r.type}|${r.rate}`;
+      opt.textContent = `${r.num} – ${r.type} (${fmtN(r.rate)}/night)${r.num === editRoomNum ? ' ✓ current' : ''}`;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+function onRoomChange() {
+  const v = document.getElementById('fRoom').value;
+  if (!v) { document.getElementById('fType').value = ''; document.getElementById('fRate').value = ''; return; }
+  const p = v.split('|');
+  document.getElementById('fType').value = p[1] || '';
+  document.getElementById('fRate').value = p[2] || '';
+  calcAmount();
+}
+
+function calcAmount() {
+  const ci   = document.getElementById('fCheckin').value;
+  const co   = document.getElementById('fCheckout').value;
+  const rate = parseFloat(document.getElementById('fRate').value) || 0;
+  const disc = parseFloat(document.getElementById('fDiscount').value) || 0;
+  const n    = nights(ci, co);
+  const raw  = rate * n;
+  const discAmt = raw * disc / 100;
+  const after   = raw - discAmt;
+  document.getElementById('dispTotal').textContent     = fmtN(raw);
+  document.getElementById('dispNights').textContent    = n === 1 ? '1 night' : `${n} nights`;
+  document.getElementById('dispAfterDisc').textContent = fmtN(after);
+  document.getElementById('dispDisc').textContent      = disc > 0 ? `${disc}% off (−${fmtN(discAmt)})` : 'No discount';
+  calcBalance();
+}
+
+function calcBalance() {
+  const ci   = document.getElementById('fCheckin').value;
+  const co   = document.getElementById('fCheckout').value;
+  const rate = parseFloat(document.getElementById('fRate').value) || 0;
+  const disc = parseFloat(document.getElementById('fDiscount').value) || 0;
+  const paid = parseFloat(document.getElementById('fPaid').value) || 0;
+  const n    = nights(ci, co);
+  const bal  = Math.max(0, rate * n * (1 - disc / 100) - paid);
+  document.getElementById('dispBalance').textContent = fmtN(bal);
+  document.getElementById('dispPaidSub').textContent = fmtN(paid) + ' paid';
+}
+
+function adj(id, d) {
+  const el = document.getElementById(id);
+  el.value = Math.min(parseInt(el.max) || 99, Math.max(parseInt(el.min) || 0, (parseInt(el.value) || 0) + d));
+}
+
+function clearBookingForm() {
+  ['fName','fPhone','fEmail','fIdNum','fCheckin','fCheckout','fRate','fDiscount','fPaid','fRecordedBy','fNotes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fType').value      = '';
+  document.getElementById('fAdults').value    = '1';
+  document.getElementById('fChildren').value  = '0';
+  document.getElementById('fIdType').value    = 'NIN';
+  document.getElementById('fPayMethod').value = 'Cash';
+  document.getElementById('fPayStatus').value = 'Pending';
+  ['dispTotal','dispAfterDisc','dispBalance'].forEach(id => document.getElementById(id).textContent = '₦0');
+  document.getElementById('dispNights').textContent  = '0 nights';
+  document.getElementById('dispDisc').textContent    = 'No discount';
+  document.getElementById('dispPaidSub').textContent = '₦0 paid';
+  document.getElementById('modalDeleteBtn').style.display = 'none';
+}
+
+function openBookingModal() {
+  editIdx = null;
+  document.getElementById('modalTitle').textContent = 'New Booking';
+  clearBookingForm();
+  populateRoomSelect(null);
+  document.getElementById('fCheckin').value = new Date().toISOString().split('T')[0];
+  document.getElementById('bookingModal').classList.add('show');
+}
+
+function openEdit(i) {
+  editIdx = i; const b = bookings[i];
+  document.getElementById('modalTitle').textContent = `Edit Booking — Room ${b.room}`;
+  clearBookingForm();
+  populateRoomSelect(b.room);
+  document.getElementById('fName').value       = b.guest;
+  document.getElementById('fPhone').value      = b.phone;
+  document.getElementById('fEmail').value      = b.email || '';
+  document.getElementById('fIdType').value     = b.idType || 'NIN';
+  document.getElementById('fIdNum').value      = b.idNum || '';
+  document.getElementById('fType').value       = b.type;
+  document.getElementById('fCheckin').value    = b.checkin;
+  document.getElementById('fCheckout').value   = b.checkout;
+  document.getElementById('fRate').value       = b.rate;
+  document.getElementById('fDiscount').value   = b.discount || 0;
+  document.getElementById('fPaid').value       = b.paid || 0;
+  document.getElementById('fPayMethod').value  = b.payMethod;
+  document.getElementById('fPayStatus').value  = b.payStatus;
+  document.getElementById('fRecordedBy').value = b.recordedBy || '';
+  document.getElementById('fAdults').value     = b.adults || 1;
+  document.getElementById('fChildren').value   = b.children || 0;
+  document.getElementById('fNotes').value      = b.notes || '';
+  const sel = document.getElementById('fRoom');
+  for (let o of sel.options) { if (o.value.startsWith(b.room + '|')) { sel.value = o.value; break; } }
+  calcAmount();
+  document.getElementById('modalDeleteBtn').style.display = 'inline-flex';
+  document.getElementById('bookingModal').classList.add('show');
+}
+
+async function saveBooking() {
+  const name = document.getElementById('fName').value.trim();
+  const ci   = document.getElementById('fCheckin').value;
+  const co   = document.getElementById('fCheckout').value;
+  if (!name || !ci || !co) { showToast('Please fill in guest name and dates.', 'error'); return; }
+  const roomVal = document.getElementById('fRoom').value;
+  const roomNum = editIdx !== null ? bookings[editIdx].room : (roomVal ? roomVal.split('|')[0] : '');
+  if (!roomNum) { showToast('Please select a room.', 'error'); return; }
+
+  const entry = {
+    room: roomNum, type: document.getElementById('fType').value,
+    guest: name, phone: document.getElementById('fPhone').value, email: document.getElementById('fEmail').value,
+    idType: document.getElementById('fIdType').value, idNum: document.getElementById('fIdNum').value,
+    checkin: ci, checkout: co,
+    rate: parseFloat(document.getElementById('fRate').value) || 0,
+    discount: parseFloat(document.getElementById('fDiscount').value) || 0,
+    paid: parseFloat(document.getElementById('fPaid').value) || 0,
+    payMethod: document.getElementById('fPayMethod').value,
+    payStatus: document.getElementById('fPayStatus').value,
+    recordedBy: document.getElementById('fRecordedBy').value,
+    adults: parseInt(document.getElementById('fAdults').value) || 1,
+    children: parseInt(document.getElementById('fChildren').value) || 0,
+    notes: document.getElementById('fNotes').value,
+    status: editIdx !== null ? bookings[editIdx].status : 'reserved',
+  };
+
+  if (editIdx !== null) {
+    bookings[editIdx] = entry;
+    showToast('Booking updated.', 'success');
+  } else {
+    const existIdx = bookings.findIndex(b => b.room === roomNum);
+    if (existIdx >= 0) bookings[existIdx] = entry; else bookings.push(entry);
+    if (!guestDB.find(g => g.name === name)) guestDB.push({ name, phone: entry.phone, email: entry.email, idType: entry.idType, idNum: entry.idNum });
+    showToast('Booking saved. Room marked as Reserved.', 'success');
+  }
+
+  await saveShared(KEY_BOOKINGS, bookings);
+  closeModal('bookingModal');
+  editIdx = null;
+  renderRoomGrid(roomFilter);
+}
+
+/* ═══════════════════════════════════════════════
+   DELETE
+═══════════════════════════════════════════════ */
+function openDeleteFromEdit() {
+  if (editIdx === null) return;
+  deleteIdx = editIdx;
+  document.getElementById('delGuest').textContent = bookings[deleteIdx].guest;
+  document.getElementById('delRoom').textContent  = bookings[deleteIdx].room;
+  closeModal('bookingModal');
+  document.getElementById('deleteModal').classList.add('show');
+}
+
+async function confirmDelete() {
+  if (deleteIdx === null) return;
+  const b = bookings[deleteIdx];
+  bookings[deleteIdx] = { room:b.room, type:b.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:b.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:'', idType:'NIN', idNum:'' };
+  await saveShared(KEY_BOOKINGS, bookings);
+  closeModal('deleteModal');
+  deleteIdx = null;
+  showToast('Booking deleted. Room marked as Available.', 'info');
+  renderRoomGrid(roomFilter);
+}
+
+/* ═══════════════════════════════════════════════
+   ROOM STATUS MODAL
+═══════════════════════════════════════════════ */
+function openRoomStatusModal(num) {
+  statusRoom = num;
+  const r   = allRooms.find(x => x.num === num);
+  const bk  = bookings.find(b => b.room === num);
+  const cur = getRoomStatus(num);
+  document.getElementById('rsRoomNum').textContent   = num;
+  document.getElementById('rsRoomType').textContent  = r?.type || '';
+  document.getElementById('rsCurStatus').textContent = RC_LBL[cur] || cur;
+  document.getElementById('rsNote').value            = bk?.notes || '';
+  const opts = STATUS_OPTS[cur] || [];
+  const sel  = document.getElementById('rsNewStatus');
+  sel.innerHTML = opts.length === 0
+    ? '<option value="">No changes available</option>'
+    : opts.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+  document.getElementById('roomStatusModal').classList.add('show');
+}
+
+async function saveRoomStatus() {
+  if (!statusRoom) return;
+  const newSt = document.getElementById('rsNewStatus').value;
+  if (!newSt) return;
+  const note = document.getElementById('rsNote').value.trim();
+  const i = bookings.findIndex(b => b.room === statusRoom);
+  if (i >= 0) {
+    if (newSt === 'vacant') {
+      const p = bookings[i];
+      bookings[i] = { room:p.room, type:p.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:p.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:note||'', idType:'NIN', idNum:'' };
+    } else {
+      bookings[i].status = newSt;
+      if (note) bookings[i].notes = note;
+    }
+  }
+  await saveShared(KEY_BOOKINGS, bookings);
+  closeModal('roomStatusModal');
+  showToast(`Room ${statusRoom} → ${RC_LBL[newSt] || newSt}.`, 'success');
+  renderRoomGrid(roomFilter);
+}
+
+/* ═══════════════════════════════════════════════
+   ADD ROOM MODAL
+═══════════════════════════════════════════════ */
+function openAddRoomModal() {
+  ['arNum','arRate','arNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('arType').value   = 'Standard';
+  document.getElementById('arStatus').value = 'vacant';
+  document.getElementById('addRoomModal').classList.add('show');
+}
+
+async function saveNewRoom() {
+  const num    = document.getElementById('arNum').value.trim();
+  const type   = document.getElementById('arType').value;
+  const rate   = parseFloat(document.getElementById('arRate').value) || 0;
+  const status = document.getElementById('arStatus').value;
+  const notes  = document.getElementById('arNotes').value.trim();
+  if (!num) { showToast('Please enter a room number.', 'error'); return; }
+  if (allRooms.find(r => r.num === num)) { showToast(`Room ${num} already exists.`, 'error'); return; }
+  allRooms.push({ num, type, rate });
+  bookings.push({ room:num, type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status, notes, idType:'NIN', idNum:'' });
+  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
+  closeModal('addRoomModal');
+  showToast(`Room ${num} added.`, 'success');
+  renderRoomGrid(roomFilter);
+}
+
+/* ═══════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════ */
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function handleModalBackdrop(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : 'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+async function init() {
+  allRooms = await loadShared(KEY_ROOMS, DEMO_ROOMS);
+  bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
+  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
+  renderRoomGrid('all');
+}
+init();
+</script>
+</body>
+</html>

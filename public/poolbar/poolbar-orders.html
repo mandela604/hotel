@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Orders | Aurum Pool Bar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  html{ height:auto; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:112px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  /* Mode tabs */
+  .mode-tabs{ display:flex; gap:2px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:4px; box-shadow:var(--shadow); flex-wrap:wrap; }
+  .mode-tab{ flex:1; min-width:150px; text-align:center; padding:11px; border-radius:10px; background:none; border:none; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--text3); cursor:pointer; transition:all .2s; }
+  .mode-tab.active{ background:var(--gold-dim); color:var(--gold); }
+  .mode-tab .sub{ display:block; font-size:10px; font-weight:400; color:var(--text3); margin-top:2px; }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .order-builder{ display:grid; grid-template-columns:1fr 340px; gap:14px; align-items:start; }
+  @media (max-width:900px){ .order-builder{ grid-template-columns:1fr; } }
+  .menu-picker{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .mp-header{ padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .cat-tabs{ display:flex; gap:4px; flex-wrap:wrap; }
+  .cat-tab{ background:none; border:1px solid var(--border); border-radius:8px; padding:4px 11px; font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:500; color:var(--text3); cursor:pointer; white-space:nowrap; }
+  .cat-tab:hover, .cat-tab.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:160px; max-width:220px; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .mi-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; padding:14px; }
+  .mi-tile{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px; cursor:pointer; transition:all .15s; text-align:left; width:100%; font-family:'Outfit',sans-serif; position:relative; overflow:hidden; }
+  .mi-tile:hover{ border-color:var(--gold-border); background:var(--gold-dim); }
+  .mi-tile:disabled{ opacity:.5; cursor:not-allowed; }
+  .mi-tile:disabled:hover{ border-color:var(--border); background:var(--surface2); }
+  .mi-cat{ font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:4px; }
+  .mi-name{ font-size:13px; font-weight:600; color:var(--text); margin-bottom:5px; }
+  .mi-price{ font-size:12.5px; color:var(--gold); font-weight:600; margin-bottom:5px; }
+  .mi-stock{ font-size:10.5px; color:var(--text3); }
+  .mi-stock.low{ color:var(--amber); } .mi-stock.out{ color:var(--red); font-weight:600; }
+  .mi-badge{ position:absolute; top:8px; right:8px; font-size:8.5px; font-weight:700; text-transform:uppercase; padding:2px 6px; border-radius:20px; background:var(--red-bg); color:var(--red); }
+  .empty-note{ font-size:12.5px; color:var(--text3); padding:24px; text-align:center; grid-column:1/-1; }
+
+  .cart-panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; position:sticky; top:16px; }
+  .cart-head{ padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .cart-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:4px 8px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  .cart-body{ flex:1; overflow-y:auto; padding:8px 14px; min-height:80px; max-height:260px; }
+  .cart-empty{ text-align:center; padding:24px 12px; color:var(--text3); font-size:12.5px; }
+  .ci{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .ci:last-child{ border-bottom:none; }
+  .ci-name{ flex:1; font-size:12.5px; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ci-qty{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .ci-qty button{ background:var(--surface2); border:1px solid var(--border); color:var(--text); width:22px; height:22px; border-radius:6px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
+  .ci-qty button:hover{ background:var(--gold-dim); color:var(--gold); border-color:var(--gold-border); }
+  .ci-qty span{ font-size:12.5px; font-weight:600; min-width:18px; text-align:center; }
+  .ci-price{ font-size:12px; color:var(--gold); min-width:60px; text-align:right; flex-shrink:0; }
+  .ci-del{ background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; padding:2px 4px; flex-shrink:0; }
+  .ci-del:hover{ color:var(--red); }
+  .cart-footer{ border-top:1px solid var(--border); padding:14px 16px; }
+  .ct-row{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--text2); margin-bottom:6px; align-items:center; }
+  .ct-row.total{ font-size:15px; font-weight:600; color:var(--text); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+  .ct-row.total .ct-val{ color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:19px; }
+  .disc-input{ width:50px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:3px 6px; color:var(--text); font-size:12px; text-align:center; outline:none; }
+  .disc-input:focus{ border-color:var(--gold-border); }
+  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-input, .form-select{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:9px; padding:8px 11px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; outline:none; width:100%; }
+  .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#000; font-weight:700; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-success{ background:rgba(74,222,128,0.14); border-color:rgba(74,222,128,0.4); color:var(--green); font-weight:700; }
+  .btn-success:hover{ background:rgba(74,222,128,0.24); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:space-between; }
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.open{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); }
+  .status-pill.on.served{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.paid{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.cancelled{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .panel-body{ padding:16px 20px; }
+  .tbl-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:820px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody tr{ border-bottom:1px solid var(--border); }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; }
+  .chip-open{ background:var(--blue-bg); color:var(--blue); } .chip-open::before{ background:var(--blue); }
+  .chip-served{ background:var(--green-bg); color:var(--green); } .chip-served::before{ background:var(--green); }
+  .chip-paid{ background:var(--gold-dim); color:var(--gold-light); } .chip-paid::before{ background:var(--gold); }
+  .chip-cancelled{ background:var(--red-bg); color:var(--red); } .chip-cancelled::before{ background:var(--red); }
+  .chip-source{ background:var(--surface3); color:var(--text3); }
+  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(420px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+  .modal-close:hover{ color:var(--text); }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note strong{ color:var(--text); }
+  .val-total{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:700; color:var(--gold); margin-bottom:14px; }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="mode-tabs no-print">
+        <button class="mode-tab active" id="tabBuild" onclick="switchView('build')">＋ New Order<span class="sub">Quick sale or open tab</span></button>
+        <button class="mode-tab" id="tabActive" onclick="switchView('active')">📋 Active &amp; Recent Orders<span class="sub">Serve, pay or cancel</span></button>
+        <button class="mode-tab" id="tabRequisition" onclick="switchView('requisition')">🧾 New Requisition<span class="sub">Request stock from Store</span></button>
+      </div>
+
+      <!-- ═══ BUILD VIEW ═══ -->
+      <div class="view active" id="view-build">
+        <div class="order-builder">
+          <div class="menu-picker">
+            <div class="mp-header">
+              <div class="cat-tabs" id="catTabs"></div>
+              <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" id="itemSearch" placeholder="Search item…" oninput="renderPicker()"></div>
+            </div>
+            <div class="mi-grid" id="itemGrid"></div>
+          </div>
+          <div class="cart-panel">
+            <div class="cart-head">
+              <div class="cart-title" id="cartTitleLbl">Quick Sale</div>
+              <button class="btn-ghost" onclick="clearCart()">Clear</button>
+            </div>
+            <div class="cart-body" id="cartBody"><div class="cart-empty">Tap an item to add it</div></div>
+            <div class="cart-footer">
+              <div class="ct-row"><span>Subtotal</span><span id="cartSub">₦0</span></div>
+              <div class="ct-row">
+                <span>Discount</span>
+                <span style="display:flex;align-items:center;gap:4px;"><input type="number" class="disc-input" id="cartDisc" value="0" min="0" max="100" oninput="updateTotals()">%</span>
+              </div>
+              <div class="ct-row total"><span>Total</span><span class="ct-val" id="cartTotal">₦0</span></div>
+              <div style="height:10px;"></div>
+
+              <div class="form-group">
+                <label class="form-label">Sale Mode</label>
+                <select class="form-select" id="fMode" onchange="switchMode()">
+                  <option value="quick">Quick Sale — instant, deducts Stock</option>
+                  <option value="tab">Open Tab — holds until paid</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Table / Seat</label>
+                <input class="form-input" type="text" id="fTable" placeholder="e.g. Pool Deck 3, Lounge">
+              </div>
+              <div class="form-group" id="payMethodGroup">
+                <label class="form-label">Payment Method</label>
+                <select class="form-select" id="fMethod">
+                  <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Staff</label>
+                <input class="form-input" type="text" id="fStaff" placeholder="Staff name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes (optional)</label>
+                <input class="form-input" type="text" id="fNotes" placeholder="Special requests…">
+              </div>
+              <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;" id="submitBtn" onclick="submitOrder()">✓ Complete Sale</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ACTIVE VIEW ═══ -->
+      <div class="view" id="view-active">
+        <div class="toolbar no-print" style="margin-bottom:14px;">
+          <div class="status-pills" id="statusPills">
+            <div class="status-pill on all" data-status="">All</div>
+            <div class="status-pill open" data-status="open"><span class="pdot" style="background:var(--blue)"></span>Open</div>
+            <div class="status-pill served" data-status="served"><span class="pdot" style="background:var(--green)"></span>Served</div>
+            <div class="status-pill paid" data-status="paid"><span class="pdot" style="background:var(--gold)"></span>Paid</div>
+            <div class="status-pill cancelled" data-status="cancelled"><span class="pdot" style="background:var(--red)"></span>Cancelled</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Orders</div>
+            <span style="font-size:11px;color:var(--text3);" id="ordCount">—</span>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Order #</th><th>Table/Seat</th><th>Items</th><th>Total (₦)</th><th>Payment</th><th>Staff</th><th>Time</th><th>Status</th><th class="no-print">Actions</th></tr></thead>
+              <tbody id="ordTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ NEW REQUISITION VIEW ═══ -->
+      <div class="view" id="view-requisition">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Raise a Requisition to Store</div>
+            <span style="font-size:11px;color:var(--text3);">Goes straight into the Store module's approval queue</span>
+          </div>
+          <div class="panel-body" id="requisitionFormPlaceholder"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- PAY CONFIRMATION MODAL -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Confirm Payment</div>
+      <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+    </div>
+    <div class="val-note">Closing out <strong id="payOrderName"></strong>. This records the sale, deducts stock, and marks the tab as paid.</div>
+    <div class="val-total" id="payOrderTotal">₦0</div>
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <select class="form-select" id="payMethodSelect">
+        <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('payModal')">Cancel</button>
+      <button class="btn btn-success btn-sm" onclick="confirmPayOrder()">✓ Confirm Payment</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/poolbar-shell.js"></script>
+<script src="../component/grace-request-form.js"></script>
+<script>
+const shell = PoolBarShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'poolbar-orders.html',
+  pageTitle:     'Orders',
+  pageSubtitle:  'Quick sales, open tabs, and requisitions to Store',
+  apiMode:       'Demo',
+  user:          { name: 'Pool Bar Manager', initials: 'PB' },
+});
+
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
+
+async function apiFetch(method, path, body=null){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_STOCK     = 'poolbar-stock';
+const KEY_SALES     = 'poolbar-sales';
+const KEY_MOVEMENTS = 'poolbar-movements';
+const KEY_ORDERS    = 'poolbar-orders';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+}
+
+/* Same catalog seed as poolbar-stock.html so this page shows real items
+   even before Stock has been opened/synced in this session. */
+const DEMO_STOCK = [
+  { name:'Heineken',        category:'Beers',      unit:'Bottles', qty:48, min:12, price:1500 },
+  { name:'Guinness',        category:'Beers',      unit:'Bottles', qty:36, min:12, price:1600 },
+  { name:'Star Lager',      category:'Beers',      unit:'Bottles', qty:8,  min:12, price:1200 },
+  { name:'Hennessy VS',     category:'Spirits',    unit:'Bottles', qty:5,  min:3,  price:4000 },
+  { name:'Johnnie Walker',  category:'Spirits',    unit:'Bottles', qty:3,  min:3,  price:4500 },
+  { name:'Baileys',         category:'Spirits',    unit:'Bottles', qty:4,  min:2,  price:3500 },
+  { name:'Moët & Chandon',  category:'Wines',       unit:'Bottles', qty:6,  min:3,  price:55000 },
+  { name:'Chapman Mix',     category:'Soft Drinks', unit:'Litres',  qty:10, min:5,  price:2500 },
+  { name:'Maltina',         category:'Soft Drinks', unit:'Cans',    qty:5,  min:12, price:800 },
+  { name:'Bottled Water',   category:'Water',       unit:'Bottles', qty:72, min:24, price:500 },
+  { name:'Mojito Mix',      category:'Cocktails',   unit:'Litres',  qty:3,  min:2,  price:5500 },
+  { name:'Pina Colada Mix', category:'Cocktails',   unit:'Litres',  qty:2,  min:2,  price:6000 },
+  { name:'Pringles',        category:'Snacks',      unit:'Packs',   qty:20, min:10, price:2000 },
+  { name:'Chin Chin',       category:'Snacks',      unit:'Packs',   qty:15, min:10, price:1500 },
+  { name:'Ice Cream Tubs',  category:'Ice Cream',   unit:'Pieces',  qty:0,  min:4,  price:2500 },
+];
+const DEMO_SALES  = [];
+const DEMO_ORDERS = [];
+
+let stock = [];
+let sales = [];
+let orders = [];
+let movements = [];
+let cart = [];
+let mode = 'quick';
+let activeCat = 'All';
+let statusFilter = '';
+let requisitionForm = null;
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function stockLevel(i){ return i.qty<=0 ? 'out' : (i.qty<=i.min ? 'low' : 'ok'); }
+function nowStamp(){
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2,'0'), month = String(d.getMonth()+1).padStart(2,'0'), year = String(d.getFullYear()).slice(-2);
+  let hh = d.getHours(); const mm = String(d.getMinutes()).padStart(2,'0'); const ampm = hh>=12?'PM':'AM';
+  hh = hh%12; if (hh===0) hh=12;
+  return `${day}/${month}/${year} ${String(hh).padStart(2,'0')}:${mm} ${ampm}`;
+}
+function todayDDMMYY(){ const d=new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; }
+
+/* ═══ VIEW / MODE SWITCHING ═══ */
+function switchView(name){
+  document.getElementById('view-build').classList.toggle('active', name==='build');
+  document.getElementById('view-active').classList.toggle('active', name==='active');
+  document.getElementById('view-requisition').classList.toggle('active', name==='requisition');
+  document.getElementById('tabBuild').classList.toggle('active', name==='build');
+  document.getElementById('tabActive').classList.toggle('active', name==='active');
+  document.getElementById('tabRequisition').classList.toggle('active', name==='requisition');
+  if (name==='active') renderOrdersTable();
+  if (name==='requisition') ensureRequisitionForm();
+}
+function switchMode(){
+  mode = document.getElementById('fMode').value;
+  document.getElementById('cartTitleLbl').textContent = mode==='quick' ? 'Quick Sale' : 'Open Tab';
+  document.getElementById('payMethodGroup').style.display = mode==='quick' ? '' : 'none';
+  document.getElementById('submitBtn').textContent = mode==='quick' ? '✓ Complete Sale' : '✓ Open Tab';
+}
+
+/* ═══ KPIs ═══ */
+function renderKPIs(){
+  const today = todayDDMMYY();
+  const todaySales = sales.filter(s => s.status==='completed' && s.date.startsWith(today));
+  const revenue = todaySales.reduce((s,x)=>s+x.total,0);
+  const openTabs = orders.filter(o=>o.status==='open').length;
+  const servedTabs = orders.filter(o=>o.status==='served').length;
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-accent">💰</div><div class="kpi-label">Today's Sales</div>
+      <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
+      <div class="kpi-trend up">${todaySales.length} sale${todaySales.length!==1?'s':''} rung up</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent">🔔</div><div class="kpi-label">Open Tabs</div>
+      <div class="kpi-value" style="color:var(--blue);">${openTabs}</div>
+      <div class="kpi-trend ${openTabs>0?'warn':'up'}">${openTabs>0?'Awaiting service':'✓ All clear'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent">🍹</div><div class="kpi-label">Served, Awaiting Payment</div>
+      <div class="kpi-value" style="color:var(--gold);">${servedTabs}</div>
+      <div class="kpi-trend ${servedTabs>0?'warn':'up'}">${servedTabs>0?'Ready to close out':'None pending'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent">📦</div><div class="kpi-label">Items In Stock</div>
+      <div class="kpi-value">${stock.filter(i=>i.qty>0).length}</div>
+      <div class="kpi-trend neutral">Of ${stock.length} tracked</div>
+    </div>`;
+}
+
+/* ═══ PICKER (single source: Pool Bar Stock) ═══ */
+function getCategories(){ return ['All', ...new Set(stock.map(i=>i.category))]; }
+function renderPicker(){
+  const cats = getCategories();
+  document.getElementById('catTabs').innerHTML = cats.map(c => `<button class="cat-tab${c===activeCat?' active':''}" onclick="activeCat='${c}';renderPicker()">${c}</button>`).join('');
+  const q = (document.getElementById('itemSearch').value||'').toLowerCase();
+  const grid = document.getElementById('itemGrid');
+  const items = stock.filter(i => (activeCat==='All'||i.category===activeCat) && (!q || i.name.toLowerCase().includes(q)));
+
+  grid.innerHTML = items.length===0
+    ? `<div class="empty-note">No stock items match.</div>`
+    : items.map(i => {
+        const lvl = stockLevel(i);
+        const inCart = cart.find(c=>c.key===i.name);
+        const remaining = i.qty - (inCart?inCart.qty:0);
+        const disabled = i.qty<=0 || remaining<=0;
+        return `<button class="mi-tile" ${disabled?'disabled':''} onclick="addToCart('${i.name.replace(/'/g,"\\'")}')">
+          ${i.qty<=0?'<span class="mi-badge">Out</span>':''}
+          <div class="mi-cat">${i.category}</div>
+          <div class="mi-name">${i.name}</div>
+          <div class="mi-price">${fmtN(i.price)}</div>
+          <div class="mi-stock ${lvl}">${i.qty} ${i.unit} on hand</div>
+        </button>`;
+      }).join('');
+}
+
+/* ═══ CART ═══ */
+function addToCart(key){
+  const inv = stock.find(i=>i.name===key);
+  if (!inv || inv.qty<=0) { showToast(`${key} is out of stock.`, 'error'); return; }
+  const existing = cart.find(c=>c.key===key);
+  if (existing) {
+    if (existing.qty >= inv.qty) { showToast(`Only ${inv.qty} ${inv.unit} of ${key} available.`, 'error'); return; }
+    existing.qty++;
+  } else cart.push({ key, qty:1, price:inv.price, unit:inv.unit });
+  renderCart(); renderPicker();
+}
+function adjustQty(key, delta){
+  const c = cart.find(x=>x.key===key); if (!c) return;
+  const inv = stock.find(i=>i.name===key);
+  const max = inv ? inv.qty : c.qty;
+  const next = c.qty+delta;
+  if (next<1) { removeFromCart(key); return; }
+  if (next>max) { showToast(`Only ${max} available.`, 'error'); return; }
+  c.qty = next;
+  renderCart(); renderPicker();
+}
+function removeFromCart(key){ cart = cart.filter(c=>c.key!==key); renderCart(); renderPicker(); }
+function clearCart(){ cart=[]; renderCart(); renderPicker(); }
+function renderCart(){
+  const body = document.getElementById('cartBody');
+  if (cart.length===0) { body.innerHTML = `<div class="cart-empty">Tap an item to add it</div>`; updateTotals(); return; }
+  body.innerHTML = cart.map(c => `
+    <div class="ci">
+      <div class="ci-name">${c.key}</div>
+      <div class="ci-qty"><button onclick="adjustQty('${c.key.replace(/'/g,"\\'")}',-1)">−</button><span>${c.qty}</span><button onclick="adjustQty('${c.key.replace(/'/g,"\\'")}',1)">+</button></div>
+      <div class="ci-price">${fmtN(c.price*c.qty)}</div>
+      <button class="ci-del" onclick="removeFromCart('${c.key.replace(/'/g,"\\'")}')">✕</button>
+    </div>`).join('');
+  updateTotals();
+}
+function updateTotals(){
+  const sub = cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const disc = parseFloat(document.getElementById('cartDisc').value)||0;
+  document.getElementById('cartSub').textContent = fmtN(sub);
+  document.getElementById('cartTotal').textContent = fmtN(sub*(1-disc/100));
+  document.getElementById('submitBtn').disabled = cart.length===0;
+}
+
+/* ═══ SUBMIT ═══ */
+function nextSaleId(){ let max=1000; sales.forEach(s=>{ const n=parseInt((s.id||'').replace('PBS-',''),10); if(!isNaN(n)&&n>max) max=n; }); return 'PBS-'+(max+1); }
+function nextOrderId(){ let max=0; orders.forEach(o=>{ const n=parseInt((o.id||'').replace('PBO-',''),10); if(!isNaN(n)&&n>max) max=n; }); return 'PBO-'+String(max+1).padStart(3,'0'); }
+
+async function submitOrder(){
+  if (cart.length===0) { showToast('Add at least one item.', 'error'); return; }
+  const table = document.getElementById('fTable').value.trim();
+  const staff = document.getElementById('fStaff').value.trim();
+  if (!table) { showToast('Please enter a table or seat.', 'error'); return; }
+  if (!staff) { showToast('Please enter the staff name.', 'error'); return; }
+  const notes = document.getElementById('fNotes').value.trim();
+  const discount = parseFloat(document.getElementById('cartDisc').value)||0;
+  const subtotal = cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const total = subtotal*(1-discount/100);
+  const stamp = nowStamp();
+
+  if (mode==='quick') {
+    const method = document.getElementById('fMethod').value;
+    const sale = {
+      id: nextSaleId(),
+      items: cart.map(c=>({name:c.key,qty:c.qty,price:c.price})),
+      subtotal, discount, total, method, staff, table, notes, date:stamp, status:'completed', source:'quick'
+    };
+    cart.forEach(c => {
+      const inv = stock.find(i=>i.name===c.key);
+      if (inv) { inv.qty = Math.max(0, inv.qty-c.qty); movements.unshift({date:stamp, item:c.key, qtyIn:0, qtyOut:c.qty, balance:inv.qty, reason:`Sale (${sale.id})`}); }
+    });
+    sales.unshift(sale);
+    await Promise.all([ saveShared(KEY_SALES, sales), saveShared(KEY_STOCK, stock), saveShared(KEY_MOVEMENTS, movements) ]);
+    apiSave('POST', '/api/poolbar/sales', sale);
+    showToast(`${sale.id} recorded — ${fmtN(total)}.`, 'success');
+  } else {
+    const order = {
+      id: nextOrderId(),
+      items: cart.map(c=>({name:c.key,qty:c.qty,price:c.price})),
+      subtotal, discount, total, staff, table, notes, date:stamp, status:'open', source:'tab'
+    };
+    orders.unshift(order);
+    await saveShared(KEY_ORDERS, orders);
+    apiSave('POST', '/api/poolbar/orders', order);
+    showToast(`Tab ${order.id} opened for ${table}.`, 'success');
+  }
+
+  clearCart();
+  document.getElementById('fTable').value=''; document.getElementById('fStaff').value=''; document.getElementById('fNotes').value='';
+  document.getElementById('cartDisc').value='0';
+  renderKPIs();
+}
+
+/* ═══ ACTIVE ORDERS TABLE ═══ */
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      statusFilter = p.dataset.status;
+      document.querySelectorAll('.status-pill').forEach(x=>x.classList.remove('on'));
+      p.classList.add('on');
+      renderOrdersTable();
+    });
+  });
+}
+function renderOrdersTable(){
+  const rows = orders.filter(o => !statusFilter || o.status===statusFilter).sort((a,b) => b.date.localeCompare(a.date));
+  document.getElementById('ordCount').textContent = rows.length + ' order' + (rows.length!==1?'s':'');
+  document.getElementById('ordTableBody').innerHTML = rows.length===0
+    ? `<tr class="empty-row"><td colspan="9">No orders match this filter.</td></tr>`
+    : rows.map(o => `
+      <tr>
+        <td style="font-weight:600;">${o.id}</td>
+        <td>${o.table}</td>
+        <td>${o.items.length} item${o.items.length!==1?'s':''}</td>
+        <td style="font-weight:600;color:var(--gold);">${fmtN(o.total)}</td>
+        <td>${o.payMethod||'—'}</td>
+        <td>${o.staff}</td>
+        <td>${o.date}</td>
+        <td><span class="chip chip-${o.status}">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span></td>
+        <td class="no-print">
+          <div class="act-btns">
+            ${o.status==='open'?`<button class="act-btn" onclick="markServed('${o.id}')">Served</button>`:''}
+            ${o.status==='served'?`<button class="act-btn" onclick="openPayModal('${o.id}')">Pay</button>`:''}
+            ${(o.status==='open'||o.status==='served')?`<button class="act-btn" onclick="cancelOrder('${o.id}')">Cancel</button>`:''}
+          </div>
+        </td>
+      </tr>`).join('');
+}
+function markServed(id){
+  const o = orders.find(x=>x.id===id); if (!o) return;
+  o.status='served';
+  saveShared(KEY_ORDERS, orders);
+  apiSave('PATCH', `/api/poolbar/orders/${id}`, {status:'served'});
+  showToast(`${id} marked as served.`, 'success');
+  renderOrdersTable(); renderKPIs();
+}
+
+/* ═══ PAY FLOW ═══ */
+let payOrderId = null;
+function openPayModal(id){
+  const o = orders.find(x=>x.id===id); if (!o) return;
+  payOrderId = id;
+  document.getElementById('payOrderName').textContent = `${o.id} — ${o.table}`;
+  document.getElementById('payOrderTotal').textContent = fmtN(o.total);
+  document.getElementById('payMethodSelect').value = 'Cash';
+  document.getElementById('payModal').classList.add('show');
+}
+async function confirmPayOrder(){
+  const id = payOrderId;
+  const o = orders.find(x=>x.id===id); if (!o) return;
+  const method = document.getElementById('payMethodSelect').value;
+  const stamp = nowStamp();
+  const sale = { id: nextSaleId(), items:o.items, subtotal:o.subtotal, discount:o.discount, total:o.total, method, staff:o.staff, table:o.table, notes:o.notes, date:stamp, status:'completed', source:'tab' };
+  o.items.forEach(item => {
+    const inv = stock.find(i=>i.name===item.name);
+    if (inv) { inv.qty = Math.max(0, inv.qty-item.qty); movements.unshift({date:stamp, item:item.name, qtyIn:0, qtyOut:item.qty, balance:inv.qty, reason:`Tab Payment (${o.id})`}); }
+  });
+  sales.unshift(sale);
+  o.status='paid'; o.payMethod=method; o.paidSaleId=sale.id;
+  await Promise.all([ saveShared(KEY_SALES, sales), saveShared(KEY_STOCK, stock), saveShared(KEY_MOVEMENTS, movements), saveShared(KEY_ORDERS, orders) ]);
+  apiSave('PATCH', `/api/poolbar/orders/${id}`, {status:'paid', method});
+  closeModal('payModal');
+  showToast(`${id} paid — ${fmtN(o.total)} recorded as ${sale.id}.`, 'success');
+  renderOrdersTable(); renderKPIs();
+}
+function cancelOrder(id){
+  const o = orders.find(x=>x.id===id); if (!o) return;
+  o.status='cancelled';
+  saveShared(KEY_ORDERS, orders);
+  apiSave('PATCH', `/api/poolbar/orders/${id}`, {status:'cancelled'});
+  showToast(`${id} cancelled.`, 'error');
+  renderOrdersTable(); renderKPIs();
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.getElementById('payModal').addEventListener('click', function(e){ if (e.target === this) closeModal('payModal'); });
+
+/* ═══ NEW REQUISITION — reuses the shared Grace request form component.
+   Writes to req:<no> / req-index in the same storage adapter the Store
+   module (store.html / store-approval.html) reads, so a Pool Bar
+   requisition shows up there immediately — no separate pipe needed. ═══ */
+function ensureRequisitionForm(){
+  if (requisitionForm) return;
+  requisitionForm = GraceHotelRequestForm.attach('#requisitionFormPlaceholder', {
+    defaultMode: 'store_issue',
+    pageSize: 5,
+    showRecent: true,
+    departments: ['Bar'],
+    fulfillStores: ['Central Store'],
+    catalog: stock.map(i => ({ name: i.name, unit: i.unit })),
+    currentUser: { name: 'Pool Bar Manager' },
+    storage: storage,
+    onOpenRequest: (reqNo) => { window.location.href = `poolbar-pending-requisitions.html?req=${reqNo}`; },
+    onSubmit: () => { shell.setPendingBadge && shell.setPendingBadge((orders.filter(o=>o.status==='open').length)); },
+  });
+}
+
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+async function init(){
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/poolbar/orders-page');
+      stock = data.stock || []; sales = data.sales || []; orders = data.orders || []; movements = data.movements || [];
+      shell.setApiMode('Live');
+      finishInit();
+      return;
+    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+  }
+  stock  = await loadShared(KEY_STOCK, DEMO_STOCK);
+  sales  = await loadShared(KEY_SALES, DEMO_SALES);
+  orders = await loadShared(KEY_ORDERS, DEMO_ORDERS);
+  movements = await loadShared(KEY_MOVEMENTS, []);
+  await Promise.all([
+    saveShared(KEY_STOCK, stock), saveShared(KEY_SALES, sales),
+    saveShared(KEY_ORDERS, orders), saveShared(KEY_MOVEMENTS, movements),
+  ]);
+  finishInit();
+}
+function finishInit(){
+  bindStatusPills();
+  renderKPIs();
+  renderPicker();
+  renderCart();
+  renderOrdersTable();
+}
+init();
+</script>
+</body>
+</html>

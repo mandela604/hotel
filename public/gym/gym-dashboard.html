@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard | Gym & Fitness — Aurum Hotel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ height:auto; visibility:hidden; }
+  html.gym-ready{ visibility:visible; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  /* ═══ KPI ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:112px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.green{ background:linear-gradient(160deg, rgba(74,222,128,.08), var(--surface) 60%); border-color:rgba(74,222,128,.24); }
+  .kpi-card.green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.green .kpi-label{ color:var(--green); }
+  .kpi-card.amber{ background:linear-gradient(160deg, rgba(251,191,36,.08), var(--surface) 60%); border-color:rgba(251,191,36,.24); }
+  .kpi-card.amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-card.amber .kpi-label{ color:var(--amber); }
+  .kpi-card.red{ background:linear-gradient(160deg, rgba(248,113,113,.08), var(--surface) 60%); border-color:rgba(248,113,113,.24); }
+  .kpi-card.red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.red .kpi-label{ color:var(--red); }
+  .kpi-card.gold{ background:linear-gradient(160deg, rgba(201,168,76,.10), var(--surface) 60%); border-color:var(--gold-border); }
+  .kpi-card.gold::before{ background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.gold .kpi-label{ color:var(--gold); }
+  .kpi-card.grey{ background:linear-gradient(160deg, rgba(106,138,158,.08), var(--surface) 60%); border-color:rgba(106,138,158,.24); }
+  .kpi-card.grey::before{ background:linear-gradient(90deg,var(--text3),transparent); }
+  .kpi-card.grey .kpi-label{ color:var(--text3); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:20px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  /* ═══ Toolbar ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-btns{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; max-width:160px; }
+  .filter-select:focus{ border-color:var(--gold-border); }
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.active{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.expiring{ background:var(--amber-bg); border-color:rgba(251,191,36,.4); color:var(--amber); }
+  .status-pill.on.expired{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .status-pill.on.frozen{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+
+  @media (max-width:700px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select{ width:100%; max-width:none; }
+    .toolbar-btns{ width:100%; }
+    .toolbar-btns .btn{ flex:1; justify-content:center; }
+  }
+
+  /* ═══ Panel / table ═══ */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:860px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.center{ text-align:center; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  tbody td.center{ text-align:center; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .mem-name{ font-weight:600; }
+  .mem-avatar{ width:28px; height:28px; border-radius:50%; background:var(--gold-dim); border:1.5px solid var(--gold-border); display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--gold); margin-right:9px; flex-shrink:0; }
+  .mem-cell{ display:flex; align-items:center; }
+  .mem-sub{ font-size:10.5px; color:var(--text3); margin-top:1px; }
+
+  .plan-chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .plan-dot{ width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-active{ background:var(--green-bg); color:var(--green); } .chip-active::before{ background:var(--green); }
+  .chip-expiring{ background:var(--amber-bg); color:var(--amber); } .chip-expiring::before{ background:var(--amber); }
+  .chip-expired{ background:var(--red-bg); color:var(--red); } .chip-expired::before{ background:var(--red); }
+  .chip-frozen{ background:var(--blue-bg); color:var(--blue); } .chip-frozen::before{ background:var(--blue); }
+  .chip-balance{ background:var(--amber-bg); color:var(--amber); } .chip-balance::before{ background:var(--amber); }
+
+  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
+  .act-btn.green:hover{ border-color:var(--green); color:var(--green); }
+  .act-btn:disabled{ opacity:.35; cursor:not-allowed; pointer-events:none; }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+
+  /* ═══ Modal ═══ */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal.mode-delete::before{ background:var(--red); }
+  .modal-sm{ width:min(420px,96vw); }
+  .modal-lg{ width:min(640px,96vw); }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
+  .modal-close:hover{ color:var(--text); }
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  @media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
+  .form-group{ display:flex; flex-direction:column; gap:5px; }
+  .form-group.span2{ grid-column:span 2; }
+  @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-label.required::after{ content:' *'; color:var(--red); }
+  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:var(--gold-border); }
+  .form-input:read-only{ opacity:.7; cursor:default; }
+  .form-textarea{ resize:vertical; min-height:60px; }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note strong{ color:var(--text); }
+
+  /* ═══ Member detail modal ═══ */
+  .detail-head{ display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+  .detail-avatar{ width:54px; height:54px; border-radius:50%; background:var(--gold-dim); border:2px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:var(--gold); flex-shrink:0; }
+  .detail-name{ font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:700; color:var(--text); line-height:1.2; }
+  .detail-subline{ display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
+  @media (max-width:480px){ .detail-grid{ grid-template-columns:1fr 1fr; } }
+  .detail-stat{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .detail-stat-label{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:600; margin-bottom:4px; }
+  .detail-stat-val{ font-size:12.5px; color:var(--text); font-weight:600; line-height:1.4; }
+  .plan-detail-card{ border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:14px; }
+  .plan-detail-top{ display:flex; align-items:center; justify-content:space-between; font-size:13px; margin-bottom:6px; flex-wrap:wrap; gap:6px; }
+  .plan-detail-notes{ font-size:12px; color:var(--text2); line-height:1.5; white-space:pre-line; }
+  .detail-section{ margin-bottom:14px; }
+  .detail-section-title{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--gold); font-weight:700; margin-bottom:8px; }
+  .detail-section-body{ font-size:12.5px; color:var(--text2); line-height:1.55; }
+  .checkin-row{ display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--text2); padding:6px 0; border-bottom:1px solid var(--border); }
+  .checkin-row:last-child{ border-bottom:none; }
+
+  /* ═══ Guest search results ═══ */
+  .guest-result{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; cursor:pointer; transition:background .15s; border:1px solid var(--border); margin-bottom:4px; }
+  .guest-result:hover{ background:var(--surface2); border-color:var(--gold-border); }
+  .guest-result.selected{ background:var(--gold-dim); border-color:var(--gold-border); }
+  .guest-result-avatar{ width:30px; height:30px; border-radius:50%; background:var(--gold-dim); border:1.5px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--gold); flex-shrink:0; }
+  .guest-result-info{ flex:1; min-width:0; }
+  .guest-result-name{ font-size:12.5px; font-weight:600; color:var(--text); }
+  .guest-result-meta{ font-size:10.5px; color:var(--text3); }
+
+  /* Toast */
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    .gym-sidebar, .gym-topbar, .toolbar, .pagination, .act-btns, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar + topbar rendered by gym-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main" id="mainWrap">
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ═══ FILTER BAR ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill active" data-status="active"><span class="pdot" style="background:var(--green)"></span>Active</div>
+                <div class="status-pill expiring" data-status="expiring"><span class="pdot" style="background:var(--amber)"></span>Expiring</div>
+                <div class="status-pill expired" data-status="expired"><span class="pdot" style="background:var(--red)"></span>Expired</div>
+                <div class="status-pill frozen" data-status="frozen"><span class="pdot" style="background:var(--blue)"></span>Inactive</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <input type="text" id="fSearch" placeholder="Name, room, phone…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Plan</span>
+              <select class="filter-select" id="fPlan" onchange="page=1;render()">
+                <option value="">All Plans</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="page=1;render()">
+                <option value="name_asc">Name (A → Z)</option>
+                <option value="expiry_asc">Expiry (Soonest)</option>
+                <option value="joined_desc">Joined (Newest)</option>
+              </select>
+            </div>
+            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+          </div>
+          <div class="toolbar-btns">
+            <button class="btn btn-outline btn-sm" onclick="openPlansModal()">🏷 Manage Plans</button>
+            <button class="btn btn-primary btn-sm" onclick="openMemberModal()">＋ New Member</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MEMBERS (full width) ═══ -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Members</div>
+          <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Plan</th>
+                <th>Room / Contact</th>
+                <th>Joined</th>
+                <th>Expiry</th>
+                <th class="center">Check-ins</th>
+                <th>Status</th>
+                <th class="no-print center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT MEMBER MODAL -->
+<div class="modal-overlay" id="memberModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="memberModalTitle">New Gym Member</div>
+      <button class="modal-close" onclick="closeModal('memberModal')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group span2">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" id="mName" placeholder="e.g. Chidi Nwankwo">
+      </div>
+      <div class="form-group">
+        <label class="form-label required">Plan</label>
+        <select class="form-select" id="mPlan" onchange="onPlanChange()" required></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Room / Contact</label>
+        <input class="form-input" type="text" id="mRoom" placeholder="e.g. Room 204 or Walk-in">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input class="form-input" type="text" id="mPhone" placeholder="e.g. +234 801 234 5678">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Join Date</label>
+        <input class="form-input" type="date" id="mJoined">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Expiry Date</label>
+        <input class="form-input" type="date" id="mExpiry" readonly>
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">Notes (optional)</label>
+        <input class="form-input" type="text" id="mNotes" placeholder="Medical notes, goals…">
+      </div>
+      <div class="form-group span2" style="border-top:1px solid var(--border);padding-top:12px;">
+        <label class="form-label" style="font-size:11px;color:var(--gold);">Payment Method</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <label class="payment-option" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;flex:1;min-width:120px;">
+            <input type="radio" name="paymentMethod" value="cash" checked onchange="togglePaymentMethod()" style="accent-color:var(--gold);">
+            <span style="font-size:12px;color:var(--text2);">💵 Pay Now (Cash)</span>
+          </label>
+          <label class="payment-option" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;flex:1;min-width:120px;">
+            <input type="radio" name="paymentMethod" value="charge" onchange="togglePaymentMethod()" style="accent-color:var(--gold);">
+            <span style="font-size:12px;color:var(--text2);">🏨 Charge to Room</span>
+          </label>
+        </div>
+        <div id="guestSearchSection" style="display:none;margin-top:8px;">
+          <label class="form-label">Search Hotel Guest</label>
+          <input class="form-input" type="text" id="guestSearch" placeholder="Type guest name, room or phone…" oninput="searchGuests()">
+          <div id="guestResults" style="margin-top:6px;max-height:160px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('memberModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveMember()">✓ Save & Collect Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER PROFILE (DETAIL) MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Member Profile</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<!-- CHECK-IN MODAL -->
+<div class="modal-overlay" id="checkinModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Check In</div>
+      <button class="modal-close" onclick="closeModal('checkinModal')">✕</button>
+    </div>
+    <div class="val-note" id="ciNote">Log a gym visit for <strong id="ciName"></strong>.</div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('checkinModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmCheckin()">✓ Confirm Check-in</button>
+    </div>
+  </div>
+</div>
+
+<!-- RENEW MODAL -->
+<div class="modal-overlay" id="renewModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Renew Membership</div>
+      <button class="modal-close" onclick="closeModal('renewModal')">✕</button>
+    </div>
+    <div class="val-note">Extending <strong id="rnName"></strong>'s membership.</div>
+    <div class="form-group">
+      <label class="form-label">New Expiry Date</label>
+      <input class="form-input" type="date" id="rnExpiry">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('renewModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmRenew()">✓ Renew</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBERSHIP PLANS MODAL -->
+<div class="modal-overlay" id="plansModal">
+  <div class="modal" style="width:min(640px,96vw);">
+    <div class="modal-header">
+      <div class="modal-title">Membership Plans</div>
+      <button class="modal-close" onclick="closeModal('plansModal')">✕</button>
+    </div>
+    <div id="planFormWrap" style="display:none;"></div>
+    <button class="btn btn-outline btn-sm" id="addPlanBtn" onclick="showPlanForm()" style="margin-bottom:14px;">＋ Add Plan</button>
+    <div class="plan-list" id="planList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" onclick="closeModal('plansModal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal modal-sm mode-delete">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--red);" id="deleteModalTitle">Remove</div>
+      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;" id="deleteMsg"></p>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-sm" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/gym-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar for the Gym module.
+═══════════════════════════════════════════ */
+const shell = GymShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'gym-dashboard.html',
+  pageTitle:     'Dashboard',
+  pageSubtitle:  'Gym & Fitness operations',
+  apiMode:       'Demo',
+  user:          { name: 'Gym Attendant', initials: 'GA' },
+});
+document.documentElement.classList.add('gym-ready');
+
+/* ═══════════════════════════════════════════
+   STORAGE
+═══════════════════════════════════════════ */
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_MEMBERS  = 'gym-members';
+const KEY_PLANS    = 'gym-plans';
+const KEY_CHECKINS = 'gym-checkins';
+const KEY_GUESTS   = 'hotel-guests';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+}
+
+/* ═══════════════════════════════════════════
+   DEMO DATA
+═══════════════════════════════════════════ */
+function isoIn(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().split('T')[0]; }
+function isoAgo(days){ const d = new Date(); d.setDate(d.getDate()-days); return d.toISOString().split('T')[0]; }
+function isoAgoHours(h){ const d = new Date(); d.setHours(d.getHours()-h); return d.toISOString(); }
+
+const DEMO_PLANS = [
+  { id:'pl01', name:'Basic',    price:15000, durationDays:30, notes:'Full gym floor access. Locker included.', color:'blue' },
+  { id:'pl02', name:'Premium',  price:35000, durationDays:30, notes:'Everything in Basic, plus classes, sauna & PT consult.', color:'gold' },
+  { id:'pl03', name:'Day Pass', price:5000,  durationDays:1,  notes:'Single-day access for hotel guests.', color:'purple' },
+  { id:'pl04', name:'Annual',   price:120000,durationDays:365,notes:'Full year unlimited access. Best value.', color:'green' },
+  { id:'pl05', name:'Student',  price:8000,  durationDays:30, notes:'Discounted plan for students with valid ID.', color:'amber' },
+];
+
+const DEMO_MEMBERS = [
+  { id:'gm01', name:'Chidi Nwankwo',  planId:'pl02', room:'Room 204', phone:'+234 801 234 5671', joined:isoAgo(120), expiry:isoIn(18),  checkins:34, lastCheckin:isoAgoHours(5),  status:'active',  notes:'', amountPaid:35000, totalDue:35000 },
+  { id:'gm02', name:'Fatima Bello',   planId:'pl01', room:'Room 118', phone:'+234 802 345 6782', joined:isoAgo(60),  expiry:isoIn(4),   checkins:12, lastCheckin:isoAgoHours(30), status:'active',  notes:'', amountPaid:15000, totalDue:15000 },
+  { id:'gm03', name:'Segun Johnson',  planId:'pl03', room:'Walk-in',  phone:'+234 803 456 7893', joined:isoAgo(1),   expiry:isoAgo(0),  checkins:1,  lastCheckin:isoAgoHours(1),  status:'active',  notes:'', amountPaid:5000,  totalDue:5000 },
+  { id:'gm04', name:'Ada Williams',   planId:'pl02', room:'Room 204 (Suite)', phone:'+234 804 567 8904', joined:isoAgo(200), expiry:isoAgo(10), checkins:88, lastCheckin:isoAgo(10), status:'active',  notes:'VIP guest', amountPaid:20000, totalDue:35000 },
+  { id:'gm05', name:'Ibrahim Musa',   planId:'pl01', room:'Staff',   phone:'+234 805 678 9015', joined:isoAgo(300), expiry:isoIn(90),  checkins:150,lastCheckin:isoAgo(45), status:'frozen',  notes:'On medical leave', amountPaid:15000, totalDue:15000 },
+  { id:'gm06', name:'Ngozi Okafor',   planId:'pl04', room:'Room 301', phone:'+234 806 789 0126', joined:isoAgo(10),  expiry:isoIn(50),  checkins:6,  lastCheckin:isoAgoHours(20), status:'active',  notes:'', amountPaid:60000, totalDue:120000 },
+  { id:'gm07', name:'Emeka Obi',      planId:'pl02', room:'Room 105', phone:'+234 807 890 1234', joined:isoAgo(90),  expiry:isoAgo(5),  checkins:45, lastCheckin:isoAgo(6),     status:'active',  notes:'Expired plan', amountPaid:0, totalDue:35000 },
+];
+
+const DEMO_CHECKINS = [
+  { id:'ci01', memberId:'gm03', memberName:'Segun Johnson', time:isoAgoHours(1) },
+  { id:'ci02', memberId:'gm01', memberName:'Chidi Nwankwo', time:isoAgoHours(5) },
+  { id:'ci03', memberId:'gm06', memberName:'Ngozi Okafor',  time:isoAgoHours(20) },
+  { id:'ci04', memberId:'gm02', memberName:'Fatima Bello',  time:isoAgoHours(30) },
+  { id:'ci05', memberId:'gm01', memberName:'Chidi Nwankwo', time:isoAgoHours(48) },
+];
+
+// Demo hotel guests for room charge feature
+const DEMO_GUESTS = [
+  { id:'g01', name:'Mr. Adeyemi, Tunde',   room:'101', phone:'+234 803 111 2233' },
+  { id:'g02', name:'Mrs. Okafor, Ngozi',   room:'102', phone:'+234 806 222 4455' },
+  { id:'g03', name:'Mr. Bello, Ibrahim',   room:'103', phone:'+234 701 333 6677' },
+  { id:'g04', name:'Dr. Eze, Chukwuemeka', room:'201', phone:'+234 802 444 8899' },
+  { id:'g05', name:'Ms. Abubakar, Fatima', room:'202', phone:'+234 805 555 0011' },
+  { id:'g06', name:'Mr. Johnson, Segun',   room:'203', phone:'+234 708 666 2233' },
+  { id:'g07', name:'Prof. Williams, Ada',  room:'204', phone:'+234 803 777 4455' },
+];
+
+let members  = [];
+let plans    = [];
+let checkins = [];
+let guests   = [];
+let page = 1;
+let statusFilter = '';
+let activeId = null;
+let editingPlanId = null;
+let deleteTarget = null;
+let detailMemberId = null;
+let editMemberId = null;
+let paymentLabel = 'Collect Payment';
+let selectedGuestId = null;
+
+const PAGE_SIZE = 8;
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function _esc(s){ return (s == null ? '' : String(s)).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>'); }
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(s){ if(!s) return '—'; return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDateTime(iso){ if(!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ', ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+function timeAgo(iso){
+  if (!iso) return '—';
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins/60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs/24);
+  if (days < 7) return days + 'd ago';
+  return fmtDateTime(iso);
+}
+function daysUntil(s){ if(!s) return null; const d = new Date(s+'T00:00:00'); const t = new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); }
+
+/* ═══════════════════════════════════════════
+   computeStatus — a plan is mandatory on every member now, so
+   "no plan" can never legitimately occur. Statuses are:
+   active, expiring, expired, frozen (Inactive), balance.
+   If a legacy record somehow has no plan, treat it as expired
+   so it surfaces for the attendant to fix via Edit, rather than
+   silently passing as active.
+═══════════════════════════════════════════ */
+function computeStatus(m){
+  if (!m.planId) return 'expired';
+  if (m.status === 'frozen') return 'frozen';
+  const days = daysUntil(m.expiry);
+  if (days === null) return 'active';
+  if (days < 0) return 'expired';
+  if (days <= 7) return 'expiring';
+  return 'active';
+}
+const STATUS_LABEL = { active:'Active', expiring:'Expiring', expired:'Expired', frozen:'Inactive' };
+const STATUS_CHIP  = { active:'chip-active', expiring:'chip-expiring', expired:'chip-expired', frozen:'chip-frozen' };
+function initials(name){ return (name||'').split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function genId(prefix){ return prefix + Date.now() + Math.floor(Math.random()*1000); }
+
+const COLOR_TOKENS = {
+  gold:   { bg:'var(--gold-dim)',   fg:'var(--gold-light)', dot:'var(--gold)' },
+  blue:   { bg:'var(--blue-bg)',    fg:'var(--blue)',       dot:'var(--blue)' },
+  purple: { bg:'var(--purple-bg)',  fg:'var(--purple)',     dot:'var(--purple)' },
+  green:  { bg:'var(--green-bg)',   fg:'var(--green)',      dot:'var(--green)' },
+  amber:  { bg:'var(--amber-bg)',   fg:'var(--amber)',      dot:'var(--amber)' },
+};
+function planById(id){ return plans.find(p => p.id === id) || { id:null, name:'No Plan', price:0, durationDays:0, notes:'', color:'blue' }; }
+function planChipHtml(plan){
+  const c = COLOR_TOKENS[plan.color] || COLOR_TOKENS.blue;
+  return `<span class="plan-chip" style="background:${c.bg};color:${c.fg};"><span class="plan-dot" style="background:${c.dot}"></span>${_esc(plan.name)}</span>`;
+}
+
+/* ═══════════════════════════════════════════
+   KPIs
+═══════════════════════════════════════════ */
+function renderKPIs(){
+  const withStatus = members.map(m => ({...m, _s: computeStatus(m)}));
+  const active   = withStatus.filter(m => m._s === 'active').length;
+  const expiring = withStatus.filter(m => m._s === 'expiring').length;
+  const expired  = withStatus.filter(m => m._s === 'expired').length;
+  const revenue  = withStatus.filter(m => m._s === 'active' || m._s === 'expiring')
+    .reduce((sum, m) => sum + (planById(m.planId).price || 0), 0);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card green" onclick="setStatus('active')">
+      <div class="kpi-accent">💪</div>
+      <div class="kpi-label">Active Members</div>
+      <div class="kpi-value">${active}</div>
+      <div class="kpi-trend up">${members.length} total on file</div>
+    </div>
+    <div class="kpi-card amber" onclick="setStatus('expiring')">
+      <div class="kpi-accent">⏳</div>
+      <div class="kpi-label">Expiring Within 7 Days</div>
+      <div class="kpi-value" style="color:var(--amber);">${expiring}</div>
+      <div class="kpi-trend ${expiring>0?'warn':'up'}">${expiring>0?'Needs renewal outreach':'None due'}</div>
+    </div>
+    <div class="kpi-card red" onclick="setStatus('expired')">
+      <div class="kpi-accent">✕</div>
+      <div class="kpi-label">Expired Memberships</div>
+      <div class="kpi-value" style="color:var(--red);">${expired}</div>
+      <div class="kpi-trend ${expired>0?'warn':'up'}">${expired>0?'Access should be blocked':'All current'}</div>
+    </div>
+    <div class="kpi-card gold" onclick="openPlansModal()">
+      <div class="kpi-accent">💳</div>
+      <div class="kpi-label">Est. Monthly Revenue</div>
+      <div class="kpi-value" style="color:var(--gold-light);">${fmtN(revenue)}</div>
+      <div class="kpi-trend info">${plans.length} active plan${plans.length!==1?'s':''} on offer</div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   STATUS PILLS / FILTERS
+═══════════════════════════════════════════ */
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p => {
+    p.addEventListener('click', () => setStatus(p.dataset.status));
+  });
+}
+function setStatus(s){
+  statusFilter = s;
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  const target = document.querySelector(`.status-pill[data-status="${s}"]`);
+  if (target) target.classList.add('on');
+  page = 1;
+  render();
+}
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fPlan').value = '';
+  document.getElementById('fSort').value = 'name_asc';
+  statusFilter = '';
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1;
+  render();
+}
+function populatePlanFilter(){
+  const sel = document.getElementById('fPlan');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Plans</option>' + plans.map(p => `<option value="${p.id}">${_esc(p.name)}</option>`).join('');
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+function getFiltered(){
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const planFilter = document.getElementById('fPlan').value;
+  const sort = document.getElementById('fSort').value;
+
+  let rows = members.map(m => ({...m, _s: computeStatus(m)})).filter(m => {
+    const mq = !q || m.name.toLowerCase().includes(q) || (m.room||'').toLowerCase().includes(q) || (m.phone||'').toLowerCase().includes(q);
+    const mp = !planFilter || m.planId === planFilter;
+    const ms = !statusFilter || m._s === statusFilter;
+    return mq && mp && ms;
+  });
+
+  if (sort === 'name_asc') rows.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sort === 'expiry_asc') rows.sort((a,b) => (a.expiry||'').localeCompare(b.expiry||''));
+  else if (sort === 'joined_desc') rows.sort((a,b) => (b.joined||'').localeCompare(a.joined||''));
+
+  return rows;
+}
+
+/* ═══════════════════════════════════════════
+   PAGINATION
+═══════════════════════════════════════════ */
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total === 0 ? 0 : (page-1)*PAGE_SIZE + 1;
+  const to = Math.min(page*PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const mk = (label, p, disabled, active) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label; b.disabled = !!disabled;
+    b.onclick = () => { page = p; render(); };
+    return b;
+  };
+  wrap.appendChild(mk('‹', page-1, page===1, false));
+  let start = Math.max(1, page-2), end = Math.min(totalPages, start+4); start = Math.max(1, end-4);
+  for (let i=start;i<=end;i++) wrap.appendChild(mk(String(i), i, false, i===page));
+  wrap.appendChild(mk('›', page+1, page>=totalPages, false));
+}
+
+/* ═══════════════════════════════════════════
+   RENDER MEMBERS TABLE
+═══════════════════════════════════════════ */
+function render(){
+  renderKPIs();
+  const rows = getFiltered();
+  document.getElementById('tblCount').textContent = rows.length + ' member' + (rows.length!==1?'s':'');
+
+  const start = (page-1)*PAGE_SIZE;
+  const pageRows = rows.slice(start, start+PAGE_SIZE);
+
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="8">No members match your filters.</td></tr>`
+    : pageRows.map(m => {
+        const plan = planById(m.planId);
+        return `
+      <tr onclick="openDetail('${m.id}')">
+        <td><div class="mem-cell"><span class="mem-avatar">${initials(m.name)}</span><span class="mem-name">${_esc(m.name)}</span></div></td>
+        <td>${m.planId ? planChipHtml(plan) : '<span style="color:var(--text3);font-size:11px;">— Not set</span>'}</td>
+        <td>${_esc(m.room || '—')}${m.phone ? `<div class="mem-sub">${_esc(m.phone)}</div>` : ''}</td>
+        <td>${fmtDate(m.joined)}</td>
+        <td>${fmtDate(m.expiry)}</td>
+        <td class="center">${m.checkins || 0}</td>
+        <td><span class="chip ${STATUS_CHIP[m._s]}">${STATUS_LABEL[m._s]}</span></td>
+        <td class="no-print center" onclick="event.stopPropagation()">
+          <div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${m.id}')">👁 View</button>
+            <button class="act-btn green" onclick="openCheckin('${m.id}')" ${m._s === 'expired' || m._s === 'frozen' ? 'disabled title="Cannot check in — ' + STATUS_LABEL[m._s].toLowerCase() + '"' : ''}>✓ Check-in</button>
+            <button class="act-btn" onclick="openRenew('${m.id}')">↻ Renew</button>
+            <button class="act-btn danger" onclick="openDeleteModal('member','${m.id}')">🗑</button>
+          </div>
+        </td>
+      </tr>`;
+      }).join('');
+
+  renderPagination(rows.length);
+}
+
+/* ═══════════════════════════════════════════
+   Auto-calculate expiry date when plan changes
+   Payment method — Pay Now or Charge to Room
+═══════════════════════════════════════════ */
+function onPlanChange(){
+  const planId = document.getElementById('mPlan').value;
+  const plan = plans.find(p => p.id === planId);
+  if (plan && plan.durationDays) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const joinedVal = document.getElementById('mJoined').value;
+    let base = joinedVal ? new Date(joinedVal + 'T00:00:00') : today;
+    // Never anchor the new expiry to a stale, already-past join date — if the
+    // join date is in the past (e.g. editing a previously expired member),
+    // the new cycle starts today, same as a manual renewal would.
+    if (base < today) base = today;
+    const d = new Date(base);
+    d.setDate(d.getDate() + plan.durationDays);
+    document.getElementById('mExpiry').value = d.toISOString().split('T')[0];
+  } else {
+    document.getElementById('mExpiry').value = '';
+  }
+}
+
+function togglePaymentMethod(){
+  const isCharge = document.querySelector('input[name="paymentMethod"]:checked').value === 'charge';
+  document.getElementById('guestSearchSection').style.display = isCharge ? 'block' : 'none';
+  paymentLabel = isCharge ? 'Charge to Room' : 'Collect Payment';
+  if (!isCharge) {
+    selectedGuestId = null;
+    document.getElementById('guestResults').innerHTML = '';
+  }
+}
+
+function searchGuests(){
+  const q = document.getElementById('guestSearch').value.toLowerCase().trim();
+  const results = document.getElementById('guestResults');
+  if (!q) { results.innerHTML = ''; return; }
+  const matches = guests.filter(g =>
+    g.name.toLowerCase().includes(q) ||
+    g.room.toLowerCase().includes(q) ||
+    g.phone.includes(q)
+  ).slice(0, 6);
+  if (matches.length === 0) {
+    results.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:6px;">No guests found</div>';
+    return;
+  }
+  results.innerHTML = matches.map(g => `
+    <div class="guest-result${selectedGuestId === g.id ? ' selected' : ''}" onclick="selectGuest('${g.id}')">
+      <span class="guest-result-avatar">${initials(g.name)}</span>
+      <div class="guest-result-info">
+        <div class="guest-result-name">${_esc(g.name)}</div>
+        <div class="guest-result-meta">${_esc(g.room)} · ${_esc(g.phone)}</div>
+      </div>
+      ${selectedGuestId === g.id ? '<span style="color:var(--gold);font-size:14px;">✓</span>' : ''}
+    </div>
+  `).join('');
+}
+
+function selectGuest(id){
+  selectedGuestId = id;
+  const g = guests.find(x => x.id === id);
+  if (g) {
+    document.getElementById('guestSearch').value = g.name + ' (' + g.room + ')';
+    // Auto-fill the member's own details from the selected guest record —
+    // name, room AND phone — not just the room number.
+    document.getElementById('mRoom').value = g.room;
+    document.getElementById('mPhone').value = g.phone || '';
+    document.getElementById('mName').value = g.name;
+    showToast(`Filled in ${g.name}'s details from Room ${g.room}.`, 'info');
+  }
+  searchGuests();
+}
+
+/* ═══════════════════════════════════════════
+   ADD / EDIT MEMBER MODAL
+═══════════════════════════════════════════ */
+function populateMemberPlanSelect(selectedId){
+  const sel = document.getElementById('mPlan');
+  sel.innerHTML = '<option value="">— Select a Plan —</option>' + plans.map(p => `<option value="${p.id}">${_esc(p.name)} — ${fmtN(p.price)}</option>`).join('');
+  if (selectedId && [...sel.options].some(o => o.value === selectedId)) sel.value = selectedId;
+}
+function openMemberModal(id=null){
+  editMemberId = id;
+  const isEdit = !!id;
+  document.getElementById('memberModalTitle').textContent = isEdit ? 'Edit Member' : 'New Gym Member';
+  if (isEdit) {
+    const m = members.find(x => x.id === id);
+    document.getElementById('mName').value = m.name;
+    populateMemberPlanSelect(m.planId);
+    document.getElementById('mRoom').value = m.room || '';
+    document.getElementById('mPhone').value = m.phone || '';
+    document.getElementById('mJoined').value = m.joined || '';
+    document.getElementById('mExpiry').value = m.expiry || '';
+    document.getElementById('mNotes').value = m.notes || '';
+    // Hide payment section for edits
+    document.querySelector('.form-group.span2:last-child').style.display = 'none';
+  } else {
+    document.getElementById('mName').value = '';
+    populateMemberPlanSelect(null);
+    document.getElementById('mRoom').value = '';
+    document.getElementById('mPhone').value = '';
+    document.getElementById('mJoined').value = new Date().toISOString().split('T')[0];
+    document.getElementById('mExpiry').value = '';
+    document.getElementById('mNotes').value = '';
+    document.querySelector('.form-group.span2:last-child').style.display = 'block';
+    selectedGuestId = null;
+    document.getElementById('guestSearch').value = '';
+    document.getElementById('guestResults').innerHTML = '';
+    document.querySelector('input[name="paymentMethod"][value="cash"]').checked = true;
+    togglePaymentMethod();
+  }
+  document.getElementById('memberModal').classList.add('show');
+}
+async function saveMember(){
+  const name = document.getElementById('mName').value.trim();
+  if (!name) { showToast('Please enter the member\'s name.', 'error'); return; }
+
+  // A plan is mandatory for every member — new or existing. This is the
+  // one check that was previously skipped on edits, which let a member's
+  // plan get silently cleared and fall back to "No Plan".
+  const planId = document.getElementById('mPlan').value;
+  if (!planId) { showToast('Please select a membership plan before saving.', 'error'); return; }
+
+  const entry = {
+    id: editMemberId || genId('gm'),
+    name,
+    planId,
+    room: document.getElementById('mRoom').value.trim(),
+    phone: document.getElementById('mPhone').value.trim(),
+    joined: document.getElementById('mJoined').value,
+    expiry: document.getElementById('mExpiry').value,
+    notes: document.getElementById('mNotes').value.trim(),
+    checkins: editMemberId ? (members.find(m=>m.id===editMemberId)||{}).checkins || 0 : 0,
+    lastCheckin: editMemberId ? (members.find(m=>m.id===editMemberId)||{}).lastCheckin || null : null,
+    status: editMemberId ? (members.find(m=>m.id===editMemberId)||{}).status || 'active' : 'active',
+  };
+
+  if (editMemberId) {
+    const idx = members.findIndex(m => m.id === editMemberId);
+    members[idx] = entry;
+    showToast('Member updated.', 'success');
+  } else {
+    members.push(entry);
+    // Handle payment
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    if (paymentMethod === 'charge' && selectedGuestId) {
+      const guest = guests.find(g => g.id === selectedGuestId);
+      const plan = planById(planId);
+      showToast(`${name} added. ${fmtN(plan.price)} charged to ${guest.name} (${guest.room}).`, 'success');
+    } else if (paymentMethod === 'cash') {
+      const plan = planById(planId);
+      showToast(`${name} added. ${fmtN(plan.price)} collected in cash.`, 'success');
+    } else {
+      showToast('Member added.', 'success');
+    }
+  }
+  closeModal('memberModal');
+  render();
+  if (document.getElementById('detailModal').classList.contains('show') && detailMemberId === entry.id) renderDetail();
+  await saveShared(KEY_MEMBERS, members);
+}
+
+/* ═══════════════════════════════════════════
+   MEMBER PROFILE (DETAIL) MODAL
+   Paginated check-in history in profile
+═══════════════════════════════════════════ */
+let detailCheckinPage = 1;
+const DETAIL_CHECKIN_PAGE_SIZE = 5;
+
+function openDetail(id){
+  detailMemberId = id;
+  detailCheckinPage = 1;
+  renderDetail();
+  document.getElementById('detailModal').classList.add('show');
+}
+function renderDetail(){
+  const m = members.find(x => x.id === detailMemberId);
+  if (!m) return;
+  const plan = planById(m.planId);
+  const s = computeStatus(m);
+  const c = COLOR_TOKENS[plan.color] || COLOR_TOKENS.blue;
+  const memberCheckins = checkins.filter(ci => ci.memberId === m.id);
+  const totalCheckins = memberCheckins.length;
+  const totalPages = Math.max(1, Math.ceil(totalCheckins / DETAIL_CHECKIN_PAGE_SIZE));
+  if (detailCheckinPage > totalPages) detailCheckinPage = totalPages;
+  const start = (detailCheckinPage - 1) * DETAIL_CHECKIN_PAGE_SIZE;
+  const pageCheckins = memberCheckins.slice(start, start + DETAIL_CHECKIN_PAGE_SIZE);
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-head">
+      <span class="detail-avatar">${initials(m.name)}</span>
+      <div>
+        <div class="detail-name">${_esc(m.name)}</div>
+        <div class="detail-subline"><span class="chip ${STATUS_CHIP[s]}">${STATUS_LABEL[s]}</span>${m.planId ? planChipHtml(plan) : '<span style="color:var(--text3);font-size:11px;margin-left:6px;">Not set</span>'}</div>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-stat"><div class="detail-stat-label">Room / Contact</div><div class="detail-stat-val">${_esc(m.room||'—')}${m.phone ? '<br>'+_esc(m.phone) : ''}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Joined</div><div class="detail-stat-val">${fmtDate(m.joined)}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Expiry</div><div class="detail-stat-val">${fmtDate(m.expiry)}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Total Check-ins</div><div class="detail-stat-val">${m.checkins||0}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Last Check-in</div><div class="detail-stat-val">${m.lastCheckin ? timeAgo(m.lastCheckin) : 'Never'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Status</div><div class="detail-stat-val">${STATUS_LABEL[s]}</div></div>
+    </div>
+    ${m.planId ? `
+    <div class="plan-detail-card" style="background:${c.bg};border-color:${c.fg}55;">
+      <div class="plan-detail-top"><span style="color:${c.fg};font-weight:700;">${_esc(plan.name)} Plan</span><span style="color:${c.fg};">${fmtN(plan.price)} / ${plan.durationDays} day${plan.durationDays!==1?'s':''}</span></div>
+      ${plan.notes ? `<div class="plan-detail-notes">${_esc(plan.notes)}</div>` : ''}
+    </div>` : ''}
+    ${m.notes ? `<div class="detail-section"><div class="detail-section-title">Notes</div><div class="detail-section-body">${_esc(m.notes)}</div></div>` : ''}
+    <div class="detail-section">
+      <div class="detail-section-title">Check-in History</div>
+      ${totalCheckins === 0
+        ? `<div class="empty-note" style="padding:12px 0;">No check-ins recorded yet.</div>`
+        : pageCheckins.map(ci => `<div class="checkin-row"><span>${fmtDateTime(ci.time)}</span><span style="color:var(--text3);">${timeAgo(ci.time)}</span></div>`).join('')}
+      ${totalCheckins > DETAIL_CHECKIN_PAGE_SIZE ? `
+      <div class="pagination" style="border-top:none;padding:8px 0 0;">
+        <span style="font-size:11px;">${start+1}–${Math.min(start+DETAIL_CHECKIN_PAGE_SIZE, totalCheckins)} of ${totalCheckins}</span>
+        <div class="page-btns">
+          <button class="page-btn" onclick="detailCheckinPage--;renderDetail();" ${detailCheckinPage<=1?'disabled':''}>‹</button>
+          <button class="page-btn active">${detailCheckinPage}</button>
+          <button class="page-btn" onclick="detailCheckinPage++;renderDetail();" ${detailCheckinPage>=totalPages?'disabled':''}>›</button>
+        </div>
+      </div>` : ''}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="openRenew('${m.id}')">↻ Renew</button>
+      <button class="btn btn-outline btn-sm" onclick="openCheckin('${m.id}')" ${s === 'expired' || s === 'frozen' ? 'disabled' : ''}>✓ Check-in</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal'); openMemberModal('${m.id}')">✏ Edit</button>
+      <button class="btn btn-sm" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:var(--red);" onclick="closeModal('detailModal'); openDeleteModal('member','${m.id}')">🗑 Remove</button>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   Check-in — block non-active members
+═══════════════════════════════════════════ */
+function openCheckin(id){
+  const m = members.find(x => x.id === id);
+  if (!m) return;
+  const s = computeStatus(m);
+  // Block check-in for non-active members
+  if (s === 'expired') {
+    showToast('Cannot check in — membership has expired. Please renew first.', 'error');
+    return;
+  }
+  if (s === 'frozen') {
+    showToast('Cannot check in — membership is inactive.', 'error');
+    return;
+  }
+  activeId = id;
+  document.getElementById('ciName').textContent = m.name;
+  document.getElementById('ciNote').innerHTML = 'Log a gym visit for <strong>' + _esc(m.name) + '</strong>.';
+  document.getElementById('checkinModal').classList.add('show');
+}
+async function confirmCheckin(){
+  const m = members.find(x => x.id === activeId);
+  if (!m) return;
+  const now = new Date().toISOString();
+  m.checkins = (m.checkins || 0) + 1;
+  m.lastCheckin = now;
+  checkins.unshift({ id: genId('ci'), memberId: m.id, memberName: m.name, time: now });
+  if (checkins.length > 100) checkins = checkins.slice(0, 100);
+  closeModal('checkinModal');
+  render();
+  if (document.getElementById('detailModal').classList.contains('show') && detailMemberId === m.id) renderDetail();
+  await Promise.all([ saveShared(KEY_MEMBERS, members), saveShared(KEY_CHECKINS, checkins) ]);
+  showToast(`${m.name} checked in.`, 'success');
+}
+
+/* ═══════════════════════════════════════════
+   RENEW
+═══════════════════════════════════════════ */
+function openRenew(id){
+  activeId = id;
+  const m = members.find(x => x.id === id);
+  document.getElementById('rnName').textContent = m.name;
+  const plan = planById(m.planId);
+  const base = m.expiry && new Date(m.expiry+'T00:00:00') > new Date() ? m.expiry : new Date().toISOString().split('T')[0];
+  const d = new Date(base+'T00:00:00'); d.setDate(d.getDate() + (plan.durationDays || 30));
+  document.getElementById('rnExpiry').value = d.toISOString().split('T')[0];
+  document.getElementById('renewModal').classList.add('show');
+}
+async function confirmRenew(){
+  const m = members.find(x => x.id === activeId);
+  if (!m) return;
+  const newExpiry = document.getElementById('rnExpiry').value;
+  if (!newExpiry) { showToast('Please choose a new expiry date.', 'error'); return; }
+  m.expiry = newExpiry;
+  m.status = 'active';
+  closeModal('renewModal');
+  render();
+  if (document.getElementById('detailModal').classList.contains('show') && detailMemberId === m.id) renderDetail();
+  await saveShared(KEY_MEMBERS, members);
+  showToast(`${m.name}'s membership renewed to ${fmtDate(newExpiry)}.`, 'success');
+}
+
+/* ═══════════════════════════════════════════
+   MEMBERSHIP PLANS
+═══════════════════════════════════════════ */
+function openPlansModal(){
+  hidePlanForm();
+  renderPlanList();
+  document.getElementById('plansModal').classList.add('show');
+}
+function colorSwatchesHtml(selected){
+  return Object.keys(COLOR_TOKENS).map(c =>
+    `<span class="color-swatch${c===selected?' on':''}" data-color="${c}" style="background:${COLOR_TOKENS[c].dot}" title="${c}"></span>`
+  ).join('');
+}
+function showPlanForm(id=null){
+  editingPlanId = id;
+  const p = id ? plans.find(x => x.id === id) : { name:'', price:'', durationDays:'', notes:'', color:'blue' };
+  const wrap = document.getElementById('planFormWrap');
+  wrap.innerHTML = `
+    <div class="plan-form" style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Plan Name</label><input class="form-input" id="pfName" placeholder="e.g. Basic"></div>
+        <div class="form-group"><label class="form-label">Price (₦)</label><input class="form-input" type="number" id="pfPrice" placeholder="0" min="0"></div>
+        <div class="form-group"><label class="form-label">Duration (days)</label><input class="form-input" type="number" id="pfDuration" placeholder="30" min="1"></div>
+        <div class="form-group"><label class="form-label">Color Tag</label><div class="color-swatches" id="pfColorRow" style="display:flex;align-items:center;gap:8px;padding-top:4px;">${colorSwatchesHtml(p.color)}</div></div>
+        <div class="form-group span2"><label class="form-label">Notes / What's Included</label><textarea class="form-textarea" id="pfNotes" placeholder="Describe what members get on this plan…"></textarea></div>
+      </div>
+      <div class="modal-footer" style="margin-top:0;padding-top:12px;">
+        <button class="btn btn-outline btn-sm" onclick="hidePlanForm()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="savePlan()">${id?'✓ Update Plan':'✓ Add Plan'}</button>
+      </div>
+    </div>`;
+  document.getElementById('pfName').value = p.name;
+  document.getElementById('pfPrice').value = p.price;
+  document.getElementById('pfDuration').value = p.durationDays;
+  document.getElementById('pfNotes').value = p.notes || '';
+  wrap.querySelectorAll('.color-swatch').forEach(sw => sw.addEventListener('click', () => {
+    wrap.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('on'));
+    sw.classList.add('on');
+  }));
+  wrap.style.display = 'block';
+  document.getElementById('addPlanBtn').style.display = 'none';
+  document.getElementById('pfName').focus();
+}
+function hidePlanForm(){
+  editingPlanId = null;
+  document.getElementById('planFormWrap').style.display = 'none';
+  document.getElementById('planFormWrap').innerHTML = '';
+  document.getElementById('addPlanBtn').style.display = 'inline-flex';
+}
+async function savePlan(){
+  const name = document.getElementById('pfName').value.trim();
+  if (!name) { showToast('Please enter a plan name.', 'error'); return; }
+  const price = parseFloat(document.getElementById('pfPrice').value) || 0;
+  const durationDays = parseInt(document.getElementById('pfDuration').value, 10) || 1;
+  const notes = document.getElementById('pfNotes').value.trim();
+  const colorEl = document.querySelector('#pfColorRow .color-swatch.on');
+  const color = colorEl ? colorEl.dataset.color : 'blue';
+
+  if (editingPlanId) {
+    const idx = plans.findIndex(p => p.id === editingPlanId);
+    plans[idx] = { ...plans[idx], name, price, durationDays, notes, color };
+    showToast('Plan updated.', 'success');
+  } else {
+    plans.push({ id: genId('pl'), name, price, durationDays, notes, color });
+    showToast('Plan added.', 'success');
+  }
+  hidePlanForm();
+  renderPlanList();
+  populatePlanFilter();
+  render();
+  await saveShared(KEY_PLANS, plans);
+}
+function renderPlanList(){
+  const el = document.getElementById('planList');
+  el.innerHTML = plans.length === 0
+    ? `<div class="empty-note">No plans yet — add one above.</div>`
+    : plans.map(p => {
+        const inUse = members.filter(m => m.planId === p.id).length;
+        const c = COLOR_TOKENS[p.color] || COLOR_TOKENS.blue;
+        return `
+        <div class="plan-card" style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
+          <div class="plan-card-top" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <span class="plan-chip" style="background:${c.bg};color:${c.fg};"><span class="plan-dot" style="background:${c.dot}"></span>${_esc(p.name)}</span>
+            <div style="display:flex;gap:5px;">
+              <button class="act-btn" onclick="showPlanForm('${p.id}')">✏ Edit</button>
+              <button class="act-btn danger" onclick="openDeleteModal('plan','${p.id}')">🗑</button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text2);font-weight:600;">${fmtN(p.price)} <span style="color:var(--text3);font-weight:400;">/ ${p.durationDays} day${p.durationDays!==1?'s':''} · ${inUse} member${inUse!==1?'s':''} enrolled</span></div>
+          ${p.notes ? `<div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5;white-space:pre-line;">${_esc(p.notes)}</div>` : ''}
+        </div>`;
+      }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   DELETE
+═══════════════════════════════════════════ */
+function openDeleteModal(type, id){
+  if (type === 'plan') {
+    const p = plans.find(x => x.id === id);
+    const inUse = members.filter(m => m.planId === id).length;
+    if (inUse > 0) { showToast(`Can't delete "${p.name}" — ${inUse} member${inUse!==1?'s are':' is'} still on this plan.`, 'error'); return; }
+    deleteTarget = { type, id };
+    document.getElementById('deleteModalTitle').textContent = 'Delete Plan';
+    document.getElementById('deleteMsg').textContent = `Delete the "${p.name}" plan? This cannot be undone.`;
+  } else {
+    const m = members.find(x => x.id === id);
+    deleteTarget = { type, id };
+    document.getElementById('deleteModalTitle').textContent = 'Remove Member';
+    document.getElementById('deleteMsg').textContent = `Remove "${m.name}" from the gym member list? This cannot be undone.`;
+  }
+  document.getElementById('deleteModal').classList.add('show');
+}
+async function confirmDelete(){
+  if (!deleteTarget) { closeModal('deleteModal'); return; }
+  if (deleteTarget.type === 'plan') {
+    const p = plans.find(x => x.id === deleteTarget.id);
+    plans = plans.filter(x => x.id !== deleteTarget.id);
+    closeModal('deleteModal');
+    renderPlanList();
+    populatePlanFilter();
+    render();
+    await saveShared(KEY_PLANS, plans);
+    showToast(`"${p ? p.name : ''}" plan deleted.`, 'error');
+  } else {
+    const m = members.find(x => x.id === deleteTarget.id);
+    members = members.filter(x => x.id !== deleteTarget.id);
+    closeModal('deleteModal');
+    if (document.getElementById('detailModal').classList.contains('show') && detailMemberId === deleteTarget.id) closeModal('detailModal');
+    render();
+    await saveShared(KEY_MEMBERS, members);
+    showToast(`"${m ? m.name : ''}" removed.`, 'error');
+  }
+  deleteTarget = null;
+}
+
+/* ═══════════════════════════════════════════
+   MODAL / TOAST HELPERS
+═══════════════════════════════════════════ */
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+['memberModal','checkinModal','renewModal','plansModal','deleteModal','detailModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
+});
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+async function init(){
+  plans    = await loadShared(KEY_PLANS, DEMO_PLANS);
+  members  = await loadShared(KEY_MEMBERS, DEMO_MEMBERS);
+  checkins = await loadShared(KEY_CHECKINS, DEMO_CHECKINS);
+  guests   = await loadShared(KEY_GUESTS, DEMO_GUESTS);
+
+  await Promise.all([
+    saveShared(KEY_PLANS, plans),
+    saveShared(KEY_MEMBERS, members),
+    saveShared(KEY_CHECKINS, checkins),
+    saveShared(KEY_GUESTS, guests),
+  ]);
+
+  populatePlanFilter();
+  bindStatusPills();
+  render();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Transfer History | Aurum Restaurant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  /* restaurant-shell.js defines --gold/--text/--border/--surface etc,
+     but never defines status colors — every green/red/amber/blue
+     reference on this page depends on THESE being defined right here. */
+  :root{
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  /* This page only owns layout + its own content. Sidebar + topbar
+     look/markup live entirely in restaurant-shell.js. */
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  /* ═══ KPI (colorful, same pattern as Dashboard) ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.accepted{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
+  .kpi-card.accepted::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.rejected{ background:linear-gradient(160deg, rgba(248,113,113,.07), var(--surface) 60%); border-color:rgba(248,113,113,.22); }
+  .kpi-card.rejected::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.units{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
+  .kpi-card.units::before{ background:linear-gradient(90deg,#60a5fa,transparent); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-card.accepted .kpi-label{ color:var(--green); }
+  .kpi-card.rejected .kpi-label{ color:var(--red); }
+  .kpi-card.units .kpi-label{ color:#60a5fa; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:#60a5fa; }
+
+  /* Pagination */
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  /* ═══ Toolbar / filter bar ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
+  .filter-date{ cursor:default; color-scheme:dark; }
+  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .status-pills{ display:flex; gap:6px; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.accepted{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
+  .active-chip button{ background:none; border:none; color:var(--gold-light); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
+  .active-chip button:hover{ color:#fff; }
+  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
+
+  @media (max-width:700px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select, .filter-date{ width:100%; }
+    .status-pills{ flex-wrap:wrap; }
+    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .btn-ghost{ align-self:flex-start; }
+  }
+
+  /* ═══ Panel / table ═══ */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:860px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th[data-sortkey]:hover{ color:var(--gold); }
+  thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
+  thead th.no-sort{ cursor:default; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .meal-badge{ display:inline-flex; align-items:center; gap:6px; }
+  .meal-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-accepted{ background:var(--green-bg); color:var(--green); } .chip-accepted::before{ background:var(--green); }
+  .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+
+  /* Modal */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal.status-accepted::before{ background:var(--green); }
+  .modal.status-rejected::before{ background:var(--red); }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+  .modal-close:hover{ color:var(--text); }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-bottom:16px; }
+  @media (max-width:460px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-item{ display:flex; flex-direction:column; gap:3px; }
+  .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
+  .detail-remarks{ background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--text3); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--text2); line-height:1.5; }
+  .detail-remarks.status-accepted{ border-left-color:var(--green); background:var(--green-bg); color:var(--text); }
+  .detail-remarks.status-rejected{ border-left-color:var(--red); background:var(--red-bg); color:var(--text); }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    #rst-sidebar, #rst-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by restaurant-shell.js — Restaurant nav only -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by restaurant-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ═══ FILTER BAR ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill accepted" data-status="accepted"><span class="pdot" style="background:var(--green)"></span>Accepted</div>
+                <div class="status-pill rejected" data-status="rejected"><span class="pdot" style="background:var(--red)"></span>Rejected</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <input type="text" id="fSearch" placeholder="Transfer #, meal, staff…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Meal</span>
+              <select class="filter-select" id="fMeal" onchange="page=1;render()">
+                <option value="">All Meals</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">From Kitchen</span>
+              <select class="filter-select" id="fKitchen" onchange="page=1;render()">
+                <option value="">All Kitchens</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Action Date — From</span>
+              <input type="date" class="filter-date" id="fDateFrom" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Action Date — To</span>
+              <input type="date" class="filter-date" id="fDateTo" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="page=1;render()">
+                <option value="date_desc">Action Date (Newest)</option>
+                <option value="date_asc">Action Date (Oldest)</option>
+                <option value="qty_desc">Quantity (High → Low)</option>
+                <option value="qty_asc">Quantity (Low → High)</option>
+                <option value="meal_asc">Meal (A → Z)</option>
+              </select>
+            </div>
+            <button class="btn-ghost" id="clearFiltersBtn" onclick="clearFilters()">✕ Clear Filters</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+        </div>
+        <div class="toolbar-row" id="chipsRow" style="display:none;">
+          <div class="active-chips" id="activeChips"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Transfer History</div>
+          <span class="toolbar-count" id="tblCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="no-sort">Transfer No.</th>
+                <th data-sortkey="meal">Meal <span class="sort-arrow" id="arrow-meal"></span></th>
+                <th data-sortkey="qty">Qty <span class="sort-arrow" id="arrow-qty"></span></th>
+                <th class="no-sort">From Kitchen</th>
+                <th class="no-sort">Sent By</th>
+                <th class="no-sort">Date Sent</th>
+                <th data-sortkey="date">Action Date <span class="sort-arrow" id="arrow-date"></span></th>
+                <th class="no-sort">Handled By</th>
+                <th class="no-sort">Status</th>
+                <th class="no-print no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- DETAILS MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="dTitle">Transfer Details</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="detail-grid" id="dGrid"></div>
+    <div class="detail-remarks" id="dRemarks"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/restaurant-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar, restaurant nav only.
+   NOTE the activeFile below matches THIS file's own name so the
+   sidebar highlights "Transfer History", not "Pending Transfers".
+═══════════════════════════════════════════ */
+const shell = RestaurantShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'restaurant-transfer-history.html',
+  pageTitle:     'Transfer History',
+  pageSubtitle:  'Every accepted or rejected transfer from the Kitchen',
+  apiMode:       'Demo',
+  user:          { name: 'Restaurant Manager', initials: 'RM' },
+});
+
+/* ═══════════════════════════════════════════
+   CONFIG & STORAGE — reads the SAME shared key that
+   restaurant-transfers.html writes to on Accept/Reject.
+═══════════════════════════════════════════ */
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE: 8 };
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_HISTORY   = 'restaurant-transfer-history';
+const KEY_TRANSFERS = 'restaurant-pending-transfers';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+
+/* Demo seed — only used the very first time, before any real history exists */
+const DEMO_HISTORY = [
+  { no:'KTN-00040', meal:'Jollof Rice',  qty:25, unit:'Plates',   from:'Main Kitchen',    sentBy:'Head Chef', date:'14/07/26 09:10 AM', prodNo:'PROD-00089', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'14/07/26 09:40 AM' },
+  { no:'KTN-00041', meal:'Egusi Soup',   qty:16, unit:'Portions', from:'Main Kitchen',    sentBy:'Head Chef', date:'14/07/26 12:05 PM', prodNo:'PROD-00090', remarks:'', status:'accepted', receivedBy:'Tunde, Waitstaff', actionRemarks:'', actionDate:'14/07/26 12:30 PM' },
+  { no:'KTN-00042', meal:'Moi Moi',      qty:10, unit:'Pieces',   from:'Banquet Kitchen', sentBy:'Sous Chef', date:'15/07/26 08:50 AM', prodNo:'PROD-00092', remarks:'', status:'rejected', receivedBy:'', actionRemarks:'Wrong batch — texture off, sent back.', actionDate:'15/07/26 09:05 AM' },
+  { no:'KTN-00043', meal:'Fried Rice',   qty:22, unit:'Plates',   from:'Main Kitchen',    sentBy:'Head Chef', date:'15/07/26 01:15 PM', prodNo:'PROD-00093', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'15/07/26 01:45 PM' },
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let history = [];
+let page = 1;
+let statusFilter = '';
+let sortKey = 'date', sortDir = 'desc';
+let _filteredCache = [];
+
+function parseTransferDate(str){
+  if (!str) return null;
+  const [datePart, timePart, ampm] = str.split(' ');
+  const [d, m, y] = datePart.split('/').map(n => parseInt(n, 10));
+  let hh = 0, mm = 0;
+  if (timePart) { const [h, mi] = timePart.split(':').map(n => parseInt(n, 10)); hh = h; mm = mi || 0; }
+  if (ampm) {
+    const upper = ampm.toUpperCase();
+    if (upper === 'PM' && hh < 12) hh += 12;
+    if (upper === 'AM' && hh === 12) hh = 0;
+  }
+  const fullYear = y < 100 ? 2000 + y : y;
+  return new Date(fullYear, m - 1, d, hh, mm);
+}
+function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null; }
+
+const MEAL_COLORS = { 'Jollof Rice':'#c9a84c', 'Fried Rice':'#60a5fa', 'Egusi Soup':'#a78bfa', 'Moi Moi':'#4ade80' };
+function mealColor(meal){ return MEAL_COLORS[meal] || '#6a8a9e'; }
+
+/* ═══════════════════════════════════════════
+   FILTER OPTIONS
+═══════════════════════════════════════════ */
+function populateFilterOptions(){
+  const mealSel = document.getElementById('fMeal');
+  const curMeal = mealSel.value;
+  const meals = [...new Set(history.map(h => h.meal))].sort();
+  mealSel.innerHTML = '<option value="">All Meals</option>' + meals.map(m => `<option${m===curMeal?' selected':''}>${m}</option>`).join('');
+
+  const kitchenSel = document.getElementById('fKitchen');
+  const curKitchen = kitchenSel.value;
+  const kitchens = [...new Set(history.map(h => h.from))].sort();
+  kitchenSel.innerHTML = '<option value="">All Kitchens</option>' + kitchens.map(k => `<option${k===curKitchen?' selected':''}>${k}</option>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   KPIs — colorful, mirrors the Dashboard's kpi-card pattern
+═══════════════════════════════════════════ */
+function renderKPIs(rows){
+  const accepted = rows.filter(h => h.status === 'accepted');
+  const rejected = rows.filter(h => h.status === 'rejected');
+  const totalUnits = accepted.reduce((s,h)=>s+h.qty,0);
+  const total = rows.length;
+  const acceptRate = total ? Math.round(accepted.length / total * 100) : 0;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card accepted">
+      <div class="kpi-accent" style="color:var(--green)">✓</div>
+      <div class="kpi-label">Accepted Transfers</div>
+      <div class="kpi-value" style="color:var(--green);">${accepted.length}</div>
+      <div class="kpi-trend up">Added to inventory</div>
+    </div>
+    <div class="kpi-card rejected">
+      <div class="kpi-accent" style="color:var(--red)">✕</div>
+      <div class="kpi-label">Rejected Transfers</div>
+      <div class="kpi-value" style="color:var(--red);">${rejected.length}</div>
+      <div class="kpi-trend ${rejected.length>0?'warn':'up'}">${rejected.length>0?'Sent back to Kitchen':'None on record'}</div>
+    </div>
+    <div class="kpi-card units">
+      <div class="kpi-accent" style="color:#60a5fa">📦</div>
+      <div class="kpi-label">Total Units Received</div>
+      <div class="kpi-value" style="color:#60a5fa;">${totalUnits}</div>
+      <div class="kpi-trend info">Across ${accepted.length} accepted transfer${accepted.length!==1?'s':''}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent">📊</div>
+      <div class="kpi-label">Acceptance Rate</div>
+      <div class="kpi-value" style="color:var(--gold);">${acceptRate}%</div>
+      <div class="kpi-trend ${acceptRate>=80?'up':acceptRate>=50?'warn':'down'}">${total} total record${total!==1?'s':''}</div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   STATUS PILLS
+═══════════════════════════════════════════ */
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      statusFilter = p.dataset.status;
+      document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+      p.classList.add('on');
+      page = 1;
+      render();
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════
+   FILTER + SORT + PAGINATE
+═══════════════════════════════════════════ */
+function getFiltered(){
+  const q       = document.getElementById('fSearch').value.toLowerCase();
+  const meal    = document.getElementById('fMeal').value;
+  const kitchen = document.getElementById('fKitchen').value;
+  const dFrom   = document.getElementById('fDateFrom').value;
+  const dTo     = document.getElementById('fDateTo').value;
+  const sortVal = document.getElementById('fSort').value;
+  [sortKey, sortDir] = sortVal.split('_');
+
+  let rows = history.filter(h => {
+    const mq = !q || h.no.toLowerCase().includes(q) || h.meal.toLowerCase().includes(q) || (h.sentBy||'').toLowerCase().includes(q) || (h.receivedBy||'').toLowerCase().includes(q);
+    const mMeal = !meal || h.meal === meal;
+    const mKitchen = !kitchen || h.from === kitchen;
+    const mStatus = !statusFilter || h.status === statusFilter;
+    let mDate = true;
+    if (dFrom || dTo) {
+      const hd = dateOnly(parseTransferDate(h.actionDate));
+      if (dFrom) { const f = new Date(dFrom + 'T00:00:00'); if (!hd || hd < f) mDate = false; }
+      if (dTo)   { const to = new Date(dTo + 'T00:00:00'); if (!hd || hd > to) mDate = false; }
+    }
+    return mq && mMeal && mKitchen && mStatus && mDate;
+  });
+
+  rows = rows.sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === 'date') cmp = (parseTransferDate(a.actionDate) - parseTransferDate(b.actionDate));
+    else if (sortKey === 'qty') cmp = a.qty - b.qty;
+    else if (sortKey === 'meal') cmp = a.meal.localeCompare(b.meal);
+    return sortDir === 'desc' ? -cmp : cmp;
+  });
+
+  return rows;
+}
+
+function renderSortArrows(){
+  ['meal','qty','date'].forEach(k => {
+    const el = document.getElementById('arrow-' + k);
+    if (!el) return;
+    el.textContent = sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : '';
+  });
+}
+
+function renderActiveChips(){
+  const chips = [];
+  const q = document.getElementById('fSearch').value;
+  const meal = document.getElementById('fMeal').value;
+  const kitchen = document.getElementById('fKitchen').value;
+  const dFrom = document.getElementById('fDateFrom').value;
+  const dTo = document.getElementById('fDateTo').value;
+
+  if (statusFilter) chips.push({ label: `Status: ${statusFilter === 'accepted' ? 'Accepted' : 'Rejected'}`, clear: () => { statusFilter = ''; document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on')); document.querySelector('.status-pill.all').classList.add('on'); } });
+  if (q) chips.push({ label: `Search: "${q}"`, clear: () => { document.getElementById('fSearch').value = ''; } });
+  if (meal) chips.push({ label: `Meal: ${meal}`, clear: () => { document.getElementById('fMeal').value = ''; } });
+  if (kitchen) chips.push({ label: `Kitchen: ${kitchen}`, clear: () => { document.getElementById('fKitchen').value = ''; } });
+  if (dFrom) chips.push({ label: `From: ${dFrom}`, clear: () => { document.getElementById('fDateFrom').value = ''; } });
+  if (dTo) chips.push({ label: `To: ${dTo}`, clear: () => { document.getElementById('fDateTo').value = ''; } });
+
+  const chipsRow = document.getElementById('chipsRow');
+  const wrap = document.getElementById('activeChips');
+  if (chips.length === 0) { chipsRow.style.display = 'none'; wrap.innerHTML = ''; return; }
+  chipsRow.style.display = '';
+  wrap.innerHTML = chips.map((c, i) => `<span class="active-chip">${c.label}<button data-chip="${i}">✕</button></span>`).join('');
+  wrap.querySelectorAll('[data-chip]').forEach(btn => {
+    btn.addEventListener('click', () => { chips[parseInt(btn.dataset.chip, 10)].clear(); page = 1; render(); });
+  });
+}
+
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fMeal').value = '';
+  document.getElementById('fKitchen').value = '';
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  statusFilter = '';
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1;
+  render();
+}
+
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total === 0 ? 0 : (page - 1) * CFG.PAGE_SIZE + 1;
+  const to = Math.min(page * CFG.PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const mk = (label, p, disabled, active) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label; b.disabled = !!disabled;
+    b.addEventListener('click', () => { page = p; renderTable(); });
+    return b;
+  };
+  wrap.appendChild(mk('‹', page - 1, page === 1, false));
+  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
+  wrap.appendChild(mk('›', page + 1, page >= totalPages, false));
+}
+
+function renderTable(){
+  const rows = _filteredCache;
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+  const start = (page - 1) * CFG.PAGE_SIZE;
+  const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
+
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="10">No transfer history matches your filters.</td></tr>`
+    : pageRows.map(h => `
+      <tr onclick="openDetail('${h.no}')">
+        <td style="font-weight:600;">${h.no}</td>
+        <td><span class="meal-badge"><span class="meal-dot" style="background:${mealColor(h.meal)}"></span>${h.meal}</span></td>
+        <td>${h.qty} ${h.unit}</td>
+        <td>${h.from}</td>
+        <td>${h.sentBy || '—'}</td>
+        <td>${h.date}</td>
+        <td>${h.actionDate}</td>
+        <td>${h.status === 'accepted' ? (h.receivedBy || '—') : '—'}</td>
+        <td><span class="chip chip-${h.status}">${h.status === 'accepted' ? 'Accepted' : 'Rejected'}</span></td>
+        <td class="no-print" onclick="event.stopPropagation()">
+          <button class="act-btn" onclick="openDetail('${h.no}')">👁 View</button>
+        </td>
+      </tr>`).join('');
+
+  renderPagination(rows.length);
+}
+
+function render(){
+  populateFilterOptions();
+  _filteredCache = getFiltered();
+  renderKPIs(_filteredCache);
+  renderSortArrows();
+  renderActiveChips();
+  renderTable();
+}
+
+/* Clicking a sortable column header updates the Sort By select and re-renders */
+function bindHeaderSort(){
+  document.querySelectorAll('th[data-sortkey]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortkey;
+      if (key !== 'meal' && key !== 'qty' && key !== 'date') return;
+      const sel = document.getElementById('fSort');
+      const [curKey, curDir] = sel.value.split('_');
+      let nextDir = 'desc';
+      if (curKey === key) nextDir = curDir === 'desc' ? 'asc' : 'desc';
+      sel.value = `${key}_${nextDir}`;
+      page = 1;
+      render();
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════
+   DETAILS MODAL
+═══════════════════════════════════════════ */
+function openDetail(no){
+  const h = history.find(x => x.no === no);
+  if (!h) return;
+  const statusClass = h.status === 'accepted' ? 'status-accepted' : 'status-rejected';
+  const modalEl = document.querySelector('#detailModal .modal');
+  modalEl.classList.remove('status-accepted', 'status-rejected');
+  modalEl.classList.add(statusClass);
+
+  document.getElementById('dTitle').textContent = `Transfer ${h.no}`;
+  document.getElementById('dGrid').innerHTML = `
+    <div class="detail-item"><div class="detail-label">Meal</div><div class="detail-value"><span class="meal-badge"><span class="meal-dot" style="background:${mealColor(h.meal)}"></span>${h.meal}</span></div></div>
+    <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value" style="color:var(--blue);">${h.qty} ${h.unit}</div></div>
+    <div class="detail-item"><div class="detail-label">From Kitchen</div><div class="detail-value">${h.from}</div></div>
+    <div class="detail-item"><div class="detail-label">Sent By</div><div class="detail-value">${h.sentBy || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Date Sent</div><div class="detail-value">${h.date}</div></div>
+    <div class="detail-item"><div class="detail-label">Action Date</div><div class="detail-value">${h.actionDate}</div></div>
+    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-${h.status}">${h.status === 'accepted' ? 'Accepted' : 'Rejected'}</span></div></div>
+    <div class="detail-item"><div class="detail-label">${h.status === 'accepted' ? 'Received By' : 'Rejected — no receiver'}</div><div class="detail-value" style="color:${h.status==='accepted'?'var(--green)':'var(--red)'};">${h.status === 'accepted' ? (h.receivedBy || '—') : '—'}</div></div>`;
+  const remarksEl = document.getElementById('dRemarks');
+  remarksEl.classList.remove('status-accepted', 'status-rejected');
+  remarksEl.classList.add(statusClass);
+  remarksEl.textContent = h.actionRemarks ? `Remarks: ${h.actionRemarks}` : (h.remarks ? `Original remarks: ${h.remarks}` : 'No remarks on this transfer.');
+  document.getElementById('detailModal').classList.add('show');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.getElementById('detailModal').addEventListener('click', function(e){ if (e.target === this) closeModal('detailModal'); });
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+async function init(){
+  history = await loadShared(KEY_HISTORY, DEMO_HISTORY);
+
+  // Seed shared storage the very first time so this page and
+  // restaurant-transfers.html stay in sync going forward.
+  try { const existing = await storage.get(KEY_HISTORY, true); if (!existing) await storage.set(KEY_HISTORY, JSON.stringify(history), true); } catch(e){}
+
+  bindStatusPills();
+  bindHeaderSort();
+  render();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Sales | Aurum Restaurant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  html, body{ height:auto;}
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:block; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.revenue{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
+  .kpi-card.revenue::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.revenue .kpi-label{ color:var(--green); }
+  .kpi-card.units{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
+  .kpi-card.units::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.units .kpi-label{ color:var(--blue); }
+  .kpi-card.voided{ background:linear-gradient(160deg, rgba(248,113,113,.07), var(--surface) 60%); border-color:rgba(248,113,113,.22); }
+  .kpi-card.voided::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.voided .kpi-label{ color:var(--red); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
+  .filter-date{ cursor:default; color-scheme:dark; }
+  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .status-pills{ display:flex; gap:6px; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.completed{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.voided{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
+  .active-chip button{ background:none; border:none; color:var(--gold-light); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
+  .active-chip button:hover{ color:#fff; }
+  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+
+  @media (max-width:700px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select, .filter-date{ width:100%; }
+    .status-pills{ flex-wrap:wrap; }
+    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .btn-ghost{ align-self:flex-start; }
+  }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; flex-shrink:0; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:840px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th[data-sortkey]:hover{ color:var(--gold); }
+  thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
+  thead th.no-sort{ cursor:default; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; }
+  tbody td.nowrap{ white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .items-summary{ max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
+  .items-summary .more{ color:var(--text3); }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-completed{ background:var(--green-bg); color:var(--green); } .chip-completed::before{ background:var(--green); }
+  .chip-voided{ background:var(--red-bg); color:var(--red); } .chip-voided::before{ background:var(--red); }
+  .chip-pay{ background:var(--gold-dim); color:var(--gold-light); } .chip-pay::before{ background:var(--gold); }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .act-btn.void{ border-color:rgba(248,113,113,0.35); color:var(--red); background:var(--red-bg); font-weight:600; }
+  .act-btn.void:hover{ border-color:var(--red); background:rgba(248,113,113,0.2); color:var(--red); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  .summary-bar{ display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface2); border-top:1px solid var(--border); }
+  @media (max-width:560px){ .summary-bar{ grid-template-columns:1fr 1fr; } }
+  .sb-item{ text-align:center; padding:12px 12px; border-right:1px solid var(--border); }
+  .sb-item:last-child{ border-right:none; }
+  .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
+  .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    #rst-sidebar, #rst-topbar, .toolbar, .pagination, .act-btns, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+    .print-header{ display:block !important; margin-bottom:14px; }
+  }
+  .print-header{ display:none; }
+  .print-header h2{ font-family:'Cormorant Garamond',serif; font-size:18px; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by restaurant-shell.js — Restaurant nav only -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by restaurant-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ═══ FILTER BAR ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill completed" data-status="completed"><span class="pdot" style="background:var(--green)"></span>Completed</div>
+                <div class="status-pill voided" data-status="voided"><span class="pdot" style="background:var(--red)"></span>Voided</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <input type="text" id="fSearch" placeholder="Sale #, meal, staff, table…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Payment</span>
+              <select class="filter-select" id="fMethod" onchange="page=1;render()">
+                <option value="">All Payments</option>
+                <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Date — From</span>
+              <input type="date" class="filter-date" id="fDateFrom" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Date — To</span>
+              <input type="date" class="filter-date" id="fDateTo" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="page=1;render()">
+                <option value="date_desc">Date (Newest)</option>
+                <option value="date_asc">Date (Oldest)</option>
+                <option value="total_desc">Total (High → Low)</option>
+                <option value="total_asc">Total (Low → High)</option>
+              </select>
+            </div>
+            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="printSales()">🖨 Print</button>
+        </div>
+        <div class="toolbar-row" id="chipsRow" style="display:none;">
+          <div class="active-chips" id="activeChips"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="print-header"><h2>Aurum Hotel — Restaurant Sales Report</h2><p id="printSub"></p></div>
+        <div class="panel-head">
+          <div class="panel-title">Sales</div>
+          <span class="toolbar-count" id="tblCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="no-sort">Sale No.</th>
+                <th class="no-sort">Items</th>
+                <th data-sortkey="total">Total (₦) <span class="sort-arrow" id="arrow-total"></span></th>
+                <th class="no-sort">Payment</th>
+                <th class="no-sort">Staff</th>
+                <th class="no-sort">Table/Seat</th>
+                <th data-sortkey="date">Date &amp; Time <span class="sort-arrow" id="arrow-date"></span></th>
+                <th class="no-sort">Status</th>
+                <th class="no-print no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="summary-bar" id="summaryBar" style="display:none;">
+          <div class="sb-item"><div class="sb-lbl">Sales</div><div class="sb-val" id="sbCount">0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Gross</div><div class="sb-val" id="sbGross">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Discounts</div><div class="sb-val" id="sbDisc">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Net Revenue</div><div class="sb-val" id="sbNet">₦0</div></div>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- No inline modals — "View" opens SalesDetail, "Void" opens VoidSale.
+     Both are reusable components (component/sales-detail.js, component/void-sale.js). -->
+
+<script src="../component/restaurant-shell.js"></script>
+<script src="../component/sales-detail.js"></script>
+<script src="../component/void-sale.js"></script>
+<script>
+const shell = RestaurantShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'restaurant-sales.html',
+  pageTitle:     'Sales',
+  pageSubtitle:  'Completed transactions — synced with Restaurant Inventory',
+  apiMode:       'Demo',
+  user:          { name: 'Restaurant Manager', initials: 'RM' },
+});
+
+/* ═══════════════════════════════════════════
+   THEME BRIDGE — sales-detail.js / void-sale.js follow a shared
+   'aurum-theme' localStorage key + 'aurum:themechange' event, but
+   this page's shell (restaurant-shell.js) uses its own 'restaurant-theme'
+   key and doesn't dispatch that event. Rather than touching the shell,
+   we read the shell's actual applied theme at creation time and
+   re-broadcast on every toggle so both components stay in sync. */
+function currentShellTheme(){ return document.documentElement.getAttribute('data-theme') || 'dark'; }
+document.getElementById('rst-themeBtn').addEventListener('click', () => {
+  setTimeout(() => {
+    document.dispatchEvent(new CustomEvent('aurum:themechange', { detail: { theme: currentShellTheme() } }));
+  }, 0);
+});
+
+/* ═══════════════════════════════════════════
+   REUSABLE DETAIL + VOID COMPONENTS
+   onVoid on the detail modal hands off straight to VoidSale; onConfirm
+   on VoidSale is where the ACTUAL mutation happens (this page owns the
+   sales array / storage key, per each component's own design).
+═══════════════════════════════════════════ */
+const salesDetail = SalesDetail.create({
+  theme: currentShellTheme(),
+  onVoid: (saleShape) => voidSale.open(saleShape),
+});
+const voidSale = VoidSale.create({
+  theme: currentShellTheme(),
+  onConfirm: (saleShape, reason) => performVoid(saleShape.id, reason),
+});
+
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
+
+async function apiFetch(method, path, body=null){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_SALES     = 'restaurant-sales';
+const KEY_INVENTORY = 'restaurant-inventory';
+const KEY_MOVEMENTS = 'restaurant-movements';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+}
+
+/* ═══════════════════════════════════════════
+   NORMALIZATION — a sale can land in KEY_SALES from more than one
+   place (Quick Sale, Tab Payment, or an older/external POS flow).
+   Every sale is coerced into a safe shape the instant it's loaded,
+   so one malformed record can never take the whole table down.
+═══════════════════════════════════════════ */
+function normalizeSale(s){
+  return {
+    id: s && s.id ? s.id : 'SALE-UNKNOWN',
+    items: Array.isArray(s && s.items) ? s.items : [],
+    subtotal: (s && typeof s.subtotal === 'number') ? s.subtotal : (s && s.total) || 0,
+    discount: (s && typeof s.discount === 'number') ? s.discount : 0,
+    total: (s && typeof s.total === 'number') ? s.total : 0,
+    method: (s && s.method) ? s.method : '—',
+    staff: (s && s.staff) || '',
+    table: (s && s.table) || '',
+    notes: (s && s.notes) || '',
+    date: (s && s.date) || '',
+    status: (s && s.status === 'voided') ? 'voided' : 'completed',
+    voidReason: s && s.voidReason,
+    voidDate: s && s.voidDate,
+    source: (s && s.source) || 'quick',
+  };
+}
+
+/* Demo seed — only used the very first time, before the POS page has synced anything.
+   Shape: { id, items:[{meal,qty,price}], subtotal, discount%, total, method, staff,
+            table, notes, date:"DD/MM/YY HH:MM AM/PM", status: completed|voided,
+            voidReason, voidDate } */
+const DEMO_SALES = [
+  { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], subtotal:12000, discount:0, total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', notes:'', date:'17/07/26 11:05 AM', status:'completed' },
+  { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000}], subtotal:18000, discount:0, total:18000, method:'POS', staff:'Tunde A.', table:'Table 2', notes:'', date:'17/07/26 10:40 AM', status:'completed' },
+  { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], subtotal:2500, discount:0, total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', notes:'', date:'17/07/26 09:52 AM', status:'completed' },
+  { id:'SALE-1040', items:[{meal:'Jollof Rice',qty:4,price:5500},{meal:'Moi Moi',qty:2,price:2500}], subtotal:27000, discount:10, total:24300, method:'Room Charge', staff:'Tunde A.', table:'Room 204', notes:'', date:'16/07/26 07:30 PM', status:'completed' },
+  { id:'SALE-1039', items:[{meal:'Egusi Soup',qty:1,price:6000}], subtotal:6000, discount:0, total:6000, method:'Cash', staff:'Amaka O.', table:'Table 1', notes:'Wrong order', date:'16/07/26 01:15 PM', status:'voided', voidReason:'Customer changed mind before it was served', voidDate:'16/07/26 01:20 PM' },
+];
+const DEMO_INVENTORY = [
+  { meal:'Egusi Soup',  qty:15, unit:'Portions', batch:'PROD-00094', received:'17/07/26', min:8 },
+  { meal:'Moi Moi',     qty:4,  unit:'Pieces',   batch:'PROD-00090', received:'16/07/26', min:8 },
+  { meal:'Jollof Rice', qty:0,  unit:'Plates',   batch:'PROD-00088', received:'16/07/26', min:6 },
+  { meal:'Fried Rice',  qty:18, unit:'Plates',   batch:'PROD-00085', received:'16/07/26', min:6 },
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let sales     = [];
+let inventory = [];
+let movements = [];
+let page = 1;
+let sortKey = 'date', sortDir = 'desc';
+let _filteredCache = [];
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
+
+function parseSaleDate(str){
+  if (!str) return null;
+  const [datePart, timePart, ampm] = str.split(' ');
+  const [d, m, y] = datePart.split('/').map(n => parseInt(n, 10));
+  let hh = 0, mm = 0;
+  if (timePart) { const [h, mi] = timePart.split(':').map(n => parseInt(n, 10)); hh = h; mm = mi || 0; }
+  if (ampm) {
+    const upper = ampm.toUpperCase();
+    if (upper === 'PM' && hh < 12) hh += 12;
+    if (upper === 'AM' && hh === 12) hh = 0;
+  }
+  const fullYear = y < 100 ? 2000 + y : y;
+  return new Date(fullYear, m - 1, d, hh, mm);
+}
+function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null; }
+function itemsQty(s){ const items = Array.isArray(s.items) ? s.items : []; return items.reduce((sum,i)=>sum+(i && typeof i.qty==='number'?i.qty:0),0); }
+function itemsSummary(s){
+  const items = Array.isArray(s.items) ? s.items : [];
+  if (items.length === 0) return '<span class="more">No item details</span>';
+  const names = items.map(i => `${(i && i.meal) || 'Unknown item'} ×${(i && i.qty) || 0}`);
+  if (names.length <= 2) return names.join(', ');
+  return `${names.slice(0,2).join(', ')} <span class="more">+${names.length-2} more</span>`;
+}
+
+/* Converts this page's internal sale shape (items keyed by `meal`,
+   discount as a %) into the shape SalesDetail / VoidSale expect
+   (items keyed by `name`, discount as a naira amount). */
+function buildDetailSale(s){
+  const items = (Array.isArray(s.items) ? s.items : []).map(i => ({ name: (i && i.meal) || 'Unknown item', qty: (i && i.qty) || 0, price: (i && i.price) || 0 }));
+  const discountAmt = s.subtotal * (s.discount || 0) / 100;
+  return {
+    id: s.id,
+    dept: 'Restaurant',
+    table: s.table,
+    staff: s.staff,
+    date: s.date,
+    method: s.method,
+    items,
+    discount: discountAmt,
+    total: s.total,
+    status: s.status,
+    voidReason: s.voidReason,
+    notes: s.notes,
+  };
+}
+
+/* ═══════════════════════════════════════════
+   KPIs
+═══════════════════════════════════════════ */
+function renderKPIs(rows){
+  const completed = rows.filter(s => s.status === 'completed');
+  const voided    = rows.filter(s => s.status === 'voided');
+  const revenue   = completed.reduce((sum,s)=>sum+s.total,0);
+  const units     = completed.reduce((sum,s)=>sum+itemsQty(s),0);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-accent">🧾</div>
+      <div class="kpi-label">Total Sales</div>
+      <div class="kpi-value" style="color:var(--gold);">${rows.length}</div>
+      <div class="kpi-trend neutral">${completed.length} completed · ${voided.length} voided</div>
+    </div>
+    <div class="kpi-card revenue">
+      <div class="kpi-accent" style="color:var(--green)">💰</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
+      <div class="kpi-trend up">From completed sales</div>
+    </div>
+    <div class="kpi-card units">
+      <div class="kpi-accent" style="color:var(--blue)">📦</div>
+      <div class="kpi-label">Units Sold</div>
+      <div class="kpi-value" style="color:var(--blue);">${units}</div>
+      <div class="kpi-trend info">Across ${completed.length} sale${completed.length!==1?'s':''}</div>
+    </div>
+    <div class="kpi-card voided">
+      <div class="kpi-accent" style="color:var(--red)">✕</div>
+      <div class="kpi-label">Voided Sales</div>
+      <div class="kpi-value" style="color:var(--red);">${voided.length}</div>
+      <div class="kpi-trend ${voided.length>0?'warn':'up'}">${voided.length>0?'Stock restored':'None on record'}</div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   STATUS PILLS
+═══════════════════════════════════════════ */
+let statusFilter = '';
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      statusFilter = p.dataset.status;
+      document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+      p.classList.add('on');
+      page = 1;
+      render();
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════
+   FILTER + SORT + PAGINATE
+═══════════════════════════════════════════ */
+function getFiltered(){
+  const q       = document.getElementById('fSearch').value.toLowerCase();
+  const method  = document.getElementById('fMethod').value;
+  const dFrom   = document.getElementById('fDateFrom').value;
+  const dTo     = document.getElementById('fDateTo').value;
+  const sortVal = document.getElementById('fSort').value;
+  [sortKey, sortDir] = sortVal.split('_');
+
+  let rows = sales.filter(s => {
+    const items = Array.isArray(s.items) ? s.items : [];
+    const mq = !q
+      || (s.id||'').toLowerCase().includes(q)
+      || (s.staff||'').toLowerCase().includes(q)
+      || (s.table||'').toLowerCase().includes(q)
+      || items.some(i => ((i && i.meal) || '').toLowerCase().includes(q));
+    const mMethod = !method || s.method === method;
+    const mStatus = !statusFilter || s.status === statusFilter;
+    let mDate = true;
+    if (dFrom || dTo) {
+      const sd = dateOnly(parseSaleDate(s.date));
+      if (dFrom) { const f = new Date(dFrom + 'T00:00:00'); if (!sd || sd < f) mDate = false; }
+      if (dTo)   { const to = new Date(dTo + 'T00:00:00'); if (!sd || sd > to) mDate = false; }
+    }
+    return mq && mMethod && mStatus && mDate;
+  });
+
+  rows = rows.sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === 'date') cmp = (parseSaleDate(a.date) - parseSaleDate(b.date));
+    else if (sortKey === 'total') cmp = a.total - b.total;
+    return sortDir === 'desc' ? -cmp : cmp;
+  });
+
+  return rows;
+}
+
+function renderSortArrows(){
+  ['total','date'].forEach(k => {
+    const el = document.getElementById('arrow-' + k);
+    if (!el) return;
+    el.textContent = sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : '';
+  });
+}
+
+function renderActiveChips(){
+  const chips = [];
+  const q = document.getElementById('fSearch').value;
+  const method = document.getElementById('fMethod').value;
+  const dFrom = document.getElementById('fDateFrom').value;
+  const dTo = document.getElementById('fDateTo').value;
+
+  if (statusFilter) chips.push({ label: `Status: ${statusFilter === 'completed' ? 'Completed' : 'Voided'}`, clear: () => { statusFilter = ''; document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on')); document.querySelector('.status-pill.all').classList.add('on'); } });
+  if (q) chips.push({ label: `Search: "${q}"`, clear: () => { document.getElementById('fSearch').value = ''; } });
+  if (method) chips.push({ label: `Payment: ${method}`, clear: () => { document.getElementById('fMethod').value = ''; } });
+  if (dFrom) chips.push({ label: `From: ${dFrom}`, clear: () => { document.getElementById('fDateFrom').value = ''; } });
+  if (dTo) chips.push({ label: `To: ${dTo}`, clear: () => { document.getElementById('fDateTo').value = ''; } });
+
+  const chipsRow = document.getElementById('chipsRow');
+  const wrap = document.getElementById('activeChips');
+  if (chips.length === 0) { chipsRow.style.display = 'none'; wrap.innerHTML = ''; return; }
+  chipsRow.style.display = '';
+  wrap.innerHTML = chips.map((c, i) => `<span class="active-chip">${c.label}<button data-chip="${i}">✕</button></span>`).join('');
+  wrap.querySelectorAll('[data-chip]').forEach(btn => {
+    btn.addEventListener('click', () => { chips[parseInt(btn.dataset.chip, 10)].clear(); page = 1; render(); });
+  });
+}
+
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fMethod').value = '';
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  statusFilter = '';
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1;
+  render();
+}
+
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total === 0 ? 0 : (page - 1) * CFG.PAGE_SIZE + 1;
+  const to = Math.min(page * CFG.PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const mk = (label, p, disabled, active) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label; b.disabled = !!disabled;
+    b.addEventListener('click', () => { page = p; renderTable(); });
+    return b;
+  };
+  wrap.appendChild(mk('‹', page - 1, page === 1, false));
+  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
+  wrap.appendChild(mk('›', page + 1, page >= totalPages, false));
+}
+
+function renderSummaryBar(rows){
+  const bar = document.getElementById('summaryBar');
+  if (rows.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'grid';
+  const completed = rows.filter(s => s.status === 'completed');
+  const gross = completed.reduce((s,x)=>s+x.subtotal,0);
+  const disc  = completed.reduce((s,x)=>s+x.subtotal*(x.discount||0)/100,0);
+  const net   = completed.reduce((s,x)=>s+x.total,0);
+  document.getElementById('sbCount').textContent = rows.length;
+  document.getElementById('sbGross').textContent = fmtN(gross);
+  document.getElementById('sbDisc').textContent  = fmtN(disc);
+  document.getElementById('sbNet').textContent   = fmtN(net);
+}
+
+function renderTable(){
+  const rows = _filteredCache;
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+  const start = (page - 1) * CFG.PAGE_SIZE;
+  const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
+
+  /* Built defensively — a single malformed record can no longer throw
+     mid-map and blank out every other row along with it. */
+  const rowsHtml = pageRows.map(s => {
+    try {
+      return `
+      <tr onclick="openDetail('${s.id}')">
+        <td class="nowrap" style="font-weight:600;">${s.id}</td>
+        <td class="items-summary">${itemsSummary(s)}</td>
+        <td class="nowrap" style="font-weight:600;color:var(--gold);">${fmtN(s.total)}</td>
+        <td class="nowrap"><span class="chip chip-pay">${s.method}</span></td>
+        <td class="nowrap">${s.staff || '—'}</td>
+        <td class="nowrap">${s.table || '—'}</td>
+        <td class="nowrap">${s.date || '—'}</td>
+        <td class="nowrap"><span class="chip chip-${s.status}">${s.status === 'completed' ? 'Completed' : 'Voided'}</span></td>
+        <td class="no-print nowrap" onclick="event.stopPropagation()">
+          <div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${s.id}')">👁 View</button>
+            ${s.status === 'completed' ? `<button class="act-btn void" onclick="openVoidDirect('${s.id}')">✕ Void</button>` : ''}
+          </div>
+        </td>
+      </tr>`;
+    } catch (e) {
+      console.warn('[Sales] Skipped a malformed sale record:', s, e);
+      return '';
+    }
+  }).join('');
+
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="9">No sales match your filters.</td></tr>`
+    : rowsHtml;
+
+  renderPagination(rows.length);
+}
+
+function render(){
+  _filteredCache = getFiltered();
+  renderKPIs(_filteredCache);
+  renderSortArrows();
+  renderActiveChips();
+  renderTable();
+  renderSummaryBar(_filteredCache);
+}
+
+function bindHeaderSort(){
+  document.querySelectorAll('th[data-sortkey]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortkey;
+      if (key !== 'total' && key !== 'date') return;
+      const sel = document.getElementById('fSort');
+      const [curKey, curDir] = sel.value.split('_');
+      let nextDir = 'desc';
+      if (curKey === key) nextDir = curDir === 'desc' ? 'asc' : 'desc';
+      sel.value = `${key}_${nextDir}`;
+      page = 1;
+      render();
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════
+   VIEW / VOID — wired to the reusable components. openDetail() feeds
+   SalesDetail; openVoidDirect() skips straight to VoidSale (used by
+   the row's own Void button, so it doesn't require going through the
+   detail modal first).
+═══════════════════════════════════════════ */
+function openDetail(id){
+  const s = sales.find(x => x.id === id);
+  if (!s) return;
+  salesDetail.open(buildDetailSale(s));
+}
+function openVoidDirect(id){
+  const s = sales.find(x => x.id === id);
+  if (!s) return;
+  voidSale.open(buildDetailSale(s));
+}
+
+/* Actual mutation lives here — VoidSale only collects the reason and
+   confirms intent, per its own design; this page owns the sales array
+   and Restaurant Inventory, so it performs the restore + write-back. */
+async function performVoid(id, reason){
+  const s = sales.find(x => x.id === id);
+  if (!s) return;
+  const stamp = nowStamp();
+
+  const items = Array.isArray(s.items) ? s.items : [];
+  items.forEach(item => {
+    const inv = inventory.find(i => i.meal === item.meal);
+    if (inv) {
+      inv.qty += item.qty;
+      movements.unshift({ date: stamp, meal: item.meal, qtyIn: item.qty, qtyOut: 0, balance: inv.qty, reason: `Voided Sale (${s.id})` });
+    }
+  });
+
+  s.status = 'voided';
+  s.voidReason = reason;
+  s.voidDate = stamp;
+
+  await Promise.all([ saveShared(KEY_SALES, sales), saveShared(KEY_INVENTORY, inventory), saveShared(KEY_MOVEMENTS, movements) ]);
+  apiSave('PATCH', `/api/restaurant/sales/${s.id}/void`, { reason });
+
+  showToast(`${s.id} voided — stock restored to Restaurant Inventory.`, 'error');
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   PRINT
+═══════════════════════════════════════════ */
+function printSales(){
+  document.getElementById('printSub').textContent = `Printed: ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${document.getElementById('tblCount').textContent}`;
+  window.print();
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+/* ═══════════════════════════════════════════
+   INIT — tries a real API first (when CFG.USE_DEMO=false), falls
+   back to shared storage, and finally to the hardcoded demo seed.
+═══════════════════════════════════════════ */
+async function init(){
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/restaurant/sales');
+      sales     = (data.sales || []).map(normalizeSale);
+      inventory = data.inventory || [];
+      movements = data.movements || [];
+      shell.setApiMode('Live');
+      bindStatusPills();
+      bindHeaderSort();
+      render();
+      return;
+    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+  }
+
+  const rawSales = await loadShared(KEY_SALES, DEMO_SALES);
+  sales     = rawSales.map(normalizeSale);
+  inventory = await loadShared(KEY_INVENTORY, DEMO_INVENTORY);
+  movements = await loadShared(KEY_MOVEMENTS, []);
+
+  // Seed shared storage the very first time so the POS page and Dashboard
+  // read the same live data going forward.
+  await Promise.all([
+    saveShared(KEY_SALES, sales),
+    saveShared(KEY_INVENTORY, inventory),
+    saveShared(KEY_MOVEMENTS, movements),
+  ]);
+
+  bindStatusPills();
+  bindHeaderSort();
+  render();
+}
+init();
+</script>
+</body>
+</html>

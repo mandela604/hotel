@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Aurum Hotel — Booking Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* This page owns layout + its own overview content only. Sidebar +
+   topbar look/markup live entirely in booking-shell.js — same split
+   used by every other module (see gym-shell.js / kitchen-shell.js). */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --radius: 14px;
+  --radius-sm: 10px;
+  --transition: 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background var(--transition), color var(--transition);
+}
+
+.app { display: flex; min-height: 100vh; }
+.main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
+@media (max-width: 768px) { .main { margin-left: 0 !important; } }
+
+/* ═══════════ CONTENT ═══════════ */
+.content { flex: 1; padding: 24px; min-width: 0; overflow-x: hidden; }
+@media (max-width: 480px) { .content { padding: 16px; } }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 6px; }
+.section-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-weight: 500; }
+
+/* ═══════════ KPI GRID ═══════════ */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
+
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; position: relative; overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; animation: fadeUp 0.4s ease both; text-decoration: none; display: block; }
+.kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+.kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+.kpi-card:nth-child(5){animation-delay:.20s} .kpi-card:nth-child(6){animation-delay:.24s}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--gold-border); }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+.kpi-accent { position: absolute; bottom: -10px; right: -10px; font-size: 52px; opacity: 0.07; line-height: 1; pointer-events: none; }
+.kpi-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; font-weight: 500; }
+.kpi-value { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 6px; }
+@media (max-width: 480px) { .kpi-value { font-size: 22px; } }
+.kpi-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; }
+.kpi-trend.up { color: var(--green); } .kpi-trend.down { color: var(--red); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.info { color: var(--blue); }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ═══════════ PANEL ═══════════ */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 14px; animation: fadeUp 0.4s ease 0.2s both; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.panel-action { font-size: 12px; color: var(--gold); text-decoration: none; font-weight: 500; cursor: pointer; background: none; border: none; font-family: 'Outfit', sans-serif; }
+.panel-action:hover { color: var(--gold-light); }
+
+.two-col { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 14px; margin-bottom: 14px; }
+@media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+/* Occ bars */
+.occ-row { margin-bottom: 14px; }
+.occ-row:last-child { margin-bottom: 0; }
+.occ-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.occ-name { font-size: 12.5px; color: var(--text2); }
+.occ-count { font-size: 12px; color: var(--text3); }
+.occ-bar { height: 6px; background: var(--surface3); border-radius: 20px; overflow: hidden; }
+.occ-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--gold), var(--gold-light)); transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.occ-fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.occ-fill.amber { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+.occ-fill.red { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+/* Activity */
+.activity-list { display: flex; flex-direction: column; }
+.act-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.act-item:last-child { border-bottom: none; padding-bottom: 0; }
+.act-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; background: var(--gold); }
+.act-dot.green { background: var(--green); } .act-dot.red { background: var(--red); } .act-dot.blue { background: var(--blue); } .act-dot.amber { background: var(--amber); }
+.act-text { font-size: 12.5px; color: var(--text); line-height: 1.4; }
+.act-time { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.act-empty { padding: 10px 0; font-size: 12.5px; color: var(--text3); }
+
+/* Quick actions */
+.quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 600px) { .quick-grid { grid-template-columns: 1fr 1fr; } }
+.quick-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; color: var(--text2); text-decoration: none; transition: all 0.2s; white-space: nowrap; border: 1px solid var(--border); }
+.quick-btn:hover { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold-light); }
+.quick-icon { font-size: 18px; flex-shrink: 0; }
+
+/* Print */
+@media print {
+  #sidebarSlot, #topbarSlot, .no-print { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .content { padding: 0 !important; overflow: visible !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ccc !important; }
+  @page { margin: 16mm; }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar rendered here by booking-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar rendered here by booking-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+      <div class="section-header">
+        <div class="section-title">Department Overview</div>
+        <span class="section-title" id="ovDate" style="color:var(--text2);text-transform:none;font-size:12px;letter-spacing:0;"></span>
+      </div>
+      <div class="kpi-grid" id="ovKpi"></div>
+
+      <div class="two-col">
+        <!-- Occupancy breakdown -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Occupancy by Room Type</div>
+            <a class="panel-action" href="booking-rooms.html">View Rooms →</a>
+          </div>
+          <div id="ovOccBars"></div>
+        </div>
+        <!-- Status snapshot -->
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Status Snapshot</div></div>
+          <div id="ovStatusSnap"></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Today's activity -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Today's Activity</div>
+            <a class="panel-action" href="booking-list.html">All Bookings →</a>
+          </div>
+          <div class="activity-list" id="ovActivity"></div>
+        </div>
+        <!-- Quick actions -->
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
+          <div class="quick-grid">
+            <a class="quick-btn" href="booking-list.html?action=new"><span class="quick-icon">＋</span>New Booking</a>
+            <a class="quick-btn" href="booking-rooms.html"><span class="quick-icon">🛏</span>Room Status</a>
+            <a class="quick-btn" href="booking-reports.html"><span class="quick-icon">📊</span>Reports</a>
+            <a class="quick-btn" href="booking-rooms.html?action=add"><span class="quick-icon">➕</span>Add Room</a>
+            <a class="quick-btn" href="booking-list.html"><span class="quick-icon">📋</span>All Bookings</a>
+            <button class="quick-btn" onclick="window.print()" style="cursor:pointer;"><span class="quick-icon">🖨</span>Print Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../component/booking-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════════
+   Shell
+═══════════════════════════════════════════════ */
+const shell = BookingShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'booking-dashboard.html',
+  pageTitle:     'Dashboard',
+  pageSubtitle:  'Booking operations overview',
+  apiMode:       'Demo',
+  user:          { name: 'Booking Manager', initials: 'MG' },
+});
+
+/* ═══════════════════════════════════════════════
+   Storage shim — same 4-method contract used across every module
+   (Store's req:/req-index keys, Pool Bar's poolbar-* keys). Booking
+   uses 'booking-rooms' and 'booking-bookings' as its shared keys, so
+   booking-rooms.html / booking-list.html / booking-reports.html all
+   read and write the exact same two records.
+═══════════════════════════════════════════════ */
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_ROOMS    = 'booking-rooms';
+const KEY_BOOKINGS = 'booking-bookings';
+
+/* Seed data — identical shape/values to the original single-page
+   booking.html, so switching over doesn't reset anyone's demo state. */
+const DEMO_ROOMS = [
+  {num:'101',type:'Standard',   rate:35000},{num:'102',type:'Standard',   rate:35000},
+  {num:'103',type:'Standard',   rate:35000},{num:'104',type:'Standard',   rate:35000},
+  {num:'105',type:'Standard',   rate:35000},{num:'106',type:'Standard',   rate:35000},
+  {num:'201',type:'Deluxe',     rate:60000},{num:'202',type:'Deluxe',     rate:60000},
+  {num:'203',type:'Deluxe',     rate:60000},{num:'204',type:'Deluxe',     rate:60000},
+  {num:'301',type:'Suite',      rate:120000},{num:'302',type:'Suite',     rate:120000},
+  {num:'303',type:'Suite',      rate:120000},
+  {num:'401',type:'Conference', rate:200000},{num:'402',type:'Conference',rate:200000},
+];
+
+const DEMO_BOOKINGS = [
+  {room:'101',type:'Standard',  guest:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',   idType:'NIN',             idNum:'12345678901', checkin:'2026-03-10',checkout:'2026-03-14',rate:35000, discount:0,  paid:140000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:''},
+  {room:'102',type:'Standard',  guest:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',      idType:'Passport',         idNum:'A12345678',   checkin:'2026-03-12',checkout:'2026-03-13',rate:35000, discount:0,  paid:35000, payMethod:'Cash',                   payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkout',   notes:''},
+  {room:'103',type:'Standard',  guest:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                       idType:'NIN',             idNum:'98765432109', checkin:'2026-03-13',checkout:'2026-03-16',rate:35000, discount:10, paid:50000, payMethod:'POS',                    payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:1,status:'reserved',   notes:'Extra pillow'},
+  {room:'104',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'105',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'Plumbing repair'},
+  {room:'106',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'201',type:'Deluxe',    guest:'Dr. Eze, Chukwuemeka',  phone:'+234 802 444 8899',email:'ceze@hospital.ng',       idType:'Passport',         idNum:'B87654321',   checkin:'2026-03-11',checkout:'2026-03-15',rate:60000, discount:0,  paid:240000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
+  {room:'202',type:'Deluxe',    guest:'Ms. Abubakar, Fatima',  phone:'+234 805 555 0011',email:'fatima.a@gmail.com',     idType:"Driver's Licence", idNum:'ABJ001234',   checkin:'2026-03-13',checkout:'2026-03-17',rate:60000, discount:5,  paid:100000,payMethod:'Split – Cash + Transfer',payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'reserved',   notes:'Honeymoon setup'},
+  {room:'203',type:'Deluxe',    guest:'Mr. Johnson, Segun',    phone:'+234 708 666 2233',email:'',                       idType:'NIN',             idNum:'55566677788', checkin:'2026-03-09',checkout:'2026-03-13',rate:60000, discount:0,  paid:240000,payMethod:'POS',                    payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:2,status:'checkout',   notes:''},
+  {room:'204',type:'Deluxe',    guest:'Prof. Williams, Ada',   phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng',idType:'NIN',             idNum:'11122233344', checkin:'2026-03-12',checkout:'2026-03-18',rate:60000, discount:15, paid:200000,payMethod:'Transfer',              payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:'Vegetarian meals'},
+  {room:'301',type:'Suite',     guest:'Chief Dangote, Emeka',  phone:'+234 801 888 6677',email:'emeka.d@corp.ng',        idType:'Passport',         idNum:'C11223344',   checkin:'2026-03-10',checkout:'2026-03-15',rate:120000,discount:0,  paid:600000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
+  {room:'302',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'303',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'AC repair in progress'},
+  {room:'401',type:'Conference',guest:'Zenith Bank Ltd.',       phone:'+234 700 999 8877',email:'events@zenithbank.com',  idType:"Voter's Card",     idNum:'ZB00001',     checkin:'2026-03-13',checkout:'2026-03-13',rate:200000,discount:0,  paid:200000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:40,children:0,status:'checkedin',  notes:'Projector & PA system'},
+  {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+];
+
+async function loadShared(key, fallback) {
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
+  } catch (e) {}
+  return fallback;
+}
+async function saveShared(key, value) {
+  try { await storage.set(key, JSON.stringify(value), true); } catch (e) { console.warn('[sync]', key, e); }
+}
+
+let allRooms = [];
+let bookings = [];
+
+const TODAY = new Date().toISOString().split('T')[0];
+
+/* ═══════════════════════════════════════════════
+   HELPERS (same math as the original single-page version)
+═══════════════════════════════════════════════ */
+function nights(ci, co) { if (!ci || !co) return 0; const n = (new Date(co) - new Date(ci)) / 86400000; return n > 0 ? n : 0; }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
+function calcTotal(b) { const n = nights(b.checkin, b.checkout) || 1; return b.rate * n * (1 - (b.discount || 0) / 100); }
+function calcBal(b) { return Math.max(0, calcTotal(b) - (b.paid || 0)); }
+function getRoomStatus(num) {
+  const b = bookings.find(r => r.room === num);
+  if (!b || !b.status) return 'available';
+  return b.status === 'vacant' ? 'available' : b.status;
+}
+
+/* ═══════════════════════════════════════════════
+   OVERVIEW RENDER
+═══════════════════════════════════════════════ */
+function renderOverview() {
+  const occ    = bookings.filter(b => b.status === 'checkedin').length;
+  const avail  = bookings.filter(b => b.status === 'vacant').length;
+  const maint  = bookings.filter(b => b.status === 'maintenance').length;
+  const resv   = bookings.filter(b => b.status === 'reserved').length;
+  const chkout = bookings.filter(b => b.status === 'checkout').length;
+  const total  = allRooms.length;
+  const pct    = total ? Math.round(occ / total * 100) : 0;
+  const withG  = bookings.filter(b => b.guest);
+  const rev    = withG.reduce((s, b) => s + calcTotal(b), 0);
+
+  document.getElementById('ovDate').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  document.getElementById('ovKpi').innerHTML = `
+    <a class="kpi-card" href="booking-rooms.html">
+      <div class="kpi-accent">🏨</div>
+      <div class="kpi-label">Occupancy Rate</div>
+      <div class="kpi-value">${pct}%</div>
+      <div class="kpi-trend ${pct>=70?'up':'down'}">${pct>=70?'↑ Good':'↓ Low'}</div>
+      <div class="kpi-sub">${occ} of ${total} rooms</div>
+    </a>
+    <a class="kpi-card" href="booking-rooms.html?filter=available">
+      <div class="kpi-accent">✅</div>
+      <div class="kpi-label">Available Rooms</div>
+      <div class="kpi-value">${avail}</div>
+      <div class="kpi-trend info">Ready to book</div>
+    </a>
+    <a class="kpi-card" href="booking-list.html?status=reserved">
+      <div class="kpi-accent">📋</div>
+      <div class="kpi-label">Reserved / Incoming</div>
+      <div class="kpi-value">${resv}</div>
+      <div class="kpi-trend info">Upcoming arrivals</div>
+    </a>
+    <a class="kpi-card" href="booking-reports.html">
+      <div class="kpi-accent">₦</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" style="font-size:${rev>=1000000?'20px':'28px'}">${fmtN(rev)}</div>
+      <div class="kpi-trend up">↑ All bookings</div>
+    </a>
+    <a class="kpi-card" href="booking-rooms.html?filter=checkout">
+      <div class="kpi-accent">🚪</div>
+      <div class="kpi-label">Check-outs Due</div>
+      <div class="kpi-value">${chkout}</div>
+      <div class="kpi-trend ${chkout>0?'warn':'up'}">${chkout>0?'⚠ Action needed':'All clear'}</div>
+    </a>
+    <a class="kpi-card" href="booking-rooms.html?filter=maintenance">
+      <div class="kpi-accent">🔧</div>
+      <div class="kpi-label">Under Maintenance</div>
+      <div class="kpi-value">${maint}</div>
+      <div class="kpi-trend ${maint>0?'warn':'up'}">${maint>0?'⚠ Not bookable':'None'}</div>
+    </a>`;
+
+  // Occupancy bars by type
+  const types = ['Standard','Deluxe','Suite','Conference'];
+  document.getElementById('ovOccBars').innerHTML = types.map(t => {
+    const rooms = allRooms.filter(r => r.type === t);
+    const occR  = rooms.filter(r => getRoomStatus(r.num) === 'checkedin').length;
+    const pctR  = rooms.length ? Math.round(occR / rooms.length * 100) : 0;
+    const cls   = pctR >= 80 ? 'green' : pctR >= 50 ? '' : 'amber';
+    return `<div class="occ-row">
+      <div class="occ-meta">
+        <span class="occ-name">${t} Rooms</span>
+        <span class="occ-count">${occR}/${rooms.length} · ${pctR}%</span>
+      </div>
+      <div class="occ-bar"><div class="occ-fill ${cls}" style="width:${pctR}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Status snapshot
+  const cats = [
+    {l:'Occupied',   n:occ,   c:'var(--gold)'},
+    {l:'Available',  n:avail, c:'var(--green)'},
+    {l:'Reserved',   n:resv,  c:'var(--blue)'},
+    {l:'Check-out',  n:chkout,c:'var(--red)'},
+    {l:'Maintenance',n:maint, c:'#fb923c'},
+  ];
+  document.getElementById('ovStatusSnap').innerHTML = cats.map(c => `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px;"><span>${c.l}</span><span style="font-weight:600;">${c.n}</span></div>
+      <div style="height:6px;background:var(--surface3);border-radius:20px;overflow:hidden;"><div style="height:100%;width:${total?Math.round(c.n/total*100):0}%;background:${c.c};border-radius:20px;transition:width 1.2s;"></div></div>
+    </div>`).join('');
+
+  // Today's activity
+  const acts = bookings.filter(b => b.guest && (b.checkin === TODAY || b.checkout === TODAY));
+  document.getElementById('ovActivity').innerHTML = acts.length === 0
+    ? `<div class="act-empty">No check-ins or check-outs today.</div>`
+    : acts.map(b => `
+      <div class="act-item">
+        <div class="act-dot ${b.checkin===TODAY?'green':'red'}"></div>
+        <div style="flex:1;">
+          <div class="act-text">${b.guest} — Room ${b.room}</div>
+          <div class="act-time">${b.checkin===TODAY?'Check-in today':'Check-out today'} · ${fmtDate(b.checkin===TODAY?b.checkin:b.checkout)}</div>
+        </div>
+      </div>`).join('');
+
+  // Keep the sidebar's "All Bookings" badge in sync with reserved
+  // arrivals — mirrors how every other module's shell shows a live count.
+  shell.setPendingBadge(resv);
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+async function init() {
+  allRooms = await loadShared(KEY_ROOMS, DEMO_ROOMS);
+  bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
+  // Persist the seed on first run so booking-rooms.html / booking-list.html
+  // / booking-reports.html see the exact same records immediately.
+  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
+  renderOverview();
+}
+init();
+</script>
+</body>
+</html>

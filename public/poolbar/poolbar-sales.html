@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" style="background:#080f18;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>Sales | Aurum Pool Bar</title>
+
+<!-- ═══ CRITICAL INLINE CSS — applied before any network request, so the
+     dark background paints immediately. This is what actually kills the
+     white flash: the Google Fonts stylesheet below is render-blocking,
+     so without this, the browser shows nothing (default white) until
+     that request finishes. This tiny block guarantees dark-first paint. ═══ -->
+<style>html,body{background:#080f18;margin:0;}</style>
+
+<!-- ═══ Fonts loaded asynchronously (preload + swap on load) so they never
+     block first paint. Falls back to system fonts instantly, then swaps
+     in Cormorant/Outfit once they arrive — no flash, no invisible text. ═══ -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+.content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; }   @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+.kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; flex-shrink:0; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.revenue{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
+  .kpi-card.revenue::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.revenue .kpi-label{ color:var(--green); }
+  .kpi-card.units{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
+  .kpi-card.units::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.units .kpi-label{ color:var(--blue); }
+  .kpi-card.voided{ background:linear-gradient(160deg, rgba(248,113,113,.07), var(--surface) 60%); border-color:rgba(248,113,113,.22); }
+  .kpi-card.voided::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.voided .kpi-label{ color:var(--red); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+.toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
+  .filter-date{ cursor:default; color-scheme:dark; }
+  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.completed{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.voided{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
+  .active-chip button{ background:none; border:none; color:var(--gold-light); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
+  .active-chip button:hover{ color:#fff; }
+  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+
+  @media (max-width:900px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select, .filter-date{ width:100%; }
+    .status-pills{ flex-wrap:wrap; }
+    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .btn-ghost{ align-self:flex-start; }
+  }
+
+.panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; min-width:0; flex-shrink:0; } 
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:840px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th[data-sortkey]:hover{ color:var(--gold); }
+  thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
+  thead th.no-sort{ cursor:default; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; }
+  tbody td.nowrap{ white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .items-summary{ max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
+  .items-summary .more{ color:var(--text3); }
+
+  /* ═══════════════════════════════════════════
+     MOBILE / TABLET — the table collapses into
+     stacked cards below 880px instead of relying
+     on horizontal scroll, so nothing gets "lost".
+  ═══════════════════════════════════════════ */
+  @media (max-width:880px){
+    .tbl-wrap{ overflow-x:visible; }
+    table{ min-width:0; width:100%; }
+    thead{ display:none; }
+    table, tbody, tr, td{ display:block; width:100%; }
+    tbody tr{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; margin:0 0 10px; padding:6px 14px; cursor:pointer; }
+    tbody tr:last-child{ margin-bottom:0; }
+    tbody td{ border:none; padding:8px 0; white-space:normal !important; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; text-align:right; }
+    tbody td:not(:last-child){ border-bottom:1px dashed var(--border); }
+    tbody td::before{ content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; flex-shrink:0; text-align:left; padding-top:1px; }
+    tbody td.items-summary{ max-width:none; text-align:right; white-space:normal; }
+    tbody td .act-btns{ justify-content:flex-end; flex-wrap:wrap; }
+    .empty-row{ display:block; }
+    .empty-row td{ display:block; text-align:center; }
+    .empty-row td::before{ content:none; }
+  }
+  @media (max-width:420px){
+    tbody tr{ padding:4px 10px; }
+    tbody td{ font-size:12px; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; }
+    tbody td::before{ padding-top:0; }
+  }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-completed{ background:var(--green-bg); color:var(--green); } .chip-completed::before{ background:var(--green); }
+  .chip-voided{ background:var(--red-bg); color:var(--red); } .chip-voided::before{ background:var(--red); }
+  .chip-pay{ background:var(--gold-dim); color:var(--gold-light); } .chip-pay::before{ background:var(--gold); }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-danger{ background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:var(--red); font-weight:700; }
+  .btn-danger:hover{ background:rgba(248,113,113,0.18); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .act-btn.void{ border-color:rgba(248,113,113,0.35); color:var(--red); background:var(--red-bg); font-weight:600; }
+  .act-btn.void:hover{ border-color:var(--red); background:rgba(248,113,113,0.2); color:var(--red); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  .summary-bar{ display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface2); border-top:1px solid var(--border); }
+  @media (max-width:560px){ .summary-bar{ grid-template-columns:1fr 1fr; } }
+  .sb-item{ text-align:center; padding:12px 12px; border-right:1px solid var(--border); }
+  .sb-item:last-child{ border-right:none; }
+  @media (max-width:560px){ .sb-item:nth-child(2){ border-right:none; } }
+  .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
+  .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal.status-completed::before{ background:var(--green); }
+  .modal.status-voided::before{ background:var(--red); }
+  .modal-sm{ width:min(400px,96vw); }
+  @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-title.void-title{ color:var(--red); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+  .modal-close:hover{ color:var(--text); }
+  .modal-meta{ font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.6; }
+  .ov-item{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12.5px; gap:8px; }
+  .ov-item:last-child{ border-bottom:none; }
+  .ov-item .oi-name{ color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ov-item .oi-qty{ color:var(--text3); flex-shrink:0; margin:0 10px; }
+  .ov-item .oi-total{ color:var(--gold); font-weight:600; flex-shrink:0; }
+  .ov-totals{ background:var(--surface2); border-radius:10px; padding:12px 14px; margin-top:12px; }
+  .ot-row{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--text2); margin-bottom:4px; }
+  .ot-row.total{ font-size:15px; font-weight:600; color:var(--text); margin-top:6px; padding-top:6px; border-top:1px solid var(--border); }
+  .ot-row.total span:last-child{ color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:18px; }
+
+  /* Rich void-info card shown inside the detail modal for voided sales */
+  .void-info-card{ background:var(--red-bg); border:1px solid rgba(248,113,113,0.3); border-radius:12px; padding:14px 16px; margin-top:14px; }
+  .void-info-head{ display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:.6px; margin-bottom:10px; }
+  .void-info-row{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; padding:5px 0; color:var(--text2); }
+  .void-info-row .vlbl{ color:var(--text3); flex-shrink:0; }
+  .void-info-row .vval{ color:var(--text); font-weight:600; text-align:right; }
+  .void-info-note{ margin-top:8px; padding-top:8px; border-top:1px dashed rgba(248,113,113,0.3); font-size:12px; color:var(--text2); line-height:1.5; font-style:italic; }
+
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note strong{ color:var(--text); }
+  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-label.req::after{ content:' *'; color:var(--red); }
+  .form-textarea, .form-input{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-textarea{ resize:vertical; min-height:60px; }
+  .form-textarea:focus, .form-input:focus{ border-color:var(--gold-border); }
+  .form-input.err, .form-textarea.err{ border-color:var(--red); }
+  .field-error{ font-size:11px; color:var(--red); margin-top:2px; display:none; }
+  .field-error.show{ display:block; }
+  .auth-divider{ display:flex; align-items:center; gap:10px; margin:16px 0 12px; }
+  .auth-divider::before, .auth-divider::after{ content:''; flex:1; height:1px; background:var(--border); }
+  .auth-divider span{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; white-space:nowrap; }
+  .auth-hint{ font-size:11px; color:var(--text3); margin-top:6px; line-height:1.5; display:flex; gap:6px; align-items:flex-start; }
+  .auth-hint .ico{ flex-shrink:0; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @media (max-width:480px){ .toast{ left:12px; right:12px; bottom:12px; max-width:none; } }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    #pbs-sidebar, #pbs-topbar, .toolbar, .pagination, .act-btns, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+    .print-header{ display:block !important; margin-bottom:14px; }
+  }
+  .print-header{ display:none; }
+  .print-header h2{ font-family:'Cormorant Garamond',serif; font-size:18px; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by poolbar-shell.js — unchanged -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by poolbar-shell.js — unchanged -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ═══ FILTER BAR ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill completed" data-status="completed"><span class="pdot" style="background:var(--green)"></span>Completed</div>
+                <div class="status-pill voided" data-status="voided"><span class="pdot" style="background:var(--red)"></span>Voided</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <input type="text" id="fSearch" placeholder="Sale #, item, staff, location…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Payment</span>
+              <select class="filter-select" id="fMethod" onchange="page=1;render()">
+                <option value="">All Payments</option>
+                <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Date — From</span>
+              <input type="date" class="filter-date" id="fDateFrom" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Date — To</span>
+              <input type="date" class="filter-date" id="fDateTo" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="page=1;render()">
+                <option value="date_desc">Date (Newest)</option>
+                <option value="date_asc">Date (Oldest)</option>
+                <option value="total_desc">Total (High → Low)</option>
+                <option value="total_asc">Total (Low → High)</option>
+              </select>
+            </div>
+            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="printSales()">🖨 Print</button>
+        </div>
+        <div class="toolbar-row" id="chipsRow" style="display:none;">
+          <div class="active-chips" id="activeChips"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="print-header"><h2>Aurum Hotel — Pool Bar Sales Report</h2><p id="printSub"></p></div>
+        <div class="panel-head">
+          <div class="panel-title">Sales</div>
+          <span class="toolbar-count" id="tblCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="no-sort">Sale No.</th>
+                <th class="no-sort">Items</th>
+                <th data-sortkey="total">Total (₦) <span class="sort-arrow" id="arrow-total"></span></th>
+                <th class="no-sort">Payment</th>
+                <th class="no-sort">Staff</th>
+                <th class="no-sort">Location</th>
+                <th data-sortkey="date">Date &amp; Time <span class="sort-arrow" id="arrow-date"></span></th>
+                <th class="no-sort">Status</th>
+                <th class="no-print no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="summary-bar" id="summaryBar" style="display:none;">
+          <div class="sb-item"><div class="sb-lbl">Sales</div><div class="sb-val" id="sbCount">0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Gross</div><div class="sb-val" id="sbGross">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Discounts</div><div class="sb-val" id="sbDisc">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Net Revenue</div><div class="sb-val" id="sbNet">₦0</div></div>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SALE DETAILS MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="dTitle">Sale Details</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="modal-meta" id="dMeta"></div>
+    <div id="dItems"></div>
+    <div class="ov-totals" id="dTotals"></div>
+    <div id="dVoidInfo"></div>
+    <div class="modal-footer" id="dFooter">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- VOID SALE MODAL — now with full audit trail + manager/admin authorization -->
+<div class="modal-overlay" id="voidModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title void-title">✕ Void Sale</div>
+      <button class="modal-close" onclick="closeModal('voidModal')">✕</button>
+    </div>
+    <div class="val-note">Voiding <strong id="vName"></strong> will restore its items to Pool Bar Stock, remove it from revenue totals, and be permanently logged with the details below.</div>
+
+    <div class="form-group">
+      <label class="form-label req">Reason for Void</label>
+      <textarea class="form-textarea" id="vReason" placeholder="e.g. Wrong order, customer changed mind, duplicate entry…"></textarea>
+      <div class="field-error" id="vReasonErr">Please enter a reason for the void.</div>
+    </div>
+
+    <div class="auth-divider"><span>Manager / Admin Authorization</span></div>
+
+    <div class="form-group">
+      <label class="form-label req">Authorizing Name</label>
+      <input class="form-input" type="text" id="vAuthName" list="authStaffList" placeholder="Full name of Manager/Admin approving this void" autocomplete="off">
+      <datalist id="authStaffList"></datalist>
+      <div class="field-error" id="vAuthNameErr">Enter the name of the Manager/Admin authorizing this void.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label req">Authorization Password</label>
+      <input class="form-input" type="password" id="vAuthPass" placeholder="Enter authorization password" autocomplete="off">
+      <div class="field-error" id="vAuthPassErr">Incorrect name/password combination. Only an authorized Manager or Admin may void a sale.</div>
+      <div class="auth-hint"><span class="ico">🔒</span><span>This action is logged. Only staff with Manager or Admin authorization can void a completed sale.</span></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('voidModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmVoid()">✕ Confirm Void</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/poolbar-shell.js"></script>
+<script>
+const shell = PoolBarShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'poolbar-sales.html',
+  pageTitle:     'Sales',
+  pageSubtitle:  'Completed transactions — synced with Pool Bar Stock',
+  apiMode:       'Demo',
+  user:          { name: 'Pool Bar Manager', initials: 'PB' },
+});
+
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
+
+async function apiFetch(method, path, body=null){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_SALES     = 'poolbar-sales';
+const KEY_STOCK     = 'poolbar-stock';
+const KEY_MOVEMENTS = 'poolbar-movements';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+}
+
+/* ═══════════════════════════════════════════
+   AUTHORIZED STAFF — demo credential list used to gate the Void
+   action. In a real deployment this check must happen server-side
+   (never trust a client-side password match); this is a UI-level
+   gate to demonstrate the flow and keep the demo self-contained.
+═══════════════════════════════════════════ */
+const AUTHORIZED_STAFF = [
+  { name:'Adaeze Nwankwo', role:'Duty Manager',   password:'manager123' },
+  { name:'Chinedu Obi',    role:'General Manager', password:'admin456'  },
+  { name:'Grace Umeh',     role:'Admin',           password:'grace789'  },
+];
+
+const DEMO_SALES = [
+  { id:'PBS-1012', items:[{name:'Heineken',qty:3,price:1500}], subtotal:4500, discount:0, total:4500, method:'Cash', staff:'Emeka S.', table:'Pool Deck 2', notes:'', date:'17/07/26 11:05 AM', status:'completed' },
+  { id:'PBS-1011', items:[{name:'Chapman',qty:2,price:2500},{name:'Guinness',qty:2,price:1600}], subtotal:8200, discount:0, total:8200, method:'POS', staff:'Amaka O.', table:'Pool Lounge', notes:'', date:'17/07/26 10:40 AM', status:'completed' },
+  { id:'PBS-1010', items:[{name:'Guinness',qty:1,price:1600}], subtotal:1600, discount:0, total:1600, method:'Transfer', staff:'Emeka S.', table:'Pool Deck 1', notes:'', date:'17/07/26 09:52 AM', status:'completed' },
+  { id:'PBS-1009', items:[{name:'Heineken',qty:4,price:1500},{name:'Chapman',qty:1,price:2500}], subtotal:8500, discount:10, total:7650, method:'Room Charge', staff:'Amaka O.', table:'Pool Deck 4', notes:'', date:'16/07/26 07:30 PM', status:'completed' },
+  { id:'PBS-1008', items:[{name:'Guinness',qty:2,price:1600}], subtotal:3200, discount:0, total:3200, method:'Cash', staff:'Emeka S.', table:'Pool Deck 1', notes:'Wrong order', date:'16/07/26 01:15 PM', status:'voided', voidReason:'Customer changed mind before it was served', voidDate:'16/07/26 01:20 PM', voidedBy:'Adaeze Nwankwo (Duty Manager)' },
+];
+const DEMO_STOCK = [
+  { name:'Heineken', category:'Beers', unit:'Bottles', qty:48, min:12, batch:'REQ-00031', received:'17/07/26', price:1500 },
+  { name:'Guinness',  category:'Beers', unit:'Bottles', qty:36, min:12, batch:'REQ-00031', received:'17/07/26', price:1600 },
+];
+
+let sales     = [];
+let stock     = [];
+let movements = [];
+let activeId  = null;
+let page = 1;
+let sortKey = 'date', sortDir = 'desc';
+let _filteredCache = [];
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
+
+function parseSaleDate(str){
+  if (!str) return null;
+  const [datePart, timePart, ampm] = str.split(' ');
+  const [d, m, y] = datePart.split('/').map(n => parseInt(n, 10));
+  let hh = 0, mm = 0;
+  if (timePart) { const [h, mi] = timePart.split(':').map(n => parseInt(n, 10)); hh = h; mm = mi || 0; }
+  if (ampm) {
+    const upper = ampm.toUpperCase();
+    if (upper === 'PM' && hh < 12) hh += 12;
+    if (upper === 'AM' && hh === 12) hh = 0;
+  }
+  const fullYear = y < 100 ? 2000 + y : y;
+  return new Date(fullYear, m - 1, d, hh, mm);
+}
+function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null; }
+function itemsQty(s){ return s.items.reduce((sum,i)=>sum+i.qty,0); }
+function itemsSummary(s){
+  const names = s.items.map(i => `${i.name} ×${i.qty}`);
+  if (names.length <= 2) return names.join(', ');
+  return `${names.slice(0,2).join(', ')} <span class="more">+${names.length-2} more</span>`;
+}
+
+function renderKPIs(rows){
+  const completed = rows.filter(s => s.status === 'completed');
+  const voided    = rows.filter(s => s.status === 'voided');
+  const revenue   = completed.reduce((sum,s)=>sum+s.total,0);
+  const units     = completed.reduce((sum,s)=>sum+itemsQty(s),0);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-accent">🧾</div>
+      <div class="kpi-label">Total Sales</div>
+      <div class="kpi-value" style="color:var(--gold);">${rows.length}</div>
+      <div class="kpi-trend neutral">${completed.length} completed · ${voided.length} voided</div>
+    </div>
+    <div class="kpi-card revenue">
+      <div class="kpi-accent" style="color:var(--green)">💰</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
+      <div class="kpi-trend up">From completed sales</div>
+    </div>
+    <div class="kpi-card units">
+      <div class="kpi-accent" style="color:var(--blue)">📦</div>
+      <div class="kpi-label">Units Sold</div>
+      <div class="kpi-value" style="color:var(--blue);">${units}</div>
+      <div class="kpi-trend info">Across ${completed.length} sale${completed.length!==1?'s':''}</div>
+    </div>
+    <div class="kpi-card voided">
+      <div class="kpi-accent" style="color:var(--red)">✕</div>
+      <div class="kpi-label">Voided Sales</div>
+      <div class="kpi-value" style="color:var(--red);">${voided.length}</div>
+      <div class="kpi-trend ${voided.length>0?'warn':'up'}">${voided.length>0?'Stock restored':'None on record'}</div>
+    </div>`;
+}
+
+let statusFilter = '';
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      statusFilter = p.dataset.status;
+      document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+      p.classList.add('on');
+      page = 1;
+      render();
+    });
+  });
+}
+
+function getFiltered(){
+  const q       = document.getElementById('fSearch').value.toLowerCase();
+  const method  = document.getElementById('fMethod').value;
+  const dFrom   = document.getElementById('fDateFrom').value;
+  const dTo     = document.getElementById('fDateTo').value;
+  const sortVal = document.getElementById('fSort').value;
+  [sortKey, sortDir] = sortVal.split('_');
+
+  let rows = sales.filter(s => {
+    const mq = !q
+      || s.id.toLowerCase().includes(q)
+      || (s.staff||'').toLowerCase().includes(q)
+      || (s.table||'').toLowerCase().includes(q)
+      || s.items.some(i => i.name.toLowerCase().includes(q));
+    const mMethod = !method || s.method === method;
+    const mStatus = !statusFilter || s.status === statusFilter;
+    let mDate = true;
+    if (dFrom || dTo) {
+      const sd = dateOnly(parseSaleDate(s.date));
+      if (dFrom) { const f = new Date(dFrom + 'T00:00:00'); if (!sd || sd < f) mDate = false; }
+      if (dTo)   { const to = new Date(dTo + 'T00:00:00'); if (!sd || sd > to) mDate = false; }
+    }
+    return mq && mMethod && mStatus && mDate;
+  });
+
+  rows = rows.sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === 'date') cmp = (parseSaleDate(a.date) - parseSaleDate(b.date));
+    else if (sortKey === 'total') cmp = a.total - b.total;
+    return sortDir === 'desc' ? -cmp : cmp;
+  });
+
+  return rows;
+}
+
+function renderSortArrows(){
+  ['total','date'].forEach(k => {
+    const el = document.getElementById('arrow-' + k);
+    if (!el) return;
+    el.textContent = sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : '';
+  });
+}
+
+function renderActiveChips(){
+  const chips = [];
+  const q = document.getElementById('fSearch').value;
+  const method = document.getElementById('fMethod').value;
+  const dFrom = document.getElementById('fDateFrom').value;
+  const dTo = document.getElementById('fDateTo').value;
+
+  if (statusFilter) chips.push({ label: `Status: ${statusFilter === 'completed' ? 'Completed' : 'Voided'}`, clear: () => { statusFilter = ''; document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on')); document.querySelector('.status-pill.all').classList.add('on'); } });
+  if (q) chips.push({ label: `Search: "${q}"`, clear: () => { document.getElementById('fSearch').value = ''; } });
+  if (method) chips.push({ label: `Payment: ${method}`, clear: () => { document.getElementById('fMethod').value = ''; } });
+  if (dFrom) chips.push({ label: `From: ${dFrom}`, clear: () => { document.getElementById('fDateFrom').value = ''; } });
+  if (dTo) chips.push({ label: `To: ${dTo}`, clear: () => { document.getElementById('fDateTo').value = ''; } });
+
+  const chipsRow = document.getElementById('chipsRow');
+  const wrap = document.getElementById('activeChips');
+  if (chips.length === 0) { chipsRow.style.display = 'none'; wrap.innerHTML = ''; return; }
+  chipsRow.style.display = '';
+  wrap.innerHTML = chips.map((c, i) => `<span class="active-chip">${c.label}<button data-chip="${i}">✕</button></span>`).join('');
+  wrap.querySelectorAll('[data-chip]').forEach(btn => {
+    btn.addEventListener('click', () => { chips[parseInt(btn.dataset.chip, 10)].clear(); page = 1; render(); });
+  });
+}
+
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fMethod').value = '';
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  statusFilter = '';
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1;
+  render();
+}
+
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total === 0 ? 0 : (page - 1) * CFG.PAGE_SIZE + 1;
+  const to = Math.min(page * CFG.PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const mk = (label, p, disabled, active) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label; b.disabled = !!disabled;
+    b.addEventListener('click', () => { page = p; renderTable(); });
+    return b;
+  };
+  wrap.appendChild(mk('‹', page - 1, page === 1, false));
+  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
+  wrap.appendChild(mk('›', page + 1, page >= totalPages, false));
+}
+
+function renderSummaryBar(rows){
+  const bar = document.getElementById('summaryBar');
+  if (rows.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'grid';
+  const completed = rows.filter(s => s.status === 'completed');
+  const gross = completed.reduce((s,x)=>s+x.subtotal,0);
+  const disc  = completed.reduce((s,x)=>s+x.subtotal*(x.discount||0)/100,0);
+  const net   = completed.reduce((s,x)=>s+x.total,0);
+  document.getElementById('sbCount').textContent = rows.length;
+  document.getElementById('sbGross').textContent = fmtN(gross);
+  document.getElementById('sbDisc').textContent  = fmtN(disc);
+  document.getElementById('sbNet').textContent   = fmtN(net);
+}
+
+/* data-label attributes below drive the mobile card layout (::before
+   content:attr(data-label) in CSS) — every cell keeps its column name
+   visible even when the table collapses into stacked cards. */
+function renderTable(){
+  const rows = _filteredCache;
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+  const start = (page - 1) * CFG.PAGE_SIZE;
+  const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
+
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="9">No sales match your filters.</td></tr>`
+    : pageRows.map(s => `
+      <tr onclick="openDetail('${s.id}')">
+        <td class="nowrap" data-label="Sale No." style="font-weight:600;">${s.id}</td>
+        <td class="items-summary" data-label="Items">${itemsSummary(s)}</td>
+        <td class="nowrap" data-label="Total" style="font-weight:600;color:var(--gold);">${fmtN(s.total)}</td>
+        <td class="nowrap" data-label="Payment"><span class="chip chip-pay">${s.method}</span></td>
+        <td class="nowrap" data-label="Staff">${s.staff || '—'}</td>
+        <td class="nowrap" data-label="Location">${s.table || '—'}</td>
+        <td class="nowrap" data-label="Date &amp; Time">${s.date}</td>
+        <td class="nowrap" data-label="Status"><span class="chip chip-${s.status}">${s.status === 'completed' ? 'Completed' : 'Voided'}</span></td>
+        <td class="no-print nowrap" data-label="Actions" onclick="event.stopPropagation()">
+          <div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${s.id}')">👁 View</button>
+            ${s.status === 'completed' ? `<button class="act-btn void" onclick="openVoid('${s.id}')">✕ Void</button>` : ''}
+          </div>
+        </td>
+      </tr>`).join('');
+
+  renderPagination(rows.length);
+}
+
+function render(){
+  _filteredCache = getFiltered();
+  renderKPIs(_filteredCache);
+  renderSortArrows();
+  renderActiveChips();
+  renderTable();
+  renderSummaryBar(_filteredCache);
+}
+
+function bindHeaderSort(){
+  document.querySelectorAll('th[data-sortkey]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortkey;
+      if (key !== 'total' && key !== 'date') return;
+      const sel = document.getElementById('fSort');
+      const [curKey, curDir] = sel.value.split('_');
+      let nextDir = 'desc';
+      if (curKey === key) nextDir = curDir === 'desc' ? 'asc' : 'desc';
+      sel.value = `${key}_${nextDir}`;
+      page = 1;
+      render();
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════
+   SALE DETAILS — now richer: shows a dedicated
+   Void Information card (who voided it, when,
+   and why) whenever the sale has been voided.
+═══════════════════════════════════════════ */
+function openDetail(id){
+  const s = sales.find(x => x.id === id);
+  if (!s) return;
+  activeId = id;
+  const statusClass = s.status === 'completed' ? 'status-completed' : 'status-voided';
+  const modalEl = document.querySelector('#detailModal .modal');
+  modalEl.classList.remove('status-completed', 'status-voided');
+  modalEl.classList.add(statusClass);
+
+  document.getElementById('dTitle').textContent = `Sale ${s.id}`;
+  document.getElementById('dMeta').innerHTML = `
+    <span class="chip chip-pay">${s.method}</span> &nbsp;
+    ${s.table || '—'} &nbsp;·&nbsp; ${s.date} &nbsp;·&nbsp; ${s.staff || '—'}
+    ${s.notes ? `<br><em style="color:var(--text3);">"${s.notes}"</em>` : ''}`;
+
+  document.getElementById('dItems').innerHTML = s.items.map(i => `
+    <div class="ov-item">
+      <span class="oi-name">${i.name}</span>
+      <span class="oi-qty">× ${i.qty}</span>
+      <span class="oi-total">${fmtN(i.price * i.qty)}</span>
+    </div>`).join('');
+
+  const discAmt = s.subtotal * (s.discount || 0) / 100;
+  document.getElementById('dTotals').innerHTML = `
+    <div class="ot-row"><span>Subtotal</span><span>${fmtN(s.subtotal)}</span></div>
+    ${s.discount ? `<div class="ot-row"><span>Discount (${s.discount}%)</span><span style="color:var(--red);">−${fmtN(discAmt)}</span></div>` : ''}
+    <div class="ot-row total"><span>Total</span><span>${fmtN(s.total)}</span></div>`;
+
+  const voidInfoEl = document.getElementById('dVoidInfo');
+  if (s.status === 'voided') {
+    voidInfoEl.innerHTML = `
+      <div class="void-info-card">
+        <div class="void-info-head">🚫 Void Information</div>
+        <div class="void-info-row"><span class="vlbl">Voided By</span><span class="vval">${s.voidedBy || 'Unrecorded'}</span></div>
+        <div class="void-info-row"><span class="vlbl">Voided On</span><span class="vval">${s.voidDate || '—'}</span></div>
+        <div class="void-info-row"><span class="vlbl">Original Amount</span><span class="vval">${fmtN(s.total)}</span></div>
+        <div class="void-info-note">"${s.voidReason || 'No reason recorded.'}"</div>
+      </div>`;
+  } else {
+    voidInfoEl.innerHTML = '';
+  }
+
+  const footer = document.getElementById('dFooter');
+  footer.innerHTML = `<button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>` +
+    (s.status === 'completed' ? `<button class="btn btn-danger btn-sm" onclick="closeModal('detailModal');openVoid('${s.id}')">✕ Void Sale</button>` : '');
+
+  document.getElementById('detailModal').classList.add('show');
+}
+
+/* ═══════════════════════════════════════════
+   VOID FLOW — requires a reason + Manager/Admin
+   name & password match against AUTHORIZED_STAFF
+   before the void is allowed to proceed.
+═══════════════════════════════════════════ */
+function openVoid(id){
+  activeId = id;
+  const s = sales.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('vName').textContent = `${s.id} — ${fmtN(s.total)}`;
+  document.getElementById('vReason').value = '';
+  document.getElementById('vAuthName').value = '';
+  document.getElementById('vAuthPass').value = '';
+  ['vReason','vAuthName','vAuthPass'].forEach(id => document.getElementById(id).classList.remove('err'));
+  ['vReasonErr','vAuthNameErr','vAuthPassErr'].forEach(id => document.getElementById(id).classList.remove('show'));
+  document.getElementById('authStaffList').innerHTML = AUTHORIZED_STAFF.map(a => `<option value="${a.name}">`).join('');
+  document.getElementById('voidModal').classList.add('show');
+}
+
+function setFieldError(fieldId, errId, hasError){
+  document.getElementById(fieldId).classList.toggle('err', hasError);
+  document.getElementById(errId).classList.toggle('show', hasError);
+}
+
+async function confirmVoid(){
+  const s = sales.find(x => x.id === activeId);
+  if (!s) return;
+
+  const reason   = document.getElementById('vReason').value.trim();
+  const authName = document.getElementById('vAuthName').value.trim();
+  const authPass = document.getElementById('vAuthPass').value;
+
+  const reasonMissing = !reason;
+  setFieldError('vReason', 'vReasonErr', reasonMissing);
+
+  const match = AUTHORIZED_STAFF.find(a =>
+    a.name.toLowerCase() === authName.toLowerCase() && a.password === authPass
+  );
+  const nameMissing = !authName;
+  setFieldError('vAuthName', 'vAuthNameErr', nameMissing);
+  const authFailed = !nameMissing && !match;
+  setFieldError('vAuthPass', 'vAuthPassErr', authFailed || (!authPass && !nameMissing));
+
+  if (reasonMissing) { showToast('Please enter a reason for the void.', 'error'); return; }
+  if (nameMissing || !authPass) { showToast('Enter the authorizing Manager/Admin name and password.', 'error'); return; }
+  if (!match) { showToast('Incorrect authorization credentials. Void cancelled.', 'error'); return; }
+
+  const stamp = nowStamp();
+  s.items.forEach(item => {
+    const inv = stock.find(i => i.name === item.name);
+    if (inv) { inv.qty += item.qty; movements.unshift({ date: stamp, item: item.name, qtyIn: item.qty, qtyOut: 0, balance: inv.qty, reason: `Voided Sale (${s.id})` }); }
+  });
+
+  s.status = 'voided';
+  s.voidReason = reason;
+  s.voidDate = stamp;
+  s.voidedBy = `${match.name} (${match.role})`;
+
+  await Promise.all([ saveShared(KEY_SALES, sales), saveShared(KEY_STOCK, stock), saveShared(KEY_MOVEMENTS, movements) ]);
+  apiSave('PATCH', `/api/poolbar/sales/${s.id}/void`, { reason, voidedBy: s.voidedBy });
+
+  closeModal('voidModal');
+  showToast(`${s.id} voided by ${match.name} — stock restored to Pool Bar Stock.`, 'error');
+  render();
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+['detailModal','voidModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
+});
+
+function printSales(){
+  document.getElementById('printSub').textContent = `Printed: ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${document.getElementById('tblCount').textContent}`;
+  window.print();
+}
+
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+async function init(){
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/poolbar/sales');
+      sales = data.sales || [];
+      stock = data.stock || [];
+      movements = data.movements || [];
+      shell.setApiMode('Live');
+      bindStatusPills();
+      bindHeaderSort();
+      render();
+      return;
+    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+  }
+
+  sales     = await loadShared(KEY_SALES, DEMO_SALES);
+  stock     = await loadShared(KEY_STOCK, DEMO_STOCK);
+  movements = await loadShared(KEY_MOVEMENTS, []);
+
+  await Promise.all([
+    saveShared(KEY_SALES, sales),
+    saveShared(KEY_STOCK, stock),
+    saveShared(KEY_MOVEMENTS, movements),
+  ]);
+
+  bindStatusPills();
+  bindHeaderSort();
+  render();
+}
+init();
+</script>
+</body>
+</html>

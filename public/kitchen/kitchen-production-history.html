@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" style="background:#080f18;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>Production History | Aurum Kitchen</title>
+<style>html,body{background:#080f18;margin:0;}</style>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+    --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+  }
+  [data-theme="dark"]{
+    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6); --modal-bg:#0c1824;
+  }
+  [data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10); --modal-bg:#f8fafc;
+  }
+  html, body{ height:100%; overflow-x:hidden; }
+  body{ font-family:'Outfit', system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:768px){ .content{ padding:16px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:100px; }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:700; color:var(--text); line-height:1; }
+  .kpi-trend{ font-size:11px; color:var(--text3); margin-top:auto; }
+
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:240px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  @media (max-width:900px){ .toolbar{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .flt-group{ width:100%; } .search-box{ max-width:100%; } .filter-select{ width:100%; } }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:640px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
+
+  @media (max-width:880px){
+    .tbl-wrap{ overflow-x:visible; }
+    table{ min-width:0; width:100%; }
+    thead{ display:none; }
+    table, tbody, tr, td{ display:block; width:100%; }
+    tbody tr{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; margin:0 0 10px; padding:6px 14px; }
+    tbody tr:last-child{ margin-bottom:0; }
+    tbody td{ border:none; padding:8px 0; white-space:normal !important; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; text-align:right; }
+    tbody td:not(:last-child){ border-bottom:1px dashed var(--border); }
+    tbody td::before{ content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; flex-shrink:0; text-align:left; }
+    .empty-row{ display:block; } .empty-row td{ display:block; text-align:center; } .empty-row td::before{ content:none; }
+  }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-draft{ background:var(--surface3); color:var(--text3); } .chip-draft::before{ background:var(--text3); }
+  .chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
+  .chip-accepted{ background:var(--green-bg); color:var(--green); } .chip-accepted::before{ background:var(--green); }
+  .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
+  .chip-completed{ background:var(--purple-bg); color:var(--purple); } .chip-completed::before{ background:var(--purple); }
+  .chip-rts{ background:var(--blue-bg); color:var(--blue); } .chip-rts::before{ background:var(--blue); }
+  .chip-coo{ background:var(--amber-bg); color:var(--amber); } .chip-coo::before{ background:var(--amber); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; padding:0 7px; font-family:'Outfit',sans-serif; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .link-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; }
+  .link-chip:hover{ background:rgba(201,168,76,0.22); }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 30px 80px rgba(0,0,0,0.6); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
+  @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:10px; }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
+  .modal-close:hover{ color:var(--text); }
+  .modal-footer{ display:flex; gap:10px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; margin-bottom:14px; }
+  @media (max-width:480px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-item{ display:flex; flex-direction:column; gap:3px; }
+  .detail-item.span2{ grid-column:span 2; }
+  @media (max-width:480px){ .detail-item.span2{ grid-column:span 1; } }
+  .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; }
+  .detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
+  .detail-value.muted{ color:var(--text3); font-weight:400; font-style:italic; }
+  .modal-sub-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin:16px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
+  .recipe-box{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+  .ing-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+  .ing-row:last-child{ border-bottom:none; }
+  .ing-name{ color:var(--text2); } .ing-qty{ color:var(--text); font-weight:600; }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+  @media print{ #kit-sidebar, #kit-topbar, .toolbar, .pagination, .no-print{ display:none !important; } .main{ margin-left:0 !important; } body{ background:#fff !important; color:#000 !important; } .panel{ box-shadow:none !important; border:1px solid #ccc !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="toolbar no-print">
+        <div class="toolbar-left">
+          <div class="flt-group" style="flex:1;min-width:180px;max-width:240px;">
+            <span class="flt-label">Search</span>
+            <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" id="fSearch" placeholder="Production #, meal…" oninput="page=1;render()"></div>
+          </div>
+          <div class="flt-group"><span class="flt-label">Status</span>
+            <select class="filter-select" id="fStatus" onchange="page=1;render()">
+              <option value="">All Statuses</option><option value="draft">Draft</option><option value="sent">Sent</option>
+              <option value="accepted">Accepted</option><option value="rejected">Rejected</option><option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="flt-group"><span class="flt-label">Type</span>
+            <select class="filter-select" id="fType" onchange="page=1;render()">
+              <option value="">All Types</option><option value="rts">Ready-to-Serve</option><option value="coo">Cook-on-Order</option>
+            </select>
+          </div>
+          <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">All Productions</div><span style="font-size:11px;color:var(--text3);" id="tblCount">—</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>No.</th><th>Meal</th><th>Qty</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="paginLabel">—</span><div class="page-btns" id="pageBtns"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="productionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🍲 <span id="pmTitle">Production Details</span></div>
+      <button class="modal-close" onclick="closeModal('productionModal')">✕</button>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item"><span class="detail-label">Production No.</span><span class="detail-value" id="pmNo">—</span></div>
+      <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value" id="pmStatus">—</span></div>
+      <div class="detail-item"><span class="detail-label">Meal</span><span class="detail-value" id="pmMeal">—</span></div>
+      <div class="detail-item"><span class="detail-label">Quantity</span><span class="detail-value" id="pmQty">—</span></div>
+      <div class="detail-item"><span class="detail-label">Destination Type</span><span class="detail-value" id="pmType">—</span></div>
+      <div class="detail-item"><span class="detail-label">Prepared By</span><span class="detail-value" id="pmBy">—</span></div>
+      <div class="detail-item"><span class="detail-label">Time</span><span class="detail-value" id="pmTime">—</span></div>
+      <div class="detail-item"><span class="detail-label">Linked Order</span><span class="detail-value" id="pmLinkedOrder">—</span></div>
+      <div class="detail-item span2"><span class="detail-label">Remarks</span><span class="detail-value" id="pmRemarks">—</span></div>
+    </div>
+    <div class="modal-sub-title">Recipe Used — Ingredients Deducted</div>
+    <div class="recipe-box" id="pmDeductions"></div>
+    <div id="pmTransferWrap" style="margin-top:14px;display:none;">
+      <div class="modal-sub-title" style="margin-top:0;">Linked Transfer</div>
+      <span class="link-chip" id="pmTransferLink" onclick="jumpToTransfer()">🚚 View Transfer →</span>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('productionModal')">Close</button></div>
+  </div>
+</div>
+
+<script src="../component/kitchen-shell.js"></script>
+<script>
+const shell = KitchenShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'kitchen-production-history.html',
+  pageTitle:     'Production History',
+  pageSubtitle:  'Every production run — drafts, sent, accepted, rejected, completed',
+  apiMode:       'Demo',
+  user:          { name: 'Head Chef', initials: 'HC' },
+});
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+};
+async function loadShared(key, fallback){
+  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
+  return fallback;
+}
+
+const KEY_PRODUCTIONS = 'kitchen-productions';
+
+const DEMO_PRODUCTIONS = [
+  { no:'PROD-00096', meal:'Fried Rice',   qty:30, unit:'Plates',  type:'rts', status:'sent',      time:'10:30 AM', by:'Head Chef', remarks:'Lunch preparation', linkedOrder:'',
+    deductions:[ {ing:'Rice',qty:3.00,unit:'kg'}, {ing:'Oil',qty:0.30,unit:'Ltr'}, {ing:'Curry',qty:0.60,unit:'kg'}, {ing:'Green Peas',qty:0.45,unit:'kg'}, {ing:'Chicken',qty:1.50,unit:'kg'}, {ing:'Seasoning',qty:0.09,unit:'kg'} ], transferNo:'KTN-00045' },
+  { no:'PROD-00095', meal:'Jollof Rice',  qty:20, unit:'Plates',  type:'rts', status:'accepted',  time:'10:15 AM', by:'Head Chef', remarks:'', linkedOrder:'',
+    deductions:[ {ing:'Rice',qty:2.00,unit:'kg'}, {ing:'Oil',qty:0.24,unit:'Ltr'}, {ing:'Tomato',qty:0.60,unit:'kg'}, {ing:'Pepper',qty:0.30,unit:'kg'}, {ing:'Chicken',qty:1.00,unit:'kg'}, {ing:'Seasoning',qty:0.06,unit:'kg'} ], transferNo:'KTN-00044' },
+  { no:'PROD-00094', meal:'Egusi Soup',   qty:15, unit:'Portions',type:'rts', status:'accepted',  time:'10:00 AM', by:'Sous Chef', remarks:'', linkedOrder:'',
+    deductions:[ {ing:'Egusi',qty:0.90,unit:'kg'}, {ing:'Palm Oil',qty:0.30,unit:'Ltr'}, {ing:'Spinach',qty:0.60,unit:'kg'}, {ing:'Chicken',qty:0.60,unit:'kg'}, {ing:'Seasoning',qty:0.045,unit:'kg'} ], transferNo:'KTN-00043' },
+  { no:'PROD-00093', meal:'Pepper Soup',  qty:2,  unit:'Portions',type:'coo', status:'completed', time:'09:45 AM', by:'Head Chef', remarks:'', linkedOrder:'ORD-1053',
+    deductions:[ {ing:'Chicken',qty:0.16,unit:'kg'}, {ing:'Pepper',qty:0.04,unit:'kg'}, {ing:'Seasoning',qty:0.008,unit:'kg'}, {ing:'Scent Leaf',qty:0.02,unit:'kg'} ], transferNo:'' },
+  { no:'PROD-00092', meal:'Moi Moi',      qty:25, unit:'Pieces',  type:'rts', status:'rejected',  time:'09:30 AM', by:'Sous Chef', remarks:'', linkedOrder:'',
+    deductions:[ {ing:'Beans Flour',qty:2.00,unit:'kg'}, {ing:'Oil',qty:0.25,unit:'Ltr'}, {ing:'Egg',qty:1.25,unit:'pcs'}, {ing:'Seasoning',qty:0.05,unit:'kg'} ], transferNo:'KTN-00042' },
+];
+
+let productions = [];
+let page = 1;
+const PAGE_SIZE = 10;
+let filtered = [];
+const STATUS_LBL = { draft:'Draft', sent:'Sent', accepted:'Accepted', rejected:'Rejected', completed:'Completed' };
+const TYPE_LBL = { rts:'Ready-to-Serve', coo:'Cook-on-Order' };
+function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
+
+function renderKPIs(){
+  const total = productions.length;
+  const sent = productions.filter(p=>p.status==='sent').length;
+  const accepted = productions.filter(p=>p.status==='accepted').length;
+  const rejected = productions.filter(p=>p.status==='rejected').length;
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Productions</div><div class="kpi-value">${total}</div><div class="kpi-trend">All-time record</div></div>
+    <div class="kpi-card"><div class="kpi-label">Awaiting Restaurant</div><div class="kpi-value" style="color:var(--blue);">${sent}</div><div class="kpi-trend">Sent, not yet accepted</div></div>
+    <div class="kpi-card"><div class="kpi-label">Accepted</div><div class="kpi-value" style="color:var(--green);">${accepted}</div><div class="kpi-trend">Confirmed into Restaurant stock</div></div>
+    <div class="kpi-card"><div class="kpi-label">Rejected</div><div class="kpi-value" style="color:${rejected>0?'var(--red)':'var(--text)'};">${rejected}</div><div class="kpi-trend">${rejected>0?'Review needed':'None on record'}</div></div>`;
+}
+
+function clearFilters(){
+  document.getElementById('fSearch').value=''; document.getElementById('fStatus').value=''; document.getElementById('fType').value='';
+  page=1; render();
+}
+function getFiltered(){
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const st = document.getElementById('fStatus').value;
+  const ty = document.getElementById('fType').value;
+  return productions.filter(p => {
+    const mq = !q || p.no.toLowerCase().includes(q) || p.meal.toLowerCase().includes(q);
+    return mq && (!st||p.status===st) && (!ty||p.type===ty);
+  });
+}
+function renderPagination(total){
+  const totalPg = Math.max(1, Math.ceil(total/PAGE_SIZE));
+  if (page>totalPg) page=totalPg;
+  const from = total===0?0:(page-1)*PAGE_SIZE+1, to = Math.min(page*PAGE_SIZE,total);
+  document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
+  const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
+  const mk=(l,p,d,a)=>{ const b=document.createElement('button'); b.className='page-btn'+(a?' active':''); b.textContent=l; b.disabled=!!d; b.onclick=()=>{page=p;renderTable();}; return b; };
+  wrap.appendChild(mk('‹',page-1,page===1,false));
+  let start=Math.max(1,page-2), end=Math.min(totalPg,start+4); start=Math.max(1,end-4);
+  for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
+  wrap.appendChild(mk('›',page+1,page>=totalPg,false));
+}
+function renderTable(){
+  const rows = filtered;
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+  const start=(page-1)*PAGE_SIZE;
+  const pageRows = rows.slice(start,start+PAGE_SIZE);
+  document.getElementById('tblBody').innerHTML = pageRows.length===0
+    ? `<tr class="empty-row"><td colspan="6">No productions found</td></tr>`
+    : pageRows.map(p => `<tr onclick="openProductionModal('${p.no}')">
+        <td data-label="No." style="font-weight:600;">${p.no}</td>
+        <td data-label="Meal">${p.meal}</td>
+        <td data-label="Qty">${p.qty} ${p.unit}</td>
+        <td data-label="Type"><span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type]}</span></td>
+        <td data-label="Status"><span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span></td>
+        <td data-label="Time">${p.time}</td>
+      </tr>`).join('');
+  renderPagination(rows.length);
+}
+function render(){ filtered = getFiltered(); renderKPIs(); renderTable(); }
+
+function openProductionModal(no){
+  const p = productions.find(x=>x.no===no); if (!p) return;
+  document.getElementById('pmTitle').textContent = `Production ${p.no}`;
+  document.getElementById('pmNo').textContent = p.no;
+  document.getElementById('pmStatus').innerHTML = `<span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span>`;
+  document.getElementById('pmMeal').textContent = p.meal;
+  document.getElementById('pmQty').textContent = `${p.qty} ${p.unit}`;
+  document.getElementById('pmType').innerHTML = `<span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type]}</span>`;
+  document.getElementById('pmBy').textContent = p.by || '—';
+  document.getElementById('pmTime').textContent = p.time || '—';
+  const lo = document.getElementById('pmLinkedOrder');
+  if (p.type==='coo' && p.linkedOrder) { lo.textContent=p.linkedOrder; lo.classList.remove('muted'); } else { lo.textContent='Not applicable'; lo.classList.add('muted'); }
+  const rm = document.getElementById('pmRemarks');
+  if (p.remarks) { rm.textContent=p.remarks; rm.classList.remove('muted'); } else { rm.textContent='No remarks recorded.'; rm.classList.add('muted'); }
+  const ded = p.deductions || [];
+  document.getElementById('pmDeductions').innerHTML = ded.length===0
+    ? `<div style="font-size:12px;color:var(--text3);">No inventory deduction recorded (draft or unmapped recipe).</div>`
+    : ded.map(d => `<div class="ing-row"><span class="ing-name">${d.ing}</span><span class="ing-qty">−${fmtQty(d.qty)} ${d.unit}</span></div>`).join('');
+  const xw = document.getElementById('pmTransferWrap');
+  if (p.transferNo) { xw.style.display=''; document.getElementById('pmTransferLink').textContent = `🚚 View Transfer ${p.transferNo} →`; window._pmActiveTransfer = p.transferNo; }
+  else xw.style.display='none';
+  document.getElementById('productionModal').classList.add('show');
+}
+function jumpToTransfer(){ if (window._pmActiveTransfer) window.location.href = `kitchen-transfers.html?open=${window._pmActiveTransfer}`; }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.getElementById('productionModal').addEventListener('click', function(e){ if (e.target===this) closeModal('productionModal'); });
+
+async function init(){
+  productions = await loadShared(KEY_PRODUCTIONS, DEMO_PRODUCTIONS);
+  render();
+  const openNo = new URLSearchParams(location.search).get('open');
+  if (openNo) openProductionModal(openNo);
+}
+init();
+</script>
+</body>
+</html>

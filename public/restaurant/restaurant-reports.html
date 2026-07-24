@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Reports | Aurum Restaurant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  html{ height:auto; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:112px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; color-scheme:dark; }
+  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody tr{ border-bottom:1px solid var(--border); }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; }
+  .chip-completed{ background:var(--green-bg); color:var(--green); } .chip-completed::before{ background:var(--green); }
+  .chip-voided{ background:var(--red-bg); color:var(--red); } .chip-voided::before{ background:var(--red); }
+  .chip-pay{ background:var(--gold-dim); color:var(--gold-light); } .chip-pay::before{ background:var(--gold); }
+  .chip-source{ background:var(--surface3); color:var(--text3); }
+
+  .summary-bar{ display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface2); border-top:1px solid var(--border); }
+  @media (max-width:560px){ .summary-bar{ grid-template-columns:1fr 1fr; } }
+  .sb-item{ text-align:center; padding:12px 12px; border-right:1px solid var(--border); }
+  .sb-item:last-child{ border-right:none; }
+  .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
+  .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @media print{
+    #rst-sidebar, #rst-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+    .print-header{ display:block !important; margin-bottom:14px; }
+  }
+  .print-header{ display:none; }
+  .print-header h2{ font-family:'Cormorant Garamond',serif; font-size:18px; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="toolbar no-print">
+        <div class="toolbar-row">
+          <div class="toolbar-left">
+            <div class="flt-group"><span class="flt-label">From</span><input type="date" class="filter-date" id="repFrom"></div>
+            <div class="flt-group"><span class="flt-label">To</span><input type="date" class="filter-date" id="repTo"></div>
+            <div class="flt-group">
+              <span class="flt-label">Payment</span>
+              <select class="filter-select" id="repPay">
+                <option value="">All Payments</option>
+                <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Source</span>
+              <select class="filter-select" id="repSource">
+                <option value="">All Sources</option>
+                <option value="quick">Quick Sale</option>
+                <option value="tab">Open Tab</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <select class="filter-select" id="repStatus">
+                <option value="">All Statuses</option>
+                <option value="completed">Completed</option>
+                <option value="voided">Voided</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-sm" style="align-self:flex-end;" onclick="page=1;generateReport()">Generate</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="printReport()">🖨 Print</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="print-header"><h2>Aurum Hotel — Restaurant Sales Report</h2><p id="printSub"></p></div>
+        <div class="panel-head">
+          <div class="panel-title" id="panelTitle">Full Report</div>
+          <span style="font-size:11px;color:var(--text3);" id="repCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Sale No.</th><th>Date</th><th>Items</th><th>Subtotal (₦)</th><th>Disc%</th><th>Total (₦)</th><th>Payment</th><th>Source</th><th>Staff</th><th>Table</th><th>Status</th></tr></thead>
+            <tbody id="repTableBody"></tbody>
+          </table>
+        </div>
+        <div class="summary-bar">
+          <div class="sb-item"><div class="sb-lbl">Sales</div><div class="sb-val" id="sbCount">0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Gross</div><div class="sb-val" id="sbGross">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Discounts</div><div class="sb-val" id="sbDisc">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Net Revenue</div><div class="sb-val" id="sbNet">₦0</div></div>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../component/restaurant-shell.js"></script>
+<script>
+const shell = RestaurantShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'restaurant-reports.html',
+  pageTitle:     'Reports',
+  pageSubtitle:  'Filterable view over completed and voided sales',
+  apiMode:       'Demo',
+  user:          { name: 'Restaurant Manager', initials: 'RM' },
+});
+
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:12 };
+
+async function apiFetch(method, path){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+};
+
+const KEY_SALES = 'restaurant-sales';
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+
+const DEMO_SALES = [
+  { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], subtotal:12000, discount:0, total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', date:'17/07/26 11:05 AM', status:'completed', source:'quick' },
+  { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000}], subtotal:18000, discount:0, total:18000, method:'POS', staff:'Tunde A.', table:'Table 2', date:'17/07/26 10:40 AM', status:'completed', source:'quick' },
+  { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], subtotal:2500, discount:0, total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', date:'17/07/26 09:52 AM', status:'completed', source:'quick' },
+];
+
+let sales = [];
+let page = 1;
+let filtered = [];
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function itemsSummary(s){
+  const names = s.items.map(i => `${i.meal} ×${i.qty}`);
+  return names.length <= 2 ? names.join(', ') : `${names.slice(0,2).join(', ')} +${names.length-2} more`;
+}
+
+function parseSaleDate(str){
+  if (!str) return null;
+  const [datePart, timePart, ampm] = str.split(' ');
+  const [d,m,y] = datePart.split('/').map(n=>parseInt(n,10));
+  let hh=0, mm=0;
+  if (timePart) { const [h,mi]=timePart.split(':').map(n=>parseInt(n,10)); hh=h; mm=mi||0; }
+  if (ampm) { const u=ampm.toUpperCase(); if (u==='PM'&&hh<12) hh+=12; if (u==='AM'&&hh===12) hh=0; }
+  return new Date(2000+y, m-1, d, hh, mm);
+}
+function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null; }
+
+function renderKPIs(rows){
+  const completed = rows.filter(s=>s.status==='completed');
+  const revenue = completed.reduce((s,x)=>s+x.total,0);
+  const quick = completed.filter(s=>s.source!=='tab').length;
+  const tabs = completed.filter(s=>s.source==='tab').length;
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card"><div class="kpi-accent">🧾</div><div class="kpi-label">Total Sales</div><div class="kpi-value" style="color:var(--gold);">${rows.length}</div><div class="kpi-trend neutral">${completed.length} completed</div></div>
+    <div class="kpi-card"><div class="kpi-accent">💰</div><div class="kpi-label">Net Revenue</div><div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div><div class="kpi-trend up">From completed sales</div></div>
+    <div class="kpi-card"><div class="kpi-accent">⚡</div><div class="kpi-label">Quick Sales</div><div class="kpi-value" style="color:var(--blue);">${quick}</div><div class="kpi-trend info">Instant, from Inventory</div></div>
+    <div class="kpi-card"><div class="kpi-accent">📋</div><div class="kpi-label">Tab Sales</div><div class="kpi-value" style="color:#a78bfa;">${tabs}</div><div class="kpi-trend neutral">Closed-out open tabs</div></div>`;
+}
+
+function generateReport(){
+  const from = document.getElementById('repFrom').value;
+  const to = document.getElementById('repTo').value;
+  const pay = document.getElementById('repPay').value;
+  const src = document.getElementById('repSource').value;
+  const status = document.getElementById('repStatus').value;
+
+  filtered = sales.filter(s => {
+    if (pay && s.method !== pay) return false;
+    if (status && s.status !== status) return false;
+    if (src && (s.source||'quick') !== src) return false;
+    if (from || to) {
+      const sd = dateOnly(parseSaleDate(s.date));
+      if (from) { const f = new Date(from+'T00:00:00'); if (!sd || sd < f) return false; }
+      if (to) { const t = new Date(to+'T00:00:00'); if (!sd || sd > t) return false; }
+    }
+    return true;
+  }).sort((a,b) => parseSaleDate(b.date) - parseSaleDate(a.date));
+
+  const gross = filtered.reduce((s,x)=>s+x.subtotal,0);
+  const disc  = filtered.reduce((s,x)=>s+x.subtotal*(x.discount||0)/100,0);
+  const net   = filtered.filter(s=>s.status==='completed').reduce((s,x)=>s+x.total,0);
+
+  document.getElementById('panelTitle').textContent = (from||to) ? `Report: ${from||'…'} → ${to||'…'}` : 'Full Report';
+  document.getElementById('repCount').textContent = filtered.length + ' record' + (filtered.length!==1?'s':'');
+  document.getElementById('sbCount').textContent = filtered.length;
+  document.getElementById('sbGross').textContent = fmtN(gross);
+  document.getElementById('sbDisc').textContent = fmtN(disc);
+  document.getElementById('sbNet').textContent = fmtN(net);
+  document.getElementById('printSub').textContent = `Generated: ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · Net: ${fmtN(net)}`;
+
+  renderKPIs(filtered);
+  renderTable();
+}
+
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total/CFG.PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total===0?0:(page-1)*CFG.PAGE_SIZE+1;
+  const to = Math.min(page*CFG.PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
+  const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
+  const mk = (label,p,disabled,active) => { const b=document.createElement('button'); b.className='page-btn'+(active?' active':''); b.textContent=label; b.disabled=!!disabled; b.onclick=()=>{page=p;renderTable();}; return b; };
+  wrap.appendChild(mk('‹',page-1,page===1,false));
+  let start=Math.max(1,page-2), end=Math.min(totalPages,start+4); start=Math.max(1,end-4);
+  for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
+  wrap.appendChild(mk('›',page+1,page>=totalPages,false));
+}
+
+function renderTable(){
+  const start = (page-1)*CFG.PAGE_SIZE;
+  const rows = filtered.slice(start, start+CFG.PAGE_SIZE);
+  document.getElementById('repTableBody').innerHTML = rows.length===0
+    ? `<tr class="empty-row"><td colspan="11">No sales match your filters.</td></tr>`
+    : rows.map(s => `<tr>
+        <td style="font-weight:600;">${s.id}</td>
+        <td>${s.date}</td>
+        <td>${itemsSummary(s)}</td>
+        <td>${fmtN(s.subtotal)}</td>
+        <td>${s.discount||0}%</td>
+        <td style="font-weight:600;color:var(--gold);">${fmtN(s.total)}</td>
+        <td><span class="chip chip-pay">${s.method}</span></td>
+        <td><span class="chip chip-source">${s.source==='tab'?'Tab':'Quick'}</span></td>
+        <td>${s.staff||'—'}</td>
+        <td>${s.table||'—'}</td>
+        <td><span class="chip chip-${s.status}">${s.status==='completed'?'Completed':'Voided'}</span></td>
+      </tr>`).join('');
+  renderPagination(filtered.length);
+}
+
+function printReport(){ window.print(); }
+
+async function init(){
+  sales = await loadShared(KEY_SALES, DEMO_SALES);
+  document.getElementById('repFrom').value = '';
+  document.getElementById('repTo').value = '';
+  generateReport();
+}
+init();
+</script>
+</body>
+</html>

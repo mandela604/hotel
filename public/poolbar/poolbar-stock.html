@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Pool Bar Stock | Aurum Pool Bar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  /* ═══════════════════════════════════════════════════════════
+     THEME TOKEN DEFAULTS — defined here, synchronously, in the
+     page's own <head>, NOT only inside poolbar-shell.js. The shell
+     script runs at the bottom of <body> and injects the full token
+     set, but that's too late for the very first paint: without
+     these, the browser renders with no --bg/--surface/etc defined
+     yet, which shows as a flash of unstyled white background
+     before the sidebar/topbar appear. Declaring the same values
+     here means the correct dark (or light) background paints
+     immediately. The shell's injected CSS still runs afterward and
+     simply re-affirms the same values — no conflict, no flash.
+  ═══════════════════════════════════════════════════════════ */
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  [data-theme="dark"]{
+    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  }
+  [data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  }
+  html{ background:var(--bg); height:auto; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:112px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card.active-filter{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold), var(--shadow-lg); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.low{ background:linear-gradient(160deg, rgba(251,191,36,.08), var(--surface) 60%); border-color:rgba(251,191,36,.24); }
+  .kpi-card.low::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-card.low .kpi-label{ color:var(--amber); }
+  .kpi-card.out{ background:linear-gradient(160deg, rgba(248,113,113,.08), var(--surface) 60%); border-color:rgba(248,113,113,.24); }
+  .kpi-card.out::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.out .kpi-label{ color:var(--red); }
+  .kpi-card.units{ background:linear-gradient(160deg, rgba(96,165,250,.08), var(--surface) 60%); border-color:rgba(96,165,250,.24); }
+  .kpi-card.units::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.units .kpi-label{ color:var(--blue); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:#60a5fa; }
+
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select:focus{ border-color:var(--gold-border); }
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.ok{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.low{ background:var(--amber-bg); border-color:rgba(251,191,36,.4); color:var(--amber); }
+  .status-pill.on.out{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+
+  @media (max-width:700px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select{ width:100%; }
+    .toolbar-row.top > div{ width:100%; }
+    .toolbar-row.top .btn{ flex:1; justify-content:center; }
+  }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:960px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.center{ text-align:center; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  tbody td.center{ text-align:center; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
+  .empty-row{ cursor:default; }
+  .item-name{ font-weight:600; }
+  .item-badge{ display:inline-flex; align-items:center; gap:6px; }
+  .item-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .cat-badge{ font-size:9px; padding:1px 7px; border-radius:20px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; background:var(--gold-dim); color:var(--gold-light); }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-ok{ background:var(--green-bg); color:var(--green); } .chip-ok::before{ background:var(--green); }
+  .chip-low{ background:var(--amber-bg); color:var(--amber); } .chip-low::before{ background:var(--amber); }
+  .chip-out{ background:var(--red-bg); color:var(--red); } .chip-out::before{ background:var(--red); }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal.mode-remove::before{ background:var(--red); }
+  .modal.mode-delete::before{ background:var(--red); }
+  .modal-sm{ width:min(400px,96vw); }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+  .modal-close:hover{ color:var(--text); }
+  .form-section-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  @media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
+  .form-group{ display:flex; flex-direction:column; gap:5px; }
+  .form-group.span2{ grid-column:span 2; }
+  @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:var(--gold-border); }
+  .form-input:disabled, .form-select:disabled{ opacity:.55; cursor:not-allowed; }
+  .form-textarea{ resize:vertical; min-height:60px; }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note strong{ color:var(--text); }
+  .field-note{ font-size:10.5px; color:var(--text3); line-height:1.4; }
+  .info-note{ font-size:11.5px; color:var(--text3); background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--gold-border); border-radius:8px; padding:9px 11px; line-height:1.5; margin-bottom:14px; }
+  .info-note .link-like{ color:var(--gold); font-weight:600; cursor:pointer; }
+  .role-badge{ display:inline-flex; align-items:center; gap:4px; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; padding:2px 7px; border-radius:20px; background:var(--gold-dim); color:var(--gold-light); margin-left:6px; }
+
+  /* View-detail modal */
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-bottom:16px; }
+  @media (max-width:460px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-item{ display:flex; flex-direction:column; gap:3px; }
+  .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
+  .detail-remarks{ background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--gold-border); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--text2); line-height:1.5; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue,#60a5fa); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    #pbs-sidebar, #pbs-topbar, .toolbar, .pagination, .act-btns, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-level="">All</div>
+                <div class="status-pill ok" data-level="ok"><span class="pdot" style="background:var(--green)"></span>In Stock</div>
+                <div class="status-pill low" data-level="low"><span class="pdot" style="background:var(--amber)"></span>Low Stock</div>
+                <div class="status-pill out" data-level="out"><span class="pdot" style="background:var(--red)"></span>Out of Stock</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <input type="text" id="fSearch" placeholder="Item name, batch…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Category</span>
+              <select class="filter-select" id="fCategory" onchange="page=1;render()">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="page=1;render()">
+                <option value="name_asc">Item (A → Z)</option>
+                <option value="qty_asc">Lowest Stock First</option>
+                <option value="qty_desc">Highest Stock First</option>
+                <option value="received_desc">Recently Received</option>
+              </select>
+            </div>
+            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="openItemModal()">＋ Add Item</button>
+            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Pool Bar Stock <span style="font-weight:400;color:var(--text3);font-size:11px;">— every sellable drink or snack, one source of truth for Orders. Click a row for details.</span></div>
+          <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="center">Category</th>
+                <th class="center">Unit</th>
+                <th class="center">On Hand</th>
+                <th class="center">Reorder Level</th>
+                <th class="center">Price (₦)</th>
+                <th>Batch / Req No.</th>
+                <th>Last Received</th>
+                <th class="center">Status</th>
+                <th class="no-print center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- VIEW ITEM DETAIL MODAL — opened by clicking a row -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="dTitle">Item Details</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="detail-grid" id="dGrid"></div>
+    <div class="detail-remarks" id="dRemarks"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>
+      <button class="btn btn-outline btn-sm" id="dEditBtn">✏ Edit</button>
+      <button class="btn btn-primary btn-sm" id="dDeductBtn">− Deduct Stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT ITEM MODAL — catalog fields only. Quantity is NEVER
+     entered here, for a new item or an existing one: it starts at 0
+     and only ever changes via Pending Requisitions → Accept
+     (procurement) or the Deduct Stock modal (usage/wastage/loss). -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="itemModalTitle">Add Item to Stock</div>
+      <button class="modal-close" onclick="closeModal('itemModal')">✕</button>
+    </div>
+    <div class="info-note" id="itemModalNote">
+      New items start at 0 on hand. To bring in stock, raise a requisition to the Store and <span class="link-like" onclick="location.href='poolbar-pending-requisitions.html'">Accept it</span> once delivered.
+    </div>
+    <div class="form-section-title">Item Details</div>
+    <div class="form-row">
+      <div class="form-group span2">
+        <label class="form-label">Item Name</label>
+        <input class="form-input" type="text" id="fName" placeholder="e.g. Heineken">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="fCategory2">
+          <option>Beers</option><option>Spirits</option><option>Wines</option><option>Cocktails</option>
+          <option>Soft Drinks</option><option>Water</option><option>Snacks</option><option>Ice Cream</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <select class="form-select" id="fUnit">
+          <option>Bottles</option><option>Cans</option><option>Litres</option><option>Pieces</option><option>Packs</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reorder Level <span class="role-badge" id="reorderRoleBadge">Demo</span></label>
+        <input class="form-input" type="number" id="fMin" placeholder="0" min="0">
+        <span class="field-note" id="fMinNote"></span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sale Price (₦)</label>
+        <input class="form-input" type="number" id="fPrice" placeholder="0" min="0">
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">Description <span style="text-transform:none;">(shown to guests / staff on Orders)</span></label>
+        <input class="form-input" type="text" id="fDesc" placeholder="Brief description…">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('itemModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveItem()">✓ Save Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEDUCT STOCK MODAL — the only manual way quantity can change,
+     for usage, wastage, breakage or corrections. New stock can only
+     be received by submitting and getting an approved Requisition. -->
+<div class="modal-overlay" id="adjustModal">
+  <div class="modal modal-sm mode-remove">
+    <div class="modal-header">
+      <div class="modal-title">Deduct Stock</div>
+      <button class="modal-close" onclick="closeModal('adjustModal')">✕</button>
+    </div>
+    <div class="val-note">Recording usage for <strong id="adjName"></strong> — currently <strong id="adjCurrent"></strong> on hand. New stock can only be received via an approved <strong>Requisition</strong> — it can't be added from here.</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Quantity to Deduct</label>
+      <input class="form-input" type="number" id="adjQty" placeholder="0" min="1">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Reason</label>
+      <select class="form-select" id="adjReason">
+        <option>Sale / Consumption</option>
+        <option>Wastage / Spoilage / Breakage</option>
+        <option>Transfer Out</option>
+        <option>Stock Correction</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <textarea class="form-textarea" id="adjNotes" placeholder="Any extra detail…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('adjustModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmAdjust()">✓ Confirm Deduction</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--red);">Delete Item</div>
+      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;" id="deleteMsg"></p>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/poolbar-shell.js"></script>
+<script>
+const shell = PoolBarShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'poolbar-stock.html',
+  pageTitle:     'Pool Bar Stock',
+  pageSubtitle:  'Every sellable item — drinks and snacks from Store',
+  apiMode:       'Demo',
+  user:          { name: 'Pool Bar Manager', initials: 'PB' },
+});
+
+/* ═══════════════════════════════════════════
+   CONFIG
+   USER_ROLE + USE_DEMO together decide whether Reorder Level is
+   editable here. In production, only admin/manager/owner can change
+   a reorder threshold (from Settings, elsewhere) — everyone else on
+   this page sees it read-only. Default is demo mode, which keeps it
+   editable so you can test different thresholds right now.
+   To simulate production for a non-privileged staff member, set
+   USE_DEMO to false and USER_ROLE to something like 'pool_bar_staff'.
+═══════════════════════════════════════════ */
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8, USER_ROLE:'demo' };
+const PRIVILEGED_ROLES = ['demo','admin','manager','owner','superadmin'];
+function canEditReorderLevel(){ return CFG.USE_DEMO || PRIVILEGED_ROLES.includes(CFG.USER_ROLE); }
+
+async function apiFetch(method, path, body=null){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_STOCK     = 'poolbar-stock';
+const KEY_MOVEMENTS = 'poolbar-movements';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+}
+
+/* Demo seed — same catalog the old pool-bar.html monolith shipped with */
+const DEMO_STOCK = [
+  { name:'Heineken',        category:'Beers',      unit:'Bottles', qty:48, min:12, batch:'REQ-00031', received:'17/07/26', price:1500, desc:'33cl chilled beer' },
+  { name:'Guinness',        category:'Beers',      unit:'Bottles', qty:36, min:12, batch:'REQ-00031', received:'17/07/26', price:1600, desc:'Stout, 33cl' },
+  { name:'Star Lager',      category:'Beers',      unit:'Bottles', qty:8,  min:12, batch:'REQ-00029', received:'15/07/26', price:1200, desc:'33cl chilled beer' },
+  { name:'Hennessy VS',     category:'Spirits',    unit:'Bottles', qty:5,  min:3,  batch:'REQ-00027', received:'14/07/26', price:4000, desc:'Premium cognac, per shot billed' },
+  { name:'Johnnie Walker',  category:'Spirits',    unit:'Bottles', qty:3,  min:3,  batch:'REQ-00026', received:'13/07/26', price:4500, desc:'Blended scotch whisky' },
+  { name:'Baileys',         category:'Spirits',    unit:'Bottles', qty:4,  min:2,  batch:'REQ-00025', received:'12/07/26', price:3500, desc:'Irish cream liqueur' },
+  { name:'Moët & Chandon',  category:'Wines',       unit:'Bottles', qty:6,  min:3,  batch:'REQ-00024', received:'11/07/26', price:55000, desc:'750ml champagne' },
+  { name:'Chapman Mix',     category:'Soft Drinks', unit:'Litres',  qty:10, min:5,  batch:'REQ-00031', received:'17/07/26', price:2500, desc:'Classic Nigerian mocktail mix' },
+  { name:'Maltina',         category:'Soft Drinks', unit:'Cans',    qty:5,  min:12, batch:'REQ-00030', received:'16/07/26', price:800, desc:'Malt drink' },
+  { name:'Bottled Water',   category:'Water',       unit:'Bottles', qty:72, min:24, batch:'REQ-00031', received:'17/07/26', price:500, desc:'750ml still water' },
+  { name:'Mojito Mix',      category:'Cocktails',   unit:'Litres',  qty:3,  min:2,  batch:'REQ-00028', received:'14/07/26', price:5500, desc:'Rum, mint, lime, soda' },
+  { name:'Pina Colada Mix', category:'Cocktails',   unit:'Litres',  qty:2,  min:2,  batch:'REQ-00028', received:'14/07/26', price:6000, desc:'Rum, coconut, pineapple' },
+  { name:'Pringles',        category:'Snacks',      unit:'Packs',   qty:20, min:10, batch:'REQ-00029', received:'15/07/26', price:2000, desc:'Assorted flavours' },
+  { name:'Chin Chin',       category:'Snacks',      unit:'Packs',   qty:15, min:10, batch:'REQ-00029', received:'15/07/26', price:1500, desc:'Nigerian fried snack' },
+  { name:'Ice Cream Tubs',  category:'Ice Cream',   unit:'Pieces',  qty:0,  min:4,  batch:'REQ-00022', received:'09/07/26', price:2500, desc:'Assorted scoops' },
+];
+
+let stock = [];
+let movements = [];
+let page = 1;
+let levelFilter = '';
+let activeName = null;
+
+function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function stockLevel(i){ return i.qty<=0 ? 'out' : (i.qty<=i.min ? 'low' : 'ok'); }
+const LEVEL_CHIP  = { ok:'chip-ok', low:'chip-low', out:'chip-out' };
+const LEVEL_LABEL = { ok:'In Stock', low:'Low Stock', out:'Out of Stock' };
+const ITEM_COLORS = { 'Heineken':'#c9a84c', 'Guinness':'#a78bfa', 'Chapman Mix':'#60a5fa', 'Bottled Water':'#4ade80' };
+function itemColor(name){ return ITEM_COLORS[name] || '#6a8a9e'; }
+
+function renderKPIs(){
+  const total = stock.length;
+  const low = stock.filter(i => stockLevel(i)==='low').length;
+  const out = stock.filter(i => stockLevel(i)==='out').length;
+  const units = stock.reduce((s,i)=>s+i.qty,0);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card" onclick="setLevel('')">
+      <div class="kpi-accent">📦</div>
+      <div class="kpi-label">Items Tracked</div>
+      <div class="kpi-value">${total}</div>
+      <div class="kpi-trend up">Drinks + Snacks</div>
+    </div>
+    <div class="kpi-card low" onclick="setLevel('low')">
+      <div class="kpi-accent">⚠️</div>
+      <div class="kpi-label">Low Stock</div>
+      <div class="kpi-value" style="color:var(--amber);">${low}</div>
+      <div class="kpi-trend ${low>0?'warn':'up'}">${low>0?'Needs a requisition':'✓ All above threshold'}</div>
+    </div>
+    <div class="kpi-card out" onclick="setLevel('out')">
+      <div class="kpi-accent">✕</div>
+      <div class="kpi-label">Out of Stock</div>
+      <div class="kpi-value" style="color:var(--red);">${out}</div>
+      <div class="kpi-trend ${out>0?'warn':'up'}">${out>0?'Unavailable to sell':'✓ None'}</div>
+    </div>
+    <div class="kpi-card units" onclick="setLevel('')">
+      <div class="kpi-accent">🍹</div>
+      <div class="kpi-label">Total Units On Hand</div>
+      <div class="kpi-value" style="color:var(--blue);">${units}</div>
+      <div class="kpi-trend info">Across ${total} item${total!==1?'s':''}</div>
+    </div>`;
+}
+
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      levelFilter = p.dataset.level;
+      document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+      p.classList.add('on');
+      page = 1;
+      render();
+    });
+  });
+}
+function setLevel(k){
+  levelFilter = k;
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  const target = document.querySelector(`.status-pill[data-level="${k}"]`);
+  if (target) target.classList.add('on');
+  page = 1;
+  render();
+}
+
+function populateCategoryOptions(){
+  const sel = document.getElementById('fCategory');
+  const cur = sel.value;
+  const cats = [...new Set(stock.map(i=>i.category))].sort();
+  sel.innerHTML = '<option value="">All Categories</option>' + cats.map(c=>`<option${c===cur?' selected':''}>${c}</option>`).join('');
+}
+
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fCategory').value = '';
+  document.getElementById('fSort').value = 'name_asc';
+  levelFilter = '';
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1;
+  render();
+}
+
+function parseDDMMYY(s){
+  if (!s) return 0;
+  const [d,m,y] = s.split('/').map(n=>parseInt(n,10));
+  return new Date(2000+y, m-1, d).getTime();
+}
+function getFiltered(){
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const cat = document.getElementById('fCategory').value;
+  const sort = document.getElementById('fSort').value;
+
+  let rows = stock.filter(i => {
+    const mq = !q || i.name.toLowerCase().includes(q) || (i.batch||'').toLowerCase().includes(q);
+    const ml = !levelFilter || stockLevel(i) === levelFilter;
+    const mc = !cat || i.category === cat;
+    return mq && ml && mc;
+  });
+
+  if (sort === 'name_asc') rows.sort((a,b)=>a.name.localeCompare(b.name));
+  else if (sort === 'qty_asc') rows.sort((a,b)=>a.qty-b.qty);
+  else if (sort === 'qty_desc') rows.sort((a,b)=>b.qty-a.qty);
+  else if (sort === 'received_desc') rows.sort((a,b)=>parseDDMMYY(b.received)-parseDDMMYY(a.received));
+
+  return rows;
+}
+
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total === 0 ? 0 : (page-1)*CFG.PAGE_SIZE + 1;
+  const to = Math.min(page*CFG.PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const prev = document.createElement('button'); prev.className='page-btn'; prev.textContent='‹'; prev.disabled=(page===1);
+  prev.onclick = () => { page--; render(); }; wrap.appendChild(prev);
+  let start = Math.max(1, page-2), end = Math.min(totalPages, start+4); start = Math.max(1, end-4);
+  for (let i=start;i<=end;i++){
+    const b = document.createElement('button'); b.className = 'page-btn' + (i===page?' active':''); b.textContent = i;
+    b.onclick = (p=>()=>{ page=p; render(); })(i); wrap.appendChild(b);
+  }
+  const next = document.createElement('button'); next.className='page-btn'; next.textContent='›'; next.disabled=(page>=totalPages);
+  next.onclick = () => { page++; render(); }; wrap.appendChild(next);
+}
+
+function render(){
+  renderKPIs();
+  populateCategoryOptions();
+  const rows = getFiltered();
+  document.getElementById('tblCount').textContent = rows.length + ' item' + (rows.length!==1?'s':'');
+
+  const start = (page-1)*CFG.PAGE_SIZE;
+  const pageRows = rows.slice(start, start+CFG.PAGE_SIZE);
+
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="10">No stock items match your filters.${stock.length===0 ? ' Use “+ Add Item” to set up your opening catalog.' : ''}</td></tr>`
+    : pageRows.map(i => {
+        const lvl = stockLevel(i);
+        const safeName = i.name.replace(/'/g,"\\'");
+        return `<tr onclick="openDetail('${safeName}')">
+          <td class="item-name"><span class="item-badge"><span class="item-dot" style="background:${itemColor(i.name)}"></span>${i.name}</span></td>
+          <td class="center"><span class="cat-badge">${i.category}</span></td>
+          <td class="center">${i.unit}</td>
+          <td class="center" style="font-weight:600;color:${lvl==='out'?'var(--red)':lvl==='low'?'var(--amber)':'var(--text)'};">${i.qty}</td>
+          <td class="center">${i.min}</td>
+          <td class="center" style="color:var(--gold);font-weight:600;">${fmtN(i.price)}</td>
+          <td>${i.batch || '—'}</td>
+          <td>${i.received || '—'}</td>
+          <td class="center"><span class="chip ${LEVEL_CHIP[lvl]}">${LEVEL_LABEL[lvl]}</span></td>
+          <td class="no-print center" onclick="event.stopPropagation()">
+            <div class="act-btns">
+              <button class="act-btn" onclick="openAdjustModal('${safeName}')">− Deduct</button>
+              <button class="act-btn" onclick="openItemModal('${safeName}')">✏</button>
+              <button class="act-btn danger" onclick="openDeleteModal('${safeName}')">🗑</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+  renderPagination(rows.length);
+}
+
+/* ═══════════════════════════════════════════
+   VIEW DETAIL MODAL — opened by clicking anywhere on a row
+═══════════════════════════════════════════ */
+function openDetail(name){
+  const i = stock.find(x => x.name === name);
+  if (!i) return;
+  activeName = name;
+  const lvl = stockLevel(i);
+  document.getElementById('dTitle').textContent = i.name;
+  document.getElementById('dGrid').innerHTML = `
+    <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value"><span class="cat-badge">${i.category}</span></div></div>
+    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip ${LEVEL_CHIP[lvl]}">${LEVEL_LABEL[lvl]}</span></div></div>
+    <div class="detail-item"><div class="detail-label">On Hand</div><div class="detail-value" style="color:${lvl==='out'?'var(--red)':lvl==='low'?'var(--amber)':'var(--text)'};">${i.qty} ${i.unit}</div></div>
+    <div class="detail-item"><div class="detail-label">Reorder Level</div><div class="detail-value">${i.min} ${i.unit}</div></div>
+    <div class="detail-item"><div class="detail-label">Sale Price</div><div class="detail-value" style="color:var(--gold);">${fmtN(i.price)}</div></div>
+    <div class="detail-item"><div class="detail-label">Batch / Req No.</div><div class="detail-value">${i.batch || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Last Received</div><div class="detail-value">${i.received || '—'}</div></div>`;
+  document.getElementById('dRemarks').textContent = i.desc ? i.desc : 'No description on file for this item.';
+  document.getElementById('dEditBtn').onclick = () => { closeModal('detailModal'); openItemModal(i.name); };
+  document.getElementById('dDeductBtn').onclick = () => { closeModal('detailModal'); openAdjustModal(i.name); };
+  document.getElementById('detailModal').classList.add('show');
+}
+
+let editName = null;
+function openItemModal(name=null){
+  editName = name;
+  const isEdit = !!name;
+  const editable = canEditReorderLevel();
+  document.getElementById('itemModalTitle').textContent = isEdit ? 'Edit Item' : 'Add Item to Stock';
+  document.getElementById('itemModalNote').style.display = isEdit ? 'none' : '';
+
+  const minInput = document.getElementById('fMin');
+  const minNote  = document.getElementById('fMinNote');
+  const roleBadge = document.getElementById('reorderRoleBadge');
+  minInput.disabled = !editable;
+  roleBadge.textContent = CFG.USE_DEMO ? 'Demo — editable' : (editable ? CFG.USER_ROLE : 'Read-only');
+  minNote.textContent = editable
+    ? 'Demo mode: reorder level is editable here so you can test alerts. In production only Admin, Manager or Owner can set this, from Settings.'
+    : 'Only Admin, Manager or Owner can change the reorder level, from Settings.';
+
+  if (isEdit) {
+    const i = stock.find(x=>x.name===name);
+    document.getElementById('fName').value = i.name;
+    document.getElementById('fCategory2').value = i.category;
+    document.getElementById('fUnit').value = i.unit;
+    minInput.value = i.min;
+    document.getElementById('fPrice').value = i.price || '';
+    document.getElementById('fDesc').value = i.desc || '';
+  } else {
+    document.getElementById('fName').value = '';
+    document.getElementById('fCategory2').value = 'Beers';
+    document.getElementById('fUnit').value = 'Bottles';
+    minInput.value = editable ? '' : 0;
+    document.getElementById('fPrice').value = '';
+    document.getElementById('fDesc').value = '';
+  }
+  document.getElementById('itemModal').classList.add('show');
+}
+
+async function saveItem(){
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { showToast('Please enter an item name.', 'error'); return; }
+  const isEdit = !!editName;
+  const existing = isEdit ? stock.find(i=>i.name===editName) : null;
+  const editable = canEditReorderLevel();
+
+  const category = document.getElementById('fCategory2').value;
+  const unit = document.getElementById('fUnit').value;
+  const price = parseFloat(document.getElementById('fPrice').value) || 0;
+  const desc = document.getElementById('fDesc').value.trim();
+  // Reorder level only changes if the current user is allowed to edit it —
+  // otherwise the existing value (or 0 for a brand-new item) is kept as-is,
+  // even if the disabled field technically still has a value in the DOM.
+  const min = editable
+    ? (parseFloat(document.getElementById('fMin').value) || 0)
+    : (existing ? existing.min : 0);
+
+  if (isEdit) {
+    // Editing never touches qty/batch/received — those are procurement-controlled.
+    stock[stock.findIndex(i=>i.name===editName)] = { ...existing, name, category, unit, min, price, desc };
+    apiSave('PUT', `/api/poolbar/stock/${encodeURIComponent(editName)}`, stock.find(i=>i.name===name));
+    showToast('Item updated.', 'success');
+  } else {
+    if (stock.some(i=>i.name.toLowerCase()===name.toLowerCase())) { showToast('That item is already tracked — edit it instead.', 'error'); return; }
+    const entry = { name, category, unit, qty:0, min, price, batch:'—', received:'—', desc };
+    stock.push(entry);
+    apiSave('POST', '/api/poolbar/stock', entry);
+    showToast('Item added — raise a requisition to bring in stock.', 'success');
+  }
+  closeModal('itemModal');
+  render();
+  await saveShared(KEY_STOCK, stock);
+}
+
+function openAdjustModal(name){
+  activeName = name;
+  const i = stock.find(x=>x.name===name);
+  document.getElementById('adjName').textContent = i.name;
+  document.getElementById('adjCurrent').textContent = `${i.qty} ${i.unit}`;
+  document.getElementById('adjQty').value = '';
+  document.getElementById('adjReason').value = 'Sale / Consumption';
+  document.getElementById('adjNotes').value = '';
+  document.getElementById('adjustModal').classList.add('show');
+}
+async function confirmAdjust(){
+  const i = stock.find(x=>x.name===activeName);
+  if (!i) return;
+  const qty = parseFloat(document.getElementById('adjQty').value) || 0;
+  if (qty < 1) { showToast('Enter a valid quantity.', 'error'); return; }
+  const reason = document.getElementById('adjReason').value;
+  const notes = document.getElementById('adjNotes').value.trim();
+
+  if (qty > i.qty) { showToast(`Cannot deduct more than the ${i.qty} ${i.unit} on hand.`, 'error'); return; }
+
+  i.qty = i.qty - qty;
+
+  movements.unshift({ date: nowStamp(), item: i.name, qtyIn: 0, qtyOut: qty, balance: i.qty, reason: notes ? `${reason} — ${notes}` : reason });
+
+  apiSave('PATCH', `/api/poolbar/stock/${encodeURIComponent(i.name)}/adjust`, { qtyIn: 0, qtyOut: qty, reason, notes });
+
+  closeModal('adjustModal');
+  showToast(`${i.name}: deducted ${qty} ${i.unit}.`, 'info');
+  render();
+  await Promise.all([ saveShared(KEY_STOCK, stock), saveShared(KEY_MOVEMENTS, movements) ]);
+}
+
+function openDeleteModal(name){
+  activeName = name;
+  document.querySelector('#deleteModal .modal').classList.add('mode-delete');
+  document.getElementById('deleteMsg').textContent = `Remove "${name}" from Pool Bar Stock? This cannot be undone.`;
+  document.getElementById('deleteModal').classList.add('show');
+}
+async function confirmDelete(){
+  const i = stock.find(x=>x.name===activeName);
+  stock = stock.filter(x=>x.name!==activeName);
+  apiSave('DELETE', `/api/poolbar/stock/${encodeURIComponent(activeName)}`);
+  closeModal('deleteModal');
+  showToast(`"${i ? i.name : activeName}" removed from stock.`, 'error');
+  render();
+  await saveShared(KEY_STOCK, stock);
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+['detailModal','itemModal','adjustModal','deleteModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
+});
+
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+async function init(){
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/poolbar/stock');
+      stock = data.stock || data || [];
+      movements = data.movements || [];
+      shell.setApiMode('Live');
+      bindStatusPills();
+      render();
+      return;
+    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+  }
+
+  stock = await loadShared(KEY_STOCK, DEMO_STOCK);
+  movements = await loadShared(KEY_MOVEMENTS, []);
+
+  await Promise.all([
+    saveShared(KEY_STOCK, stock),
+    saveShared(KEY_MOVEMENTS, movements),
+  ]);
+
+  bindStatusPills();
+  render();
+}
+init();
+</script>
+</body>
+</html>

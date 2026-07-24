@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" style="background:#080f18;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>New Production | Aurum Kitchen</title>
+<style>html,body{background:#080f18;margin:0;}</style>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  [data-theme="dark"]{
+    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6); --input-bg:#0d1a26;
+  }
+  [data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10); --input-bg:#eef1f6;
+  }
+  html, body{ height:100%; overflow-x:hidden; }
+  body{ font-family:'Outfit', system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  @media (max-width:768px){ .content{ padding:16px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+      <div id="productionPlaceholder"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../component/kitchen-shell.js"></script>
+<script src="../component/grace-kitchen-production.js"></script>
+<script>
+KitchenShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'kitchen-production.html',
+  pageTitle:     'New Production',
+  pageSubtitle:  'Multi-meal batches, tabbed recipe review, collated summary',
+  apiMode:       'Demo',
+  user:          { name: 'Head Chef', initials: 'HC' },
+});
+
+/* ═══════════════════════════════════════════
+   All form logic (multi-meal tabs, combined
+   deduction, department/custom transfer, save)
+   lives in grace-kitchen-production.js — this
+   page is just a thin shell that configures it.
+═══════════════════════════════════════════ */
+GraceKitchenProduction.attach('#productionPlaceholder', {
+  kitchenName: 'Main Kitchen',
+  cfg: { API_BASE: '', API_KEY: '', USE_DEMO: true },
+
+  // Hardcoded default — swapped for a live call automatically once
+  // USE_DEMO is false and departmentsApiUrl resolves (General Platform
+  // Settings page, when live).
+  departments: ['Main Restaurant / POS', 'Pool Bar', 'Room Service', 'Banquets Hall'],
+  departmentsApiUrl: '/api/settings/departments',
+
+  recipes: {
+    'Fried Rice':  { 'Rice':0.10, 'Oil':0.01, 'Curry':0.02, 'Green Peas':0.015, 'Chicken':0.05, 'Seasoning':0.003 },
+    'Jollof Rice': { 'Rice':0.10, 'Oil':0.012, 'Tomato':0.03, 'Pepper':0.015, 'Chicken':0.05, 'Seasoning':0.003 },
+    'Egusi Soup':  { 'Egusi':0.06, 'Palm Oil':0.02, 'Spinach':0.04, 'Chicken':0.04, 'Seasoning':0.003 },
+    'Pepper Soup': { 'Chicken':0.08, 'Pepper':0.02, 'Seasoning':0.004, 'Scent Leaf':0.01 },
+    'Moi Moi':     { 'Beans Flour':0.08, 'Oil':0.01, 'Egg':0.05, 'Seasoning':0.002 },
+  },
+
+  stock: [
+    { name:'Rice',        qty:112, unit:'kg' },
+    { name:'Oil',         qty:18,  unit:'Ltr' },
+    { name:'Curry',       qty:4,   unit:'kg' },
+    { name:'Green Peas',  qty:9,   unit:'kg' },
+    { name:'Chicken',     qty:38,  unit:'kg' },
+    { name:'Seasoning',   qty:6,   unit:'kg' },
+    { name:'Tomato',      qty:22,  unit:'kg' },
+    { name:'Pepper',      qty:5,   unit:'kg' },
+    { name:'Egusi',       qty:14,  unit:'kg' },
+    { name:'Palm Oil',    qty:3,   unit:'Ltr' },
+    { name:'Spinach',     qty:8,   unit:'kg' },
+    { name:'Scent Leaf',  qty:2,   unit:'kg' },
+    { name:'Beans Flour', qty:12,  unit:'kg' },
+    { name:'Egg',         qty:60,  unit:'pcs' },
+  ],
+
+  openOrders: [
+    { id:'ORD-1057', label:'ORD-1057 — Table 4, 2 covers' },
+    { id:'ORD-1058', label:'ORD-1058 — Table 9, 1 cover' },
+    { id:'ORD-1059', label:'ORD-1059 — Room Service, Rm 204' },
+  ],
+
+  onSave: (batch) => {
+    // e.g. POST batch.productions / batch.transferNo to your real API here
+    // once CFG.USE_DEMO is false.
+    console.log('[kitchen-production] batch saved:', batch);
+  },
+});
+</script>
+</body>
+</html>

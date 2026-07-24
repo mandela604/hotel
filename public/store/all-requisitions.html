@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>All Requisitions | Grace Hotel HMS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --gold:#c9a84c;
+    --gold-light:#e8c96a;
+    --gold-dim: rgba(201,168,76,0.12);
+    --gold-border: rgba(201,168,76,0.25);
+    --green:#4ade80;
+    --green-bg: rgba(74,222,128,0.12);
+    --amber:#fbbf24;
+    --amber-bg: rgba(251,191,36,0.12);
+    --blue:#60a5fa;
+    --blue-bg: rgba(96,165,250,0.12);
+    --red:#f87171;
+    --red-bg: rgba(248,113,113,0.12);
+    --purple:#a78bfa;
+    --purple-bg: rgba(167,139,250,0.12);
+    --text-dark:#e8f0f8;
+    --text-mid:#a8bece;
+    --text-light:#6a8a9e;
+    --border:#1e3045;
+    --bg:#080f18;
+    --white:#111e2b;
+    --surface2:#162435;
+    --input-bg:#0d1a27;
+  }
+  /* This page only owns layout + its own table/KPI content now.
+     Sidebar + topbar look/markup live entirely in store-shell.js. */
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; overflow:hidden; }
+  body{
+    font-family: 'Outfit', 'Segoe UI', Arial, Helvetica, sans-serif;
+    background:var(--bg);
+    color:var(--text-dark);
+    font-size:14px;
+  }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; }
+  @media (max-width: 860px){ .main{ width:100%; } }
+
+  .content{ flex:1; padding:16px 24px 24px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:14px; min-height:0; }
+  @media (max-width: 640px){ .content{ padding:14px 14px 20px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; flex-shrink:0; }
+  @media (max-width: 1000px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width: 620px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width: 380px){ .kpi-row{ grid-template-columns:1fr; } }
+  .kpi-card{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:14px 16px; position:relative; overflow:hidden; }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--gold), transparent); }
+  .kpi-label{ font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-light); margin-bottom:6px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond', serif; font-size:24px; font-weight:700; color:var(--text-dark); line-height:1; }
+  .kpi-value.amber{ color:var(--amber); } .kpi-value.green{ color:var(--green); } .kpi-value.blue{ color:var(--blue); } .kpi-value.red{ color:var(--red); }
+
+  .card{ background:var(--white); border:1px solid var(--border); border-radius:12px; }
+  .toolbar{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; padding:16px 18px; flex-shrink:0; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field-label{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-light); font-weight:500; }
+  .search-wrap{ display:flex; align-items:center; gap:7px; background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:8px 12px; min-width:200px; flex:1; max-width:280px; }
+  .search-wrap:focus-within{ border-color:var(--gold-border); }
+  .search-wrap input{ background:none; border:none; outline:none; color:var(--text-dark); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-wrap input::placeholder{ color:var(--text-light); }
+  .sel, .inp{ background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; color:var(--text-dark); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .sel:focus, .inp:focus{ border-color:var(--gold-border); }
+  .inp[type="date"]{ cursor:default; }
+  .btn-ghost{ background:none; border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; color:var(--text-mid); cursor:pointer; transition:all .2s; }
+  .btn-ghost:hover{ border-color:var(--red); color:var(--red); }
+  @media (max-width: 700px){ .toolbar{ flex-direction:column; align-items:stretch; } .search-wrap{ max-width:100%; } }
+
+  .status-tabs{ display:flex; gap:6px; padding:0 18px 14px; flex-wrap:wrap; }
+  .stab{ background:none; border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:12px; font-weight:500; color:var(--text-mid); cursor:pointer; transition:all .2s; font-family:'Outfit',sans-serif; display:inline-flex; align-items:center; gap:6px; }
+  .stab .dot{ width:7px; height:7px; border-radius:50%; }
+  .stab:hover, .stab.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); }
+
+  .table-card{ display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+  .table-head-row{ display:flex; align-items:center; justify-content:space-between; padding:0 18px 12px; flex-wrap:wrap; gap:8px; }
+  .table-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; }
+  .table-count{ font-size:11.5px; color:var(--text-light); }
+  .table-scroll{ overflow-x:auto; }
+  table{ width:100%; min-width:960px; border-collapse:collapse; }
+  thead th{ text-align:left; font-size:10.5px; color:var(--text-light); font-weight:700; letter-spacing:0.3px; text-transform:uppercase; padding:10px 14px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--surface2); white-space:nowrap; }
+  thead th.center{ text-align:center; }
+  tbody td{ padding:11px 14px; font-size:12.5px; border-bottom:1px solid var(--border); color:var(--text-dark); vertical-align:middle; white-space:nowrap; }
+  tbody tr{ cursor:pointer; transition:background .15s; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td.center{ text-align:center; }
+  .req-link{ color:var(--gold-light); font-weight:600; }
+  .dept-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-mid); }
+  .dept-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .dot-kitchen{ background:var(--amber); } .dot-housekeeping{ background:var(--blue); } .dot-bar{ background:var(--purple); } .dot-frontdesk{ background:var(--green); } .dot-maintenance{ background:var(--red); } .dot-store{ background:var(--gold); }
+  .type-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .type-chip::before{ content:''; width:6px; height:6px; border-radius:50%; }
+  .type-store{ background:var(--blue-bg); color:var(--blue); } .type-store::before{ background:var(--blue); }
+  .type-purchase{ background:var(--purple-bg); color:var(--purple); } .type-purchase::before{ background:var(--purple); }
+  .status-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .status-chip::before{ content:''; width:6px; height:6px; border-radius:50%; }
+  .chip-pending{ background:var(--amber-bg); color:var(--amber); } .chip-pending::before{ background:var(--amber); }
+  .chip-partial{ background:var(--amber-bg); color:var(--amber); } .chip-partial::before{ background:var(--amber); }
+  .chip-full{ background:var(--green-bg); color:var(--green); } .chip-full::before{ background:var(--green); }
+  .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
+  .items-count{ font-size:12px; color:var(--text-mid); }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:6px; padding:5px 11px; font-size:11px; font-weight:600; color:var(--text-mid); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+
+  .empty-row td{ text-align:center; padding:36px; color:var(--text-light); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:12px; color:var(--text-light); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text-light); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:0.3; cursor:default; pointer-events:none; }
+  .page-size{ display:flex; align-items:center; gap:6px; }
+
+  /* Topbar action buttons rendered inside store-shell.js's slot — styled here since they're page-specific */
+  .print-btn{ display:flex; align-items:center; gap:8px; padding:8px 14px; border:1px solid var(--border); border-radius:8px; background:var(--white); font-size:12.5px; font-weight:600; color:var(--text-dark); cursor:pointer; font-family:'Outfit',sans-serif; }
+  .print-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .btn-primary{
+    background:var(--gold); color:#0a1520; border:none; border-radius:8px;
+    padding:9px 16px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; transition:all .2s;
+  }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:6px; }
+
+  /* ── Popup modals — this is where the two components render, instead of
+     navigating to their own separate pages. ── */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:24px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{ background:var(--white); border:1px solid var(--border); border-radius:16px; padding:22px; width:min(620px, 96vw); position:relative; margin:auto; box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .2s ease; }
+  /* Store Approval needs room for its two-column details + wide items
+     table, so it gets the larger size. The Request Form has its own
+     3-column field grid (Requested By / Department / Date Raised, etc.)
+     that needs breathing room too, or those fields collapse into a
+     single narrow column and the whole form reads as "smaller" than the
+     dedicated new-request.html page — modal-box-form gives it that room. */
+  .modal-box-lg{ width:min(1180px, 96vw); }
+  .modal-box-form{ width:min(920px, 96vw); }
+  @keyframes modalIn{ from{opacity:0; transform:translateY(14px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+  .modal-close{ position:absolute; top:14px; right:14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:30px; height:30px; color:var(--text-mid); cursor:pointer; font-size:14px; z-index:2; }
+  .modal-close:hover{ border-color:var(--red); color:var(--red); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by store-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by store-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="field" style="flex:1;min-width:200px;max-width:280px;">
+            <div class="field-label">Search</div>
+            <div class="search-wrap">
+              <span style="color:var(--text-light);font-size:13px;">🔍</span>
+              <input type="text" id="fSearch" placeholder="Req no., requester, department…" oninput="page=1;render()">
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">Department</div>
+            <select class="sel" id="fDept" onchange="page=1;render()">
+              <option value="">All Departments</option>
+              <option>Kitchen</option>
+              <option>Housekeeping</option>
+              <option>Bar</option>
+              <option>Front Desk</option>
+              <option>Maintenance</option>
+              <option>Store</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-label">From</div>
+            <input type="date" class="inp" id="fFrom" onchange="page=1;render()">
+          </div>
+          <div class="field">
+            <div class="field-label">To</div>
+            <input type="date" class="inp" id="fTo" onchange="page=1;render()">
+          </div>
+          <div class="field">
+            <div class="field-label">Sort</div>
+            <select class="sel" id="fSort" onchange="page=1;render()">
+              <option value="date_desc">Newest First</option>
+              <option value="date_asc">Oldest First</option>
+              <option value="items_desc">Most Items</option>
+            </select>
+          </div>
+          <button class="btn-ghost" onclick="clearFilters()">Clear Filters</button>
+        </div>
+
+        <div class="status-tabs" id="statusTabs"></div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-head-row" style="padding-top:18px;">
+          <div class="table-title">Requisition List</div>
+          <div class="table-count" id="tableCount">—</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Req. No.</th>
+                <th>Type</th>
+                <th>Date Raised</th>
+                <th>Requested By</th>
+                <th>Department</th>
+                <th>Required Date</th>
+                <th class="center">Items</th>
+                <th>Status</th>
+                <th class="center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ New Requisition popup — GraceHotelRequestForm renders inside here ═══ -->
+<div class="modal-overlay" id="reqFormModal">
+  <div class="modal-box modal-box-form">
+    <button class="modal-close" onclick="closeNewRequestModal()">✕</button>
+    <div id="requestFormPlaceholder"></div>
+  </div>
+</div>
+
+<!-- ═══ Store Approval popup — GraceHotelStoreApproval renders inside here ═══ -->
+<div class="modal-overlay" id="approvalModal">
+  <div class="modal-box modal-box-lg">
+    <button class="modal-close" onclick="closeApprovalModal()">✕</button>
+    <div id="approvalPlaceholder"></div>
+  </div>
+</div>
+
+<script src="../component/store-shell.js"></script>
+<script src="../component/grace-request-form.js"></script>
+<script src="../component/grace-store-approval.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar for this page. The topbar's page-specific
+   buttons (Print, New Requisition) go through topbarActionsHtml since
+   the shell only owns the generic chrome (title, date, API badge).
+═══════════════════════════════════════════ */
+const shell = GraceStoreShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'all-requisitions.html',
+  pageTitle:     'All Requisitions',
+  pageSubtitle:  'Every requisition raised across departments and stores',
+  apiMode:       'Demo',
+  topbarActionsHtml: `
+    <button class="print-btn" onclick="window.print()">🖶 <span class="print-label">Print</span></button>
+    <button class="btn-primary" onclick="openNewRequestModal()">＋ New Requisition</button>
+  `,
+});
+
+/* ═══════════════════════════════════════════
+   Storage shim — same contract used across every page (dashboard.html,
+   stock.html, new-request.html, store-approval.html). Requisitions raised
+   through GraceHotelRequestForm on new-request.html show up here directly,
+   read from the exact same req-index / req:<no> keys.
+═══════════════════════════════════════════ */
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+async function loadRequisitions(){
+  let idx = [];
+  try { const r = await storage.get('req-index', true); idx = r ? JSON.parse(r.value) : []; } catch(e){}
+  const reqs = [];
+  for (const no of idx) {
+    try { const r = await storage.get(`req:${no}`, true); if (r) reqs.push(JSON.parse(r.value)); } catch(e){}
+  }
+  return reqs;
+}
+
+const DEPT_DOT = { Kitchen:'dot-kitchen', Housekeeping:'dot-housekeeping', Bar:'dot-bar', 'Front Desk':'dot-frontdesk', Maintenance:'dot-maintenance', Store:'dot-store' };
+const STATUS_CHIP = { Pending:'chip-pending', Partial:'chip-partial', Full:'chip-full', Rejected:'chip-rejected' };
+const STATUS_TABS = ['All','Pending','Partial','Full','Rejected'];
+const PAGE_SIZE = 8;
+let page = 1;
+let activeStatus = 'All';
+let REQUISITIONS = []; // populated from shared storage in init()
+
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}); }
+
+function renderKPIs(){
+  const total = REQUISITIONS.length;
+  const pending = REQUISITIONS.filter(r=>r.status==='Pending').length;
+  const partial = REQUISITIONS.filter(r=>r.status==='Partial').length;
+  const full = REQUISITIONS.filter(r=>r.status==='Full').length;
+  const rejected = REQUISITIONS.filter(r=>r.status==='Rejected').length;
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Requisitions</div><div class="kpi-value">${total}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Pending Approval</div><div class="kpi-value amber">${pending}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Partially Issued</div><div class="kpi-value amber">${partial}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Fully Issued</div><div class="kpi-value green">${full}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Rejected</div><div class="kpi-value red">${rejected}</div></div>
+  `;
+  // The shell owns the Requisition nav badge — just tell it the count.
+  if (shell && typeof shell.setPendingBadge === 'function') shell.setPendingBadge(pending + partial);
+}
+
+function renderStatusTabs(){
+  const dotColor = { Pending:'var(--amber)', Partial:'var(--amber)', Full:'var(--green)', Rejected:'var(--red)' };
+  document.getElementById('statusTabs').innerHTML = STATUS_TABS.map(s => {
+    return `<button class="stab ${s===activeStatus?'active':''}" onclick="setStatus('${s}')">
+      ${s!=='All' ? `<span class="dot" style="background:${dotColor[s]}"></span>` : ''}${s}
+    </button>`;
+  }).join('');
+}
+function setStatus(s){ activeStatus = s; page = 1; render(); }
+
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fDept').value = '';
+  document.getElementById('fFrom').value = '';
+  document.getElementById('fTo').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  activeStatus = 'All';
+  page = 1;
+  render();
+}
+
+function getFiltered(){
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const dept = document.getElementById('fDept').value;
+  const from = document.getElementById('fFrom').value;
+  const to = document.getElementById('fTo').value;
+  const sort = document.getElementById('fSort').value;
+
+  let rows = REQUISITIONS.filter(r => {
+    const mq = !q || r.no.toLowerCase().includes(q) || r.by.toLowerCase().includes(q) || r.dept.toLowerCase().includes(q);
+    const md = !dept || r.dept === dept;
+    const ms = activeStatus === 'All' || r.status === activeStatus;
+    const mf = !from || r.dateRaised >= from;
+    const mt = !to || r.dateRaised <= to;
+    return mq && md && ms && mf && mt;
+  });
+
+  if (sort === 'date_desc') rows.sort((a,b) => (b.dateRaised||'').localeCompare(a.dateRaised||''));
+  else if (sort === 'date_asc') rows.sort((a,b) => (a.dateRaised||'').localeCompare(b.dateRaised||''));
+  else if (sort === 'items_desc') rows.sort((a,b) => b.items.length - a.items.length);
+
+  return rows;
+}
+
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const from = total === 0 ? 0 : (page-1)*PAGE_SIZE + 1;
+  const to = Math.min(page*PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const prev = document.createElement('button');
+  prev.className='page-btn'; prev.textContent='‹'; prev.disabled = (page===1);
+  prev.onclick = () => { page--; render(); };
+  wrap.appendChild(prev);
+  let start = Math.max(1, page-2), end = Math.min(totalPages, start+4);
+  start = Math.max(1, end-4);
+  for (let i=start;i<=end;i++){
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (i===page?' active':'');
+    b.textContent = i;
+    b.onclick = (function(p){ return () => { page=p; render(); }; })(i);
+    wrap.appendChild(b);
+  }
+  const next = document.createElement('button');
+  next.className='page-btn'; next.textContent='›'; next.disabled = (page>=totalPages);
+  next.onclick = () => { page++; render(); };
+  wrap.appendChild(next);
+}
+
+function render(){
+  renderStatusTabs();
+  const rows = getFiltered();
+  document.getElementById('tableCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+
+  const start = (page-1)*PAGE_SIZE;
+  const pageRows = rows.slice(start, start+PAGE_SIZE);
+
+  document.getElementById('tbody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="9">No requisitions match your filters.</td></tr>`
+    : pageRows.map(r => `
+      <tr onclick="viewReq('${r.no}')">
+        <td class="req-link">${r.no}</td>
+        <td><span class="type-chip ${r.mode==='purchase'?'type-purchase':'type-store'}">${r.mode==='purchase'?'Procurement':'Store'}</span></td>
+        <td>${fmtDate(r.dateRaised)}</td>
+        <td>${r.by}</td>
+        <td><span class="dept-chip"><span class="dept-dot ${DEPT_DOT[r.dept]||''}"></span>${r.dept}</span></td>
+        <td>${fmtDate(r.needed)}</td>
+        <td class="center"><span class="items-count">${r.items.length}</span></td>
+        <td><span class="status-chip ${STATUS_CHIP[r.status]||''}">${r.status}</span></td>
+        <td class="center" onclick="event.stopPropagation()"><button class="act-btn" onclick="viewReq('${r.no}')">View</button></td>
+      </tr>
+    `).join('');
+
+  renderPagination(rows.length);
+}
+
+/* Clicking a row or the View button opens this exact requisition in the
+   Store Approval popup — GraceHotelStoreApproval attaches into the modal
+   and reads the requisition straight from shared storage via reqNo. No
+   page navigation, no ?req= URL param needed. */
+function viewReq(no){
+  openApprovalModal(no);
+}
+
+/* ═══════════════════════════════════════════
+   POPUP #1 — New Requisition (GraceHotelRequestForm)
+═══════════════════════════════════════════ */
+let requestFormInstance = null;
+
+function openNewRequestModal(){
+  document.getElementById('reqFormModal').classList.add('show');
+  if (!requestFormInstance) {
+    requestFormInstance = GraceHotelRequestForm.attach('#requestFormPlaceholder', {
+      defaultMode: 'store_issue',
+      showRecent: false, // the table on this page already shows everything
+      storage: storage,
+      onSubmit: async () => {
+        closeNewRequestModal();
+        REQUISITIONS = await loadRequisitions();
+        renderKPIs();
+        render();
+      },
+      onOpenRequest: (reqNo) => {
+        closeNewRequestModal();
+        openApprovalModal(reqNo);
+      },
+    });
+  } else {
+    requestFormInstance.reset();
+  }
+}
+function closeNewRequestModal(){
+  document.getElementById('reqFormModal').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════
+   POPUP #2 — Store Approval (GraceHotelStoreApproval)
+═══════════════════════════════════════════ */
+let approvalInstance = null;
+
+async function getStockMap(){
+  try {
+    const r = await storage.get('stock-items', true);
+    if (r && r.value) {
+      const arr = JSON.parse(r.value);
+      if (Array.isArray(arr) && arr.length) {
+        const map = {};
+        arr.forEach(i => { map[i.name] = i.qty; });
+        return map;
+      }
+    }
+  } catch (e) {}
+  return null; // component falls back to its own built-in demo stock
+}
+
+async function deductStockAfterIssue(req){
+  try {
+    const r = await storage.get('stock-items', true);
+    if (!r || !r.value) return;
+    const arr = JSON.parse(r.value);
+    let changed = false;
+    req.items.forEach(it => {
+      const s = arr.find(x => x.name.toLowerCase() === it.name.trim().toLowerCase());
+      if (s && it.issuedQty > 0) { s.qty = Math.max(0, s.qty - it.issuedQty); changed = true; }
+    });
+    if (changed) await storage.set('stock-items', JSON.stringify(arr), true);
+  } catch (e) { console.warn('[stock sync]', e); }
+}
+
+async function openApprovalModal(no){
+  document.getElementById('approvalModal').classList.add('show');
+  const stockMap = await getStockMap();
+
+  if (!approvalInstance) {
+    approvalInstance = GraceHotelStoreApproval.attach('#approvalPlaceholder', {
+      reqNo: no,
+      stock: stockMap || undefined,
+      preparedBy: 'Store Keeper',
+      showBackButton: false, // popup has its own ✕ close button instead
+      storage: storage,
+      onApprove: async (req) => {
+        await deductStockAfterIssue(req);
+        REQUISITIONS = await loadRequisitions();
+        renderKPIs();
+        render();
+      },
+      onReject: async () => {
+        REQUISITIONS = await loadRequisitions();
+        renderKPIs();
+        render();
+      },
+    });
+  } else {
+    approvalInstance.load(no);
+  }
+}
+function closeApprovalModal(){
+  document.getElementById('approvalModal').classList.remove('show');
+}
+
+/* Click on the dark backdrop (outside the modal box) to close */
+['reqFormModal','approvalModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){
+    if (e.target === this) {
+      if (id === 'reqFormModal') closeNewRequestModal(); else closeApprovalModal();
+    }
+  });
+});
+
+async function init(){
+  REQUISITIONS = await loadRequisitions();
+  renderKPIs();
+  render();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Store Dashboard | Grace Hotel HMS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<style>
+  *{box-sizing:border-box; margin:0; padding:0;}
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.25);
+    --green:#4ade80; --green-bg: rgba(74,222,128,0.12);
+    --amber:#fbbf24; --amber-bg: rgba(251,191,36,0.12);
+    --red:#f87171; --red-bg: rgba(248,113,113,0.12);
+    --blue:#60a5fa; --blue-bg: rgba(96,165,250,0.12);
+    --purple:#a78bfa; --purple-bg: rgba(167,139,250,0.12);
+    --navy:#0a1520; --bg:#080f18; --white:#111e2b; --surface2:#162435; --input-bg:#0d1a27;
+    --text-dark:#e8f0f8; --text-mid:#a8bece; --text-light:#6a8a9e; --border:#1e3045;
+    --shadow: 0 8px 28px rgba(0,0,0,0.35);
+  }
+  /* This page only owns layout + its own KPI/panel content now.
+     Sidebar + topbar look/markup live entirely in store-shell.js. */
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit','Segoe UI',Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text-dark); font-size:14px; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; }
+  @media (max-width: 860px){ .main{ width:100%; } }
+
+  .content{ flex:1; padding:16px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  @media (max-width: 640px){ .content{ padding:14px 14px 22px; } }
+  @media (max-width: 380px){ .content{ padding:12px 10px 20px; } }
+
+  .section-title{ font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-light); font-weight:500; margin-bottom:4px; }
+
+  /* KPI */
+  .kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  @media (max-width: 1100px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width: 640px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width: 380px){ .kpi-row{ grid-template-columns:1fr; } }
+  .kpi-card{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:14px 16px; position:relative; overflow:hidden; box-shadow:var(--shadow); cursor:pointer; transition:transform .15s, border-color .15s; text-decoration:none; display:block; min-width:0; }
+  .kpi-card:hover{ transform:translateY(-2px); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--gold), transparent); }
+  .kpi-label{ font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-light); margin-bottom:6px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond', serif; font-size:24px; font-weight:700; color:var(--text-dark); line-height:1; word-break:break-word; }
+  .kpi-value.amber{ color:var(--amber); } .kpi-value.green{ color:var(--green); } .kpi-value.red{ color:var(--red); }
+  .kpi-sub{ font-size:10.5px; color:var(--text-light); margin-top:5px; }
+
+  /* PANEL */
+  .row{ display:flex; gap:14px; align-items:stretch; }
+  @media (max-width: 900px){ .row{ flex-direction:column; } }
+  .panel{ flex:1; background:var(--white); border:1px solid var(--border); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow); min-width:0; }
+  @media (max-width: 380px){ .panel{ padding:14px 12px; } }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
+  .panel-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; }
+  .panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:500; white-space:nowrap; }
+  .panel-action:hover{ color:var(--gold-light); }
+  .empty-note{ font-size:12.5px; color:var(--text-light); padding:14px 0; text-align:center; }
+
+  .list-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; }
+  .list-row:last-child{ border-bottom:none; padding-bottom:0; }
+  .list-row:hover .list-name{ color:var(--gold-light); }
+  .list-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dot-red{ background:var(--red); } .dot-amber{ background:var(--amber); } .dot-green{ background:var(--green); }
+  .list-body{ flex:1; min-width:0; }
+  .list-name{ font-size:12.5px; color:var(--text-dark); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .15s; }
+  .list-meta{ font-size:11px; color:var(--text-light); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .list-chip{ font-size:10px; font-weight:700; padding:2px 9px; border-radius:20px; flex-shrink:0; white-space:nowrap; }
+  .chip-pending{ background:var(--amber-bg); color:var(--amber); }
+  .chip-partial{ background:var(--amber-bg); color:var(--amber); }
+  .chip-full{ background:var(--green-bg); color:var(--green); }
+  .chip-rejected{ background:var(--red-bg); color:var(--red); }
+  .chip-low{ background:var(--amber-bg); color:var(--amber); }
+  .chip-out{ background:var(--red-bg); color:var(--red); }
+
+  .activity-item{ display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+  .activity-item:last-child{ border-bottom:none; padding-bottom:0; }
+  .act-dot{ width:7px; height:7px; border-radius:50%; margin-top:5px; flex-shrink:0; background:var(--gold); }
+  .act-text{ font-size:12.5px; color:var(--text-dark); line-height:1.4; }
+  .act-time{ font-size:10.5px; color:var(--text-light); margin-top:1px; }
+
+  .quick-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  @media (max-width: 900px){ .quick-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width: 380px){ .quick-grid{ grid-template-columns:1fr; } }
+  .quick-btn{ background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:14px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; color:var(--text-mid); text-decoration:none; transition:all .2s; min-width:0; }
+  .quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); }
+  .quick-icon{ font-size:17px; flex-shrink:0; }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by store-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by store-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div>
+        <div class="section-title">At a Glance</div>
+        <div class="kpi-row" id="kpiRow"></div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Pending Requisitions</div>
+            <a class="panel-action" href="store-approval.html">Review →</a>
+          </div>
+          <div id="pendingList"><div class="empty-note">Loading…</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Stock Alerts</div>
+            <a class="panel-action" href="stock.html">Open Stock →</a>
+          </div>
+          <div id="stockAlerts"><div class="empty-note">Loading…</div></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Recent Activity</div>
+            <a class="panel-action" href="all-requisitions.html">All Requisitions →</a>
+          </div>
+          <div class="activity-list" id="activityFeed"><div class="empty-note">Loading…</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
+          <div class="quick-grid">
+            <a class="quick-btn" href="new-request.html"><span class="quick-icon">＋</span>New Request</a>
+            <a class="quick-btn" href="store-approval.html"><span class="quick-icon">✓</span>Approve Issue</a>
+            <a class="quick-btn" href="stock.html"><span class="quick-icon">📦</span>Manage Stock</a>
+            <a class="quick-btn" href="all-requisitions.html"><span class="quick-icon">📋</span>All Requisitions</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../component/store-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   Shell — one call wires up sidebar + topbar for this page.
+   Every other Store page does the same with its own pageTitle/
+   pageSubtitle/activeFile — the nav itself only lives in store-shell.js.
+═══════════════════════════════════════════ */
+const shell = GraceStoreShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'dashboard.html',
+  pageTitle:     'Store Dashboard',
+  pageSubtitle:  'Central Store operations overview',
+  apiMode:       'Demo',
+});
+
+/* ═══════════════════════════════════════════
+   CONFIG & DATA LAYER (unchanged from before — page-specific, not shell)
+═══════════════════════════════════════════ */
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+async function apiFetch(method, path){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+const DEMO_STOCK = [
+  {name:'Rice (Long Grain)', qty:112, reorder:40, cost:1200},
+  {name:'Palm Oil', qty:6, reorder:15, cost:2400},
+  {name:'Chicken (Frozen)', qty:54, reorder:20, cost:3500},
+  {name:'Star Lager', qty:8, reorder:12, cost:1200},
+  {name:'Hennessy VS', qty:3, reorder:5, cost:28000},
+  {name:'Ice Cream Tubs', qty:0, reorder:4, cost:2500},
+  {name:'Bleach 5L', qty:3, reorder:10, cost:2100},
+  {name:'Pillow Cases (pair)', qty:0, reorder:20, cost:4500},
+];
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.reorder ? 'low' : 'ok'); }
+
+async function loadStock(){
+  try {
+    const r = await storage.get('stock-items', true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
+  } catch(e){}
+  return DEMO_STOCK;
+}
+
+async function loadRequisitions(){
+  let idx = [];
+  try { const r = await storage.get('req-index', true); idx = r ? JSON.parse(r.value) : []; } catch(e){}
+  const reqs = [];
+  for (const no of idx) {
+    try { const r = await storage.get(`req:${no}`, true); if (r) reqs.push(JSON.parse(r.value)); } catch(e){}
+  }
+  return reqs;
+}
+
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short'}); }
+
+function renderKPIs(stock, reqs){
+  const lowCount = stock.filter(s=>stockLevel(s)==='low').length;
+  const outCount = stock.filter(s=>stockLevel(s)==='out').length;
+  const stockValue = stock.reduce((s,i)=>s+(i.qty*i.cost),0);
+  const pending = reqs.filter(r => r.status==='Pending' || r.status==='Partial');
+  const storeReqs = reqs.filter(r => r.mode === 'store_issue');
+
+  document.getElementById('kpiRow').innerHTML = `
+    <a class="kpi-card" href="store-approval.html">
+      <div class="kpi-label">Pending Requisitions</div>
+      <div class="kpi-value amber">${pending.length}</div>
+      <div class="kpi-sub">${pending.length>0?'⚠ Awaiting store action':'✓ All clear'}</div>
+    </a>
+    <a class="kpi-card" href="all-requisitions.html">
+      <div class="kpi-label">Total Requisitions</div>
+      <div class="kpi-value">${storeReqs.length}</div>
+      <div class="kpi-sub">Store-issue requests</div>
+    </a>
+    <a class="kpi-card" href="stock.html">
+      <div class="kpi-label">Low Stock Items</div>
+      <div class="kpi-value amber">${lowCount}</div>
+      <div class="kpi-sub">${lowCount>0?'Needs reordering':'✓ All above threshold'}</div>
+    </a>
+    <a class="kpi-card" href="stock.html">
+      <div class="kpi-label">Out of Stock</div>
+      <div class="kpi-value red">${outCount}</div>
+      <div class="kpi-sub">${outCount>0?'⚠ Unavailable to issue':'✓ None'}</div>
+    </a>
+    <a class="kpi-card" href="stock.html">
+      <div class="kpi-label">Total Stock Value</div>
+      <div class="kpi-value green">${fmtN(stockValue)}</div>
+      <div class="kpi-sub">At current unit cost</div>
+    </a>`;
+
+  // The shell owns the Requisition nav badge — just tell it the count.
+  shell.setPendingBadge(pending.length);
+}
+
+function renderPendingList(reqs){
+  const pending = reqs.filter(r => r.mode==='store_issue' && (r.status==='Pending' || r.status==='Partial')).slice(0, 6);
+  const el = document.getElementById('pendingList');
+  if (pending.length === 0) { el.innerHTML = `<div class="empty-note">No requisitions waiting on Store right now.</div>`; return; }
+  el.innerHTML = pending.map(r => `
+    <a class="list-row" href="store-approval.html">
+      <span class="list-dot ${r.priority==='Urgent'?'dot-red':'dot-amber'}"></span>
+      <div class="list-body">
+        <div class="list-name">${r.no} — ${r.dept}</div>
+        <div class="list-meta">${r.items.length} item${r.items.length!==1?'s':''} · by ${r.by} · needed ${fmtDate(r.needed)}</div>
+      </div>
+      <span class="list-chip chip-${r.status.toLowerCase()}">${r.status}</span>
+    </a>`).join('');
+}
+
+function renderStockAlerts(stock){
+  const alerts = stock.filter(s => stockLevel(s) !== 'ok').sort((a,b) => (a.qty/Math.max(a.reorder,1)) - (b.qty/Math.max(b.reorder,1))).slice(0, 6);
+  const el = document.getElementById('stockAlerts');
+  if (alerts.length === 0) { el.innerHTML = `<div class="empty-note">All items are above their reorder level.</div>`; return; }
+  el.innerHTML = alerts.map(s => {
+    const lvl = stockLevel(s);
+    return `<a class="list-row" href="stock.html">
+      <span class="list-dot ${lvl==='out'?'dot-red':'dot-amber'}"></span>
+      <div class="list-body">
+        <div class="list-name">${s.name}</div>
+        <div class="list-meta">${s.qty} on hand · reorder at ${s.reorder}</div>
+      </div>
+      <span class="list-chip chip-${lvl}">${lvl==='out'?'OUT OF STOCK':'LOW STOCK'}</span>
+    </a>`;
+  }).join('');
+}
+
+function renderActivity(reqs){
+  const el = document.getElementById('activityFeed');
+  const recent = reqs.slice(0, 8);
+  if (recent.length === 0) { el.innerHTML = `<div class="empty-note">No requisition activity yet.</div>`; return; }
+  el.innerHTML = recent.map(r => {
+    const dot = r.status==='Rejected' ? '' : r.status==='Full' ? 'dot-green' : r.status==='Partial' ? 'dot-amber' : '';
+    const verb = r.status==='Pending' ? 'submitted' : r.status==='Rejected' ? 'rejected' : r.status==='Full' ? 'fully issued' : 'partially issued';
+    return `<div class="activity-item">
+      <div class="act-dot ${dot}" style="${r.status==='Rejected'?'background:var(--red)':''}"></div>
+      <div>
+        <div class="act-text"><b>${r.no}</b> (${r.dept}) ${verb} — ${r.items.length} item${r.items.length!==1?'s':''}</div>
+        <div class="act-time">${r.dateRaisedDisplay || fmtDate(r.dateRaised)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function init(){
+  let stock, reqs;
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/dashboard/summary');
+      stock = data.stock; reqs = data.requisitions;
+      shell.setApiMode('Live');
+    } catch(e) { console.warn('[API] Falling back to local demo data:', e.message); }
+  }
+  if (!stock) stock = await loadStock();
+  if (!reqs) reqs = await loadRequisitions();
+
+  renderKPIs(stock, reqs);
+  renderPendingList(reqs);
+  renderStockAlerts(stock);
+  renderActivity(reqs);
+}
+init();
+</script>
+</body>
+</html>

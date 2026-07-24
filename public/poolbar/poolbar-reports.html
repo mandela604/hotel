@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" style="background:#080f18;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>Reports | Aurum Pool Bar</title>
+
+<!-- ═══ CRITICAL INLINE CSS — applied before any network request, so the
+     dark background paints immediately. This is what actually kills the
+     white flash: the Google Fonts stylesheet below is render-blocking,
+     so without this, the browser shows nothing (default white) until
+     that request finishes. This tiny block guarantees dark-first paint. ═══ -->
+<style>html,body{background:#080f18;margin:0;}</style>
+
+<!-- ═══ Fonts loaded asynchronously (preload + swap on load) so they never
+     block first paint. Falls back to system fonts instantly, then swaps
+     in Cormorant/Outfit once they arrive — no flash, no invisible text. ═══ -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  }
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; }
+  @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+  /* ═══ KPI ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.revenue{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
+  .kpi-card.revenue::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.revenue .kpi-label{ color:var(--green); }
+  .kpi-card.avg{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
+  .kpi-card.avg::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.avg .kpi-label{ color:var(--blue); }
+  .kpi-card.voided{ background:linear-gradient(160deg, rgba(248,113,113,.07), var(--surface) 60%); border-color:rgba(248,113,113,.22); }
+  .kpi-card.voided::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.voided .kpi-label{ color:var(--red); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  /* ═══ Report controls ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; min-width:120px; }
+  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
+  .filter-date{ cursor:default; color-scheme:dark; }
+  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#000; font-weight:700; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+
+  @media (max-width:900px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select, .filter-date{ width:100%; }
+    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .btn-ghost{ align-self:flex-start; }
+  }
+
+  /* ═══ Panel / table ═══ */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; flex-shrink:0; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
+  .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.center{ text-align:center; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; }
+  tbody td.nowrap{ white-space:nowrap; }
+  tbody td.center{ text-align:center; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .items-summary{ max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
+  .items-summary .more{ color:var(--text3); }
+
+  /* ═══ Mobile / tablet — table collapses into stacked cards, same
+     pattern as poolbar-sales.html so nothing gets lost off-screen ═══ */
+  @media (max-width:880px){
+    .tbl-wrap{ overflow-x:visible; }
+    table{ min-width:0; width:100%; }
+    thead{ display:none; }
+    table, tbody, tr, td{ display:block; width:100%; }
+    tbody tr{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; margin:0 0 10px; padding:6px 14px; }
+    tbody tr:last-child{ margin-bottom:0; }
+    tbody td{ border:none; padding:8px 0; white-space:normal !important; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; text-align:right; }
+    tbody td:not(:last-child){ border-bottom:1px dashed var(--border); }
+    tbody td::before{ content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; flex-shrink:0; text-align:left; padding-top:1px; }
+    tbody td.items-summary{ max-width:none; text-align:right; white-space:normal; }
+    .empty-row{ display:block; }
+    .empty-row td{ display:block; text-align:center; }
+    .empty-row td::before{ content:none; }
+  }
+  @media (max-width:420px){
+    tbody tr{ padding:4px 10px; }
+    tbody td{ font-size:12px; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; }
+    tbody td::before{ padding-top:0; }
+  }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-completed{ background:var(--green-bg); color:var(--green); } .chip-completed::before{ background:var(--green); }
+  .chip-voided{ background:var(--red-bg); color:var(--red); } .chip-voided::before{ background:var(--red); }
+  .chip-pay{ background:var(--gold-dim); color:var(--gold-light); } .chip-pay::before{ background:var(--gold); }
+
+  /* ═══ Pagination ═══ */
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  /* ═══ Summary bar ═══ */
+  .summary-bar{ display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface2); border-top:1px solid var(--border); }
+  @media (max-width:560px){ .summary-bar{ grid-template-columns:1fr 1fr; } }
+  .sb-item{ text-align:center; padding:12px 12px; border-right:1px solid var(--border); }
+  .sb-item:last-child{ border-right:none; }
+  @media (max-width:560px){ .sb-item:nth-child(2){ border-right:none; } }
+  .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
+  .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
+
+  /* ═══ Revenue breakdown panel ═══ */
+  .rev-total{ font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:700; color:var(--gold); line-height:1; }
+  .rev-sub-label{ font-size:11px; color:var(--text3); margin:4px 0 16px; }
+  .bar-row{ margin-bottom:12px; } .bar-row:last-child{ margin-bottom:0; }
+  .bar-meta{ display:flex; justify-content:space-between; margin-bottom:5px; }
+  .bar-name{ font-size:12.5px; color:var(--text2); } .bar-count{ font-size:11.5px; color:var(--text3); }
+  .bar-track{ height:6px; background:var(--surface3); border-radius:20px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:20px; background:linear-gradient(90deg,var(--gold),var(--gold-light)); transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+  .bar-fill.blue{ background:linear-gradient(90deg,#60a5fa,#93c5fd); }
+  .bar-fill.purple{ background:linear-gradient(90deg,#a78bfa,#c4b5fd); }
+  .bar-fill.green{ background:linear-gradient(90deg,#22c55e,#4ade80); }
+  .panel-body{ padding:16px 20px 20px; }
+  .empty-note{ font-size:12.5px; color:var(--text3); padding:14px 0; text-align:center; }
+
+  /* ═══ Print ═══ */
+  .print-header{ display:none; }
+  .print-header h2{ font-family:'Cormorant Garamond',serif; font-size:18px; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
+  @media print{
+    #pbs-sidebar, #pbs-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+    .print-header{ display:block !important; margin-bottom:14px; }
+  }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by poolbar-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by poolbar-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ═══ Revenue breakdown — payment method mix for the filtered range ═══ -->
+      <div class="panel no-print" id="revenuePanel">
+        <div class="panel-head">
+          <div class="panel-title">Revenue by Payment Method</div>
+          <span class="toolbar-count" id="revRangeLabel">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="rev-total" id="revTotal">₦0</div>
+          <div class="rev-sub-label">Net revenue across the selected date range</div>
+          <div id="revBars"></div>
+        </div>
+      </div>
+
+      <!-- ═══ FILTER / GENERATE BAR ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Date — From</span>
+              <input type="date" class="filter-date" id="repFrom">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Date — To</span>
+              <input type="date" class="filter-date" id="repTo">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Payment</span>
+              <select class="filter-select" id="repPay">
+                <option value="">All Payments</option>
+                <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <input type="text" id="repSearch" placeholder="Sale #, item, staff…">
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" style="align-self:flex-end;" onclick="repPage=1;generateReport()">Generate</button>
+            <button class="btn-ghost" style="align-self:flex-end;" onclick="clearFilters()">✕ Clear</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="printReport()">🖨 Print</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="print-header"><h2>Aurum Hotel — Pool Bar Sales Report</h2><p id="printSub"></p></div>
+        <div class="panel-head">
+          <div class="panel-title" id="repPanelTitle">Full Report</div>
+          <span class="toolbar-count" id="repCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Sale No.</th>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Items</th>
+                <th class="center">Subtotal (₦)</th>
+                <th class="center">Disc%</th>
+                <th class="center">Total (₦)</th>
+                <th>Payment</th>
+                <th>Staff</th>
+                <th class="center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="repBody"></tbody>
+          </table>
+        </div>
+        <div class="summary-bar">
+          <div class="sb-item"><div class="sb-lbl">Sales</div><div class="sb-val" id="rp-cnt">0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Gross</div><div class="sb-val" id="rp-gross">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Discounts</div><div class="sb-val" id="rp-disc">₦0</div></div>
+          <div class="sb-item"><div class="sb-lbl">Net Revenue</div><div class="sb-val" id="rp-net">₦0</div></div>
+        </div>
+        <div class="pagination">
+          <span id="repPagin">—</span>
+          <div class="page-btns" id="repPageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../component/poolbar-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar, Pool Bar nav only.
+═══════════════════════════════════════════ */
+const shell = PoolBarShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'poolbar-reports.html',
+  pageTitle:     'Reports',
+  pageSubtitle:  'Full sales history and revenue breakdown — Pool Bar',
+  apiMode:       'Demo',
+  user:          { name: 'Pool Bar Manager', initials: 'PB' },
+});
+
+/* ═══════════════════════════════════════════
+   CONFIG, API LAYER & STORAGE
+   Read-only page — reads the SAME shared 'poolbar-sales' ledger that
+   poolbar-sales.html and poolbar-orders.html write to. Nothing here
+   ever creates, edits, or voids a sale; it only reports on them.
+═══════════════════════════════════════════ */
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:10 };
+
+async function apiFetch(method, path, body=null){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
+  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+};
+
+const KEY_SALES = 'poolbar-sales';
+
+async function loadShared(key, fallback){
+  try {
+    const r = await storage.get(key, true);
+    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
+  } catch(e){}
+  return fallback;
+}
+
+/* Demo seed — same rows as poolbar-sales.html so this page's numbers
+   agree with the ledger the very first time, before any real sale exists. */
+const DEMO_SALES = [
+  { id:'PBS-1012', items:[{name:'Heineken',qty:3,price:1500}], subtotal:4500, discount:0, total:4500, method:'Cash', staff:'Emeka S.', table:'Pool Deck 2', notes:'', date:'17/07/26 11:05 AM', status:'completed' },
+  { id:'PBS-1011', items:[{name:'Chapman',qty:2,price:2500},{name:'Guinness',qty:2,price:1600}], subtotal:8200, discount:0, total:8200, method:'POS', staff:'Amaka O.', table:'Pool Lounge', notes:'', date:'17/07/26 10:40 AM', status:'completed' },
+  { id:'PBS-1010', items:[{name:'Guinness',qty:1,price:1600}], subtotal:1600, discount:0, total:1600, method:'Transfer', staff:'Emeka S.', table:'Pool Deck 1', notes:'', date:'17/07/26 09:52 AM', status:'completed' },
+  { id:'PBS-1009', items:[{name:'Heineken',qty:4,price:1500},{name:'Chapman',qty:1,price:2500}], subtotal:8500, discount:10, total:7650, method:'Room Charge', staff:'Amaka O.', table:'Pool Deck 4', notes:'', date:'16/07/26 07:30 PM', status:'completed' },
+  { id:'PBS-1008', items:[{name:'Guinness',qty:2,price:1600}], subtotal:3200, discount:0, total:3200, method:'Cash', staff:'Emeka S.', table:'Pool Deck 1', notes:'Wrong order', date:'16/07/26 01:15 PM', status:'voided', voidReason:'Customer changed mind before it was served', voidDate:'16/07/26 01:20 PM', voidedBy:'Adaeze Nwankwo (Duty Manager)' },
+];
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let sales = [];
+let repPage = 1;
+let filteredRep = [];
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function itemsQty(s){ return s.items.reduce((sum,i)=>sum+i.qty,0); }
+function itemsSummary(s){
+  const names = s.items.map(i => `${i.name} ×${i.qty}`);
+  if (names.length <= 2) return names.join(', ');
+  return `${names.slice(0,2).join(', ')} <span class="more">+${names.length-2} more</span>`;
+}
+function parseSaleDate(str){
+  if (!str) return null;
+  const [datePart, timePart, ampm] = str.split(' ');
+  const [d, m, y] = datePart.split('/').map(n => parseInt(n, 10));
+  let hh = 0, mm = 0;
+  if (timePart) { const [h, mi] = timePart.split(':').map(n => parseInt(n, 10)); hh = h; mm = mi || 0; }
+  if (ampm) {
+    const upper = ampm.toUpperCase();
+    if (upper === 'PM' && hh < 12) hh += 12;
+    if (upper === 'AM' && hh === 12) hh = 0;
+  }
+  const fullYear = y < 100 ? 2000 + y : y;
+  return new Date(fullYear, m - 1, d, hh, mm);
+}
+function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null; }
+function todayISO(){ return new Date().toISOString().split('T')[0]; }
+
+/* ═══════════════════════════════════════════
+   KPIs — always computed from the FULL sales ledger (not the
+   currently filtered view), so they read as fixed facts.
+═══════════════════════════════════════════ */
+function renderKPIs(){
+  const completed = sales.filter(s => s.status === 'completed');
+  const voided    = sales.filter(s => s.status === 'voided');
+  const allRev    = completed.reduce((s,x)=>s+x.total,0);
+  const today     = todayISOToDDMMYY();
+  const todayRev  = completed.filter(s => s.date.startsWith(today)).reduce((s,x)=>s+x.total,0);
+  const days      = new Set(completed.map(s => s.date.split(' ')[0])).size || 1;
+  const avgDaily  = allRev / days;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-accent">💰</div>
+      <div class="kpi-label">All-Time Revenue</div>
+      <div class="kpi-value" style="color:var(--gold);">${fmtN(allRev)}</div>
+      <div class="kpi-trend neutral">${completed.length} completed sale${completed.length!==1?'s':''}</div>
+    </div>
+    <div class="kpi-card revenue">
+      <div class="kpi-accent" style="color:var(--green)">📅</div>
+      <div class="kpi-label">Today's Revenue</div>
+      <div class="kpi-value" style="color:var(--green);">${fmtN(todayRev)}</div>
+      <div class="kpi-trend up">Current day, completed sales</div>
+    </div>
+    <div class="kpi-card avg">
+      <div class="kpi-accent" style="color:var(--blue)">📊</div>
+      <div class="kpi-label">Avg Daily Revenue</div>
+      <div class="kpi-value" style="color:var(--blue);">${fmtN(avgDaily)}</div>
+      <div class="kpi-trend info">Across ${days} active day${days!==1?'s':''}</div>
+    </div>
+    <div class="kpi-card voided">
+      <div class="kpi-accent" style="color:var(--red)">✕</div>
+      <div class="kpi-label">Voided Sales</div>
+      <div class="kpi-value" style="color:var(--red);">${voided.length}</div>
+      <div class="kpi-trend ${voided.length>0?'warn':'up'}">${voided.length>0?'Excluded from revenue':'None on record'}</div>
+    </div>`;
+}
+function todayISOToDDMMYY(){
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
+}
+
+/* ═══════════════════════════════════════════
+   REVENUE BREAKDOWN — payment-method mix for the filtered range
+═══════════════════════════════════════════ */
+function renderRevenueBreakdown(rows){
+  const completed = rows.filter(s => s.status === 'completed');
+  const total = completed.reduce((s,x)=>s+x.total,0);
+  const byMethod = {};
+  completed.forEach(s => { byMethod[s.method] = (byMethod[s.method]||0) + s.total; });
+  const max = Math.max(...Object.values(byMethod), 1);
+  const colorCls = { Cash:'', POS:'blue', Transfer:'purple', 'Room Charge':'green', Complimentary:'' };
+
+  const from = document.getElementById('repFrom').value;
+  const to = document.getElementById('repTo').value;
+  document.getElementById('revRangeLabel').textContent = (from||to) ? `${from||'…'} → ${to||'…'}` : 'All time';
+  document.getElementById('revTotal').textContent = fmtN(total);
+  document.getElementById('revBars').innerHTML = Object.entries(byMethod).length === 0
+    ? `<div class="empty-note">No completed sales in this range.</div>`
+    : Object.entries(byMethod).sort((a,b)=>b[1]-a[1]).map(([m,v]) => `
+      <div class="bar-row">
+        <div class="bar-meta"><span class="bar-name">${m}</span><span class="bar-count">${fmtN(v)}</span></div>
+        <div class="bar-track"><div class="bar-fill ${colorCls[m]||''}" style="width:${Math.round(v/max*100)}%"></div></div>
+      </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   FILTER / GENERATE
+═══════════════════════════════════════════ */
+function clearFilters(){
+  document.getElementById('repFrom').value = '';
+  document.getElementById('repTo').value = '';
+  document.getElementById('repPay').value = '';
+  document.getElementById('repSearch').value = '';
+  repPage = 1;
+  generateReport();
+}
+
+function generateReport(){
+  const from = document.getElementById('repFrom').value;
+  const to   = document.getElementById('repTo').value;
+  const pay  = document.getElementById('repPay').value;
+  const q    = document.getElementById('repSearch').value.toLowerCase();
+
+  filteredRep = sales.filter(s => {
+    const mq = !q
+      || s.id.toLowerCase().includes(q)
+      || (s.staff||'').toLowerCase().includes(q)
+      || (s.table||'').toLowerCase().includes(q)
+      || s.items.some(i => i.name.toLowerCase().includes(q));
+    const mPay = !pay || s.method === pay;
+    let mDate = true;
+    if (from || to) {
+      const sd = dateOnly(parseSaleDate(s.date));
+      if (from) { const f = new Date(from + 'T00:00:00'); if (!sd || sd < f) mDate = false; }
+      if (to)   { const t = new Date(to + 'T00:00:00'); if (!sd || sd > t) mDate = false; }
+    }
+    return mq && mPay && mDate;
+  }).sort((a,b) => parseSaleDate(b.date) - parseSaleDate(a.date));
+
+  document.getElementById('repPanelTitle').textContent = (from||to) ? `Report: ${from||'…'} → ${to||'…'}` : 'Full Report';
+  document.getElementById('repCount').textContent = filteredRep.length + ' record' + (filteredRep.length!==1?'s':'');
+
+  const completed = filteredRep.filter(s => s.status === 'completed');
+  const gross = completed.reduce((s,x)=>s+x.subtotal,0);
+  const disc  = completed.reduce((s,x)=>s+x.subtotal*(x.discount||0)/100,0);
+  const net   = completed.reduce((s,x)=>s+x.total,0);
+  document.getElementById('rp-cnt').textContent = filteredRep.length;
+  document.getElementById('rp-gross').textContent = fmtN(gross);
+  document.getElementById('rp-disc').textContent = fmtN(disc);
+  document.getElementById('rp-net').textContent = fmtN(net);
+  document.getElementById('printSub').textContent = `Generated: ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${filteredRep.length} record${filteredRep.length!==1?'s':''} · Net: ${fmtN(net)}`;
+
+  renderRevenueBreakdown(filteredRep);
+  renderReportPage();
+}
+
+/* ═══════════════════════════════════════════
+   PAGINATION + TABLE
+═══════════════════════════════════════════ */
+function renderPagination(total){
+  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
+  if (repPage > totalPages) repPage = totalPages;
+  const from = total === 0 ? 0 : (repPage - 1) * CFG.PAGE_SIZE + 1;
+  const to = Math.min(repPage * CFG.PAGE_SIZE, total);
+  document.getElementById('repPagin').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
+
+  const wrap = document.getElementById('repPageBtns');
+  wrap.innerHTML = '';
+  const mk = (label, p, disabled, active) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label; b.disabled = !!disabled;
+    b.addEventListener('click', () => { repPage = p; renderReportPage(); });
+    return b;
+  };
+  wrap.appendChild(mk('‹', repPage - 1, repPage === 1, false));
+  let start = Math.max(1, repPage - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === repPage));
+  wrap.appendChild(mk('›', repPage + 1, repPage >= totalPages, false));
+}
+
+function renderReportPage(){
+  const start = (repPage - 1) * CFG.PAGE_SIZE;
+  const pageRows = filteredRep.slice(start, start + CFG.PAGE_SIZE);
+
+  document.getElementById('repBody').innerHTML = pageRows.length === 0
+    ? `<tr class="empty-row"><td colspan="10">No sales match this report's filters.</td></tr>`
+    : pageRows.map(s => `
+      <tr>
+        <td class="nowrap" data-label="Sale No." style="font-weight:600;">${s.id}</td>
+        <td class="nowrap" data-label="Date">${s.date}</td>
+        <td class="nowrap" data-label="Location">${s.table || '—'}</td>
+        <td class="items-summary" data-label="Items">${itemsSummary(s)}</td>
+        <td class="center nowrap" data-label="Subtotal">${fmtN(s.subtotal)}</td>
+        <td class="center nowrap" data-label="Disc%">${s.discount || 0}%</td>
+        <td class="center nowrap" data-label="Total" style="font-weight:600;color:var(--gold);">${fmtN(s.total)}</td>
+        <td class="nowrap" data-label="Payment"><span class="chip chip-pay">${s.method}</span></td>
+        <td class="nowrap" data-label="Staff">${s.staff || '—'}</td>
+        <td class="center nowrap" data-label="Status"><span class="chip chip-${s.status}">${s.status === 'completed' ? 'Completed' : 'Voided'}</span></td>
+      </tr>`).join('');
+
+  renderPagination(filteredRep.length);
+}
+
+/* ═══════════════════════════════════════════
+   PRINT
+═══════════════════════════════════════════ */
+function printReport(){
+  window.print();
+}
+
+/* ═══════════════════════════════════════════
+   INIT — tries a real API first (when CFG.USE_DEMO=false), falls
+   back to shared storage, and finally to the hardcoded demo seed.
+   Shared storage keeps this report in sync with the Sales ledger.
+═══════════════════════════════════════════ */
+async function init(){
+  document.getElementById('repFrom').value = '';
+  document.getElementById('repTo').value = todayISO();
+
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/poolbar/sales');
+      sales = data.sales || data || [];
+      shell.setApiMode('Live');
+      renderKPIs();
+      repPage = 1;
+      generateReport();
+      return;
+    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+  }
+
+  sales = await loadShared(KEY_SALES, DEMO_SALES);
+
+  renderKPIs();
+  repPage = 1;
+  generateReport();
+}
+init();
+</script>
+</body>
+</html>

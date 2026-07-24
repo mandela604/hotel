@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" style="background:#080f18;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>Dashboard | Aurum Accounting</title>
+
+<!-- Critical inline CSS — paints the dark background before any network
+     request resolves, so there's no flash of unstyled white content while
+     the (render-blocking-by-default) Google Fonts stylesheet loads. -->
+<style>html,body{background:#080f18;margin:0;}</style>
+
+<!-- Fonts loaded asynchronously — falls back to system fonts instantly,
+     swaps in Cormorant/Outfit once available. Never blocks first paint. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
+    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
+    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
+    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
+    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+    --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+  }
+  [data-theme="dark"]{
+    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
+    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  }
+  [data-theme="light"]{
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
+    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  }
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; margin-bottom:2px; }
+  .section-sub{ font-size:11.5px; color:var(--text3); margin-top:2px; }
+
+  /* Shift banner */
+  .shift-banner{ background:linear-gradient(135deg, var(--gold-dim), transparent 60%); border:1px solid var(--gold-border); border-radius:14px; padding:12px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .shift-banner .sb-icon{ font-size:19px; flex-shrink:0; }
+  .shift-banner .sb-text{ flex:1; min-width:220px; font-size:12px; color:var(--text2); line-height:1.5; }
+  .shift-banner .sb-text b{ color:var(--gold-light); }
+
+  /* KPI */
+  .kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+  @media (max-width:1200px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width:700px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; text-decoration:none; display:block; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s} .kpi-card:nth-child(5){animation-delay:.2s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:50px; opacity:.07; line-height:1; pointer-events:none; }
+  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:20px; } }
+  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+
+  /* Row / Panel */
+  .row{ display:grid; grid-template-columns:1.3fr .7fr; gap:14px; }
+  @media (max-width:900px){ .row{ grid-template-columns:1fr; } }
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); min-width:0; }
+  @media (max-width:420px){ .panel{ padding:14px; } }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
+  .panel-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:.8px; text-transform:uppercase; }
+  .panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:500; white-space:nowrap; background:none; border:none; font-family:'Outfit',sans-serif; cursor:pointer; }
+  .panel-action:hover{ color:var(--gold-light); }
+  .empty-note{ font-size:12.5px; color:var(--text3); padding:14px 0; text-align:center; }
+
+  /* Revenue bars */
+  .rev-total{ font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:700; color:var(--gold); line-height:1; }
+  .rev-sub-label{ font-size:11px; color:var(--text3); margin:4px 0 16px; }
+  .bar-row{ margin-bottom:12px; } .bar-row:last-child{ margin-bottom:0; }
+  .bar-meta{ display:flex; justify-content:space-between; margin-bottom:5px; }
+  .bar-name{ font-size:12.5px; color:var(--text2); } .bar-count{ font-size:11.5px; color:var(--text3); }
+  .bar-track{ height:6px; background:var(--surface3); border-radius:20px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:20px; background:linear-gradient(90deg,var(--gold),var(--gold-light)); transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+  .bar-fill.rest{ background:linear-gradient(90deg,#60a5fa,#93c5fd); }
+  .bar-fill.pool{ background:linear-gradient(90deg,#34d399,#6ee7b7); }
+
+  /* List rows */
+  .list-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; cursor:pointer; }
+  .list-row:last-child{ border-bottom:none; padding-bottom:0; }
+  .list-row:hover .list-name{ color:var(--gold-light); }
+  .list-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .list-body{ flex:1; min-width:0; }
+  .list-name{ font-size:12.5px; color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .15s; }
+  .list-meta{ font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; flex-shrink:0; }
+  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-ok{ background:var(--green-bg); color:var(--green); } .chip-ok::before{ background:var(--green); }
+  .chip-warn{ background:var(--amber-bg); color:var(--amber); } .chip-warn::before{ background:var(--amber); }
+  .chip-bad{ background:var(--red-bg); color:var(--red); } .chip-bad::before{ background:var(--red); }
+  .chip-pay{ background:var(--gold-dim); color:var(--gold-light); } .chip-pay::before{ background:var(--gold); }
+  .chip-dept-rooms{ background:var(--gold-dim); color:var(--gold-light); } .chip-dept-rooms::before{ background:var(--gold); }
+  .chip-dept-rest{ background:var(--blue-bg); color:var(--blue); } .chip-dept-rest::before{ background:var(--blue); }
+  .chip-dept-pool{ background:var(--green-bg); color:var(--green); } .chip-dept-pool::before{ background:var(--green); }
+
+  /* Quick actions */
+  .quick-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  @media (max-width:560px){ .quick-grid{ grid-template-columns:1fr 1fr; } }
+  .quick-btn{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 12px; cursor:pointer; display:flex;
+    align-items:center; gap:10px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; color:var(--text2); text-decoration:none; transition:all .2s; min-width:0; }
+  .quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); }
+  .quick-icon{ font-size:17px; flex-shrink:0; }
+
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @media print{
+    #acc-sidebar, #acc-topbar, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar is rendered here by accounting-shell.js — Accounting nav only -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by accounting-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div>
+        <div class="section-title">Accounting Overview</div>
+        <span class="section-sub" id="sectionSub"></span>
+      </div>
+
+      <!-- Shift banner — same 9AM–9AM shift-day logic used across the module -->
+      <div class="shift-banner no-print">
+        <div class="sb-icon">🕘</div>
+        <div class="sb-text" id="bannerText"></div>
+      </div>
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Revenue Breakdown — Current Shift</div>
+            <button class="panel-action" onclick="location.href='accounting-breakdown.html'">Full Breakdown →</button>
+          </div>
+          <div class="rev-total" id="revTotal">₦0</div>
+          <div class="rev-sub-label" id="revSub">Across all departments</div>
+          <div id="revBars"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Shift Reconciliation Status</div>
+            <button class="panel-action" onclick="location.href='accounting-reconciliation.html'">Review All →</button>
+          </div>
+          <div id="shiftList"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Recent Transactions</div>
+            <button class="panel-action" onclick="location.href='accounting-transactions.html'">View All →</button>
+          </div>
+          <div id="recentTx"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
+          <div class="quick-grid">
+            <a class="quick-btn" href="accounting-reconciliation.html"><span class="quick-icon">🕘</span>Reconcile Shift</a>
+            <a class="quick-btn" href="accounting-breakdown.html"><span class="quick-icon">📊</span>Revenue Breakdown</a>
+            <a class="quick-btn" href="accounting-transactions.html"><span class="quick-icon">🧾</span>All Transactions</a>
+            <a class="quick-btn" href="accounting-reports.html"><span class="quick-icon">📋</span>Reports</a>
+            <a class="quick-btn" href="javascript:window.print()"><span class="quick-icon">🖨</span>Print Summary</a>
+            <a class="quick-btn" href="index.html"><span class="quick-icon">🏨</span>Hotel Suite</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../component/accounting-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar for this page, Accounting nav only.
+═══════════════════════════════════════════ */
+const shell = AccountingShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'accounting-dashboard.html',
+  pageTitle:     'Dashboard',
+  pageSubtitle:  'Front-office cash, room, restaurant and pool bar revenue in one place',
+  apiMode:       'Demo',
+  user:          { name: 'Finance Manager', initials: 'FM' },
+});
+
+/* ═══════════════════════════════════════════
+   SHIFT-DAY LOGIC — identical rules to the original accounting.html,
+   duplicated here (not imported) because every Accounting page needs
+   it standalone: a "shift day" runs 9:00 AM → 9:00 AM the next day,
+   so a sale rung up at 1am still belongs to the shift that started
+   the previous afternoon/morning, not to "today".
+═══════════════════════════════════════════ */
+const SHIFT_START_HOUR = 9;
+function pad2(n){ return String(n).padStart(2,'0'); }
+function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function shiftKeyFor(dt){
+  const d = new Date(dt);
+  if (d.getHours() < SHIFT_START_HOUR) d.setDate(d.getDate() - 1);
+  return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+}
+function fmtTime(d){ return d.toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit',hour12:true}); }
+function fmtHourLabel(h){ const suffix = h>=12?'PM':'AM'; const hh = h%12===0?12:h%12; return `${hh}:00 ${suffix}`; }
+function shiftRangeLabel(key){
+  const [y,m,d] = key.split('-').map(Number);
+  const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
+  const end = new Date(start); end.setDate(end.getDate()+1);
+  const opt = {day:'numeric', month:'short'};
+  return `${start.toLocaleDateString('en-GB',opt)}, ${fmtTime(start)} → ${end.toLocaleDateString('en-GB',opt)}, ${fmtTime(end)}`;
+}
+function parseTxDate(str){
+  if (!str) return null;
+  const [datePart, timePart, ampm] = str.split(' ');
+  const [d,m,y] = datePart.split('/').map(n=>parseInt(n,10));
+  let hh=0, mm=0;
+  if (timePart) { const [h,mi]=timePart.split(':').map(n=>parseInt(n,10)); hh=h; mm=mi||0; }
+  if (ampm) { const u=ampm.toUpperCase(); if (u==='PM'&&hh<12) hh+=12; if (u==='AM'&&hh===12) hh=0; }
+  const fullYear = y<100 ? 2000+y : y;
+  return new Date(fullYear, m-1, d, hh, mm);
+}
+
+/* ═══════════════════════════════════════════
+   STORAGE + CONFIG
+═══════════════════════════════════════════ */
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
+const storage = window.storage || {
+  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
+  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
+};
+async function loadShared(key, fallback){
+  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
+  return fallback;
+}
+async function saveShared(key, value){ try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); } }
+
+/* Demo data — identical shape/seed to the original accounting.html so
+   this dashboard reads the exact same shared records once the other
+   Accounting pages (Reconciliation, Breakdown, Transactions) are built. */
+const DEMO_ROOM_TX = [
+  { id:'RM-2044', desc:'Room 312 — Checkout (Dr. Balogun)', amount:145000, method:'Room Charge', staff:'Adewale O.', date:'17/07/26 08:40 AM' },
+  { id:'RM-2043', desc:'Room 204 — Check-in (Mr. Adeyemi)', amount:98000,  method:'POS',         staff:'Adewale O.', date:'17/07/26 09:14 AM' },
+  { id:'RM-2042', desc:'Room 109 — Checkout (Ms. Okafor)',  amount:76000,  method:'Cash',         staff:'Ngozi Eze',  date:'17/07/26 08:05 AM' },
+  { id:'RM-2041', desc:'Room 402 — Check-in (Barr. Musa)',  amount:132000, method:'Transfer',     staff:'Adewale O.', date:'16/07/26 11:20 PM' },
+  { id:'RM-2040', desc:'Room 108 — Checkout (Mrs. Bello)',  amount:64000,  method:'Cash',         staff:'Kabiru Aliyu',date:'16/07/26 08:52 AM' },
+];
+const DEMO_RESTAURANT_SALES = [
+  { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', date:'17/07/26 11:05 AM', status:'completed' },
+  { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000}], total:18000, method:'POS', staff:'Tunde A.', table:'Table 2', date:'17/07/26 10:40 AM', status:'completed' },
+  { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', date:'17/07/26 09:52 AM', status:'completed' },
+  { id:'SALE-1038', items:[{meal:'Suya Platter',qty:2,price:5500}], total:11000, method:'Cash', staff:'Tunde A.', table:'Table 6', date:'17/07/26 12:20 AM', status:'completed' },
+];
+const DEMO_POOLBAR_SALES = [
+  { id:'PBS-1021', item:'Heineken',  qty:3, total:4500,  method:'Cash',     staff:'Bola Nwosu', time:'17/07/26 11:15 AM' },
+  { id:'PBS-1020', item:'Mojito',    qty:2, total:11000, method:'POS',      staff:'Bola Nwosu', time:'17/07/26 10:50 AM' },
+  { id:'PBS-1018', item:'Heineken',  qty:6, total:9000,  method:'Cash',     staff:'Emeka U.',   time:'17/07/26 01:05 AM' },
+];
+const DEMO_SHIFTS = [
+  { key:'2026-07-17', staff:'Amaka Okonkwo (Front Office Cashier)', openingFloat:50000, actualCash:null, status:'open' },
+  { key:'2026-07-16', staff:'Tunde Adeyemi (Front Office Cashier)', openingFloat:50000, actualCash:399500, status:'reconciled', notes:'' },
+  { key:'2026-07-15', staff:'Amaka Okonkwo (Front Office Cashier)', openingFloat:50000, actualCash:255000, status:'reconciled', notes:'Short by ₦5,000 — under investigation.' },
+];
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+
+function buildTransactions(roomTx, restSales, poolSales){
+  const out = [];
+  roomTx.forEach(r => out.push({ id:r.id, dept:'Rooms', desc:r.desc, amount:r.amount, method:r.method, staff:r.staff, date:parseTxDate(r.date) }));
+  restSales.filter(s=>s.status!=='voided').forEach(s => {
+    const desc = (s.items||[]).map(i=>`${i.meal} ×${i.qty}`).join(', ') || 'Restaurant sale';
+    out.push({ id:s.id, dept:'Restaurant', desc, amount:s.total, method:s.method, staff:s.staff, date:parseTxDate(s.date) });
+  });
+  poolSales.forEach(s => out.push({ id:s.id, dept:'Pool Bar', desc:`${s.item} ×${s.qty}`, amount:s.total, method:s.method, staff:s.staff, date:parseTxDate(s.time) }));
+  return out.filter(t => t.date).sort((a,b) => b.date - a.date);
+}
+
+/* ═══════════════════════════════════════════
+   BANNER — always shows the shift currently in progress
+═══════════════════════════════════════════ */
+function renderBanner(){
+  document.getElementById('bannerText').innerHTML =
+    `<b>Shift Day accounting</b> — a shift runs <b>${fmtHourLabel(SHIFT_START_HOUR)} → ${fmtHourLabel(SHIFT_START_HOUR)} the next day</b>. ` +
+    `All figures below are for the shift currently in progress. Switch to Calendar Day view on the Breakdown or Transactions pages if needed.`;
+  document.getElementById('sectionSub').textContent = shiftRangeLabel(shiftKeyFor(new Date()));
+}
+
+/* ═══════════════════════════════════════════
+   KPIs — scoped to the CURRENT shift day only
+═══════════════════════════════════════════ */
+function renderKPIs(transactions, shifts){
+  const currentKey = shiftKeyFor(new Date());
+  const rows = transactions.filter(t => shiftKeyFor(t.date) === currentKey);
+  const total = rows.reduce((s,t)=>s+t.amount,0);
+  const rooms = rows.filter(t=>t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
+  const rest  = rows.filter(t=>t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
+  const pool  = rows.filter(t=>t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
+  const openShifts = shifts.filter(s=>s.status==='open').length;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <a class="kpi-card" href="accounting-breakdown.html">
+      <div class="kpi-accent">💰</div><div class="kpi-label">Current Shift Revenue</div>
+      <div class="kpi-value" style="color:var(--gold);">${fmtN(total)}</div>
+      <div class="kpi-trend up">${rows.length} transaction${rows.length!==1?'s':''}</div>
+    </a>
+    <a class="kpi-card" href="accounting-transactions.html">
+      <div class="kpi-accent">🛏</div><div class="kpi-label">Room Revenue</div>
+      <div class="kpi-value">${fmtN(rooms)}</div>
+      <div class="kpi-trend neutral">${rows.filter(t=>t.dept==='Rooms').length} bookings</div>
+    </a>
+    <a class="kpi-card" href="accounting-transactions.html">
+      <div class="kpi-accent">🍽</div><div class="kpi-label">Restaurant Revenue</div>
+      <div class="kpi-value" style="color:#60a5fa;">${fmtN(rest)}</div>
+      <div class="kpi-trend neutral">${rows.filter(t=>t.dept==='Restaurant').length} sales</div>
+    </a>
+    <a class="kpi-card" href="accounting-transactions.html">
+      <div class="kpi-accent">🏊</div><div class="kpi-label">Pool Bar Revenue</div>
+      <div class="kpi-value" style="color:#34d399;">${fmtN(pool)}</div>
+      <div class="kpi-trend neutral">${rows.filter(t=>t.dept==='Pool Bar').length} sales</div>
+    </a>
+    <a class="kpi-card" href="accounting-reconciliation.html">
+      <div class="kpi-accent">🕘</div><div class="kpi-label">Shifts Awaiting Reconciliation</div>
+      <div class="kpi-value" style="color:${openShifts>0?'var(--amber)':'var(--text)'};">${openShifts}</div>
+      <div class="kpi-trend ${openShifts>0?'warn':'up'}">${openShifts>0?'⚠ Needs cash count':'✓ All closed out'}</div>
+    </a>`;
+
+  shell.setPendingBadge(openShifts);
+}
+
+/* ═══════════════════════════════════════════
+   REVENUE BARS — current shift only
+═══════════════════════════════════════════ */
+function renderRevenue(transactions){
+  const currentKey = shiftKeyFor(new Date());
+  const rows = transactions.filter(t => shiftKeyFor(t.date) === currentKey);
+  const total = rows.reduce((s,t)=>s+t.amount,0);
+  const rooms = rows.filter(t=>t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
+  const rest  = rows.filter(t=>t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
+  const pool  = rows.filter(t=>t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
+  const max = Math.max(total, 1);
+
+  document.getElementById('revTotal').textContent = fmtN(total);
+  document.getElementById('revSub').textContent = rows.length === 0 ? 'No revenue recorded yet this shift' : 'Across all departments, this shift';
+  document.getElementById('revBars').innerHTML = rows.length === 0
+    ? `<div class="empty-note">Nothing recorded for the current shift yet.</div>`
+    : `
+    <div class="bar-row">
+      <div class="bar-meta"><span class="bar-name">🛏 Rooms</span><span class="bar-count">${fmtN(rooms)}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(rooms/max*100)}%"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-meta"><span class="bar-name">🍽 Restaurant / Bar</span><span class="bar-count">${fmtN(rest)}</span></div>
+      <div class="bar-track"><div class="bar-fill rest" style="width:${Math.round(rest/max*100)}%"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-meta"><span class="bar-name">🏊 Pool Bar</span><span class="bar-count">${fmtN(pool)}</span></div>
+      <div class="bar-track"><div class="bar-fill pool" style="width:${Math.round(pool/max*100)}%"></div></div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   SHIFT RECONCILIATION SNAPSHOT
+═══════════════════════════════════════════ */
+function expectedCashForShift(transactions, shiftKey, openingFloat){
+  const cashTotal = transactions.filter(t => t.method === 'Cash' && shiftKeyFor(t.date) === shiftKey).reduce((s,t)=>s+t.amount,0);
+  return openingFloat + cashTotal;
+}
+function renderShiftList(transactions, shifts){
+  const sorted = [...shifts].sort((a,b)=>b.key.localeCompare(a.key)).slice(0, 5);
+  document.getElementById('shiftList').innerHTML = sorted.length === 0
+    ? `<div class="empty-note">No shifts recorded yet.</div>`
+    : sorted.map(s => {
+        const expected = expectedCashForShift(transactions, s.key, s.openingFloat);
+        const isOpen = s.status === 'open';
+        const variance = isOpen ? null : (s.actualCash - expected);
+        const chipClass = isOpen ? 'chip-warn' : (Math.abs(variance) <= 500 ? 'chip-ok' : 'chip-bad');
+        const chipLabel = isOpen ? 'Awaiting Count' : (Math.abs(variance) <= 500 ? 'Reconciled' : 'Variance');
+        const dotColor = isOpen ? 'var(--amber)' : (Math.abs(variance) <= 500 ? 'var(--green)' : 'var(--red)');
+        return `<a class="list-row" href="accounting-reconciliation.html">
+          <span class="list-dot" style="background:${dotColor}"></span>
+          <div class="list-body"><div class="list-name">${shiftRangeLabel(s.key)}</div><div class="list-meta">${s.staff} · expected ${fmtN(expected)}</div></div>
+          <span class="chip ${chipClass}">${chipLabel}</span>
+        </a>`;
+      }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   RECENT TRANSACTIONS
+═══════════════════════════════════════════ */
+const DEPT_CHIP = { 'Rooms':'chip-dept-rooms', 'Restaurant':'chip-dept-rest', 'Pool Bar':'chip-dept-pool' };
+function renderRecentTx(transactions){
+  const recent = transactions.slice(0, 6);
+  document.getElementById('recentTx').innerHTML = recent.length === 0
+    ? `<div class="empty-note">No transactions recorded yet.</div>`
+    : recent.map(t => `
+      <a class="list-row" href="accounting-transactions.html">
+        <span class="chip ${DEPT_CHIP[t.dept]||''}" style="flex-shrink:0;">${t.dept}</span>
+        <div class="list-body"><div class="list-name">${t.id} — ${t.desc}</div><div class="list-meta">${t.method} · ${fmtTime(t.date)}</div></div>
+        <span style="font-size:12px;font-weight:600;color:var(--gold);flex-shrink:0;">${fmtN(t.amount)}</span>
+      </a>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+async function init(){
+  renderBanner();
+
+  const roomTx    = await loadShared('accounting-room-tx', DEMO_ROOM_TX);
+  const restSales = await loadShared('restaurant-sales', DEMO_RESTAURANT_SALES);
+  const poolSales = await loadShared('poolbar-sales', DEMO_POOLBAR_SALES);
+  const shifts    = await loadShared('accounting-shifts', DEMO_SHIFTS);
+
+  await Promise.all([
+    saveShared('accounting-room-tx', roomTx),
+    saveShared('accounting-shifts', shifts),
+  ]);
+
+  const transactions = buildTransactions(roomTx, restSales, poolSales);
+
+  renderKPIs(transactions, shifts);
+  renderRevenue(transactions);
+  renderShiftList(transactions, shifts);
+  renderRecentTx(transactions);
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Redirecting — Gym & Fitness</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body{ font-family:'Outfit',sans-serif; background:#080f18; color:#e8f0f8; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; flex-direction:column; gap:16px; text-align:center; padding:20px; }
+  .logo{ width:48px; height:48px; background:linear-gradient(135deg,#c9a84c,#e8c96a); border-radius:12px; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:#000; }
+  h1{ font-family:'Cormorant Garamond',serif; font-size:24px; color:#c9a84c; margin:0; }
+  p{ color:#6a8a9e; font-size:14px; margin:0; }
+  a{ color:#c9a84c; text-decoration:none; font-weight:600; }
+  a:hover{ text-decoration:underline; }
+  .spinner{ width:32px; height:32px; border:3px solid #1e3045; border-top-color:#c9a84c; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin{ to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+  <div class="logo">A</div>
+  <h1>Gym & Fitness Module</h1>
+  <div class="spinner"></div>
+  <p>Redirecting to the new dashboard…</p>
+  <p style="font-size:12px;">The gym has been upgraded to its own module with dedicated pages.</p>
+  <p><a href="gym/gym-dashboard.html">Click here if you are not redirected automatically</a></p>
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+    <a href="gym/gym-dashboard.html" style="padding:8px 16px;background:var(--gold,#c9a84c);color:#000;border-radius:10px;font-size:12px;font-weight:600;">📊 Dashboard</a>
+    <a href="gym/gym-members.html" style="padding:8px 16px;border:1px solid #1e3045;border-radius:10px;font-size:12px;">👤 Members</a>
+    <a href="gym/gym-plans.html" style="padding:8px 16px;border:1px solid #1e3045;border-radius:10px;font-size:12px;">🏷 Plans</a>
+    <a href="gym/gym-checkins.html" style="padding:8px 16px;border:1px solid #1e3045;border-radius:10px;font-size:12px;">✓ Check-in Log</a>
+  </div>
+  <script>setTimeout(()=>{ window.location.href='gym/gym-dashboard.html'; }, 2000);</script>
+</body>
+</html>
