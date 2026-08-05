@@ -52,16 +52,17 @@ KitchenShell.attach({
   topbarTarget:  '#topbarSlot',
   activeFile:    'kitchen-production.html',
   pageTitle:     'New Production',
-  pageSubtitle:  'Multi-meal batches, tabbed recipe review, collated summary',
+  pageSubtitle:  'One row per batch, manual ingredient logging, expandable batch history',
   apiMode:       'Demo',
   user:          { name: 'Head Chef', initials: 'HC' },
 });
 
 /* ═══════════════════════════════════════════
-   All form logic (multi-meal tabs, combined
-   deduction, department/custom transfer, save)
-   lives in grace-kitchen-production.js — this
-   page is just a thin shell that configures it.
+   All form logic (batch-based meal entry,
+   manual ingredient logging, expandable batch
+   history, save) lives in
+   grace-kitchen-production.js — this page is
+   just a thin shell that configures it.
 ═══════════════════════════════════════════ */
 GraceKitchenProduction.attach('#productionPlaceholder', {
   kitchenName: 'Main Kitchen',
@@ -73,14 +74,13 @@ GraceKitchenProduction.attach('#productionPlaceholder', {
   departments: ['Main Restaurant / POS', 'Pool Bar', 'Room Service', 'Banquets Hall'],
   departmentsApiUrl: '/api/settings/departments',
 
-  recipes: {
-    'Fried Rice':  { 'Rice':0.10, 'Oil':0.01, 'Curry':0.02, 'Green Peas':0.015, 'Chicken':0.05, 'Seasoning':0.003 },
-    'Jollof Rice': { 'Rice':0.10, 'Oil':0.012, 'Tomato':0.03, 'Pepper':0.015, 'Chicken':0.05, 'Seasoning':0.003 },
-    'Egusi Soup':  { 'Egusi':0.06, 'Palm Oil':0.02, 'Spinach':0.04, 'Chicken':0.04, 'Seasoning':0.003 },
-    'Pepper Soup': { 'Chicken':0.08, 'Pepper':0.02, 'Seasoning':0.004, 'Scent Leaf':0.01 },
-    'Moi Moi':     { 'Beans Flour':0.08, 'Oil':0.01, 'Egg':0.05, 'Seasoning':0.002 },
-  },
+  // Suggestions only, shown in the meal-name datalist — no math is
+  // derived from this list. Ingredients used are always entered manually.
+  mealNames: ['Fried Rice', 'Jollof Rice', 'Egusi Soup', 'Pepper Soup', 'Moi Moi'],
 
+  // Reference only — shown as "on hand" next to each manually-entered
+  // ingredient so the chef can see if they're logging more than is in
+  // stock. Nothing here is auto-deducted by a formula.
   stock: [
     { name:'Rice',        qty:112, unit:'kg' },
     { name:'Oil',         qty:18,  unit:'Ltr' },
@@ -105,8 +105,8 @@ GraceKitchenProduction.attach('#productionPlaceholder', {
   ],
 
   onSave: (batch) => {
-    // e.g. POST batch.productions / batch.transferNo to your real API here
-    // once CFG.USE_DEMO is false.
+    // e.g. POST batch.batchNo / batch.meals / batch.ingredients / batch.transferNo
+    // to your real API here once CFG.USE_DEMO is false.
     console.log('[kitchen-production] batch saved:', batch);
   },
 });

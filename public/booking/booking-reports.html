@@ -3,104 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Aurum Hotel — Reports & Revenue</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Grace Hotel — Reports & Revenue</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-/* This page owns layout + its own Reports content only. Sidebar +
-   topbar look/markup live entirely in booking-shell.js — same split
-   used by booking-dashboard.html, booking-rooms.html and booking-list.html. */
+/* Exact same base as booking-list.html — sidebar/topbar from booking-shell.js,
+   content area re-declares light theme vars so only .content turns white. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
-
 html, body { height: 100%; overflow-x: hidden; }
-body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background var(--transition), color var(--transition); }
-
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+  background: var(--bg); color: var(--text);
+  transition: background var(--transition), color var(--transition);
+}
 .app { display: flex; min-height: 100vh; }
 .main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
 @media (max-width: 768px) { .main { margin-left: 0 !important; } }
 
-.content { flex: 1; padding: 24px; min-width: 0; overflow-x: hidden; }
+/* ── Light-theme content area — identical token names & values to booking-list.html ── */
+.content {
+  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
+  --border: #eef0f6; --border2: #dfe3ec;
+  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
+  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
+  --input-bg: #f4f6fb; --modal-bg: #ffffff;
+  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
+  --green: #12b76a; --green-bg: #e9f9f0;
+  --red: #f04438; --red-bg: #feecec;
+  --amber: #f79009; --amber-bg: #fff4e5;
+  --blue: #2f6fed; --blue-bg: #eaf1ff;
+  --purple: #8b5cf6; --purple-bg: #f4efff;
+  background: var(--bg); color: var(--text);
+}
 @media (max-width: 480px) { .content { padding: 14px; } }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 6px; }
-.section-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-weight: 500; }
-
-/* ═══════════ REVENUE KPI CARDS ═══════════ */
-.rev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
-@media (max-width: 720px) { .rev-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 460px) { .rev-grid { grid-template-columns: 1fr; } }
-.rev-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; animation: fadeUp 0.4s ease both; }
-.rev-card:nth-child(1){animation-delay:.04s} .rev-card:nth-child(2){animation-delay:.08s} .rev-card:nth-child(3){animation-delay:.12s}
-.rev-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
-.rev-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; }
-.rev-card-value { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 700; color: var(--text); word-break: break-word; }
-.rev-card-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
-
-/* By room type mini-breakdown */
-.type-rev-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
-@media (max-width: 720px) { .type-rev-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 400px) { .type-rev-grid { grid-template-columns: 1fr; } }
-.type-rev-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 14px; box-shadow: var(--shadow); }
-.type-rev-name { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text2); margin-bottom: 6px; }
-.type-rev-value { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 700; color: var(--text); }
-.type-rev-sub { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
-
-/* ═══════════ FILTERS ═══════════ */
-.report-filters { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; box-shadow: var(--shadow); }
-.rep-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
-.rep-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; }
-.rep-input { background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 12.5px; outline: none; transition: border-color 0.2s; width: 100%; }
-.rep-input:focus { border-color: var(--gold-border); }
-.rep-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-@media (max-width: 640px) {
-  .report-filters { flex-direction: column; align-items: stretch; }
-  .rep-group { min-width: 0; }
-  .rep-actions { width: 100%; }
-  .rep-actions button { flex: 1; justify-content: center; }
+/* ═══════════ TOOLBAR ═══════════ */
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.toolbar-right { display: flex; gap: 7px; flex-shrink: 0; }
+.filter-sel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; color: var(--text); font-family: inherit; font-size: 12.5px;
+  cursor: pointer; outline: none; transition: border-color 0.2s;
+}
+.filter-sel:focus { border-color: var(--gold-border); }
+input[type="date"].filter-sel { min-width: 0; }
+@media (max-width: 700px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left { flex-direction: column; align-items: stretch; }
+  .toolbar-right { width: 100%; }
+  .toolbar-right .btn-primary { flex: 1; justify-content: center; }
+  .filter-sel { width: 100%; }
 }
 
-/* ═══════════ QUICK RANGE CHIPS ═══════════ */
-.range-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; }
-.range-chips::-webkit-scrollbar { height: 0; }
-.rg-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: 'Outfit', sans-serif; }
-.rg-btn:hover, .rg-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
-
-/* ═══════════ BUTTONS ═══════════ */
-.btn-primary { background: var(--gold); color: #0a1520; border: none; border-radius: var(--radius-sm); padding: 9px 16px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* ═══════════ BUTTONS — same as booking-list.html ═══════════ */
+.btn-primary {
+  background: var(--gold); color: #fff; border: 1px solid var(--gold);
+  border-radius: var(--radius-sm); padding: 9px 16px;
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+  white-space: nowrap; box-shadow: 0 4px 10px rgba(47,111,237,0.28);
+}
 .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
-.btn-outline { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
+.btn-primary i { font-size: 11px; }
+
+/* ═══════════ QUICK RANGE CHIPS ═══════════ */
+.status-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; margin-bottom: 10px; }
+.status-chips::-webkit-scrollbar { height: 0; }
+.sc-btn {
+  flex-shrink: 0; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 600;
+  color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+.sc-btn:hover, .sc-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+
+/* ═══════════ KPI ROW — 7 cards in one scrollable row ═══════════ */
+.kpi-row {
+  display: flex; gap: 10px; overflow-x: auto; margin-bottom: 14px;
+  padding-bottom: 4px; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.kpi-row::-webkit-scrollbar { display: none; }
+.kpi-card {
+  flex: 0 0 auto; min-width: 148px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: var(--shadow); position: relative; overflow: hidden;
+  animation: fadeUp 0.4s ease both;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--gold);
+}
+.kpi-card.green::before { background: var(--green); }
+.kpi-card.red::before   { background: var(--red); }
+.kpi-card.amber::before { background: var(--amber); }
+.kpi-card.purple::before { background: var(--purple); }
+.kpi-card.blue2::before { background: #0ea5e9; }
+.kpi-card.teal::before  { background: #14b8a6; }
+.kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; margin-bottom: 5px; white-space: nowrap; }
+.kpi-val   { font-size: 18px; font-weight: 800; color: var(--text); white-space: nowrap; }
+.kpi-val.green  { color: var(--green); }
+.kpi-val.red    { color: var(--red); }
+.kpi-val.amber  { color: var(--amber); }
+.kpi-val.purple { color: var(--purple); }
+.kpi-val.blue2  { color: #0ea5e9; }
+.kpi-val.teal   { color: #14b8a6; }
+.kpi-sub { font-size: 10px; color: var(--text3); margin-top: 2px; white-space: nowrap; }
+.kpi-card:nth-child(1){animation-delay:.03s} .kpi-card:nth-child(2){animation-delay:.06s}
+.kpi-card:nth-child(3){animation-delay:.09s} .kpi-card:nth-child(4){animation-delay:.12s}
+.kpi-card:nth-child(5){animation-delay:.15s} .kpi-card:nth-child(6){animation-delay:.18s}
+.kpi-card:nth-child(7){animation-delay:.21s}
 
 /* ═══════════ PANEL ═══════════ */
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; animation: fadeUp 0.4s ease both; overflow: hidden; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 14px; flex-wrap: wrap; gap: 8px; }
-.panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.panel-sub { font-size: 11.5px; color: var(--text3); }
+.panel-title { font-size: 14px; font-weight: 800; color: var(--text); }
+.panel-sub { font-size: 11.5px; color: var(--text3); font-weight: 600; }
 
-/* ═══════════ TABLE (desktop / tablet) ═══════════ */
+/* ═══════════ TABLE ═══════════ */
 .table-wrap { overflow-x: auto; width: 100%; }
-.bk-table { width: 100%; border-collapse: collapse; min-width: 860px; }
-.bk-table thead th { text-align: left; padding: 9px 12px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.bk-table { width: 100%; border-collapse: collapse; min-width: 820px; }
+.bk-table thead th {
+  text-align: left; padding: 9px 12px; font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--text3); font-weight: 700;
+  background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap;
+}
 .bk-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
 .bk-table tbody tr:last-child { border-bottom: none; }
 .bk-table tbody tr:hover { background: var(--surface2); }
 .bk-table tbody td { padding: 9px 12px; color: var(--text); vertical-align: middle; font-size: 12.5px; }
 
-.room-badge { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; white-space: nowrap; }
+.room-badge { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
 .rt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.dot-standard { background: var(--blue); } .dot-deluxe { background: var(--purple); } .dot-suite { background: var(--gold); } .dot-conf { background: #34d399; }
-.status-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.dot-standard { background: var(--blue); } .dot-deluxe { background: var(--purple); }
+.dot-suite    { background: var(--gold); } .dot-conf   { background: #34d399; }
+.status-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .status-chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
-.chip-checkedin { background: var(--green-bg); color: var(--green); } .chip-checkedin::before { background: var(--green); }
-.chip-checkout  { background: var(--red-bg); color: var(--red); } .chip-checkout::before  { background: var(--red); }
-.chip-reserved  { background: var(--blue-bg); color: var(--blue); } .chip-reserved::before  { background: var(--blue); }
-.chip-vacant    { background: rgba(156,163,175,0.12); color: #9ca3af; } .chip-vacant::before  { background: #9ca3af; }
-.chip-maintenance { background: rgba(251,146,60,0.12); color: #fb923c; } .chip-maintenance::before { background: #fb923c; }
+.chip-checkedin   { background: var(--green-bg); color: var(--green); } .chip-checkedin::before   { background: var(--green); }
+.chip-checkout    { background: var(--red-bg);   color: var(--red);   } .chip-checkout::before    { background: var(--red); }
+.chip-reserved    { background: var(--blue-bg);  color: var(--blue);  } .chip-reserved::before    { background: var(--blue); }
+.chip-vacant      { background: rgba(156,163,175,.14); color: #6b7280; } .chip-vacant::before    { background: #9ca3af; }
+.chip-maintenance { background: var(--amber-bg); color: var(--amber); } .chip-maintenance::before { background: var(--amber); }
+.pay-chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
+.pay-full    { background: var(--green-bg); color: var(--green); }
+.pay-deposit { background: var(--amber-bg); color: var(--amber); }
+.pay-pending { background: var(--red-bg);   color: var(--red);   }
 
-/* ═══════════ MOBILE CARD LIST — table restyles into stacked cards ═══════════ */
-@media (max-width: 780px) {
+/* ═══════════ MOBILE CARDS ═══════════ */
+@media (max-width: 720px) {
   .table-wrap { overflow-x: visible; }
   .bk-table { min-width: 0; }
   .bk-table thead { display: none; }
@@ -109,7 +162,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--te
   .bk-table tbody tr:hover { background: var(--surface); }
   .bk-table tbody td { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border-bottom: 1px dashed var(--border); text-align: right; }
   .bk-table tbody td:last-child { border-bottom: none; }
-  .bk-table tbody td::before { content: attr(data-label); font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 500; text-align: left; flex-shrink: 0; }
+  .bk-table tbody td::before { content: attr(data-label); font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 600; text-align: left; flex-shrink: 0; }
   .bk-table tbody td.mcard-head { padding: 10px 10px 8px; border-bottom: 1px solid var(--border); }
   .bk-table tbody td.mcard-head::before { display: none; }
 }
@@ -118,8 +171,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--te
 .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface2); border-top: 1px solid var(--border); }
 .sr-item { text-align: center; padding: 10px 12px; border-right: 1px solid var(--border); }
 .sr-item:last-child { border-right: none; }
-.sr-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 3px; }
-.sr-val { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 700; color: var(--text); }
+.sr-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 3px; font-weight: 700; }
+.sr-val { font-size: 17px; font-weight: 800; color: var(--text); }
 @media (max-width: 560px) {
   .summary-row { grid-template-columns: repeat(2, 1fr); }
   .sr-item:nth-child(1), .sr-item:nth-child(2) { border-bottom: 1px solid var(--border); }
@@ -127,82 +180,105 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--te
 }
 
 /* ═══════════ PAGINATION ═══════════ */
-.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; }
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
 .page-btns { display: flex; gap: 3px; flex-wrap: wrap; }
-.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; font-family: 'Outfit', sans-serif; padding: 0 7px; }
+.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; font-family: inherit; padding: 0 7px; font-weight: 600; }
 .page-btn:hover { border-color: var(--gold-border); color: var(--gold); }
-.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 600; }
+.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 700; }
 .page-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
+/* ═══════════ PRINT REPORT ═══════════ */
+@media print {
+  #sidebarSlot, #topbarSlot, .status-chips, .toolbar, .no-print { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .content { padding: 0 !important; overflow: visible !important; background: #fff !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ccc !important; }
+  .kpi-row { overflow: visible !important; flex-wrap: wrap !important; }
+  .kpi-card { min-width: 120px !important; flex: 1 !important; }
+  .bk-table { min-width: 0 !important; }
+  /* Print header is injected into the DOM before printing */
+}
+
 /* ═══════════ TOAST ═══════════ */
-.toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px; color: var(--text); box-shadow: 0 8px 28px rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; max-width: calc(100vw - 40px); }
-.toast.success { border-left: 3px solid var(--green); }
-.toast.error   { border-left: 3px solid var(--red); }
-.toast.info    { border-left: 3px solid var(--blue); }
+.toast {
+  position: fixed; bottom: 20px; right: 20px; background: #ffffff;
+  border: 1px solid #eef0f6; border-radius: var(--radius-sm); padding: 11px 16px;
+  font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,34,55,0.18);
+  z-index: 999; display: flex; align-items: center; gap: 8px;
+  animation: toastIn 0.3s ease; max-width: calc(100vw - 40px); font-weight: 600;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+}
+.toast.success { border-left: 3px solid #12b76a; }
+.toast.error   { border-left: 3px solid #f04438; }
+.toast.info    { border-left: 3px solid #2f6fed; }
 @keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
 
-/* Print */
-@media print {
-  #sidebarSlot, #topbarSlot, .report-filters, .range-chips, .rep-actions, .no-print { display: none !important; }
-  .main { margin-left: 0 !important; }
-  .content { padding: 0 !important; overflow: visible !important; }
-  body { background: #fff !important; color: #000 !important; }
-  .panel, .rev-card, .type-rev-card { box-shadow: none !important; border: 1px solid #ccc !important; }
-  @page { margin: 16mm; }
-}
-
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border2, #dfe3ec); border-radius: 5px; }
 </style>
 </head>
 <body>
 
 <div class="app">
-  <!-- Sidebar rendered here by booking-shell.js -->
   <div id="sidebarSlot"></div>
 
   <div class="main">
-    <!-- Topbar rendered here by booking-shell.js -->
     <div id="topbarSlot"></div>
 
     <div class="content">
 
-      <div class="section-header">
-        <div class="section-title">Revenue Summary</div>
-        <span class="section-title" id="repRangeLabel" style="color:var(--text2);text-transform:none;font-size:12px;letter-spacing:0;"></span>
-      </div>
-      <div class="rev-grid" id="revCards"></div>
-      <div class="type-rev-grid" id="typeRevGrid"></div>
-
-      <div class="range-chips no-print" id="rangeChips">
-        <button class="rg-btn" data-r="today" onclick="applyQuickRange('today',this)">Today</button>
-        <button class="rg-btn" data-r="7" onclick="applyQuickRange('7',this)">Last 7 Days</button>
-        <button class="rg-btn" data-r="30" onclick="applyQuickRange('30',this)">Last 30 Days</button>
-        <button class="rg-btn" data-r="month" onclick="applyQuickRange('month',this)">This Month</button>
-        <button class="rg-btn active" data-r="all" onclick="applyQuickRange('all',this)">All Time</button>
+      <!-- ── QUICK RANGE CHIPS ── -->
+      <div class="status-chips no-print" id="rangeChips">
+        <button class="sc-btn active" data-r="all"   onclick="applyRange('all',this)">All Time</button>
+        <button class="sc-btn" data-r="today"  onclick="applyRange('today',this)">Today</button>
+        <button class="sc-btn" data-r="7"      onclick="applyRange('7',this)">Last 7 Days</button>
+        <button class="sc-btn" data-r="30"     onclick="applyRange('30',this)">Last 30 Days</button>
+        <button class="sc-btn" data-r="month"  onclick="applyRange('month',this)">This Month</button>
       </div>
 
-      <div class="report-filters no-print">
-        <div class="rep-group"><div class="rep-label">From</div><input type="date" class="rep-input" id="repFrom" onchange="clearQuickRange()"></div>
-        <div class="rep-group"><div class="rep-label">To</div><input type="date" class="rep-input" id="repTo" onchange="clearQuickRange()"></div>
-        <div class="rep-group"><div class="rep-label">Room Type</div>
-          <select class="rep-input" id="repType"><option value="">All Types</option><option>Standard</option><option>Deluxe</option><option>Suite</option><option>Conference</option></select>
+      <!-- ── TOOLBAR (filters + Generate button) ── -->
+      <div class="toolbar no-print">
+        <div class="toolbar-left">
+          <input type="date" class="filter-sel" id="repFrom" onchange="clearRangeChips()" title="Check-in from">
+          <input type="date" class="filter-sel" id="repTo"   onchange="clearRangeChips()" title="Check-in to">
+          <select class="filter-sel" id="repType" onchange="repPage=1;generateReport()">
+            <option value="">All Types</option>
+            <option value="Standard">Standard</option>
+            <option value="Deluxe">Deluxe</option>
+            <option value="Suite">Suite</option>
+            <option value="Conference">Conference</option>
+          </select>
+          <select class="filter-sel" id="repStatus" onchange="repPage=1;generateReport()">
+            <option value="">All Statuses</option>
+            <option value="checkedin">Checked In</option>
+            <option value="reserved">Reserved</option>
+            <option value="checkout">Check-out</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+          <select class="filter-sel" id="repPay" onchange="repPage=1;generateReport()">
+            <option value="">All Payments</option>
+            <option value="Fully Paid">Fully Paid</option>
+            <option value="Deposit Paid">Deposit Paid</option>
+            <option value="Pending">Pending</option>
+          </select>
         </div>
-        <div class="rep-group"><div class="rep-label">Status</div>
-          <select class="rep-input" id="repStatus"><option value="">All</option><option value="checkedin">Checked In</option><option value="reserved">Reserved</option><option value="checkout">Check-out</option></select>
-        </div>
-        <div class="rep-group"><div class="rep-label">Payment</div>
-          <select class="rep-input" id="repPay"><option value="">All</option><option>Fully Paid</option><option>Deposit Paid</option><option>Pending</option></select>
-        </div>
-        <div class="rep-actions">
-          <button class="btn-primary" onclick="repPage=1;generateReport()">Generate</button>
-          <button class="btn-outline" onclick="exportCsv()">⬇ CSV</button>
-          <button class="btn-outline" onclick="window.print()">🖨 Print</button>
+        <div class="toolbar-right">
+          <button class="btn-primary" onclick="repPage=1;generateReport()">
+            <i class="fa-solid fa-chart-bar"></i> Generate Report
+          </button>
+          <button class="btn-primary" style="background:#6b7280;border-color:#6b7280;box-shadow:none;" onclick="printReport()">
+            <i class="fa-solid fa-print"></i> Print
+          </button>
         </div>
       </div>
 
+      <!-- ── 7-CARD KPI ROW ── -->
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ── REPORT TABLE ── -->
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title" id="repTitle">Full Report</div>
@@ -214,28 +290,28 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--te
               <tr>
                 <th>Room</th>
                 <th>Guest</th>
-                <th>Type</th>
                 <th>Check-in</th>
                 <th>Check-out</th>
                 <th>Nts</th>
-                <th>Rate/Night</th>
-                <th>Disc%</th>
+                <th>Rate/Night (₦)</th>
+                <th>Disc %</th>
                 <th>Total (₦)</th>
                 <th>Paid (₦)</th>
                 <th>Balance (₦)</th>
                 <th>Method</th>
+                <th>Payment</th>
                 <th>Status</th>
-                <th>By</th>
+                <th>Recorded By</th>
               </tr>
             </thead>
             <tbody id="repBody"></tbody>
           </table>
         </div>
-        <div class="summary-row" id="repSummary">
+        <div class="summary-row" id="repSummary" style="display:none">
           <div class="sr-item"><div class="sr-label">Records</div><div class="sr-val" id="rep-cnt">0</div></div>
-          <div class="sr-item"><div class="sr-label">Gross Revenue</div><div class="sr-val" id="rep-total">₦0</div></div>
+          <div class="sr-item"><div class="sr-label">Total Revenue</div><div class="sr-val" id="rep-total">₦0</div></div>
           <div class="sr-item"><div class="sr-label">Collected</div><div class="sr-val" id="rep-paid">₦0</div></div>
-          <div class="sr-item"><div class="sr-label">Balance Due</div><div class="sr-val" style="color:var(--red);" id="rep-bal">₦0</div></div>
+          <div class="sr-item"><div class="sr-label">Balance Due</div><div class="sr-val" style="color:var(--red)" id="rep-bal">₦0</div></div>
         </div>
         <div class="pagination">
           <span id="repPaginLabel">—</span>
@@ -243,8 +319,18 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--te
         </div>
       </div>
 
-    </div>
+    </div><!-- /content -->
   </div>
+</div>
+
+<!-- Hidden print header — shown only during window.print() -->
+<div id="printHeader" style="display:none">
+  <div style="text-align:center;margin-bottom:18px;border-bottom:2px solid #2f6fed;padding-bottom:14px;">
+    <div style="font-size:22px;font-weight:900;color:#2f6fed;letter-spacing:1px;">GRACE HOTEL</div>
+    <div style="font-size:13px;color:#6b7280;margin-top:2px;">Revenue & Booking Report</div>
+    <div style="font-size:12px;color:#9aa1b3;margin-top:4px;" id="printMeta"></div>
+  </div>
+  <div id="printKpiPrint" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px;"></div>
 </div>
 
 <script src="../component/booking-shell.js"></script>
@@ -263,23 +349,16 @@ const shell = BookingShell.attach({
 });
 
 /* ═══════════════════════════════════════════════
-   Storage shim — same 4-method contract used across every module.
-   Reads the exact same 'booking-rooms' / 'booking-bookings' shared
-   keys as booking-dashboard.html, booking-rooms.html and booking-list.html.
-   This page is read-mostly: it never writes booking records, only reads.
+   Storage shim
 ═══════════════════════════════════════════════ */
 const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
+  async get(key){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v}; },
+  async set(key, value){ localStorage.setItem(key, value); return {key, value}; },
 };
-
 const KEY_ROOMS    = 'booking-rooms';
 const KEY_BOOKINGS = 'booking-bookings';
 
-/* Seed data — identical shape/values to the other Booking pages, so
-   this page never diverges from them on first run. */
+/* Seed data — identical to booking-list.html */
 const DEMO_ROOMS = [
   {num:'101',type:'Standard',   rate:35000},{num:'102',type:'Standard',   rate:35000},
   {num:'103',type:'Standard',   rate:35000},{num:'104',type:'Standard',   rate:35000},
@@ -290,134 +369,146 @@ const DEMO_ROOMS = [
   {num:'303',type:'Suite',      rate:120000},
   {num:'401',type:'Conference', rate:200000},{num:'402',type:'Conference',rate:200000},
 ];
-
 const DEMO_BOOKINGS = [
-  {room:'101',type:'Standard',  guest:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',   idType:'NIN',             idNum:'12345678901', checkin:'2026-03-10',checkout:'2026-03-14',rate:35000, discount:0,  paid:140000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:''},
-  {room:'102',type:'Standard',  guest:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',      idType:'Passport',         idNum:'A12345678',   checkin:'2026-03-12',checkout:'2026-03-13',rate:35000, discount:0,  paid:35000, payMethod:'Cash',                   payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkout',   notes:''},
-  {room:'103',type:'Standard',  guest:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                       idType:'NIN',             idNum:'98765432109', checkin:'2026-03-13',checkout:'2026-03-16',rate:35000, discount:10, paid:50000, payMethod:'POS',                    payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:1,status:'reserved',   notes:'Extra pillow'},
-  {room:'104',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'101',type:'Standard',  guest:'Mr. Adeyemi, Tunde',   phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',   idType:'NIN',              idNum:'12345678901', checkin:'2026-03-10',checkout:'2026-03-14',rate:35000, discount:0,  paid:140000,payMethod:'Transfer',               payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:''},
+  {room:'102',type:'Standard',  guest:'Mrs. Okafor, Ngozi',   phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',      idType:'Passport',         idNum:'A12345678',   checkin:'2026-03-12',checkout:'2026-03-13',rate:35000, discount:0,  paid:35000, payMethod:'Cash',                    payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkout',   notes:''},
+  {room:'103',type:'Standard',  guest:'Mr. Bello, Ibrahim',   phone:'+234 701 333 6677',email:'',                       idType:'NIN',              idNum:'98765432109', checkin:'2026-03-13',checkout:'2026-03-16',rate:35000, discount:10, paid:50000, payMethod:'POS',                     payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:1,status:'reserved',   notes:'Extra pillow'},
+  {room:'104',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',    notes:''},
   {room:'105',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'Plumbing repair'},
-  {room:'106',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'201',type:'Deluxe',    guest:'Dr. Eze, Chukwuemeka',  phone:'+234 802 444 8899',email:'ceze@hospital.ng',       idType:'Passport',         idNum:'B87654321',   checkin:'2026-03-11',checkout:'2026-03-15',rate:60000, discount:0,  paid:240000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'202',type:'Deluxe',    guest:'Ms. Abubakar, Fatima',  phone:'+234 805 555 0011',email:'fatima.a@gmail.com',     idType:"Driver's Licence", idNum:'ABJ001234',   checkin:'2026-03-13',checkout:'2026-03-17',rate:60000, discount:5,  paid:100000,payMethod:'Split – Cash + Transfer',payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'reserved',   notes:'Honeymoon setup'},
-  {room:'203',type:'Deluxe',    guest:'Mr. Johnson, Segun',    phone:'+234 708 666 2233',email:'',                       idType:'NIN',             idNum:'55566677788', checkin:'2026-03-09',checkout:'2026-03-13',rate:60000, discount:0,  paid:240000,payMethod:'POS',                    payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:2,status:'checkout',   notes:''},
-  {room:'204',type:'Deluxe',    guest:'Prof. Williams, Ada',   phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng',idType:'NIN',             idNum:'11122233344', checkin:'2026-03-12',checkout:'2026-03-18',rate:60000, discount:15, paid:200000,payMethod:'Transfer',              payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:'Vegetarian meals'},
-  {room:'301',type:'Suite',     guest:'Chief Dangote, Emeka',  phone:'+234 801 888 6677',email:'emeka.d@corp.ng',        idType:'Passport',         idNum:'C11223344',   checkin:'2026-03-10',checkout:'2026-03-15',rate:120000,discount:0,  paid:600000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'302',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'106',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',    notes:''},
+  {room:'201',type:'Deluxe',    guest:'Dr. Eze, Chukwuemeka', phone:'+234 802 444 8899',email:'ceze@hospital.ng',       idType:'Passport',         idNum:'B87654321',   checkin:'2026-03-11',checkout:'2026-03-15',rate:60000, discount:0,  paid:240000,payMethod:'Transfer',               payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
+  {room:'202',type:'Deluxe',    guest:'Ms. Abubakar, Fatima', phone:'+234 805 555 0011',email:'fatima.a@gmail.com',     idType:"Driver's Licence", idNum:'ABJ001234',   checkin:'2026-03-13',checkout:'2026-03-17',rate:60000, discount:5,  paid:100000,payMethod:'Split – Cash + Transfer', payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'reserved',   notes:'Honeymoon setup'},
+  {room:'203',type:'Deluxe',    guest:'Mr. Johnson, Segun',   phone:'+234 708 666 2233',email:'',                       idType:'NIN',              idNum:'55566677788', checkin:'2026-03-09',checkout:'2026-03-13',rate:60000, discount:0,  paid:240000,payMethod:'POS',                     payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:2,status:'checkout',   notes:''},
+  {room:'204',type:'Deluxe',    guest:'Prof. Williams, Ada',  phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng',idType:'NIN',              idNum:'11122233344', checkin:'2026-03-12',checkout:'2026-03-18',rate:60000, discount:15, paid:200000,payMethod:'Transfer',               payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:'Vegetarian meals'},
+  {room:'301',type:'Suite',     guest:'Chief Dangote, Emeka', phone:'+234 801 888 6677',email:'emeka.d@corp.ng',        idType:'Passport',         idNum:'C11223344',   checkin:'2026-03-10',checkout:'2026-03-15',rate:120000,discount:0,  paid:600000,payMethod:'Transfer',               payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
+  {room:'302',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',    notes:''},
   {room:'303',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'AC repair in progress'},
-  {room:'401',type:'Conference',guest:'Zenith Bank Ltd.',       phone:'+234 700 999 8877',email:'events@zenithbank.com',  idType:"Voter's Card",     idNum:'ZB00001',     checkin:'2026-03-13',checkout:'2026-03-13',rate:200000,discount:0,  paid:200000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:40,children:0,status:'checkedin',  notes:'Projector & PA system'},
-  {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
+  {room:'401',type:'Conference',guest:'Zenith Bank Ltd.',      phone:'+234 700 999 8877',email:'events@zenithbank.com',  idType:"Voter's Card",     idNum:'ZB00001',     checkin:'2026-03-13',checkout:'2026-03-13',rate:200000,discount:0,  paid:200000,payMethod:'Transfer',               payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:40,children:0,status:'checkedin',  notes:'Projector & PA system'},
+  {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',    notes:''},
 ];
+
+let allRooms = [];
+let bookings = [];
+let filteredRep = [];
+let repPage = 1;
+const PAGE_REP = 12;
+const TODAY = new Date().toISOString().split('T')[0];
 
 async function loadShared(key, fallback) {
   try {
     const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
-  } catch (e) {}
+    if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p) && p.length) return p; }
+  } catch(e) {}
   return fallback;
 }
 async function saveShared(key, value) {
-  try { await storage.set(key, JSON.stringify(value), true); } catch (e) { console.warn('[sync]', key, e); }
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e) {}
 }
-
-let allRooms = [];
-let bookings = [];
-
-/* ═══════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════ */
-let repPage      = 1;
-let filteredRep  = [];
-const PAGE_REP   = 12;
-const TODAY      = new Date().toISOString().split('T')[0];
 
 /* ═══════════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════════ */
-function nights(ci, co) { if (!ci || !co) return 0; const n = (new Date(co) - new Date(ci)) / 86400000; return n > 0 ? n : 0; }
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+function nights(ci, co) { if (!ci || !co) return 0; const n = (new Date(co)-new Date(ci))/86400000; return n>0?n:0; }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
-function calcTotal(b) { const n = nights(b.checkin, b.checkout) || 1; return b.rate * n * (1 - (b.discount || 0) / 100); }
-function calcBal(b) { return Math.max(0, calcTotal(b) - (b.paid || 0)); }
+function calcTotal(b) { const n = nights(b.checkin,b.checkout)||1; return b.rate*n*(1-(b.discount||0)/100); }
+function calcBal(b)   { return Math.max(0, calcTotal(b)-(b.paid||0)); }
 
-const DOT_CLASS = { Standard:'dot-standard', Deluxe:'dot-deluxe', Suite:'dot-suite', Conference:'dot-conf' };
-const CHIP_CLS  = { checkedin:'chip-checkedin', checkout:'chip-checkout', reserved:'chip-reserved', vacant:'chip-vacant', maintenance:'chip-maintenance' };
-const CHIP_LBL  = { checkedin:'Checked In', checkout:'Check-out', reserved:'Reserved', vacant:'Vacant', maintenance:'Maintenance' };
-const TYPE_ICON = { Standard:'🛏', Deluxe:'✨', Suite:'👑', Conference:'🏛' };
-
-/* ═══════════════════════════════════════════════
-   PAGINATION
-═══════════════════════════════════════════════ */
-function renderPagination(btnId, labelId, page, total, size, cb) {
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const from = total === 0 ? 0 : (page - 1) * size + 1;
-  const to   = Math.min(page * size, total);
-  document.getElementById(labelId).textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
-  const wrap = document.getElementById(btnId);
-  wrap.innerHTML = '';
-  const prev = document.createElement('button');
-  prev.className = 'page-btn'; prev.textContent = '‹'; prev.disabled = (page === 1);
-  prev.onclick = () => cb(page - 1); wrap.appendChild(prev);
-  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
-  start = Math.max(1, end - 4);
-  for (let i = start; i <= end; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'page-btn' + (i === page ? ' active' : '');
-    btn.textContent = i; btn.onclick = (function(p){return () => cb(p);})(i);
-    wrap.appendChild(btn);
-  }
-  const next = document.createElement('button');
-  next.className = 'page-btn'; next.textContent = '›'; next.disabled = (page >= totalPages);
-  next.onclick = () => cb(page + 1); wrap.appendChild(next);
-}
+const DOT_CLASS  = {Standard:'dot-standard',Deluxe:'dot-deluxe',Suite:'dot-suite',Conference:'dot-conf'};
+const CHIP_CLS   = {checkedin:'chip-checkedin',checkout:'chip-checkout',reserved:'chip-reserved',vacant:'chip-vacant',maintenance:'chip-maintenance'};
+const CHIP_LBL   = {checkedin:'Checked In',checkout:'Check-out',reserved:'Reserved',vacant:'Vacant',maintenance:'Maintenance'};
+const PAY_CLS    = {'Fully Paid':'pay-full','Deposit Paid':'pay-deposit','Pending':'pay-pending'};
 
 /* ═══════════════════════════════════════════════
    QUICK RANGE
 ═══════════════════════════════════════════════ */
 function fmtISO(d) { return d.toISOString().split('T')[0]; }
-function applyQuickRange(r, btn) {
-  document.querySelectorAll('.rg-btn').forEach(b => b.classList.remove('active'));
+function applyRange(r, btn) {
+  document.querySelectorAll('#rangeChips .sc-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   const now = new Date();
-  let from = '', to = '';
-  if (r === 'today') { from = TODAY; to = TODAY; }
-  else if (r === '7') { const d = new Date(now); d.setDate(d.getDate() - 6); from = fmtISO(d); to = TODAY; }
-  else if (r === '30') { const d = new Date(now); d.setDate(d.getDate() - 29); from = fmtISO(d); to = TODAY; }
-  else if (r === 'month') { from = fmtISO(new Date(now.getFullYear(), now.getMonth(), 1)); to = TODAY; }
-  else if (r === 'all') { from = ''; to = ''; }
+  let from='', to='';
+  if (r==='today')  { from=TODAY; to=TODAY; }
+  else if (r==='7') { const d=new Date(now); d.setDate(d.getDate()-6); from=fmtISO(d); to=TODAY; }
+  else if (r==='30'){ const d=new Date(now); d.setDate(d.getDate()-29); from=fmtISO(d); to=TODAY; }
+  else if (r==='month') { from=fmtISO(new Date(now.getFullYear(),now.getMonth(),1)); to=TODAY; }
+  /* 'all' → leave empty */
   document.getElementById('repFrom').value = from;
   document.getElementById('repTo').value   = to;
   repPage = 1;
   generateReport();
 }
-function clearQuickRange() {
-  document.querySelectorAll('.rg-btn').forEach(b => b.classList.remove('active'));
+function clearRangeChips() {
+  document.querySelectorAll('#rangeChips .sc-btn').forEach(b => b.classList.remove('active'));
+  repPage = 1;
+  generateReport();
 }
 
 /* ═══════════════════════════════════════════════
-   REVENUE CARDS (respects current filters)
+   PAGINATION
 ═══════════════════════════════════════════════ */
-function renderRevCards(rows) {
-  const totRev  = rows.reduce((s, b) => s + calcTotal(b), 0);
-  const totPaid = rows.reduce((s, b) => s + (b.paid || 0), 0);
-  const totBal  = rows.reduce((s, b) => s + calcBal(b), 0);
-  const collRate = totRev > 0 ? Math.round(totPaid / totRev * 100) : 0;
+function renderPagination(btnId, labelId, page, total, size, cb) {
+  const totalPages = Math.max(1, Math.ceil(total/size));
+  const from = total===0 ? 0 : (page-1)*size+1;
+  const to   = Math.min(page*size, total);
+  document.getElementById(labelId).textContent = total===0 ? 'No records' : `${from}–${to} of ${total}`;
+  const wrap = document.getElementById(btnId);
+  wrap.innerHTML = '';
+  const prev = document.createElement('button');
+  prev.className='page-btn'; prev.textContent='‹'; prev.disabled=(page===1);
+  prev.onclick=()=>cb(page-1); wrap.appendChild(prev);
+  let start=Math.max(1,page-2), end=Math.min(totalPages,start+4);
+  start=Math.max(1,end-4);
+  for(let i=start;i<=end;i++){
+    const btn=document.createElement('button');
+    btn.className='page-btn'+(i===page?' active':'');
+    btn.textContent=i; btn.onclick=(function(p){return()=>cb(p);})(i);
+    wrap.appendChild(btn);
+  }
+  const next=document.createElement('button');
+  next.className='page-btn'; next.textContent='›'; next.disabled=(page>=totalPages);
+  next.onclick=()=>cb(page+1); wrap.appendChild(next);
+}
 
-  document.getElementById('revCards').innerHTML = `
-    <div class="rev-card"><div class="rev-card-label">Total Revenue</div><div class="rev-card-value">${fmtN(totRev)}</div><div class="rev-card-sub">${rows.length} booking${rows.length!==1?'s':''} in range</div></div>
-    <div class="rev-card"><div class="rev-card-label">Total Collected</div><div class="rev-card-value" style="color:var(--green);">${fmtN(totPaid)}</div><div class="rev-card-sub">${collRate}% collection rate</div></div>
-    <div class="rev-card"><div class="rev-card-label">Outstanding Balance</div><div class="rev-card-value" style="color:var(--red);">${fmtN(totBal)}</div><div class="rev-card-sub">Pending collection</div></div>`;
+/* ═══════════════════════════════════════════════
+   KPI ROW — 7 cards, always one line (horizontal scroll on small screens)
+═══════════════════════════════════════════════ */
+function renderKPI(rows) {
+  const totRev    = rows.reduce((s,b) => s+calcTotal(b), 0);
+  const totPaid   = rows.reduce((s,b) => s+(b.paid||0), 0);
+  const totBal    = rows.reduce((s,b) => s+calcBal(b),  0);
+  const collRate  = totRev>0 ? Math.round(totPaid/totRev*100) : 0;
+  const nights_   = rows.reduce((s,b) => s+(nights(b.checkin,b.checkout)||0), 0);
+  const avgNight  = rows.length>0 ? Math.round(totRev/(nights_||1)) : 0;
+  const fullyPaid = rows.filter(b=>b.payStatus==='Fully Paid').length;
 
-  const types = ['Standard','Deluxe','Suite','Conference'];
-  document.getElementById('typeRevGrid').innerHTML = types.map(t => {
-    const trows = rows.filter(b => b.type === t);
-    const trev  = trows.reduce((s, b) => s + calcTotal(b), 0);
-    return `<div class="type-rev-card">
-      <div class="type-rev-name">${TYPE_ICON[t]||''} ${t}</div>
-      <div class="type-rev-value">${fmtN(trev)}</div>
-      <div class="type-rev-sub">${trows.length} booking${trows.length!==1?'s':''}</div>
-    </div>`;
-  }).join('');
+  const cards = [
+    { label:'Total Revenue',    val:fmtN(totRev),        sub:`${rows.length} bookings`,   cls:'',       vcls:'' },
+    { label:'Collected',        val:fmtN(totPaid),       sub:`${collRate}% collection`,   cls:'green',  vcls:'green' },
+    { label:'Balance Due',      val:fmtN(totBal),        sub:'Outstanding',               cls:'red',    vcls:'red' },
+    { label:'Total Nights',     val:nights_.toLocaleString(), sub:'room-nights booked',   cls:'purple', vcls:'purple' },
+    { label:'Avg Rate / Night', val:fmtN(avgNight),      sub:'blended across types',      cls:'blue2',  vcls:'blue2' },
+    { label:'Fully Paid',       val:fullyPaid,           sub:`of ${rows.length} bookings`,cls:'teal',   vcls:'teal' },
+    { label:'Avg Stay',         val:(rows.length>0 ? (nights_/rows.length).toFixed(1) : '0') + ' nts',
+                                                         sub:'per booking',               cls:'amber',  vcls:'amber' },
+  ];
+
+  document.getElementById('kpiRow').innerHTML = cards.map(c =>
+    `<div class="kpi-card ${c.cls}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-val ${c.vcls}">${c.val}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`
+  ).join('');
+
+  /* Also build the compact print version */
+  document.getElementById('printKpiPrint').innerHTML = cards.map(c =>
+    `<div style="background:#f4f6fb;border:1px solid #eef0f6;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#9aa1b3;font-weight:700;margin-bottom:3px;">${c.label}</div>
+      <div style="font-size:14px;font-weight:800;color:#1c2440;">${c.val}</div>
+      <div style="font-size:9px;color:#9aa1b3;margin-top:1px;">${c.sub}</div>
+    </div>`
+  ).join('');
 }
 
 /* ═══════════════════════════════════════════════
@@ -432,88 +523,122 @@ function generateReport() {
 
   filteredRep = bookings.filter(b => {
     if (!b.guest) return false;
-    if (type   && b.type !== type)     return false;
-    if (status && b.status !== status) return false;
-    if (pay    && b.payStatus !== pay) return false;
+    if (type   && b.type      !== type)   return false;
+    if (status && b.status    !== status) return false;
+    if (pay    && b.payStatus !== pay)    return false;
     if (from   && b.checkin && b.checkin < from) return false;
     if (to     && b.checkin && b.checkin > to)   return false;
     return true;
   });
 
-  document.getElementById('repRangeLabel').textContent = from || to
-    ? `${from ? fmtDate(from) : 'Start'} → ${to ? fmtDate(to) : 'Present'}`
-    : 'All time';
+  /* Build title */
+  let title = 'Full Report';
+  const parts = [];
+  if (type)   parts.push(type);
+  if (status) parts.push(CHIP_LBL[status]||status);
+  if (pay)    parts.push(pay);
+  if (from || to) parts.push(`${from ? fmtDate(from) : 'Start'} → ${to ? fmtDate(to) : 'Present'}`);
+  if (parts.length) title = parts.join(' · ');
+  document.getElementById('repTitle').textContent = title;
 
-  renderRevCards(filteredRep);
+  /* Update print meta */
+  document.getElementById('printMeta').textContent =
+    `Generated: ${new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}` +
+    (parts.length ? `  ·  Filter: ${parts.join(', ')}` : '  ·  All records');
 
-  const totRev  = filteredRep.reduce((s, b) => s + calcTotal(b), 0);
-  const totPaid = filteredRep.reduce((s, b) => s + (b.paid || 0), 0);
-  const totBal  = filteredRep.reduce((s, b) => s + calcBal(b), 0);
+  renderKPI(filteredRep);
 
-  document.getElementById('repTitle').textContent = from || to ? `Report: ${from ? fmtDate(from) : ''} ${from && to ? '→' : ''} ${to ? fmtDate(to) : ''}` : type ? type + ' Rooms Report' : 'Full Report';
-  document.getElementById('repCount').textContent  = filteredRep.length + ' record' + (filteredRep.length !== 1 ? 's' : '');
-  document.getElementById('rep-cnt').textContent    = filteredRep.length;
-  document.getElementById('rep-total').textContent  = fmtN(totRev);
-  document.getElementById('rep-paid').textContent   = fmtN(totPaid);
-  document.getElementById('rep-bal').textContent    = fmtN(totBal);
+  const totRev  = filteredRep.reduce((s,b)=>s+calcTotal(b),0);
+  const totPaid = filteredRep.reduce((s,b)=>s+(b.paid||0),0);
+  const totBal  = filteredRep.reduce((s,b)=>s+calcBal(b), 0);
+
+  document.getElementById('repCount').textContent = filteredRep.length + ' record' + (filteredRep.length!==1?'s':'');
+  document.getElementById('rep-cnt').textContent   = filteredRep.length;
+  document.getElementById('rep-total').textContent = fmtN(totRev);
+  document.getElementById('rep-paid').textContent  = fmtN(totPaid);
+  document.getElementById('rep-bal').textContent   = fmtN(totBal);
+  document.getElementById('repSummary').style.display = filteredRep.length>0 ? 'grid' : 'none';
 
   repPage = 1;
   renderRepPage();
+  shell.setPendingBadge(bookings.filter(b=>b.status==='reserved').length);
 }
 
 function renderRepPage() {
   const total = filteredRep.length;
-  const start = (repPage - 1) * PAGE_REP;
-  const page  = filteredRep.slice(start, start + PAGE_REP);
-  document.getElementById('repBody').innerHTML = page.length === 0
-    ? `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);">No records match filters</td></tr>`
+  const start = (repPage-1)*PAGE_REP;
+  const page  = filteredRep.slice(start, start+PAGE_REP);
+
+  document.getElementById('repBody').innerHTML = page.length===0
+    ? `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);">No records match the selected filters.</td></tr>`
     : page.map(b => {
         const bal = calcBal(b);
         return `<tr>
-          <td class="mcard-head" data-label="Room"><span class="room-badge"><span class="rt-dot ${DOT_CLASS[b.type]}"></span>${b.room}</span><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||b.status}</span></td>
-          <td data-label="Guest" style="font-weight:500;">${b.guest}</td>
-          <td data-label="Type">${b.type}</td>
+          <td class="mcard-head" data-label="Room">
+            <span class="room-badge"><span class="rt-dot ${DOT_CLASS[b.type]}"></span>${b.room} · ${b.type}</span>
+          </td>
+          <td data-label="Guest">
+            <div style="font-weight:600;">${b.guest}</div>
+            <div style="font-size:10.5px;color:var(--text3)">${b.phone}</div>
+          </td>
           <td data-label="Check-in">${fmtDate(b.checkin)}</td>
           <td data-label="Check-out">${fmtDate(b.checkout)}</td>
-          <td data-label="Nights">${nights(b.checkin,b.checkout)||1}</td>
+          <td data-label="Nights">${nights(b.checkin,b.checkout)||'—'}</td>
           <td data-label="Rate/Night">${fmtN(b.rate)}</td>
-          <td data-label="Discount">${b.discount||0}%</td>
+          <td data-label="Disc %">${b.discount||0}%</td>
           <td data-label="Total"><strong>${fmtN(calcTotal(b))}</strong></td>
-          <td data-label="Paid"><span style="color:var(--green);">${fmtN(b.paid||0)}</span></td>
-          <td data-label="Balance"><span style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:600;">${fmtN(bal)}</span></td>
-          <td data-label="Method">${b.payMethod}</td>
-          <td data-label="Status"><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||b.status}</span></td>
+          <td data-label="Paid"><span style="color:var(--green);font-weight:600;">${fmtN(b.paid||0)}</span></td>
+          <td data-label="Balance"><span style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:700;">${fmtN(bal)}</span></td>
+          <td data-label="Method"><span style="font-size:11.5px;">${b.payMethod}</span></td>
+          <td data-label="Payment"><span class="pay-chip ${PAY_CLS[b.payStatus]||'pay-pending'}">${b.payStatus}</span></td>
+          <td data-label="Status"><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||'—'}</span></td>
           <td data-label="Recorded By">${b.recordedBy||'—'}</td>
         </tr>`;
       }).join('');
-  renderPagination('repPageBtns', 'repPaginLabel', repPage, total, PAGE_REP, p => { repPage = p; renderRepPage(); });
+
+  renderPagination('repPageBtns','repPaginLabel', repPage, total, PAGE_REP, p=>{ repPage=p; renderRepPage(); });
 }
 
 /* ═══════════════════════════════════════════════
-   CSV EXPORT
+   PRINT — inserts hotel header then calls window.print()
 ═══════════════════════════════════════════════ */
-function exportCsv() {
-  if (filteredRep.length === 0) { showToast('No records to export.', 'error'); return; }
-  const headers = ['Room','Guest','Type','Check-in','Check-out','Nights','Rate/Night','Discount %','Total','Paid','Balance','Payment Method','Status','Recorded By'];
-  const rows = filteredRep.map(b => [
-    b.room, b.guest, b.type, b.checkin, b.checkout, nights(b.checkin,b.checkout)||1,
-    b.rate, b.discount||0, Math.round(calcTotal(b)), b.paid||0, Math.round(calcBal(b)), b.payMethod, CHIP_LBL[b.status]||b.status, b.recordedBy||''
-  ]);
-  const esc = v => `"${String(v).replace(/"/g,'""')}"`;
-  const csv = [headers.map(esc).join(','), ...rows.map(r => r.map(esc).join(','))].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = `aurum-hotel-bookings-report-${TODAY}.csv`;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-  showToast('Report exported as CSV.', 'success');
+function printReport() {
+  /* Show the print header only during print */
+  const header = document.getElementById('printHeader');
+  header.style.display = 'block';
+
+  /* Build a style block for print-only visibility */
+  const style = document.createElement('style');
+  style.id = 'printOnlyStyle';
+  style.textContent = `
+    @media print {
+      #printHeader { display: block !important; margin-bottom: 20px; }
+      .no-print, #sidebarSlot, #topbarSlot, .toolbar, .status-chips { display: none !important; }
+      .main { margin-left: 0 !important; }
+      .content { padding: 0 !important; }
+    }
+    @media screen { #printHeader { display: none !important; } }
+  `;
+  document.head.appendChild(style);
+
+  window.print();
+
+  /* Clean up after print dialog closes */
+  setTimeout(() => {
+    header.style.display = 'none';
+    const s = document.getElementById('printOnlyStyle');
+    if (s) s.remove();
+  }, 1000);
 }
 
-function showToast(msg, type = 'success') {
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+function showToast(msg, type='success') {
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = (type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : 'ℹ ') + msg;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
@@ -524,10 +649,7 @@ function showToast(msg, type = 'success') {
 async function init() {
   allRooms = await loadShared(KEY_ROOMS, DEMO_ROOMS);
   bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
-  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
-  shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
-  document.getElementById('repFrom').value = '';
-  document.getElementById('repTo').value   = '';
+  await Promise.all([saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings)]);
   generateReport();
 }
 init();

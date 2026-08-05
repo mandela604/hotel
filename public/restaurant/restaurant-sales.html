@@ -5,21 +5,34 @@
 <title>Sales | Aurum Restaurant</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  /* This page pins its own content to a permanent white/light palette —
+     same approach as restaurant-dashboard.html / restaurant-inventory.html.
+     Sidebar + topbar look/markup live entirely in restaurant-shell.js and
+     stay on the shared dark/blue theme; only .content + the toast pick up
+     these light values, so the sidebar never sees this. */
+  .content, .toast{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
   }
   html, body{ height:auto;}
-  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  body{ font-family:'Outfit',sans-serif; font-size:14px; transition:background .3s,color .3s; }
   .app{ display:block; height:100vh; overflow:hidden; }
   .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; }
+  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
@@ -31,16 +44,12 @@
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-card.revenue{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
   .kpi-card.revenue::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-card.revenue .kpi-label{ color:var(--green); }
-  .kpi-card.units{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
   .kpi-card.units::before{ background:linear-gradient(90deg,var(--blue),transparent); }
   .kpi-card.units .kpi-label{ color:var(--blue); }
-  .kpi-card.voided{ background:linear-gradient(160deg, rgba(248,113,113,.07), var(--surface) 60%); border-color:rgba(248,113,113,.22); }
   .kpi-card.voided::before{ background:linear-gradient(90deg,var(--red),transparent); }
   .kpi-card.voided .kpi-label{ color:var(--red); }
-  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
   .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
   .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
   @media (max-width:420px){ .kpi-value{ font-size:21px; } }
@@ -57,21 +66,29 @@
   .search-box:focus-within{ border-color:var(--gold-border); }
   .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
-  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
-  .filter-date{ cursor:default; color-scheme:dark; }
-  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select:focus{ border-color:var(--gold-border); }
+
+  /* Single date-range field — one input opens one flatpickr popup covering both From + To, same pattern as Transfer History */
+  .daterange-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:190px; cursor:pointer; }
+  .daterange-box:focus-within, .daterange-box.open{ border-color:var(--gold-border); }
+  .daterange-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; width:100%; cursor:pointer; }
+  .daterange-box input::placeholder{ color:var(--text3); }
+  .daterange-clear{ background:none; border:none; color:var(--text3); cursor:pointer; font-size:12px; padding:0; display:none; line-height:1; }
+  .daterange-box.has-value .daterange-clear{ display:flex; }
+  .daterange-clear:hover{ color:var(--red); }
+
   .status-pills{ display:flex; gap:6px; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.completed{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
-  .status-pill.on.voided{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .status-pill.on.completed{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.voided{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
   .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
-  .active-chip button{ background:none; border:none; color:var(--gold-light); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
-  .active-chip button:hover{ color:#fff; }
+  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
+  .active-chip button{ background:none; border:none; color:var(--gold); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
+  .active-chip button:hover{ color:var(--red); }
   .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
   .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
   .btn-ghost:hover{ color:var(--gold); }
@@ -80,8 +97,8 @@
     .toolbar-row.top{ flex-direction:column; align-items:stretch; }
     .toolbar-left{ flex-direction:column; align-items:stretch; }
     .flt-group{ width:100%; }
-    .search-box{ max-width:100%; }
-    .filter-select, .filter-date{ width:100%; }
+    .search-box, .daterange-box{ max-width:100%; }
+    .filter-select{ width:100%; }
     .status-pills{ flex-wrap:wrap; }
     .toolbar-row.top > .btn{ width:100%; justify-content:center; }
     .btn-ghost{ align-self:flex-start; }
@@ -118,8 +135,8 @@
   .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
   .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .act-btn.void{ border-color:rgba(248,113,113,0.35); color:var(--red); background:var(--red-bg); font-weight:600; }
-  .act-btn.void:hover{ border-color:var(--red); background:rgba(248,113,113,0.2); color:var(--red); }
+  .act-btn.void{ border-color:rgba(240,68,56,0.35); color:var(--red); background:var(--red-bg); font-weight:600; }
+  .act-btn.void:hover{ border-color:var(--red); background:rgba(240,68,56,0.2); color:var(--red); }
 
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
@@ -135,7 +152,7 @@
   .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
   .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
 
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
   .toast.success{ border-left:3px solid var(--green); }
   .toast.error{ border-left:3px solid var(--red); }
   .toast.info{ border-left:3px solid var(--blue); }
@@ -146,6 +163,21 @@
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
 
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* flatpickr theming — hardcoded to the page's light palette since
+     flatpickr appends its calendar straight to <body>, outside the
+     .content scope that holds the CSS variables. */
+  .flatpickr-calendar{ background:#ffffff !important; border:1px solid #eef0f6 !important; box-shadow:0 18px 46px rgba(15,34,55,0.16) !important; font-family:'Outfit',sans-serif !important; }
+  .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after{ border-bottom-color:#ffffff !important; }
+  .flatpickr-months, .flatpickr-weekdays{ background:#ffffff !important; }
+  .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year{ color:#1c2440 !important; }
+  span.flatpickr-weekday{ color:#9aa1b3 !important; }
+  .flatpickr-day{ color:#6b7280 !important; }
+  .flatpickr-day.today{ border-color:#2f6fed !important; }
+  .flatpickr-day:hover{ background:#f4f6fb !important; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange{ background:#2f6fed !important; border-color:#2f6fed !important; color:#ffffff !important; }
+  .flatpickr-day.inRange{ background:rgba(47,111,237,0.10) !important; border-color:rgba(47,111,237,0.10) !important; box-shadow:-5px 0 0 rgba(47,111,237,0.10), 5px 0 0 rgba(47,111,237,0.10) !important; }
+  .flatpickr-day.flatpickr-disabled{ color:#9aa1b3 !important; opacity:.4 !important; }
 
   @media print{
     #rst-sidebar, #rst-topbar, .toolbar, .pagination, .act-btns, .no-print{ display:none !important; }
@@ -201,12 +233,12 @@
               </select>
             </div>
             <div class="flt-group">
-              <span class="flt-label">Date — From</span>
-              <input type="date" class="filter-date" id="fDateFrom" onchange="page=1;render()">
-            </div>
-            <div class="flt-group">
-              <span class="flt-label">Date — To</span>
-              <input type="date" class="filter-date" id="fDateTo" onchange="page=1;render()">
+              <span class="flt-label">Date</span>
+              <div class="daterange-box" id="dateRangeBox">
+                <span style="color:var(--text3);font-size:12px;">📅</span>
+                <input type="text" id="fDateRange" placeholder="Date range" readonly>
+                <button type="button" class="daterange-clear" id="dateRangeClear" title="Clear dates">✕</button>
+              </div>
             </div>
             <div class="flt-group">
               <span class="flt-label">Sort By</span>
@@ -269,6 +301,7 @@
 <!-- No inline modals — "View" opens SalesDetail, "Void" opens VoidSale.
      Both are reusable components (component/sales-detail.js, component/void-sale.js). -->
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script src="../component/sales-detail.js"></script>
 <script src="../component/void-sale.js"></script>
@@ -398,6 +431,8 @@ let inventory = [];
 let movements = [];
 let page = 1;
 let sortKey = 'date', sortDir = 'desc';
+let rangeStart = null, rangeEnd = null; // single date-range filter
+let fp = null; // flatpickr instance
 let _filteredCache = [];
 
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
@@ -450,6 +485,48 @@ function buildDetailSale(s){
 }
 
 /* ═══════════════════════════════════════════
+   SINGLE DATE-RANGE POPUP (flatpickr, mode:"range")
+   One input + one calendar covers both "from" and "to" — first
+   click sets the start date, second click sets the end date. Same
+   widget used on Transfer History for Date Sent.
+═══════════════════════════════════════════ */
+function initDateRangePicker(){
+  const input = document.getElementById('fDateRange');
+  const box = document.getElementById('dateRangeBox');
+  const clearBtn = document.getElementById('dateRangeClear');
+
+  fp = flatpickr(input, {
+    mode: 'range',
+    dateFormat: 'd/m/Y',
+    altInput: false,
+    onOpen: () => box.classList.add('open'),
+    onClose: () => box.classList.remove('open'),
+    onChange: (selectedDates) => {
+      if (selectedDates.length === 2) {
+        rangeStart = dateOnly(selectedDates[0]);
+        rangeEnd = dateOnly(selectedDates[1]);
+        box.classList.add('has-value');
+      } else if (selectedDates.length === 0) {
+        rangeStart = null; rangeEnd = null;
+        box.classList.remove('has-value');
+      }
+      page = 1;
+      render();
+    }
+  });
+
+  box.addEventListener('click', (e) => { if (e.target !== clearBtn) fp.open(); });
+  clearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fp.clear();
+    rangeStart = null; rangeEnd = null;
+    box.classList.remove('has-value');
+    page = 1;
+    render();
+  });
+}
+
+/* ═══════════════════════════════════════════
    KPIs
 ═══════════════════════════════════════════ */
 function renderKPIs(rows){
@@ -460,25 +537,21 @@ function renderKPIs(rows){
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card">
-      <div class="kpi-accent">🧾</div>
       <div class="kpi-label">Total Sales</div>
       <div class="kpi-value" style="color:var(--gold);">${rows.length}</div>
       <div class="kpi-trend neutral">${completed.length} completed · ${voided.length} voided</div>
     </div>
     <div class="kpi-card revenue">
-      <div class="kpi-accent" style="color:var(--green)">💰</div>
       <div class="kpi-label">Total Revenue</div>
       <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
       <div class="kpi-trend up">From completed sales</div>
     </div>
     <div class="kpi-card units">
-      <div class="kpi-accent" style="color:var(--blue)">📦</div>
       <div class="kpi-label">Units Sold</div>
       <div class="kpi-value" style="color:var(--blue);">${units}</div>
       <div class="kpi-trend info">Across ${completed.length} sale${completed.length!==1?'s':''}</div>
     </div>
     <div class="kpi-card voided">
-      <div class="kpi-accent" style="color:var(--red)">✕</div>
       <div class="kpi-label">Voided Sales</div>
       <div class="kpi-value" style="color:var(--red);">${voided.length}</div>
       <div class="kpi-trend ${voided.length>0?'warn':'up'}">${voided.length>0?'Stock restored':'None on record'}</div>
@@ -507,8 +580,6 @@ function bindStatusPills(){
 function getFiltered(){
   const q       = document.getElementById('fSearch').value.toLowerCase();
   const method  = document.getElementById('fMethod').value;
-  const dFrom   = document.getElementById('fDateFrom').value;
-  const dTo     = document.getElementById('fDateTo').value;
   const sortVal = document.getElementById('fSort').value;
   [sortKey, sortDir] = sortVal.split('_');
 
@@ -522,10 +593,9 @@ function getFiltered(){
     const mMethod = !method || s.method === method;
     const mStatus = !statusFilter || s.status === statusFilter;
     let mDate = true;
-    if (dFrom || dTo) {
+    if (rangeStart && rangeEnd) {
       const sd = dateOnly(parseSaleDate(s.date));
-      if (dFrom) { const f = new Date(dFrom + 'T00:00:00'); if (!sd || sd < f) mDate = false; }
-      if (dTo)   { const to = new Date(dTo + 'T00:00:00'); if (!sd || sd > to) mDate = false; }
+      if (!sd || sd < rangeStart || sd > rangeEnd) mDate = false;
     }
     return mq && mMethod && mStatus && mDate;
   });
@@ -552,14 +622,14 @@ function renderActiveChips(){
   const chips = [];
   const q = document.getElementById('fSearch').value;
   const method = document.getElementById('fMethod').value;
-  const dFrom = document.getElementById('fDateFrom').value;
-  const dTo = document.getElementById('fDateTo').value;
 
   if (statusFilter) chips.push({ label: `Status: ${statusFilter === 'completed' ? 'Completed' : 'Voided'}`, clear: () => { statusFilter = ''; document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on')); document.querySelector('.status-pill.all').classList.add('on'); } });
   if (q) chips.push({ label: `Search: "${q}"`, clear: () => { document.getElementById('fSearch').value = ''; } });
   if (method) chips.push({ label: `Payment: ${method}`, clear: () => { document.getElementById('fMethod').value = ''; } });
-  if (dFrom) chips.push({ label: `From: ${dFrom}`, clear: () => { document.getElementById('fDateFrom').value = ''; } });
-  if (dTo) chips.push({ label: `To: ${dTo}`, clear: () => { document.getElementById('fDateTo').value = ''; } });
+  if (rangeStart && rangeEnd) {
+    const fmt = d => d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    chips.push({ label: `Date: ${fmt(rangeStart)} – ${fmt(rangeEnd)}`, clear: () => { fp.clear(); rangeStart=null; rangeEnd=null; document.getElementById('dateRangeBox').classList.remove('has-value'); } });
+  }
 
   const chipsRow = document.getElementById('chipsRow');
   const wrap = document.getElementById('activeChips');
@@ -574,9 +644,10 @@ function renderActiveChips(){
 function clearFilters(){
   document.getElementById('fSearch').value = '';
   document.getElementById('fMethod').value = '';
-  document.getElementById('fDateFrom').value = '';
-  document.getElementById('fDateTo').value = '';
   document.getElementById('fSort').value = 'date_desc';
+  if (fp) fp.clear();
+  rangeStart = null; rangeEnd = null;
+  document.getElementById('dateRangeBox').classList.remove('has-value');
   statusFilter = '';
   document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
   document.querySelector('.status-pill.all').classList.add('on');
@@ -755,6 +826,8 @@ function showToast(msg, type='success'){
    back to shared storage, and finally to the hardcoded demo seed.
 ═══════════════════════════════════════════ */
 async function init(){
+  initDateRangePicker();
+
   if (!CFG.USE_DEMO) {
     try {
       const data = await apiFetch('GET', '/api/restaurant/sales');

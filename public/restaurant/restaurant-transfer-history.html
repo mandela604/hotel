@@ -5,53 +5,59 @@
 <title>Transfer History | Aurum Restaurant</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  /* restaurant-shell.js defines --gold/--text/--border/--surface etc,
-     but never defines status colors — every green/red/amber/blue
-     reference on this page depends on THESE being defined right here. */
-  :root{
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
+  /* restaurant-shell.js defines --gold/--text/--border/--surface etc
+     for the sidebar + topbar, following whatever dark/light theme is
+     toggled. This page instead pins its OWN content to a permanent
+     white/light palette — same approach as restaurant-dashboard.html —
+     so .content, the modals, and the toast all stay white regardless
+     of the shell's theme toggle. Sidebar/topbar are untouched. */
+  .content, .modal-overlay, .toast{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
   }
   /* This page only owns layout + its own content. Sidebar + topbar
-     look/markup live entirely in restaurant-shell.js. */
-  html, body{ height:100%; overflow:hidden; }
-  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
-  .app{ display:flex; height:100vh; overflow:hidden; }
-  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+     look/markup live entirely in restaurant-shell.js. Layout now
+     follows the same "whole page scrolls" pattern as
+     restaurant-inventory.html — no fixed-height/overflow:hidden
+     shell — so the table's own horizontal scroll (.tbl-wrap) is the
+     only scroll surface inside the content, same as Inventory. */
+  html{ height:auto; }
+  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; overflow-x:hidden; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  /* ═══ KPI (colorful, same pattern as Dashboard) ═══ */
+  /* ═══ KPI ═══ */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
     display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
-  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-card.accepted{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
-  .kpi-card.accepted::before{ background:linear-gradient(90deg,var(--green),transparent); }
-  .kpi-card.rejected{ background:linear-gradient(160deg, rgba(248,113,113,.07), var(--surface) 60%); border-color:rgba(248,113,113,.22); }
-  .kpi-card.rejected::before{ background:linear-gradient(90deg,var(--red),transparent); }
-  .kpi-card.units{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
-  .kpi-card.units::before{ background:linear-gradient(90deg,#60a5fa,transparent); }
-  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
+  .kpi-card.clickable{ cursor:pointer; }
   .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-card.accepted .kpi-label{ color:var(--green); }
-  .kpi-card.rejected .kpi-label{ color:var(--red); }
-  .kpi-card.units .kpi-label{ color:#60a5fa; }
   .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
   @media (max-width:420px){ .kpi-value{ font-size:21px; } }
   .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
-  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:#60a5fa; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
   /* Pagination */
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
@@ -61,87 +67,129 @@
   .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  /* ═══ Toolbar / filter bar ═══ */
-  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
-  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
-  .toolbar-row.top{ justify-content:space-between; }
-  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
-  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  /* ═══ Toolbar / filter bar — everything centered horizontally
+     and vertically, wraps as a group instead of pinning actions
+     to the right. ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; align-items:center; }
+  .toolbar-row{ display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; width:100%; }
+  .toolbar-row.top{ justify-content:center; }
+  .toolbar-left{ display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; }
+  .toolbar-top-actions{ display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; }
+  .toolbar-more{ max-height:0; opacity:0; overflow:hidden; transition:max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s ease, margin-top .28s ease; width:100%; display:flex; justify-content:center; }
+  .toolbar-more.expanded{ max-height:140px; opacity:1; margin-top:2px; }
+  .icon-btn{ display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:9px; border:1px solid var(--border); background:var(--surface2); color:var(--text3); cursor:pointer; transition:all .15s; font-size:11px; flex-shrink:0; }
+  .icon-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .icon-btn.open{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  #moreFiltersChevron{ transition:transform .2s ease; display:inline-block; line-height:1; }
+  .icon-btn.open #moreFiltersChevron{ transform:rotate(180deg); }
+  .flt-group{ display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; text-align:center; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; text-align:left; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
-  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
-  .filter-date{ cursor:default; color-scheme:dark; }
-  [data-theme="light"] .filter-date{ color-scheme:light; }
-  .status-pills{ display:flex; gap:6px; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; text-align:center; text-align-last:center; }
+  .filter-select:focus{ border-color:var(--gold-border); }
+
+  /* Single date-range field — one input opens one flatpickr popup covering both From + To */
+  .daterange-box{ display:flex; align-items:center; justify-content:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:200px; cursor:pointer; }
+  .daterange-box:focus-within, .daterange-box.open{ border-color:var(--gold-border); }
+  .daterange-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; width:100%; cursor:pointer; text-align:center; }
+  .daterange-box input::placeholder{ color:var(--text3); }
+  .daterange-clear{ background:none; border:none; color:var(--text3); cursor:pointer; font-size:12px; padding:0; display:none; line-height:1; }
+  .daterange-box.has-value .daterange-clear{ display:flex; }
+  .daterange-clear:hover{ color:var(--red); }
+
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.pending{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); }
   .status-pill.on.accepted{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
   .status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
-  .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .active-chips{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
   .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
   .active-chip button{ background:none; border:none; color:var(--gold-light); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
   .active-chip button:hover{ color:#fff; }
   .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
 
   @media (max-width:700px){
-    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
-    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .toolbar-row.top{ flex-direction:column; align-items:center; flex-wrap:wrap; }
+    .toolbar-left{ flex-direction:column; align-items:center; flex-wrap:wrap; width:100%; }
     .flt-group{ width:100%; }
-    .search-box{ max-width:100%; }
-    .filter-select, .filter-date{ width:100%; }
+    .search-box, .daterange-box{ max-width:100%; }
+    .filter-select{ width:100%; }
+    .toolbar-more.expanded{ max-height:220px; }
     .status-pills{ flex-wrap:wrap; }
-    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
-    .btn-ghost{ align-self:flex-start; }
+    .toolbar-top-actions{ width:100%; justify-content:center; flex-wrap:wrap; }
+    .toolbar-top-actions .btn{ width:100%; justify-content:center; }
+  }
+  /* Between mobile and full desktop width, let the row wrap onto a
+     second line rather than overflow, while still keeping items
+     inline (not full column stacks). */
+  @media (min-width:701px) and (max-width:1180px){
+    .toolbar-row.top{ flex-wrap:wrap; }
+    .toolbar-left{ flex-wrap:wrap; }
   }
 
   /* ═══ Panel / table ═══ */
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
   .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
-  .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:860px; }
+  .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
   thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
   thead th[data-sortkey]:hover{ color:var(--gold); }
   thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
   thead th.no-sort{ cursor:default; }
-  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
   tbody tr:last-child{ border-bottom:none; }
   tbody tr:hover{ background:var(--surface2); }
   tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
-  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  tbody td.muted{ color:var(--text3); }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
   .meal-badge{ display:inline-flex; align-items:center; gap:6px; }
   .meal-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
   .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .chip-pending{ background:var(--blue-bg); color:var(--blue); } .chip-pending::before{ background:var(--blue); }
   .chip-accepted{ background:var(--green-bg); color:var(--green); } .chip-accepted::before{ background:var(--green); }
   .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
 
   .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-success{ background:rgba(74,222,128,0.14); border-color:rgba(74,222,128,0.4); color:var(--green); font-weight:700; }
+  .btn-success:hover{ background:rgba(74,222,128,0.24); }
+  .btn-danger{ background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:var(--red); font-weight:700; }
+  .btn-danger:hover{ background:rgba(248,113,113,0.18); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
   .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
   .btn-ghost:hover{ color:var(--gold); }
+  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
   .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .act-btn.accept{ border-color:rgba(74,222,128,0.35); color:var(--green); background:var(--green-bg); font-weight:600; }
+  .act-btn.accept:hover{ border-color:var(--green); background:rgba(74,222,128,0.2); color:var(--green); }
+  .act-btn.reject{ border-color:rgba(248,113,113,0.35); color:var(--red); background:var(--red-bg); font-weight:600; }
+  .act-btn.reject:hover{ border-color:var(--red); background:rgba(248,113,113,0.2); color:var(--red); }
 
   /* Modal */
   .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
   .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
   .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal.status-pending::before{ background:var(--blue); }
   .modal.status-accepted::before{ background:var(--green); }
   .modal.status-rejected::before{ background:var(--red); }
+  .modal-sm{ width:min(400px,96vw); }
   @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
   .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-title.accept-title{ color:var(--green); }
+  .modal-title.reject-title{ color:var(--red); }
   .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
   .modal-close:hover{ color:var(--text); }
   .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-bottom:16px; }
@@ -149,10 +197,27 @@
   .detail-item{ display:flex; flex-direction:column; gap:3px; }
   .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
   .detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
-  .detail-remarks{ background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--text3); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--text2); line-height:1.5; }
+  .detail-remarks{ background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--text3); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--text2); line-height:1.5; margin-bottom:4px; }
+  .detail-remarks.status-pending{ border-left-color:var(--blue); }
   .detail-remarks.status-accepted{ border-left-color:var(--green); background:var(--green-bg); color:var(--text); }
   .detail-remarks.status-rejected{ border-left-color:var(--red); background:var(--red-bg); color:var(--text); }
+
+  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-input, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-textarea:focus{ border-color:var(--gold-border); }
+  .form-textarea{ resize:vertical; min-height:60px; }
+
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note strong{ color:var(--text); }
+
+  /* Toast */
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
@@ -160,8 +225,23 @@
 
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
+  /* flatpickr theming — hardcoded to the page's light palette since
+     flatpickr appends its calendar straight to <body>, outside the
+     .content/.modal-overlay scope that holds the CSS variables. */
+  .flatpickr-calendar{ background:#ffffff !important; border:1px solid #eef0f6 !important; box-shadow:0 18px 46px rgba(15,34,55,0.16) !important; font-family:'Outfit',sans-serif !important; }
+  .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after{ border-bottom-color:#ffffff !important; }
+  .flatpickr-months, .flatpickr-weekdays{ background:#ffffff !important; }
+  .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year{ color:#1c2440 !important; }
+  span.flatpickr-weekday{ color:#9aa1b3 !important; }
+  .flatpickr-day{ color:#6b7280 !important; }
+  .flatpickr-day.today{ border-color:#2f6fed !important; }
+  .flatpickr-day:hover{ background:#f4f6fb !important; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange{ background:#2f6fed !important; border-color:#2f6fed !important; color:#ffffff !important; }
+  .flatpickr-day.inRange{ background:rgba(47,111,237,0.10) !important; border-color:rgba(47,111,237,0.10) !important; box-shadow:-5px 0 0 rgba(47,111,237,0.10), 5px 0 0 rgba(47,111,237,0.10) !important; }
+  .flatpickr-day.flatpickr-disabled{ color:#9aa1b3 !important; opacity:.4 !important; }
+
   @media print{
-    #rst-sidebar, #rst-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
+    #rst-sidebar, #rst-topbar, .toolbar, .act-btns, .pagination, .no-print{ display:none !important; }
     .main{ margin-left:0 !important; }
     body{ background:#fff !important; color:#000 !important; }
     .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
@@ -191,6 +271,7 @@
               <span class="flt-label">Status</span>
               <div class="status-pills" id="statusPills">
                 <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill pending" data-status="pending"><span class="pdot" style="background:var(--blue)"></span>Pending</div>
                 <div class="status-pill accepted" data-status="accepted"><span class="pdot" style="background:var(--green)"></span>Accepted</div>
                 <div class="status-pill rejected" data-status="rejected"><span class="pdot" style="background:var(--red)"></span>Rejected</div>
               </div>
@@ -209,32 +290,44 @@
               </select>
             </div>
             <div class="flt-group">
-              <span class="flt-label">From Kitchen</span>
+              <span class="flt-label">From</span>
               <select class="filter-select" id="fKitchen" onchange="page=1;render()">
-                <option value="">All Kitchens</option>
+                <option value="">All</option>
+                <option value="Kitchen">Kitchen</option>
+                <option value="Store">Store</option>
               </select>
             </div>
             <div class="flt-group">
-              <span class="flt-label">Action Date — From</span>
-              <input type="date" class="filter-date" id="fDateFrom" onchange="page=1;render()">
+              <span class="flt-label">&nbsp;</span>
+              <div class="toolbar-top-actions">
+                <button class="icon-btn" id="moreFiltersBtn" onclick="toggleMoreFilters()" title="More filters"><span id="moreFiltersChevron">▾</span></button>
+                <button class="btn-ghost" id="clearFiltersBtn" onclick="clearFilters()">✕ Clear Filters</button>
+                <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+              </div>
             </div>
+          </div>
+        </div>
+        <div class="toolbar-more" id="toolbarMore">
+          <div class="toolbar-row">
             <div class="flt-group">
-              <span class="flt-label">Action Date — To</span>
-              <input type="date" class="filter-date" id="fDateTo" onchange="page=1;render()">
+              <span class="flt-label">Date Sent</span>
+              <div class="daterange-box" id="dateRangeBox">
+                <span style="color:var(--text3);font-size:12px;">📅</span>
+                <input type="text" id="fDateRange" placeholder="Date" readonly>
+                <button type="button" class="daterange-clear" id="dateRangeClear" title="Clear dates">✕</button>
+              </div>
             </div>
             <div class="flt-group">
               <span class="flt-label">Sort By</span>
               <select class="filter-select" id="fSort" onchange="page=1;render()">
-                <option value="date_desc">Action Date (Newest)</option>
-                <option value="date_asc">Action Date (Oldest)</option>
+                <option value="date_desc">Date Sent (Newest)</option>
+                <option value="date_asc">Date Sent (Oldest)</option>
                 <option value="qty_desc">Quantity (High → Low)</option>
                 <option value="qty_asc">Quantity (Low → High)</option>
                 <option value="meal_asc">Meal (A → Z)</option>
               </select>
             </div>
-            <button class="btn-ghost" id="clearFiltersBtn" onclick="clearFilters()">✕ Clear Filters</button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
         </div>
         <div class="toolbar-row" id="chipsRow" style="display:none;">
           <div class="active-chips" id="activeChips"></div>
@@ -255,8 +348,8 @@
                 <th data-sortkey="qty">Qty <span class="sort-arrow" id="arrow-qty"></span></th>
                 <th class="no-sort">From Kitchen</th>
                 <th class="no-sort">Sent By</th>
-                <th class="no-sort">Date Sent</th>
-                <th data-sortkey="date">Action Date <span class="sort-arrow" id="arrow-date"></span></th>
+                <th data-sortkey="date">Date Sent <span class="sort-arrow" id="arrow-date"></span></th>
+                <th class="no-sort">Action Date</th>
                 <th class="no-sort">Handled By</th>
                 <th class="no-sort">Status</th>
                 <th class="no-print no-sort">Actions</th>
@@ -275,7 +368,7 @@
   </div>
 </div>
 
-<!-- DETAILS MODAL -->
+<!-- TRANSFER DETAILS MODAL — footer adapts: Accept/Reject shown only while pending -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal">
     <div class="modal-header">
@@ -286,32 +379,95 @@
     <div class="detail-remarks" id="dRemarks"></div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal')">Close</button>
+      <button class="btn btn-danger btn-sm" id="dRejectBtn" style="display:none;">✕ Reject</button>
+      <button class="btn btn-success btn-sm" id="dAcceptBtn" style="display:none;">✓ Accept</button>
     </div>
   </div>
 </div>
 
+<!-- ACCEPT MODAL -->
+<div class="modal-overlay" id="acceptModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title accept-title">✓ Accept Transfer</div>
+      <button class="modal-close" onclick="closeModal('acceptModal')">✕</button>
+    </div>
+    <div class="val-note">Accepting <strong id="acName"></strong> will add <strong id="acQty"></strong> to Restaurant Inventory and log the movement.</div>
+    <div class="form-group">
+      <label class="form-label">Received By</label>
+      <input class="form-input" type="text" id="acReceivedBy" placeholder="Staff name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Remarks (optional)</label>
+      <textarea class="form-textarea" id="acRemarks" placeholder="Condition on arrival, notes…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('acceptModal')">Cancel</button>
+      <button class="btn btn-success btn-sm" onclick="confirmAccept()">✓ Confirm Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title reject-title">✕ Reject Transfer</div>
+      <button class="modal-close" onclick="closeModal('rejectModal')">✕</button>
+    </div>
+    <div class="val-note">Rejecting <strong id="rjName"></strong> will move it to history — no inventory will be added.</div>
+    <div class="form-group">
+      <label class="form-label">Reason for Rejection</label>
+      <textarea class="form-textarea" id="rjReason" placeholder="e.g. Short delivery, wrong meal, quality issue…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('rejectModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmReject()">✕ Confirm Reject</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════════
    Shell — sidebar + topbar, restaurant nav only.
-   NOTE the activeFile below matches THIS file's own name so the
-   sidebar highlights "Transfer History", not "Pending Transfers".
 ═══════════════════════════════════════════ */
 const shell = RestaurantShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'restaurant-transfer-history.html',
   pageTitle:     'Transfer History',
-  pageSubtitle:  'Every accepted or rejected transfer from the Kitchen',
+  pageSubtitle:  'Every pending, accepted and rejected transfer from the Kitchen',
   apiMode:       'Demo',
   user:          { name: 'Restaurant Manager', initials: 'RM' },
 });
 
 /* ═══════════════════════════════════════════
-   CONFIG & STORAGE — reads the SAME shared key that
-   restaurant-transfers.html writes to on Accept/Reject.
+   CONFIG, API LAYER & STORAGE
+   Set CFG.API_BASE and CFG.USE_DEMO=false to call a real backend.
+   On any failure (or in demo mode) this falls back to shared
+   storage (window.storage, or localStorage outside the Claude.ai
+   preview), and finally to the hardcoded demo seed below.
+
+   This page reads BOTH the pending list and the history list and
+   merges them into one table. Accept/Reject still move a row from
+   KEY_TRANSFERS into KEY_HISTORY, exactly like before — the row
+   just no longer disappears from view, its Status chip and Actions
+   column update in place.
 ═══════════════════════════════════════════ */
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE: 8 };
+const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
+
+async function apiFetch(method, path, body=null){
+  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
+  const opts = { method, headers:{ 'Content-Type':'application/json' } };
+  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(CFG.API_BASE + path, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
 
 const storage = window.storage || {
   async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
@@ -320,8 +476,10 @@ const storage = window.storage || {
   async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
 };
 
-const KEY_HISTORY   = 'restaurant-transfer-history';
 const KEY_TRANSFERS = 'restaurant-pending-transfers';
+const KEY_INVENTORY = 'restaurant-inventory';
+const KEY_HISTORY    = 'restaurant-transfer-history';
+const KEY_MOVEMENTS  = 'restaurant-movements';
 
 async function loadShared(key, fallback){
   try {
@@ -330,23 +488,45 @@ async function loadShared(key, fallback){
   } catch(e){}
   return fallback;
 }
+async function saveShared(key, value){
+  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+}
 
-/* Demo seed — only used the very first time, before any real history exists */
+/* Demo seed — only used the very first time, before anything syncs */
+const DEMO_TRANSFERS = [
+  { no:'KTN-00045', meal:'Fried Rice',  qty:30, unit:'Plates',   from:'Main Kitchen',    restaurant:'Main Restaurant', sentBy:'Head Chef', date:'17/07/26 10:30 AM', prodNo:'PROD-00096', remarks:'Lunch preparation' },
+  { no:'KTN-00044', meal:'Jollof Rice', qty:20, unit:'Plates',   from:'Main Kitchen',    restaurant:'Main Restaurant', sentBy:'Head Chef', date:'17/07/26 09:15 AM', prodNo:'PROD-00095', remarks:'' },
+  { no:'KTN-00046', meal:'Moi Moi',     qty:12, unit:'Pieces',   from:'Banquet Kitchen', restaurant:'Main Restaurant', sentBy:'Sous Chef', date:'17/07/26 11:50 AM', prodNo:'PROD-00097', remarks:'' },
+];
+const DEMO_INVENTORY = [
+  { meal:'Egusi Soup',  qty:15, unit:'Portions', batch:'PROD-00094', received:'17/07/26', min:8 },
+  { meal:'Moi Moi',     qty:4,  unit:'Pieces',   batch:'PROD-00090', received:'16/07/26', min:8 },
+  { meal:'Jollof Rice', qty:0,  unit:'Plates',   batch:'PROD-00088', received:'16/07/26', min:6 },
+  { meal:'Fried Rice',  qty:18, unit:'Plates',   batch:'PROD-00085', received:'16/07/26', min:6 },
+];
 const DEMO_HISTORY = [
-  { no:'KTN-00040', meal:'Jollof Rice',  qty:25, unit:'Plates',   from:'Main Kitchen',    sentBy:'Head Chef', date:'14/07/26 09:10 AM', prodNo:'PROD-00089', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'14/07/26 09:40 AM' },
-  { no:'KTN-00041', meal:'Egusi Soup',   qty:16, unit:'Portions', from:'Main Kitchen',    sentBy:'Head Chef', date:'14/07/26 12:05 PM', prodNo:'PROD-00090', remarks:'', status:'accepted', receivedBy:'Tunde, Waitstaff', actionRemarks:'', actionDate:'14/07/26 12:30 PM' },
-  { no:'KTN-00042', meal:'Moi Moi',      qty:10, unit:'Pieces',   from:'Banquet Kitchen', sentBy:'Sous Chef', date:'15/07/26 08:50 AM', prodNo:'PROD-00092', remarks:'', status:'rejected', receivedBy:'', actionRemarks:'Wrong batch — texture off, sent back.', actionDate:'15/07/26 09:05 AM' },
-  { no:'KTN-00043', meal:'Fried Rice',   qty:22, unit:'Plates',   from:'Main Kitchen',    sentBy:'Head Chef', date:'15/07/26 01:15 PM', prodNo:'PROD-00093', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'15/07/26 01:45 PM' },
+  { no:'KTN-00040', meal:'Jollof Rice',  qty:25, unit:'Plates',   from:'Main Kitchen',    restaurant:'Main Restaurant', sentBy:'Head Chef', date:'14/07/26 09:10 AM', prodNo:'PROD-00089', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'14/07/26 09:40 AM' },
+  { no:'KTN-00041', meal:'Egusi Soup',   qty:16, unit:'Portions', from:'Main Kitchen',    restaurant:'Main Restaurant', sentBy:'Head Chef', date:'14/07/26 12:05 PM', prodNo:'PROD-00090', remarks:'', status:'accepted', receivedBy:'Tunde, Waitstaff', actionRemarks:'', actionDate:'14/07/26 12:30 PM' },
+  { no:'KTN-00042', meal:'Moi Moi',      qty:10, unit:'Pieces',   from:'Banquet Kitchen', restaurant:'Main Restaurant', sentBy:'Sous Chef', date:'15/07/26 08:50 AM', prodNo:'PROD-00092', remarks:'', status:'rejected', receivedBy:'', actionRemarks:'Wrong batch — texture off, sent back.', actionDate:'15/07/26 09:05 AM' },
+  { no:'KTN-00043', meal:'Fried Rice',   qty:22, unit:'Plates',   from:'Main Kitchen',    restaurant:'Main Restaurant', sentBy:'Head Chef', date:'15/07/26 01:15 PM', prodNo:'PROD-00093', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'15/07/26 01:45 PM' },
 ];
 
 /* ═══════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════ */
-let history = [];
+let transfers = [];   // pending only — source of truth for Accept/Reject
+let inventory = [];
+let history   = [];   // accepted + rejected — source of truth for history rows
+let movements = [];
+let activeNo  = null;
 let page = 1;
 let statusFilter = '';
 let sortKey = 'date', sortDir = 'desc';
+let rangeStart = null, rangeEnd = null; // single date-range filter (applies to Date Sent)
 let _filteredCache = [];
+let fp = null; // flatpickr instance
+
+function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
 
 function parseTransferDate(str){
   if (!str) return null;
@@ -367,56 +547,125 @@ function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.
 const MEAL_COLORS = { 'Jollof Rice':'#c9a84c', 'Fried Rice':'#60a5fa', 'Egusi Soup':'#a78bfa', 'Moi Moi':'#4ade80' };
 function mealColor(meal){ return MEAL_COLORS[meal] || '#6a8a9e'; }
 
+/* Merge pending + history into one unified list for the table */
+function getAllRecords(){
+  const pendingRows = transfers.map(t => ({ ...t, status:'pending', receivedBy:'', actionRemarks:'', actionDate:'' }));
+  const historyRows = history.map(h => ({ ...h }));
+  return [...pendingRows, ...historyRows];
+}
+
+/* ═══════════════════════════════════════════
+   SINGLE DATE-RANGE POPUP (flatpickr, mode:"range")
+   One input + one calendar covers both "from" and "to" — first
+   click sets the start date, second click sets the end date.
+═══════════════════════════════════════════ */
+function initDateRangePicker(){
+  const input = document.getElementById('fDateRange');
+  const box = document.getElementById('dateRangeBox');
+  const clearBtn = document.getElementById('dateRangeClear');
+
+  fp = flatpickr(input, {
+    mode: 'range',
+    dateFormat: 'd/m/Y',
+    altInput: false,
+    onOpen: () => box.classList.add('open'),
+    onClose: () => box.classList.remove('open'),
+    onChange: (selectedDates) => {
+      if (selectedDates.length === 2) {
+        rangeStart = dateOnly(selectedDates[0]);
+        rangeEnd = dateOnly(selectedDates[1]);
+        box.classList.add('has-value');
+      } else if (selectedDates.length === 0) {
+        rangeStart = null; rangeEnd = null;
+        box.classList.remove('has-value');
+      }
+      page = 1;
+      render();
+    }
+  });
+
+  box.addEventListener('click', (e) => { if (e.target !== clearBtn) fp.open(); });
+  clearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fp.clear();
+    rangeStart = null; rangeEnd = null;
+    box.classList.remove('has-value');
+    page = 1;
+    render();
+  });
+}
+
 /* ═══════════════════════════════════════════
    FILTER OPTIONS
 ═══════════════════════════════════════════ */
 function populateFilterOptions(){
+  const all = getAllRecords();
   const mealSel = document.getElementById('fMeal');
   const curMeal = mealSel.value;
-  const meals = [...new Set(history.map(h => h.meal))].sort();
+  const meals = [...new Set(all.map(t => t.meal))].sort();
   mealSel.innerHTML = '<option value="">All Meals</option>' + meals.map(m => `<option${m===curMeal?' selected':''}>${m}</option>`).join('');
-
-  const kitchenSel = document.getElementById('fKitchen');
-  const curKitchen = kitchenSel.value;
-  const kitchens = [...new Set(history.map(h => h.from))].sort();
-  kitchenSel.innerHTML = '<option value="">All Kitchens</option>' + kitchens.map(k => `<option${k===curKitchen?' selected':''}>${k}</option>`).join('');
+  // The From dropdown (fKitchen) is a fixed Kitchen/Store list set in the
+  // HTML — it does not get rebuilt from individual kitchen names.
 }
 
 /* ═══════════════════════════════════════════
-   KPIs — colorful, mirrors the Dashboard's kpi-card pattern
+   KPIs — Pending / Accepted / Rejected / Acceptance Rate,
+   built from the full merged data set (not the filtered view),
+   so the headline numbers stay stable while filtering the table.
 ═══════════════════════════════════════════ */
-function renderKPIs(rows){
-  const accepted = rows.filter(h => h.status === 'accepted');
-  const rejected = rows.filter(h => h.status === 'rejected');
-  const totalUnits = accepted.reduce((s,h)=>s+h.qty,0);
-  const total = rows.length;
-  const acceptRate = total ? Math.round(accepted.length / total * 100) : 0;
+function renderKPIs(){
+  const all = getAllRecords();
+  const pending = all.filter(r => r.status === 'pending');
+  const accepted = all.filter(r => r.status === 'accepted');
+  const rejected = all.filter(r => r.status === 'rejected');
+  const decided = accepted.length + rejected.length;
+  const acceptRate = decided ? Math.round(accepted.length / decided * 100) : 0;
 
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card accepted">
-      <div class="kpi-accent" style="color:var(--green)">✓</div>
+    <div class="kpi-card clickable" data-status="pending" onclick="setStatusFilter('pending')">
+      <div class="kpi-label">Pending Transfers</div>
+      <div class="kpi-value" style="color:var(--blue);">${pending.length}</div>
+      <div class="kpi-trend ${pending.length>0?'warn':'up'}">${pending.length>0?'Awaiting review':'All clear'}</div>
+    </div>
+    <div class="kpi-card clickable" data-status="accepted" onclick="setStatusFilter('accepted')">
       <div class="kpi-label">Accepted Transfers</div>
       <div class="kpi-value" style="color:var(--green);">${accepted.length}</div>
       <div class="kpi-trend up">Added to inventory</div>
     </div>
-    <div class="kpi-card rejected">
-      <div class="kpi-accent" style="color:var(--red)">✕</div>
+    <div class="kpi-card clickable" data-status="rejected" onclick="setStatusFilter('rejected')">
       <div class="kpi-label">Rejected Transfers</div>
       <div class="kpi-value" style="color:var(--red);">${rejected.length}</div>
       <div class="kpi-trend ${rejected.length>0?'warn':'up'}">${rejected.length>0?'Sent back to Kitchen':'None on record'}</div>
     </div>
-    <div class="kpi-card units">
-      <div class="kpi-accent" style="color:#60a5fa">📦</div>
-      <div class="kpi-label">Total Units Received</div>
-      <div class="kpi-value" style="color:#60a5fa;">${totalUnits}</div>
-      <div class="kpi-trend info">Across ${accepted.length} accepted transfer${accepted.length!==1?'s':''}</div>
-    </div>
     <div class="kpi-card">
-      <div class="kpi-accent">📊</div>
       <div class="kpi-label">Acceptance Rate</div>
       <div class="kpi-value" style="color:var(--gold);">${acceptRate}%</div>
-      <div class="kpi-trend ${acceptRate>=80?'up':acceptRate>=50?'warn':'down'}">${total} total record${total!==1?'s':''}</div>
+      <div class="kpi-trend ${acceptRate>=80?'up':acceptRate>=50?'warn':'down'}">${decided} decided record${decided!==1?'s':''}</div>
     </div>`;
+}
+
+function setStatusFilter(status){
+  statusFilter = statusFilter === status ? '' : status;
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  const target = statusFilter ? document.querySelector(`.status-pill[data-status="${statusFilter}"]`) : document.querySelector('.status-pill.all');
+  if (target) target.classList.add('on');
+  page = 1;
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   MORE FILTERS ACCORDION — Date Sent + Sort By stay collapsed
+   behind this icon-only toggle; Status / Search / Meal / From are
+   always visible.
+═══════════════════════════════════════════ */
+function toggleMoreFilters(){
+  const panel = document.getElementById('toolbarMore');
+  const btn = document.getElementById('moreFiltersBtn');
+  const chevron = document.getElementById('moreFiltersChevron');
+  const open = panel.classList.toggle('expanded');
+  btn.classList.toggle('open', open);
+  btn.title = open ? 'Fewer filters' : 'More filters';
+  chevron.textContent = open ? '▴' : '▾';
 }
 
 /* ═══════════════════════════════════════════
@@ -441,28 +690,25 @@ function getFiltered(){
   const q       = document.getElementById('fSearch').value.toLowerCase();
   const meal    = document.getElementById('fMeal').value;
   const kitchen = document.getElementById('fKitchen').value;
-  const dFrom   = document.getElementById('fDateFrom').value;
-  const dTo     = document.getElementById('fDateTo').value;
   const sortVal = document.getElementById('fSort').value;
   [sortKey, sortDir] = sortVal.split('_');
 
-  let rows = history.filter(h => {
-    const mq = !q || h.no.toLowerCase().includes(q) || h.meal.toLowerCase().includes(q) || (h.sentBy||'').toLowerCase().includes(q) || (h.receivedBy||'').toLowerCase().includes(q);
-    const mMeal = !meal || h.meal === meal;
-    const mKitchen = !kitchen || h.from === kitchen;
-    const mStatus = !statusFilter || h.status === statusFilter;
+  let rows = getAllRecords().filter(t => {
+    const mq = !q || t.no.toLowerCase().includes(q) || t.meal.toLowerCase().includes(q) || (t.sentBy||'').toLowerCase().includes(q) || (t.receivedBy||'').toLowerCase().includes(q);
+    const mMeal = !meal || t.meal === meal;
+    const mKitchen = !kitchen || (t.from || '').toLowerCase().includes(kitchen.toLowerCase());
+    const mStatus = !statusFilter || t.status === statusFilter;
     let mDate = true;
-    if (dFrom || dTo) {
-      const hd = dateOnly(parseTransferDate(h.actionDate));
-      if (dFrom) { const f = new Date(dFrom + 'T00:00:00'); if (!hd || hd < f) mDate = false; }
-      if (dTo)   { const to = new Date(dTo + 'T00:00:00'); if (!hd || hd > to) mDate = false; }
+    if (rangeStart && rangeEnd) {
+      const td = dateOnly(parseTransferDate(t.date));
+      if (!td || td < rangeStart || td > rangeEnd) mDate = false;
     }
     return mq && mMeal && mKitchen && mStatus && mDate;
   });
 
   rows = rows.sort((a, b) => {
     let cmp = 0;
-    if (sortKey === 'date') cmp = (parseTransferDate(a.actionDate) - parseTransferDate(b.actionDate));
+    if (sortKey === 'date') cmp = (parseTransferDate(a.date) - parseTransferDate(b.date));
     else if (sortKey === 'qty') cmp = a.qty - b.qty;
     else if (sortKey === 'meal') cmp = a.meal.localeCompare(b.meal);
     return sortDir === 'desc' ? -cmp : cmp;
@@ -484,15 +730,16 @@ function renderActiveChips(){
   const q = document.getElementById('fSearch').value;
   const meal = document.getElementById('fMeal').value;
   const kitchen = document.getElementById('fKitchen').value;
-  const dFrom = document.getElementById('fDateFrom').value;
-  const dTo = document.getElementById('fDateTo').value;
 
-  if (statusFilter) chips.push({ label: `Status: ${statusFilter === 'accepted' ? 'Accepted' : 'Rejected'}`, clear: () => { statusFilter = ''; document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on')); document.querySelector('.status-pill.all').classList.add('on'); } });
+  const statusLabels = { pending:'Pending', accepted:'Accepted', rejected:'Rejected' };
+  if (statusFilter) chips.push({ label: `Status: ${statusLabels[statusFilter]}`, clear: () => setStatusFilter(statusFilter) });
   if (q) chips.push({ label: `Search: "${q}"`, clear: () => { document.getElementById('fSearch').value = ''; } });
   if (meal) chips.push({ label: `Meal: ${meal}`, clear: () => { document.getElementById('fMeal').value = ''; } });
-  if (kitchen) chips.push({ label: `Kitchen: ${kitchen}`, clear: () => { document.getElementById('fKitchen').value = ''; } });
-  if (dFrom) chips.push({ label: `From: ${dFrom}`, clear: () => { document.getElementById('fDateFrom').value = ''; } });
-  if (dTo) chips.push({ label: `To: ${dTo}`, clear: () => { document.getElementById('fDateTo').value = ''; } });
+  if (kitchen) chips.push({ label: `From: ${kitchen}`, clear: () => { document.getElementById('fKitchen').value = ''; } });
+  if (rangeStart && rangeEnd) {
+    const fmt = d => d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    chips.push({ label: `Date Sent: ${fmt(rangeStart)} – ${fmt(rangeEnd)}`, clear: () => { fp.clear(); rangeStart=null; rangeEnd=null; document.getElementById('dateRangeBox').classList.remove('has-value'); } });
+  }
 
   const chipsRow = document.getElementById('chipsRow');
   const wrap = document.getElementById('activeChips');
@@ -508,9 +755,10 @@ function clearFilters(){
   document.getElementById('fSearch').value = '';
   document.getElementById('fMeal').value = '';
   document.getElementById('fKitchen').value = '';
-  document.getElementById('fDateFrom').value = '';
-  document.getElementById('fDateTo').value = '';
   document.getElementById('fSort').value = 'date_desc';
+  if (fp) fp.clear();
+  rangeStart = null; rangeEnd = null;
+  document.getElementById('dateRangeBox').classList.remove('has-value');
   statusFilter = '';
   document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
   document.querySelector('.status-pill.all').classList.add('on');
@@ -548,20 +796,28 @@ function renderTable(){
   const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
 
   document.getElementById('tblBody').innerHTML = pageRows.length === 0
-    ? `<tr class="empty-row"><td colspan="10">No transfer history matches your filters.</td></tr>`
-    : pageRows.map(h => `
-      <tr onclick="openDetail('${h.no}')">
-        <td style="font-weight:600;">${h.no}</td>
-        <td><span class="meal-badge"><span class="meal-dot" style="background:${mealColor(h.meal)}"></span>${h.meal}</span></td>
-        <td>${h.qty} ${h.unit}</td>
-        <td>${h.from}</td>
-        <td>${h.sentBy || '—'}</td>
-        <td>${h.date}</td>
-        <td>${h.actionDate}</td>
-        <td>${h.status === 'accepted' ? (h.receivedBy || '—') : '—'}</td>
-        <td><span class="chip chip-${h.status}">${h.status === 'accepted' ? 'Accepted' : 'Rejected'}</span></td>
+    ? `<tr class="empty-row"><td colspan="10">No transfers match your filters.</td></tr>`
+    : pageRows.map(t => `
+      <tr onclick="openDetail('${t.no}')">
+        <td style="font-weight:600;">${t.no}</td>
+        <td><span class="meal-badge"><span class="meal-dot" style="background:${mealColor(t.meal)}"></span>${t.meal}</span></td>
+        <td>${t.qty} ${t.unit}</td>
+        <td>${t.from}</td>
+        <td>${t.sentBy || '—'}</td>
+        <td>${t.date}</td>
+        <td class="${t.status==='pending'?'muted':''}">${t.actionDate || '—'}</td>
+        <td class="${t.status!=='accepted'?'muted':''}">${t.status === 'accepted' ? (t.receivedBy || '—') : '—'}</td>
+        <td><span class="chip chip-${t.status}">${t.status==='pending'?'Pending':t.status==='accepted'?'Accepted':'Rejected'}</span></td>
         <td class="no-print" onclick="event.stopPropagation()">
-          <button class="act-btn" onclick="openDetail('${h.no}')">👁 View</button>
+          ${t.status === 'pending' ? `
+          <div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${t.no}')">👁 View</button>
+            <button class="act-btn accept" onclick="openAccept('${t.no}')">✓ Accept</button>
+            <button class="act-btn reject" onclick="openReject('${t.no}')">✕ Reject</button>
+          </div>` : `
+          <div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${t.no}')">👁 View</button>
+          </div>`}
         </td>
       </tr>`).join('');
 
@@ -571,13 +827,17 @@ function renderTable(){
 function render(){
   populateFilterOptions();
   _filteredCache = getFiltered();
-  renderKPIs(_filteredCache);
+  renderKPIs();
   renderSortArrows();
   renderActiveChips();
   renderTable();
+  // Keep the sidebar nav badge + topbar bell in sync with the TOTAL
+  // pending count (not the filtered view) so it's accurate no matter
+  // what the user is currently filtering by.
+  shell.setPendingBadge(transfers.length);
+  shell.setNotifBadge(transfers.length);
 }
 
-/* Clicking a sortable column header updates the Sort By select and re-renders */
 function bindHeaderSort(){
   document.querySelectorAll('th[data-sortkey]').forEach(th => {
     th.addEventListener('click', () => {
@@ -595,44 +855,181 @@ function bindHeaderSort(){
 }
 
 /* ═══════════════════════════════════════════
-   DETAILS MODAL
+   TRANSFER DETAILS MODAL — footer shows Accept/Reject only
+   while the transfer is still pending; accepted/rejected rows
+   just get a Close button plus their outcome remarks.
 ═══════════════════════════════════════════ */
 function openDetail(no){
-  const h = history.find(x => x.no === no);
-  if (!h) return;
-  const statusClass = h.status === 'accepted' ? 'status-accepted' : 'status-rejected';
-  const modalEl = document.querySelector('#detailModal .modal');
-  modalEl.classList.remove('status-accepted', 'status-rejected');
-  modalEl.classList.add(statusClass);
+  activeNo = no;
+  const t = getAllRecords().find(x => x.no === no);
+  if (!t) return;
 
-  document.getElementById('dTitle').textContent = `Transfer ${h.no}`;
+  const modalEl = document.querySelector('#detailModal .modal');
+  modalEl.classList.remove('status-pending', 'status-accepted', 'status-rejected');
+  modalEl.classList.add('status-' + t.status);
+
+  document.getElementById('dTitle').textContent = `Transfer ${t.no}`;
   document.getElementById('dGrid').innerHTML = `
-    <div class="detail-item"><div class="detail-label">Meal</div><div class="detail-value"><span class="meal-badge"><span class="meal-dot" style="background:${mealColor(h.meal)}"></span>${h.meal}</span></div></div>
-    <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value" style="color:var(--blue);">${h.qty} ${h.unit}</div></div>
-    <div class="detail-item"><div class="detail-label">From Kitchen</div><div class="detail-value">${h.from}</div></div>
-    <div class="detail-item"><div class="detail-label">Sent By</div><div class="detail-value">${h.sentBy || '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">Date Sent</div><div class="detail-value">${h.date}</div></div>
-    <div class="detail-item"><div class="detail-label">Action Date</div><div class="detail-value">${h.actionDate}</div></div>
-    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-${h.status}">${h.status === 'accepted' ? 'Accepted' : 'Rejected'}</span></div></div>
-    <div class="detail-item"><div class="detail-label">${h.status === 'accepted' ? 'Received By' : 'Rejected — no receiver'}</div><div class="detail-value" style="color:${h.status==='accepted'?'var(--green)':'var(--red)'};">${h.status === 'accepted' ? (h.receivedBy || '—') : '—'}</div></div>`;
+    <div class="detail-item"><div class="detail-label">Meal</div><div class="detail-value"><span class="meal-badge"><span class="meal-dot" style="background:${mealColor(t.meal)}"></span>${t.meal}</span></div></div>
+    <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value" style="color:var(--blue);">${t.qty} ${t.unit}</div></div>
+    <div class="detail-item"><div class="detail-label">From Kitchen</div><div class="detail-value">${t.from}</div></div>
+    <div class="detail-item"><div class="detail-label">Restaurant</div><div class="detail-value">${t.restaurant || 'Main Restaurant'}</div></div>
+    <div class="detail-item"><div class="detail-label">Sent By</div><div class="detail-value">${t.sentBy || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Production No.</div><div class="detail-value">${t.prodNo || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Date Sent</div><div class="detail-value">${t.date}</div></div>
+    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-${t.status}">${t.status==='pending'?'Pending':t.status==='accepted'?'Accepted':'Rejected'}</span></div></div>
+    ${t.status !== 'pending' ? `
+    <div class="detail-item"><div class="detail-label">Action Date</div><div class="detail-value">${t.actionDate || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">${t.status === 'accepted' ? 'Received By' : 'Rejected — no receiver'}</div><div class="detail-value" style="color:${t.status==='accepted'?'var(--green)':'var(--red)'};">${t.status === 'accepted' ? (t.receivedBy || '—') : '—'}</div></div>` : ''}`;
+
   const remarksEl = document.getElementById('dRemarks');
-  remarksEl.classList.remove('status-accepted', 'status-rejected');
-  remarksEl.classList.add(statusClass);
-  remarksEl.textContent = h.actionRemarks ? `Remarks: ${h.actionRemarks}` : (h.remarks ? `Original remarks: ${h.remarks}` : 'No remarks on this transfer.');
+  remarksEl.classList.remove('status-pending', 'status-accepted', 'status-rejected');
+  remarksEl.classList.add('status-' + t.status);
+  remarksEl.textContent = t.status === 'pending'
+    ? (t.remarks ? `Remarks: ${t.remarks}` : 'No remarks on this transfer.')
+    : (t.actionRemarks ? `Remarks: ${t.actionRemarks}` : (t.remarks ? `Original remarks: ${t.remarks}` : 'No remarks on this transfer.'));
+
+  const acceptBtn = document.getElementById('dAcceptBtn');
+  const rejectBtn = document.getElementById('dRejectBtn');
+  if (t.status === 'pending') {
+    acceptBtn.style.display = ''; rejectBtn.style.display = '';
+    rejectBtn.onclick = () => { closeModal('detailModal'); openReject(t.no); };
+    acceptBtn.onclick = () => { closeModal('detailModal'); openAccept(t.no); };
+  } else {
+    acceptBtn.style.display = 'none'; rejectBtn.style.display = 'none';
+  }
   document.getElementById('detailModal').classList.add('show');
 }
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-document.getElementById('detailModal').addEventListener('click', function(e){ if (e.target === this) closeModal('detailModal'); });
 
 /* ═══════════════════════════════════════════
-   INIT
+   ACCEPT FLOW
+═══════════════════════════════════════════ */
+function openAccept(no){
+  activeNo = no;
+  const t = transfers.find(x => x.no === no);
+  if (!t) return;
+  document.getElementById('acName').textContent = `${t.no} — ${t.meal}`;
+  document.getElementById('acQty').textContent = `${t.qty} ${t.unit}`;
+  document.getElementById('acReceivedBy').value = '';
+  document.getElementById('acRemarks').value = '';
+  document.getElementById('acceptModal').classList.add('show');
+}
+
+async function confirmAccept(){
+  const t = transfers.find(x => x.no === activeNo);
+  if (!t) return;
+  const receivedBy = document.getElementById('acReceivedBy').value.trim();
+  if (!receivedBy) { showToast('Please enter who received the transfer.', 'error'); return; }
+  const remarks = document.getElementById('acRemarks').value.trim();
+  const stamp = nowStamp();
+
+  const existing = inventory.find(i => i.meal === t.meal);
+  if (existing) {
+    existing.qty += t.qty;
+    existing.batch = t.prodNo || existing.batch;
+    existing.received = stamp.split(' ')[0];
+  } else {
+    inventory.push({ meal: t.meal, qty: t.qty, unit: t.unit, batch: t.prodNo || '—', received: stamp.split(' ')[0], min: 6 });
+  }
+
+  const balance = inventory.find(i => i.meal === t.meal).qty;
+  movements.unshift({ date: stamp, meal: t.meal, qtyIn: t.qty, qtyOut: 0, balance, reason: `Kitchen Transfer (${t.no})` });
+
+  history.unshift({ ...t, status: 'accepted', receivedBy, actionRemarks: remarks, actionDate: stamp });
+  transfers = transfers.filter(x => x.no !== t.no);
+
+  await Promise.all([ saveShared(KEY_INVENTORY, inventory), saveShared(KEY_MOVEMENTS, movements), saveShared(KEY_HISTORY, history), saveShared(KEY_TRANSFERS, transfers) ]);
+  apiSave('PATCH', `/api/restaurant/transfers/${t.no}`, { status:'accepted', receivedBy, remarks });
+
+  closeModal('acceptModal');
+  showToast(`${t.no} accepted — ${t.qty} ${t.unit} of ${t.meal} added to Restaurant Inventory.`, 'success');
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   REJECT FLOW
+═══════════════════════════════════════════ */
+function openReject(no){
+  activeNo = no;
+  const t = transfers.find(x => x.no === no);
+  if (!t) return;
+  document.getElementById('rjName').textContent = `${t.no} — ${t.meal}`;
+  document.getElementById('rjReason').value = '';
+  document.getElementById('rejectModal').classList.add('show');
+}
+
+async function confirmReject(){
+  const t = transfers.find(x => x.no === activeNo);
+  if (!t) return;
+  const reason = document.getElementById('rjReason').value.trim();
+  if (!reason) { showToast('Please enter a reason for rejecting this transfer.', 'error'); return; }
+  const stamp = nowStamp();
+
+  history.unshift({ ...t, status: 'rejected', receivedBy: '', actionRemarks: reason, actionDate: stamp });
+  transfers = transfers.filter(x => x.no !== t.no);
+
+  await Promise.all([ saveShared(KEY_HISTORY, history), saveShared(KEY_TRANSFERS, transfers) ]);
+  apiSave('PATCH', `/api/restaurant/transfers/${t.no}`, { status:'rejected', reason });
+
+  closeModal('rejectModal');
+  showToast(`${t.no} rejected and moved to history.`, 'error');
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════════ */
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+['detailModal','acceptModal','rejectModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
+});
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+/* ═══════════════════════════════════════════
+   INIT — tries a real API first (when CFG.USE_DEMO=false), falls
+   back to shared storage, and finally to the hardcoded demo seed.
 ═══════════════════════════════════════════ */
 async function init(){
-  history = await loadShared(KEY_HISTORY, DEMO_HISTORY);
+  initDateRangePicker();
 
-  // Seed shared storage the very first time so this page and
-  // restaurant-transfers.html stay in sync going forward.
-  try { const existing = await storage.get(KEY_HISTORY, true); if (!existing) await storage.set(KEY_HISTORY, JSON.stringify(history), true); } catch(e){}
+  if (!CFG.USE_DEMO) {
+    try {
+      const data = await apiFetch('GET', '/api/restaurant/transfers');
+      transfers = data.pending || [];
+      inventory = data.inventory || [];
+      history   = data.history || [];
+      movements = data.movements || [];
+      shell.setApiMode('Live');
+      bindStatusPills();
+      bindHeaderSort();
+      render();
+      return;
+    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+  }
+
+  transfers = await loadShared(KEY_TRANSFERS, DEMO_TRANSFERS);
+  inventory = await loadShared(KEY_INVENTORY, DEMO_INVENTORY);
+  history   = await loadShared(KEY_HISTORY, DEMO_HISTORY);
+  movements = await loadShared(KEY_MOVEMENTS, []);
+
+  // Seed shared storage the very first time so Dashboard / Inventory /
+  // any other page all read the same live data going forward.
+  await Promise.all([
+    saveShared(KEY_TRANSFERS, transfers),
+    saveShared(KEY_INVENTORY, inventory),
+    saveShared(KEY_HISTORY, history),
+    saveShared(KEY_MOVEMENTS, movements),
+  ]);
 
   bindStatusPills();
   bindHeaderSort();

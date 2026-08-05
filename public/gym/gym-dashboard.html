@@ -4,17 +4,33 @@
 <meta charset="UTF-8">
 <title>Dashboard | Gym & Fitness — Aurum Hotel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   html{ height:auto; visibility:hidden; }
   html.gym-ready{ visibility:visible; }
-  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+  .content{
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px;
+    /* ── Light-theme override, scoped to content + modals only ──
+       matches booking-list.html: sidebar/topbar stay on gym-shell.js's
+       own theme, only this content area + modals turn white/blue. ── */
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    background:var(--bg); color:var(--text);
+  }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
   /* ═══ KPI ═══ */
@@ -27,16 +43,16 @@
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-card.green{ background:linear-gradient(160deg, rgba(74,222,128,.08), var(--surface) 60%); border-color:rgba(74,222,128,.24); }
+  .kpi-card.green{ background:linear-gradient(160deg, rgba(18,183,106,.08), var(--surface) 60%); border-color:rgba(18,183,106,.24); }
   .kpi-card.green::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-card.green .kpi-label{ color:var(--green); }
-  .kpi-card.amber{ background:linear-gradient(160deg, rgba(251,191,36,.08), var(--surface) 60%); border-color:rgba(251,191,36,.24); }
+  .kpi-card.amber{ background:linear-gradient(160deg, rgba(247,144,9,.08), var(--surface) 60%); border-color:rgba(247,144,9,.24); }
   .kpi-card.amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
   .kpi-card.amber .kpi-label{ color:var(--amber); }
-  .kpi-card.red{ background:linear-gradient(160deg, rgba(248,113,113,.08), var(--surface) 60%); border-color:rgba(248,113,113,.24); }
+  .kpi-card.red{ background:linear-gradient(160deg, rgba(240,68,56,.08), var(--surface) 60%); border-color:rgba(240,68,56,.24); }
   .kpi-card.red::before{ background:linear-gradient(90deg,var(--red),transparent); }
   .kpi-card.red .kpi-label{ color:var(--red); }
-  .kpi-card.gold{ background:linear-gradient(160deg, rgba(201,168,76,.10), var(--surface) 60%); border-color:var(--gold-border); }
+  .kpi-card.gold{ background:linear-gradient(160deg, rgba(47,111,237,.10), var(--surface) 60%); border-color:var(--gold-border); }
   .kpi-card.gold::before{ background:linear-gradient(90deg,var(--gold),transparent); }
   .kpi-card.gold .kpi-label{ color:var(--gold); }
   .kpi-card.grey{ background:linear-gradient(160deg, rgba(106,138,158,.08), var(--surface) 60%); border-color:rgba(106,138,158,.24); }
@@ -44,7 +60,7 @@
   .kpi-card.grey .kpi-label{ color:var(--text3); }
   .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
   .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  .kpi-value{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
   @media (max-width:420px){ .kpi-value{ font-size:20px; } }
   .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
@@ -59,20 +75,20 @@
   .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; max-width:160px; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:12.5px; cursor:pointer; outline:none; max-width:160px; }
   .filter-select:focus{ border-color:var(--gold-border); }
   .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.active{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
-  .status-pill.on.expiring{ background:var(--amber-bg); border-color:rgba(251,191,36,.4); color:var(--amber); }
-  .status-pill.on.expired{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
-  .status-pill.on.frozen{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .status-pill.on.active{ background:var(--green-bg); border-color:rgba(18,183,106,.4); color:var(--green); }
+  .status-pill.on.expiring{ background:var(--amber-bg); border-color:rgba(247,144,9,.4); color:var(--amber); }
+  .status-pill.on.expired{ background:var(--red-bg); border-color:rgba(240,68,56,.4); color:var(--red); }
+  .status-pill.on.frozen{ background:var(--blue-bg); border-color:rgba(47,111,237,.4); color:var(--blue); }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
   .btn-ghost:hover{ color:var(--gold); }
 
   @media (max-width:700px){
@@ -116,7 +132,7 @@
   .chip-balance{ background:var(--amber-bg); color:var(--amber); } .chip-balance::before{ background:var(--amber); }
 
   .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
   .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
   .act-btn.green:hover{ border-color:var(--green); color:var(--green); }
@@ -124,29 +140,42 @@
 
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; padding:0 7px; }
   .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
   .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
-  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#fff; font-weight:600; }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
 
   /* ═══ Modal ═══ */
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto;
+    /* re-declare the same light overrides for content that lives inside the modal — matches .content above and booking-list.html's modal-overlay */
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  }
   .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
   .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
   .modal.mode-delete::before{ background:var(--red); }
   .modal-sm{ width:min(420px,96vw); }
   .modal-lg{ width:min(640px,96vw); }
   @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
+  .modal-title{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:19px; font-weight:700; color:var(--text); }
   .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
   .modal-close:hover{ color:var(--text); }
   .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
@@ -156,7 +185,7 @@
   @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
   .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
   .form-label.required::after{ content:' *'; color:var(--red); }
-  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
   .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:var(--gold-border); }
   .form-input:read-only{ opacity:.7; cursor:default; }
   .form-textarea{ resize:vertical; min-height:60px; }
@@ -167,7 +196,7 @@
   /* ═══ Member detail modal ═══ */
   .detail-head{ display:flex; align-items:center; gap:14px; margin-bottom:18px; }
   .detail-avatar{ width:54px; height:54px; border-radius:50%; background:var(--gold-dim); border:2px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:var(--gold); flex-shrink:0; }
-  .detail-name{ font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:700; color:var(--text); line-height:1.2; }
+  .detail-name{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:21px; font-weight:700; color:var(--text); line-height:1.2; }
   .detail-subline{ display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap; }
   .detail-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
   @media (max-width:480px){ .detail-grid{ grid-template-columns:1fr 1fr; } }
@@ -193,10 +222,10 @@
   .guest-result-meta{ font-size:10.5px; color:var(--text3); }
 
   /* Toast */
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
-  .toast.success{ border-left:3px solid var(--green); }
-  .toast.error{ border-left:3px solid var(--red); }
-  .toast.info{ border-left:3px solid var(--blue); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:12.5px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-weight:600; }
+  .toast.success{ border-left:3px solid #12b76a; }
+  .toast.error{ border-left:3px solid #f04438; }
+  .toast.info{ border-left:3px solid #2f6fed; }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
   ::-webkit-scrollbar{ width:6px; height:6px; }
@@ -244,7 +273,7 @@
             <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
               <span class="flt-label">Search</span>
               <div class="search-box">
-                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
                 <input type="text" id="fSearch" placeholder="Name, room, phone…" oninput="page=1;render()">
               </div>
             </div>
@@ -262,11 +291,11 @@
                 <option value="joined_desc">Joined (Newest)</option>
               </select>
             </div>
-            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
           <div class="toolbar-btns">
-            <button class="btn btn-outline btn-sm" onclick="openPlansModal()">🏷 Manage Plans</button>
-            <button class="btn btn-primary btn-sm" onclick="openMemberModal()">＋ New Member</button>
+            <button class="btn btn-outline btn-sm" onclick="openPlansModal()"><i class="fa-solid fa-tag"></i> Manage Plans</button>
+            <button class="btn btn-primary btn-sm" onclick="openMemberModal()"><i class="fa-solid fa-plus"></i> New Member</button>
           </div>
         </div>
       </div>
@@ -309,7 +338,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="memberModalTitle">New Gym Member</div>
-      <button class="modal-close" onclick="closeModal('memberModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('memberModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="form-row">
       <div class="form-group span2">
@@ -345,11 +374,11 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
           <label class="payment-option" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;flex:1;min-width:120px;">
             <input type="radio" name="paymentMethod" value="cash" checked onchange="togglePaymentMethod()" style="accent-color:var(--gold);">
-            <span style="font-size:12px;color:var(--text2);">💵 Pay Now (Cash)</span>
+            <span style="font-size:12px;color:var(--text2);"><i class="fa-solid fa-money-bill-wave"></i> Pay Now (Cash)</span>
           </label>
           <label class="payment-option" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;flex:1;min-width:120px;">
             <input type="radio" name="paymentMethod" value="charge" onchange="togglePaymentMethod()" style="accent-color:var(--gold);">
-            <span style="font-size:12px;color:var(--text2);">🏨 Charge to Room</span>
+            <span style="font-size:12px;color:var(--text2);"><i class="fa-solid fa-hotel"></i> Charge to Room</span>
           </label>
         </div>
         <div id="guestSearchSection" style="display:none;margin-top:8px;">
@@ -361,7 +390,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('memberModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveMember()">✓ Save & Collect Payment</button>
+      <button class="btn btn-primary btn-sm" onclick="saveMember()"><i class="fa-solid fa-check"></i> Save &amp; Collect Payment</button>
     </div>
   </div>
 </div>
@@ -371,7 +400,7 @@
   <div class="modal modal-lg">
     <div class="modal-header">
       <div class="modal-title">Member Profile</div>
-      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('detailModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div id="detailBody"></div>
   </div>
@@ -382,12 +411,12 @@
   <div class="modal modal-sm">
     <div class="modal-header">
       <div class="modal-title">Check In</div>
-      <button class="modal-close" onclick="closeModal('checkinModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('checkinModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="val-note" id="ciNote">Log a gym visit for <strong id="ciName"></strong>.</div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('checkinModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="confirmCheckin()">✓ Confirm Check-in</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmCheckin()"><i class="fa-solid fa-check"></i> Confirm Check-in</button>
     </div>
   </div>
 </div>
@@ -397,7 +426,7 @@
   <div class="modal modal-sm">
     <div class="modal-header">
       <div class="modal-title">Renew Membership</div>
-      <button class="modal-close" onclick="closeModal('renewModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('renewModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="val-note">Extending <strong id="rnName"></strong>'s membership.</div>
     <div class="form-group">
@@ -406,7 +435,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('renewModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="confirmRenew()">✓ Renew</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmRenew()"><i class="fa-solid fa-check"></i> Renew</button>
     </div>
   </div>
 </div>
@@ -416,10 +445,10 @@
   <div class="modal" style="width:min(640px,96vw);">
     <div class="modal-header">
       <div class="modal-title">Membership Plans</div>
-      <button class="modal-close" onclick="closeModal('plansModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('plansModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div id="planFormWrap" style="display:none;"></div>
-    <button class="btn btn-outline btn-sm" id="addPlanBtn" onclick="showPlanForm()" style="margin-bottom:14px;">＋ Add Plan</button>
+    <button class="btn btn-outline btn-sm" id="addPlanBtn" onclick="showPlanForm()" style="margin-bottom:14px;"><i class="fa-solid fa-plus"></i> Add Plan</button>
     <div class="plan-list" id="planList"></div>
     <div class="modal-footer">
       <button class="btn btn-primary btn-sm" onclick="closeModal('plansModal')">Done</button>
@@ -432,12 +461,12 @@
   <div class="modal modal-sm mode-delete">
     <div class="modal-header">
       <div class="modal-title" style="color:var(--red);" id="deleteModalTitle">Remove</div>
-      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;" id="deleteMsg"></p>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn btn-sm" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()">🗑 Delete</button>
+      <button class="btn btn-sm" style="background:rgba(240,68,56,0.1);border-color:rgba(240,68,56,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
 </div>
@@ -612,25 +641,21 @@ function renderKPIs(){
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card green" onclick="setStatus('active')">
-      <div class="kpi-accent">💪</div>
       <div class="kpi-label">Active Members</div>
       <div class="kpi-value">${active}</div>
       <div class="kpi-trend up">${members.length} total on file</div>
     </div>
     <div class="kpi-card amber" onclick="setStatus('expiring')">
-      <div class="kpi-accent">⏳</div>
       <div class="kpi-label">Expiring Within 7 Days</div>
       <div class="kpi-value" style="color:var(--amber);">${expiring}</div>
       <div class="kpi-trend ${expiring>0?'warn':'up'}">${expiring>0?'Needs renewal outreach':'None due'}</div>
     </div>
     <div class="kpi-card red" onclick="setStatus('expired')">
-      <div class="kpi-accent">✕</div>
       <div class="kpi-label">Expired Memberships</div>
       <div class="kpi-value" style="color:var(--red);">${expired}</div>
       <div class="kpi-trend ${expired>0?'warn':'up'}">${expired>0?'Access should be blocked':'All current'}</div>
     </div>
     <div class="kpi-card gold" onclick="openPlansModal()">
-      <div class="kpi-accent">💳</div>
       <div class="kpi-label">Est. Monthly Revenue</div>
       <div class="kpi-value" style="color:var(--gold-light);">${fmtN(revenue)}</div>
       <div class="kpi-trend info">${plans.length} active plan${plans.length!==1?'s':''} on offer</div>
@@ -739,10 +764,10 @@ function render(){
         <td><span class="chip ${STATUS_CHIP[m._s]}">${STATUS_LABEL[m._s]}</span></td>
         <td class="no-print center" onclick="event.stopPropagation()">
           <div class="act-btns">
-            <button class="act-btn" onclick="openDetail('${m.id}')">👁 View</button>
-            <button class="act-btn green" onclick="openCheckin('${m.id}')" ${m._s === 'expired' || m._s === 'frozen' ? 'disabled title="Cannot check in — ' + STATUS_LABEL[m._s].toLowerCase() + '"' : ''}>✓ Check-in</button>
-            <button class="act-btn" onclick="openRenew('${m.id}')">↻ Renew</button>
-            <button class="act-btn danger" onclick="openDeleteModal('member','${m.id}')">🗑</button>
+            <button class="act-btn" onclick="openDetail('${m.id}')"><i class="fa-regular fa-eye"></i> View</button>
+            <button class="act-btn green" onclick="openCheckin('${m.id}')" ${m._s === 'expired' || m._s === 'frozen' ? 'disabled title="Cannot check in — ' + STATUS_LABEL[m._s].toLowerCase() + '"' : ''}><i class="fa-solid fa-check"></i> Check-in</button>
+            <button class="act-btn" onclick="openRenew('${m.id}')"><i class="fa-solid fa-rotate"></i> Renew</button>
+            <button class="act-btn danger" onclick="openDeleteModal('member','${m.id}')"><i class="fa-solid fa-trash"></i></button>
           </div>
         </td>
       </tr>`;
@@ -804,7 +829,7 @@ function searchGuests(){
         <div class="guest-result-name">${_esc(g.name)}</div>
         <div class="guest-result-meta">${_esc(g.room)} · ${_esc(g.phone)}</div>
       </div>
-      ${selectedGuestId === g.id ? '<span style="color:var(--gold);font-size:14px;">✓</span>' : ''}
+      ${selectedGuestId === g.id ? '<i class="fa-solid fa-check" style="color:var(--gold);font-size:14px;"></i>' : ''}
     </div>
   `).join('');
 }
@@ -977,10 +1002,10 @@ function renderDetail(){
       </div>` : ''}
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="openRenew('${m.id}')">↻ Renew</button>
-      <button class="btn btn-outline btn-sm" onclick="openCheckin('${m.id}')" ${s === 'expired' || s === 'frozen' ? 'disabled' : ''}>✓ Check-in</button>
-      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal'); openMemberModal('${m.id}')">✏ Edit</button>
-      <button class="btn btn-sm" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:var(--red);" onclick="closeModal('detailModal'); openDeleteModal('member','${m.id}')">🗑 Remove</button>
+      <button class="btn btn-outline btn-sm" onclick="openRenew('${m.id}')"><i class="fa-solid fa-rotate"></i> Renew</button>
+      <button class="btn btn-outline btn-sm" onclick="openCheckin('${m.id}')" ${s === 'expired' || s === 'frozen' ? 'disabled' : ''}><i class="fa-solid fa-check"></i> Check-in</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('detailModal'); openMemberModal('${m.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+      <button class="btn btn-sm" style="background:rgba(240,68,56,0.1);border-color:rgba(240,68,56,0.3);color:var(--red);" onclick="closeModal('detailModal'); openDeleteModal('member','${m.id}')"><i class="fa-solid fa-trash"></i> Remove</button>
     </div>`;
 }
 
@@ -1075,7 +1100,7 @@ function showPlanForm(id=null){
       </div>
       <div class="modal-footer" style="margin-top:0;padding-top:12px;">
         <button class="btn btn-outline btn-sm" onclick="hidePlanForm()">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="savePlan()">${id?'✓ Update Plan':'✓ Add Plan'}</button>
+        <button class="btn btn-primary btn-sm" onclick="savePlan()"><i class="fa-solid fa-check"></i> ${id?'Update Plan':'Add Plan'}</button>
       </div>
     </div>`;
   document.getElementById('pfName').value = p.name;
@@ -1131,8 +1156,8 @@ function renderPlanList(){
           <div class="plan-card-top" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
             <span class="plan-chip" style="background:${c.bg};color:${c.fg};"><span class="plan-dot" style="background:${c.dot}"></span>${_esc(p.name)}</span>
             <div style="display:flex;gap:5px;">
-              <button class="act-btn" onclick="showPlanForm('${p.id}')">✏ Edit</button>
-              <button class="act-btn danger" onclick="openDeleteModal('plan','${p.id}')">🗑</button>
+              <button class="act-btn" onclick="showPlanForm('${p.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button class="act-btn danger" onclick="openDeleteModal('plan','${p.id}')"><i class="fa-solid fa-trash"></i></button>
             </div>
           </div>
           <div style="font-size:12px;color:var(--text2);font-weight:600;">${fmtN(p.price)} <span style="color:var(--text3);font-weight:400;">/ ${p.durationDays} day${p.durationDays!==1?'s':''} · ${inUse} member${inUse!==1?'s':''} enrolled</span></div>
@@ -1191,9 +1216,10 @@ function closeModal(id){ document.getElementById(id).classList.remove('show'); }
   document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
 });
 function showToast(msg, type='success'){
+  const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3200);
 }

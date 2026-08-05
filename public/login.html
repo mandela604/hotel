@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sign In | Aurum Hotel</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gold: #c9a84c; --gold-light: #e8c96a; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.25);
+  --green: #4ade80; --green-bg: rgba(74,222,128,0.12);
+  --red: #f87171; --red-bg: rgba(248,113,113,0.12);
+  --amber: #fbbf24; --amber-bg: rgba(251,191,36,0.12);
+  --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1);
+}
+[data-theme="dark"] {
+  --bg: #080f18; --bg2: #0d1822; --surface: #111e2b; --surface2: #162435; --surface3: #1c2e40;
+  --border: #1e3045; --border2: #243850; --text: #e8f0f8; --text2: #a8bece; --text3: #6a8a9e;
+  --shadow: 0 8px 32px rgba(0,0,0,0.5); --shadow-lg: 0 16px 48px rgba(0,0,0,0.6);
+}
+[data-theme="light"] {
+  --bg: #eef2f7; --bg2: #e6ecf3; --surface: #ffffff; --surface2: #f4f7fb; --surface3: #e8edf5;
+  --border: #dce4ef; --border2: #ccd6e5; --text: #0f2237; --text2: #4a6580; --text3: #8aa0b8;
+  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
+}
+html, body { height: 100%; }
+body {
+  font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text);
+  display: flex; align-items: center; justify-content: center; min-height: 100vh;
+  padding: 20px; transition: background var(--transition), color var(--transition);
+}
+
+.login-wrap { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 20px; animation: fadeUp .5s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+.brand { text-align: center; margin-bottom: 4px; }
+.brand-icon { width: 56px; height: 56px; background: linear-gradient(135deg, var(--gold), var(--gold-light)); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; color: #000; margin: 0 auto 12px; }
+.brand-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 700; color: var(--gold); }
+.brand-sub { font-size: 12px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); overflow: hidden; }
+.card-head { padding: 20px 24px 0; }
+.card-head .title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--text); }
+.card-head .sub { font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+.card-body { padding: 20px 24px 24px; }
+
+.tab-row { display: flex; gap: 0; margin-bottom: 20px; background: var(--surface2); border-radius: var(--radius-sm); padding: 3px; }
+.tab-btn { flex: 1; text-align: center; padding: 9px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; border: none; background: none; font-family: inherit; transition: all .2s; }
+.tab-btn.on { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-border); }
+.tab-btn:hover:not(.on) { color: var(--text2); }
+
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
+.form-input { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 14px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; transition: border-color .2s; }
+.form-input:focus { border-color: var(--gold-border); }
+.form-input.err { border-color: var(--red); }
+.form-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
+.form-error.show { display: block; }
+
+.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.role-opt { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--text2); cursor: pointer; text-align: center; transition: all .15s; background: var(--bg2); font-family: inherit; }
+.role-opt:hover { border-color: var(--gold-border); }
+.role-opt.on { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+
+.submit-btn { width: 100%; padding: 13px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; background: var(--gold); color: #0a1520; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.submit-btn:hover { background: var(--gold-light); }
+.submit-btn:disabled { opacity: .6; cursor: default; }
+
+.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 100; }
+.theme-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all .2s; }
+.theme-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 16px; font-size: 12.5px; color: var(--text); box-shadow: var(--shadow-lg); z-index: 9999; display: flex; align-items: center; gap: 8px; animation: toastIn .3s ease; max-width: calc(100vw - 40px); font-family: inherit; }
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<div class="theme-toggle">
+  <button class="theme-btn" id="themeToggle" title="Toggle theme">🌙</button>
+</div>
+
+<div class="login-wrap">
+  <div class="brand">
+    <div class="brand-icon">A</div>
+    <div class="brand-name">Aurum Hotel</div>
+    <div class="brand-sub">Management Suite</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="title" id="formTitle">Welcome Back</div>
+      <div class="sub" id="formSub">Sign in to continue to the management suite</div>
+    </div>
+    <div class="card-body">
+      <div class="tab-row">
+        <button class="tab-btn on" data-tab="signin">Sign In</button>
+        <button class="tab-btn" data-tab="signup">Sign Up</button>
+      </div>
+
+      <!-- Sign In -->
+      <div id="signinForm">
+        <div class="form-group">
+          <label class="form-label">Name or Email</label>
+          <input class="form-input" id="loginName" type="text" placeholder="Enter your name or email">
+          <div class="form-error" id="loginNameErr">Please enter your name or email.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="loginPass" type="password" placeholder="Enter password (or leave blank in demo)">
+          <div class="form-error" id="loginPassErr">Invalid credentials.</div>
+        </div>
+        <button class="submit-btn" id="loginBtn">◈ Sign In</button>
+        <p style="font-size:11px;color:var(--text3);margin-top:12px;text-align:center;">
+          Demo: enter any name, leave password blank, and click Sign In
+        </p>
+      </div>
+
+      <!-- Sign Up -->
+      <div id="signupForm" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" id="signupName" type="text" placeholder="e.g. Mary Grace">
+          <div class="form-error" id="signupNameErr">Please enter your full name.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="signupEmail" type="email" placeholder="e.g. you@aurum.com">
+          <div class="form-error" id="signupEmailErr">Please enter a valid email.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role / Department</label>
+          <div class="role-grid" id="roleGrid">
+            <div class="role-opt" data-role="General Manager">General Manager</div>
+            <div class="role-opt" data-role="Front Desk">Front Desk</div>
+            <div class="role-opt" data-role="Chef">Chef</div>
+            <div class="role-opt" data-role="Waiter">Waiter</div>
+            <div class="role-opt" data-role="Store Keeper">Store Keeper</div>
+            <div class="role-opt" data-role="Accountant">Accountant</div>
+            <div class="role-opt" data-role="Procurement">Procurement</div>
+            <div class="role-opt" data-role="Barman">Barman</div>
+          </div>
+          <div class="form-error" id="signupRoleErr">Please select a role.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span style="font-size:9px;color:var(--text3);text-transform:none;letter-spacing:0;">(optional in demo)</span></label>
+          <input class="form-input" id="signupPass" type="password" placeholder="Leave blank for demo">
+          <div class="form-error" id="signupPassErr">Password must be at least 4 characters if provided.</div>
+        </div>
+        <button class="submit-btn" id="signupBtn">✦ Create Account</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:var(--text3);">
+    Aurum Hotel Management Suite &middot; Demo Mode
+  </div>
+</div>
+
+<script src="component/data-store.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  let selectedRole = '';
+  let isDark = true;
+  const $ = id => document.getElementById(id);
+
+  /* ── Theme ── */
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    $('themeToggle').textContent = isDark ? '☀️' : '🌙';
+    try { localStorage.setItem('aurum-theme', isDark ? 'dark' : 'light'); } catch (e) {}
+  }
+  try { isDark = (localStorage.getItem('aurum-theme') || 'dark') !== 'light'; } catch (e) {}
+  applyTheme();
+  $('themeToggle').addEventListener('click', () => { isDark = !isDark; applyTheme(); });
+
+  /* ── Tab switching ── */
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+    $('signinForm').style.display = tab === 'signin' ? '' : 'none';
+    $('signupForm').style.display = tab === 'signup' ? '' : 'none';
+    $('formTitle').textContent = tab === 'signin' ? 'Welcome Back' : 'Join Aurum Hotel';
+    $('formSub').textContent = tab === 'signin' ? 'Sign in to continue' : 'Create an account to get started';
+  }
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  /* ── Role selection ── */
+  document.querySelectorAll('.role-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.role-opt').forEach(r => r.classList.remove('on'));
+      opt.classList.add('on');
+      selectedRole = opt.dataset.role;
+      $('signupRoleErr').classList.remove('show');
+    });
+  });
+
+  /* ── Toast ── */
+  function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast ' + (type === 'error' ? 'error' : 'success');
+    t.textContent = (type === 'error' ? '✕ ' : '✓ ') + msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  }
+
+  /* ── Login ── */
+  async function doLogin(nameOrEmail, password) {
+    const key = nameOrEmail.toLowerCase().trim();
+
+    // Check custom accounts from DataStore
+    try {
+      const accounts = await DataStore.get('ds_user_accounts') || {};
+      const acct = accounts[key];
+      if (acct) {
+        // Password check: in demo, empty password is accepted
+        if (acct.pass && password && acct.pass !== password) return false;
+        const initials = acct.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const user = { name: acct.name, initials, role: acct.role, email: key };
+        try { localStorage.setItem('aurum_user', JSON.stringify(user)); } catch (e) {}
+        return user;
+      }
+    } catch (e) {}
+
+    // Demo mode: any name works with empty password
+    if (!password || password === '') {
+      const name = nameOrEmail.trim();
+      if (name.length < 1) return false;
+      const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      const user = { name, initials, role: 'Staff', email: key };
+      try { localStorage.setItem('aurum_user', JSON.stringify(user)); } catch (e) {}
+      return user;
+    }
+
+    return false;
+  }
+
+  $('loginBtn').addEventListener('click', async () => {
+    const name = $('loginName').value.trim();
+    const pass = $('loginPass').value;
+
+    if (!name) { $('loginNameErr').classList.add('show'); return; }
+    $('loginNameErr').classList.remove('show');
+    $('loginPassErr').classList.remove('show');
+
+    const user = await doLogin(name, pass);
+    if (user) {
+      showToast('Signed in as ' + user.name, 'success');
+      setTimeout(() => { window.location.href = 'index.html'; }, 400);
+    } else {
+      $('loginPassErr').textContent = 'Could not sign in. Try a different name or leave password blank.';
+      $('loginPassErr').classList.add('show');
+    }
+  });
+
+  $('loginPass').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
+  $('loginName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
+
+  /* ── Sign Up ── */
+  $('signupBtn').addEventListener('click', async () => {
+    const name = $('signupName').value.trim();
+    const email = $('signupEmail').value.trim();
+    const pass = $('signupPass').value;
+
+    let valid = true;
+    if (!name) { $('signupNameErr').classList.add('show'); valid = false; } else { $('signupNameErr').classList.remove('show'); }
+    if (!email || !email.includes('@')) { $('signupEmailErr').classList.add('show'); valid = false; } else { $('signupEmailErr').classList.remove('show'); }
+    if (!selectedRole) { $('signupRoleErr').classList.add('show'); valid = false; } else { $('signupRoleErr').classList.remove('show'); }
+    if (pass && pass.length < 4) { $('signupPassErr').classList.add('show'); valid = false; } else { $('signupPassErr').classList.remove('show'); }
+
+    if (!valid) return;
+
+    // Save account
+    const accounts = await DataStore.get('ds_user_accounts') || {};
+    accounts[email.toLowerCase()] = { name, role: selectedRole, pass: pass || '' };
+    await DataStore.set('ds_user_accounts', accounts);
+
+    // Auto-login
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const user = { name, initials, role: selectedRole, email: email.toLowerCase() };
+    try { localStorage.setItem('aurum_user', JSON.stringify(user)); } catch (e) {}
+
+    showToast('Account created! Welcome, ' + name, 'success');
+    setTimeout(() => { window.location.href = 'index.html'; }, 400);
+  });
+
+  $('signupPass').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('signupBtn').click(); });
+
+  /* ── Init DataStore ── */
+  DataStore.init();
+
+  /* ── If already logged in, redirect ── */
+  try {
+    const existing = localStorage.getItem('aurum_user');
+    if (existing) {
+      const u = JSON.parse(existing);
+      if (u && u.name) {
+        window.location.href = 'index.html';
+      }
+    }
+  } catch (e) {}
+
+})();
+</script>
+</body>
+</html>

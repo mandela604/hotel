@@ -9,7 +9,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
-  --sidebar-w:256px; --sidebar-col-w:68px; --topbar-h:62px; --radius:14px; --radius-sm:10px;
+  --radius:14px; --radius-sm:10px;
   --transition:0.3s cubic-bezier(.4,0,.2,1);
   --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
   --red:#f87171; --red-bg:rgba(248,113,113,0.12);
@@ -20,73 +20,32 @@
 [data-theme="dark"]{
   --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
   --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
-  --sidebar-bg:#0a1520; --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
   --input-bg:#0d1a27; --modal-bg:#0a1520;
 }
 [data-theme="light"]{
   --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
   --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
-  --sidebar-bg:#ffffff; --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
   --input-bg:#f0f4f9; --modal-bg:#f8fafc;
 }
-html,body{height:100%;overflow-x:hidden;}
-body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;transition:background var(--transition),color var(--transition);font-size:14px;}
+/* aurum-shell.js is self-contained and only exposes its colors as --aur-*
+   variables scoped to .aur-sidebar/.aur-topbar, so they never leak into
+   this page. That's why this page still declares its own --gold/--surface/
+   --border/etc. set (matching the same palette) above — without it every
+   var(--surface) etc. below would resolve to nothing and the page would
+   render unstyled. Reveal <html> only once the shell has painted, so
+   there's no white flash before the sidebar/theme vars are in place. */
+html{ height:auto; visibility:hidden; }
+html.aur-ready{ visibility:visible; }
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background var(--transition),color var(--transition);font-size:14px;}
 
-/* SIDEBAR */
-.sidebar{position:fixed;top:0;left:0;height:100%;width:var(--sidebar-w);background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:200;transition:width var(--transition),transform var(--transition);overflow:hidden;flex-shrink:0;}
-.sidebar.collapsed{width:var(--sidebar-col-w);}
-@media(max-width:768px){.sidebar{transform:translateX(-100%);width:var(--sidebar-w)!important;box-shadow:var(--shadow-lg);}.sidebar.open{transform:translateX(0);}.sidebar.collapsed{width:var(--sidebar-w)!important;}}
-.sidebar-head{display:flex;align-items:center;justify-content:space-between;padding:22px 18px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
-.logo-mark{width:36px;height:36px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:#000;flex-shrink:0;}
-.logo-text{margin-left:10px;flex:1;overflow:hidden;}
-.logo-text .name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--gold);white-space:nowrap;line-height:1.2;}
-.logo-text .sub{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-top:1px;white-space:nowrap;}
-.collapse-btn{width:28px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;flex-shrink:0;transition:all .2s;}
-.collapse-btn:hover{background:var(--gold-dim);color:var(--gold);border-color:var(--gold-border);}
-.sidebar.collapsed .logo-text,.sidebar.collapsed .sidebar-section-label,.sidebar.collapsed .nav-text,.sidebar.collapsed .nav-badge,.sidebar.collapsed .theme-label,.sidebar.collapsed .toggle-track{display:none;}
-.sidebar.collapsed .sidebar-head{justify-content:center;padding:22px 0 20px;flex-direction:column;gap:10px;}
-.sidebar.collapsed .nav-item{justify-content:center;padding:12px 0;gap:0;}
-.sidebar.collapsed .sidebar-nav{padding:8px 8px;}
-.sidebar.collapsed .sidebar-footer{padding:12px 8px;}
-.sidebar.collapsed .theme-btn{justify-content:center;padding:10px;}
-.sidebar-section-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:18px 18px 6px;}
-.sidebar-nav{flex:1;overflow-y:auto;padding:4px 10px;}
-.sidebar-nav::-webkit-scrollbar{width:3px;}
-.sidebar-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);color:var(--text2);font-size:13.5px;cursor:pointer;text-decoration:none;border:1px solid transparent;margin-bottom:2px;transition:all .2s;white-space:nowrap;}
-.nav-item:hover{background:var(--surface2);color:var(--text);}
-.nav-item.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold-light);font-weight:500;}
-.nav-item.active .nav-icon{color:var(--gold);}
-.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
-.nav-badge{margin-left:auto;background:var(--gold);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;}
-.sidebar-footer{padding:12px 10px;border-top:1px solid var(--border);flex-shrink:0;}
-.theme-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
-.theme-btn:hover{background:var(--surface3);color:var(--text);}
-.theme-label{flex:1;text-align:left;}
-.toggle-track{width:34px;height:18px;background:var(--border2);border-radius:20px;position:relative;flex-shrink:0;transition:background .3s;}
-.toggle-track.on{background:var(--gold);}
-.toggle-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .3s;}
-.toggle-track.on .toggle-thumb{transform:translateX(16px);}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:199;backdrop-filter:blur(2px);}
-.overlay.show{display:block;}
-
-/* MAIN */
-.main{margin-left:var(--sidebar-w);flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh;transition:margin-left var(--transition);}
-body.sb-collapsed .main{margin-left:var(--sidebar-col-w);}
+/* MAIN — shell renders the sidebar itself (fixed, 256px / 68px collapsed);
+   this page just needs to offset its content column to match. */
+.main{margin-left:256px;min-height:100vh;display:flex;flex-direction:column;transition:margin-left var(--transition);}
+body.aur-sb-collapsed .main{margin-left:68px;}
 @media(max-width:768px){.main{margin-left:0!important;}}
-.topbar{position:sticky;top:0;z-index:100;height:var(--topbar-h);background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;}
-.hamburger{display:none;background:var(--surface2);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:var(--radius-sm);align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;}
-@media(max-width:768px){.hamburger{display:flex;}}
-.topbar-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.topbar-date{font-size:12px;color:var(--text3);display:none;}
-@media(min-width:640px){.topbar-date{display:block;}}
-.notif-btn{width:36px;height:36px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;position:relative;color:var(--text2);}
-.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--gold);border-radius:50%;border:1.5px solid var(--bg);}
-.avatar{width:36px;height:36px;background:var(--gold-dim);border:2px solid var(--gold-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--gold);cursor:pointer;}
-.api-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.2);}
-.api-badge .dot{width:5px;height:5px;border-radius:50%;background:#fbbf24;animation:blink 2s infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
 .content{flex:1;padding:24px;min-width:0;overflow-x:hidden;}
 @media(max-width:480px){.content{padding:16px;}}
 
@@ -252,7 +211,7 @@ tbody td{padding:9px 14px;vertical-align:middle;white-space:nowrap;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px;}
 
 @media print{
-  .sidebar,.topbar,.toolbar,.pagination,.no-print{display:none!important;}
+  .toolbar,.pagination,.no-print{display:none!important;}
   .main{margin-left:0!important;}
   body{background:#fff!important;color:#000!important;}
   .panel{box-shadow:none!important;border:1px solid #ccc!important;}
@@ -261,44 +220,11 @@ tbody td{padding:9px 14px;vertical-align:middle;white-space:nowrap;}
 </head>
 <body>
 
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
-
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-head">
-    <div class="logo-mark">A</div>
-    <div class="logo-text"><div class="name">Aurum Hotel</div><div class="sub">Management Suite</div></div>
-    <button class="collapse-btn" id="collapseBtn" onclick="toggleCollapse()">◀</button>
-  </div>
-  <div class="sidebar-section-label">Modules</div>
-  <nav class="sidebar-nav">
-    <a class="nav-item" href="index.html"><span class="nav-icon">◈</span><span class="nav-text">Overview</span></a>
-    <a class="nav-item" href="booking.html"><span class="nav-icon">🛏</span><span class="nav-text">Booking (Rooms)</span></a>
-    <a class="nav-item" href="guests.html"><span class="nav-icon">👤</span><span class="nav-text">Guest Profiles</span></a>
-    <a class="nav-item" href="restaurant.html"><span class="nav-icon">🍽</span><span class="nav-text">Restaurant / Bar</span></a>
-    <a class="nav-item" href="pool-bar.html"><span class="nav-icon">🏊</span><span class="nav-text">Pool Bar</span></a>
-    <a class="nav-item active" href="staff.html"><span class="nav-icon">👥</span><span class="nav-text">Staff Management</span></a>
-    <a class="nav-item" href="procurement.html"><span class="nav-icon">📦</span><span class="nav-text">Procurement</span><span class="nav-badge">3</span></a>
-    <a class="nav-item" href="accounting.html"><span class="nav-icon">📊</span><span class="nav-text">Accounting</span></a>
-  </nav>
-  <div class="sidebar-footer">
-    <button class="theme-btn" onclick="toggleTheme()">
-      <span id="themeIcon">☀️</span><span class="theme-label" id="themeLabel">Light Mode</span>
-      <div class="toggle-track" id="toggleTrack"><div class="toggle-thumb"></div></div>
-    </button>
-  </div>
-</aside>
+<!-- Sidebar + topbar are rendered here by aurum-shell.js -->
+<div id="sidebarSlot"></div>
 
 <div class="main" id="mainWrap">
-  <div class="topbar">
-    <button class="hamburger" onclick="openSidebar()">☰</button>
-    <div class="topbar-title">Staff Management</div>
-    <div class="topbar-right">
-      <div class="topbar-date" id="topDate"></div>
-      <div class="api-badge"><span class="dot"></span><span id="apiModeLabel">Demo</span></div>
-      <div class="notif-btn">🔔<div class="notif-dot"></div></div>
-      <div class="avatar">MG</div>
-    </div>
-  </div>
+  <div id="topbarSlot"></div>
 
   <div class="content">
     <div class="section-header">
@@ -507,7 +433,23 @@ tbody td{padding:9px 14px;vertical-align:middle;white-space:nowrap;}
   </div>
 </div>
 
+<script src="component/aurum-shell.js"></script>
 <script>
+/* ═══════════════════════════════════════
+   Shell — sidebar + topbar for this page. staff.html is still a
+   root-level page (hasn't moved into its own module folder), so
+   activeFile is just 'staff.html' per aurum-shell's DEFAULT_NAV.
+═══════════════════════════════════════ */
+const shell = AurumShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'staff.html',
+  pageTitle:     'Staff Management',
+  apiMode:       'Demo',
+  user:          { name: 'Mary Grace', initials: 'MG' },
+});
+document.documentElement.classList.add('aur-ready');
+
 /* ═══════════════════════════════════════
    CONFIG / STORAGE — same shared-storage contract used across
    every module in the suite (window.storage, shared:true, with a
@@ -967,34 +909,9 @@ function showToast(msg,type='success'){
 }
 
 /* ═══════════════════════════════════════
-   SIDEBAR & THEME
-═══════════════════════════════════════ */
-let collapsed=false;
-function toggleCollapse(){
-  collapsed=!collapsed;
-  document.getElementById('sidebar').classList.toggle('collapsed',collapsed);
-  document.body.classList.toggle('sb-collapsed',collapsed);
-  document.getElementById('collapseBtn').textContent=collapsed?'▶':'◀';
-}
-function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('show'); document.body.style.overflow='hidden'; }
-function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); document.body.style.overflow=''; }
-
-let isDark=true;
-function toggleTheme(){
-  isDark=!isDark;
-  document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
-  document.getElementById('themeIcon').textContent=isDark?'☀️':'🌙';
-  document.getElementById('themeLabel').textContent=isDark?'Light Mode':'Dark Mode';
-  document.getElementById('toggleTrack').classList.toggle('on',!isDark);
-  try{ localStorage.setItem('aurum-theme', isDark?'dark':'light'); }catch(e){}
-}
-try{ const saved=localStorage.getItem('aurum-theme'); if(saved==='light'){ isDark=true; toggleTheme(); } }catch(e){}
-
-/* ═══════════════════════════════════════
    INIT
 ═══════════════════════════════════════ */
 async function init(){
-  document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   bindStatusPills();
   STAFF = await loadShared(KEY_STAFF, DEMO_STAFF);
   await saveShared(KEY_STAFF, STAFF);

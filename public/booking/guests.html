@@ -4,169 +4,215 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Aurum Hotel — Guest Profiles</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
+/* This page owns layout + its own Guest Profiles content only. Sidebar +
+   topbar look/markup live entirely in booking-shell.js — same split
+   used by booking-list.html, booking-dashboard.html and booking-rooms.html.
+   NOTE: sidebar/topbar are deliberately left on the shared dark/blue
+   theme vars from booking-shell.js. The .content and .modal-overlay
+   scopes below re-declare the SAME variable names with light values,
+   so only the main content area + modals turn white — the sidebar
+   never sees these overrides. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
-  --sidebar-w:256px; --sidebar-col-w:68px; --topbar-h:62px; --radius:14px; --radius-sm:10px;
-  --transition:0.3s cubic-bezier(.4,0,.2,1);
-}
-[data-theme="dark"]{
-  --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
-  --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
-  --sidebar-bg:#0a1520; --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
-  --input-bg:#0d1a27; --modal-bg:#0a1520;
-}
-[data-theme="light"]{
-  --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
-  --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
-  --sidebar-bg:#ffffff; --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
-  --input-bg:#f0f4f9; --modal-bg:#f8fafc;
-}
-html,body{height:100%;overflow-x:hidden;}
-body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;transition:background var(--transition),color var(--transition);}
 
-/* SIDEBAR & TOPBAR targets for BookingShell */
-#booking-sidebar-target, #booking-topbar-target {
-  position: relative;
-  z-index: 100;
+:root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
+
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+  background: var(--bg); color: var(--text);
+  transition: background var(--transition), color var(--transition);
 }
 
-/* MAIN CONTENT - adjust for BookingShell */
-.main-wrap {
-  margin-left: 256px;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-@media(max-width:768px){ .main-wrap { margin-left: 0!important; } }
+.app { display: flex; min-height: 100vh; }
+.main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
+@media (max-width: 768px) { .main { margin-left: 0 !important; } }
 
 .content {
-  flex: 1;
-  padding: 24px;
-  min-width: 0;
-  overflow-x: hidden;
+  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
+  /* ── Light-theme override, scoped to content + modals only ── */
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
+  --border: #eef0f6; --border2: #dfe3ec;
+  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
+  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
+  --input-bg: #f4f6fb; --modal-bg: #ffffff;
+  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
+  --green: #12b76a; --green-bg: #e9f9f0;
+  --red: #f04438; --red-bg: #feecec;
+  --amber: #f79009; --amber-bg: #fff4e5;
+  --blue: #2f6fed; --blue-bg: #eaf1ff;
+  --purple: #8b5cf6; --purple-bg: #f4efff;
   background: var(--bg);
-  margin-top: 62px; /* topbar height */
+  color: var(--text);
 }
-@media(max-width:480px){ .content{padding:16px; }}
+@media (max-width: 480px) { .content { padding: 14px; } }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
+/* ═══════════ SECTION HEADER ═══════════ */
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
 .section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);font-weight:500;}
 
+/* ═══════════ KPI CARDS ═══════════ */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:480px){.kpi-grid{grid-template-columns:1fr 1fr;gap:10px;}}
 .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;box-shadow:var(--shadow);animation:fadeUp .4s ease both;}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);}
-.kpi-accent{position:absolute;bottom:-10px;right:-10px;font-size:52px;opacity:.07;line-height:1;pointer-events:none;}
+.kpi-accent{position:absolute;bottom:-10px;right:-10px;font-size:44px;opacity:.09;line-height:1;pointer-events:none;}
 .kpi-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;font-weight:500;}
-.kpi-value{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--text);line-height:1;margin-bottom:6px;}
-@media(max-width:480px){.kpi-value{font-size:22px;}}
-.kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;}
-.kpi-trend.up{color:#4ade80;}.kpi-trend.warn{color:#facc15;}.kpi-trend.info{color:#60a5fa;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.kpi-value{font-size:26px;font-weight:800;color:var(--text);line-height:1;margin-bottom:6px;}
+@media(max-width:480px){.kpi-value{font-size:21px;}}
+.kpi-trend{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;}
+.kpi-trend.up{color:var(--green);}.kpi-trend.warn{color:var(--amber);}.kpi-trend.info{color:var(--blue);}
 
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px;}
+/* ═══════════ PANEL ═══════════ */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;animation:fadeUp .4s ease both;overflow:hidden;}
 .panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;flex-wrap:wrap;gap:8px;}
-.panel-title{font-size:13px;font-weight:600;color:var(--text);}
+.panel-title{font-size:14px;font-weight:800;color:var(--text);}
+.panel-sub{font-size:11.5px;color:var(--text3);font-weight:600;}
 
+/* ═══════════ TOOLBAR ═══════════ */
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
 .toolbar-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0;}
-.search-wrap{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;flex:1;min-width:160px;max-width:280px;}
+.search-wrap{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;transition:border-color .2s;flex:1;min-width:160px;max-width:280px;}
 .search-wrap:focus-within{border-color:var(--gold-border);}
-.search-wrap input{background:none;border:none;outline:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;width:100%;}
+.search-wrap i{color:var(--text3);font-size:12.5px;}
+.search-wrap input{background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:13px;width:100%;}
 .search-wrap input::placeholder{color:var(--text3);}
-.filter-sel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;outline:none;}
+.filter-sel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-family:inherit;font-size:12.5px;cursor:pointer;outline:none;transition:border-color .2s;}
+.filter-sel:focus{border-color:var(--gold-border);}
+@media(max-width:700px){
+  .toolbar{flex-direction:column;align-items:stretch;}
+  .toolbar-left{flex-direction:column;align-items:stretch;}
+  .search-wrap{max-width:100%;}
+  .filter-sel{width:100%;}
+}
 
-.btn-primary{background:var(--gold);color:#0a1520;border:none;border-radius:var(--radius-sm);padding:9px 16px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+/* ═══════════ BUTTONS ═══════════ */
+.btn-primary{background:var(--gold);color:#fff;border:1px solid var(--gold);border-radius:var(--radius-sm);padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 10px rgba(47,111,237,0.28);}
 .btn-primary:hover{background:var(--gold-light);transform:translateY(-1px);}
-.btn-outline{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-primary i{font-size:11px;}
+.btn-outline{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}
 .btn-outline:hover{border-color:var(--gold-border);color:var(--gold);}
-.btn-ghost{background:none;border:none;font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);cursor:pointer;padding:6px 10px;border-radius:var(--radius-sm);transition:all .2s;}
+.btn-outline i{color:var(--text3);font-size:12px;}
+.btn-ghost{background:none;border:none;font-family:inherit;font-size:12px;color:var(--text3);cursor:pointer;padding:6px 10px;border-radius:var(--radius-sm);transition:all .2s;}
 .btn-ghost:hover{background:var(--surface2);color:var(--text);}
-.btn-danger{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:var(--radius-sm);padding:8px 14px;color:#f87171;cursor:pointer;font-family:'Outfit',sans-serif;font-size:12.5px;transition:all .2s;}
-.btn-danger:hover{background:rgba(248,113,113,.18);}
 
-.guest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:16px;}
-.guest-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
-.guest-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold);}
-.guest-card.new::before{background:#60a5fa;}
-.guest-card.returning::before{background:#4ade80;}
-.guest-card.vip::before{background:linear-gradient(90deg,var(--gold),var(--gold-light));}
-.guest-card:hover{transform:translateY(-2px);border-color:var(--gold-border);box-shadow:0 6px 20px rgba(201,168,76,.1);}
-.gc-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.gc-avatar{width:38px;height:38px;border-radius:50%;background:var(--gold-dim);border:2px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--gold);flex-shrink:0;}
-.gc-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.gc-phone{font-size:11px;color:var(--text3);}
-.gc-badges{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;letter-spacing:.3px;}
+/* ═══════════ GUEST TABLE (identical structure/values to All Bookings' bk-table) ═══════════ */
+.tbl-wrap{overflow-x:auto;width:100%;}
+.bk-table{width:100%;border-collapse:collapse;min-width:680px;font-size:12.5px;}
+.bk-table thead th{text-align:left;padding:9px 12px;font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+.bk-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer;}
+.bk-table tbody tr:last-child{border-bottom:none;}
+.bk-table tbody tr:hover{background:var(--surface2);}
+.bk-table tbody td{padding:9px 12px;vertical-align:middle;color:var(--text);}
+.guest-id-cell{display:flex;align-items:center;gap:10px;}
+.guest-id-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-dim);border:1.5px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.guest-id-name{font-weight:700;font-size:12.5px;}
+.guest-id-phone{font-size:10.5px;color:var(--text3);}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
 .badge::before{content:'';width:5px;height:5px;border-radius:50%;}
-.badge-vip{background:var(--gold-dim);color:var(--gold-light);}.badge-vip::before{background:var(--gold);}
-.badge-returning{background:rgba(74,222,128,.12);color:#4ade80;}.badge-returning::before{background:#4ade80;}
-.badge-new{background:rgba(96,165,250,.12);color:#60a5fa;}.badge-new::before{background:#60a5fa;}
-.badge-balance{background:rgba(248,113,113,.12);color:#f87171;}.badge-balance::before{background:#f87171;}
-.gc-stats{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:9px;}
-.gc-stats b{color:var(--text);font-weight:600;}
+.badge-vip{background:var(--gold-dim);color:var(--gold-light);}.badge-vip::before{display:none;}
+.badge-returning{background:var(--green-bg);color:var(--green);}.badge-returning::before{background:var(--green);}
+.badge-new{background:var(--blue-bg);color:var(--blue);}.badge-new::before{background:var(--blue);}
+.badge-balance{background:var(--red-bg);color:var(--red);}.badge-balance::before{background:var(--red);}
 
-.tbl-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:12.5px;}
-thead th{text-align:left;padding:9px 14px;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:600;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
-tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
-tbody tr:last-child{border-bottom:none;}
-tbody tr:hover{background:var(--surface2);}
-tbody td{padding:9px 14px;vertical-align:middle;}
+.act-btns{display:flex;gap:4px;justify-content:flex-end;}
+.act-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:5px;}
+.act-btn:hover{border-color:var(--gold-border);color:var(--gold);}
+
+@media(max-width:720px){
+  .tbl-wrap{overflow-x:visible;}
+  .bk-table{min-width:0;}
+  .bk-table thead{display:none;}
+  .bk-table, .bk-table tbody, .bk-table tr, .bk-table td{display:block;width:100%;}
+  .bk-table tbody tr{border:1px solid var(--border);border-radius:var(--radius-sm);margin:10px;padding:4px 4px 2px;}
+  .bk-table tbody tr:hover{background:var(--surface);}
+  .bk-table tbody td{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-bottom:1px dashed var(--border);text-align:right;}
+  .bk-table tbody td:last-child{border-bottom:none;}
+  .bk-table tbody td::before{content:attr(data-label);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:600;text-align:left;flex-shrink:0;}
+  .bk-table tbody td.mcard-head{padding:10px 10px 8px;border-bottom:1px solid var(--border);justify-content:space-between;}
+  .bk-table tbody td.mcard-head::before{display:none;}
+  .bk-table tbody td.mcard-actions{padding:9px 10px 10px;}
+  .bk-table tbody td.mcard-actions::before{display:none;}
+  .bk-table tbody td.mcard-actions .act-btns{width:100%;}
+  .bk-table tbody td.mcard-actions .act-btn{flex:1;text-align:center;justify-content:center;padding:7px 0;}
+}
+
+/* generic small tables used inside the profile modal (Stay History / Charges) */
+.tbl-wrap table:not(.bk-table){width:100%;border-collapse:collapse;font-size:12.5px;}
+.tbl-wrap table:not(.bk-table) thead th{text-align:left;padding:9px 12px;font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:600;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+.tbl-wrap table:not(.bk-table) tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+.tbl-wrap table:not(.bk-table) tbody tr:last-child{border-bottom:none;}
+.tbl-wrap table:not(.bk-table) tbody tr:hover{background:var(--surface2);}
+.tbl-wrap table:not(.bk-table) tbody td{padding:9px 12px;vertical-align:middle;}
+
 .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;white-space:nowrap;}
 .chip::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;}
-.chip-settled{background:rgba(74,222,128,.12);color:#4ade80;}.chip-settled::before{background:#4ade80;}
-.chip-pending{background:rgba(248,113,113,.12);color:#f87171;}.chip-pending::before{background:#f87171;}
-.chip-restaurant{background:rgba(52,211,153,.12);color:#34d399;}.chip-restaurant::before{background:#34d399;}
-.chip-bar{background:rgba(167,139,250,.12);color:#a78bfa;}.chip-bar::before{background:#a78bfa;}
-.chip-pool{background:rgba(96,165,250,.12);color:#60a5fa;}.chip-pool::before{background:#60a5fa;}
-.chip-other{background:rgba(251,191,36,.12);color:#fbbf24;}.chip-other::before{background:#fbbf24;}
-.chip-checkedin{background:rgba(201,168,76,.15);color:var(--gold-light);}.chip-checkedin::before{background:var(--gold);}
-.chip-checkout{background:rgba(248,113,113,.12);color:#f87171;}.chip-checkout::before{background:#f87171;}
-.chip-reserved{background:rgba(96,165,250,.12);color:#60a5fa;}.chip-reserved::before{background:#60a5fa;}
+.chip-settled{background:var(--green-bg);color:var(--green);}.chip-settled::before{background:var(--green);}
+.chip-pending{background:var(--red-bg);color:var(--red);}.chip-pending::before{background:var(--red);}
+.chip-restaurant{background:var(--green-bg);color:var(--green);}.chip-restaurant::before{background:var(--green);}
+.chip-bar{background:var(--purple-bg);color:var(--purple);}.chip-bar::before{background:var(--purple);}
+.chip-pool{background:var(--blue-bg);color:var(--blue);}.chip-pool::before{background:var(--blue);}
+.chip-other{background:var(--amber-bg);color:var(--amber);}.chip-other::before{background:var(--amber);}
+.chip-checkedin{background:var(--gold-dim);color:var(--gold-light);}.chip-checkedin::before{background:var(--gold);}
+.chip-checkout{background:var(--red-bg);color:var(--red);}.chip-checkout::before{background:var(--red);}
+.chip-reserved{background:var(--blue-bg);color:var(--blue);}.chip-reserved::before{background:var(--blue);}
 
-.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-wrap:wrap;gap:8px;}
+/* ═══════════ PAGINATION ═══════════ */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-wrap:wrap;gap:8px;font-weight:600;}
 .pagination.sub{border-top:none;padding:10px 0 0;}
-.page-btns{display:flex;gap:3px;}
-.page-btn{min-width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;padding:0 7px;}
+.page-btns{display:flex;gap:3px;flex-wrap:wrap;}
+.page-btn{min-width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;font-family:inherit;padding:0 7px;font-weight:600;}
 .page-btn:hover{border-color:var(--gold-border);color:var(--gold);}
-.page-btn.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);font-weight:600;}
+.page-btn.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);font-weight:700;}
 .page-btn:disabled{opacity:.3;cursor:default;pointer-events:none;}
 
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);z-index:300;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+/* ═══════════ MODAL ═══════════ */
+.modal-overlay{
+  display:none; position:fixed; inset:0; background:rgba(15,20,40,0.55); backdrop-filter:blur(5px); z-index:300;
+  align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto;
+  /* re-declare the same light overrides for content that lives inside the modal */
+  --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+  --border:#eef0f6; --border2:#dfe3ec;
+  --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+  --input-bg:#f4f6fb; --modal-bg:#ffffff;
+  --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+  --green:#12b76a; --green-bg:#e9f9f0;
+  --red:#f04438; --red-bg:#feecec;
+  --amber:#f79009; --amber-bg:#fff4e5;
+  --blue:#2f6fed; --blue-bg:#eaf1ff;
+  --purple:#8b5cf6; --purple-bg:#f4efff;
+  font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+}
 .modal-overlay.show{display:flex;}
-.modal{background:var(--modal-bg);border:1px solid var(--border);border-radius:18px;padding:24px;width:min(760px,96vw);box-shadow:0 30px 80px rgba(0,0,0,.6);animation:modalIn .25s cubic-bezier(.4,0,.2,1);margin:auto;}
+.modal{background:var(--modal-bg);border:1px solid var(--border);border-radius:18px;padding:24px;width:min(760px,96vw);box-shadow:0 30px 80px rgba(15,20,40,0.25);animation:modalIn .25s cubic-bezier(.4,0,.2,1);margin:auto;}
 .modal-sm{max-width:440px;}
+@media(max-width:480px){.modal{padding:18px;border-radius:14px;}}
 @keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.modal-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--text);}
-.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;line-height:1;}
-.modal-close:hover{color:var(--text);}
+.modal-title{font-size:19px;font-weight:800;color:var(--text);}
+.modal-close{background:var(--surface2);border:1px solid var(--border);border-radius:8px;width:30px;height:30px;color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.modal-close:hover{color:var(--text);border-color:var(--gold-border);}
 .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap;}
+@media(max-width:480px){.modal-footer{flex-direction:column-reverse;}.modal-footer button{width:100%;justify-content:center;}}
 
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
-@media(max-width:500px){.form-grid,.form-grid-3{grid-template-columns:1fr;}}
+@media(max-width:500px){.form-grid{grid-template-columns:1fr;}}
 .form-group{display:flex;flex-direction:column;gap:5px;}
 .form-group.span2{grid-column:span 2;}
 @media(max-width:500px){.form-group.span2{grid-column:span 1;}}
-.form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:500;}
-.form-input,.form-select,.form-textarea{background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none;transition:border-color .2s;width:100%;}
+.form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;}
+.form-input,.form-select,.form-textarea{background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s;width:100%;}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold-border);}
 .form-textarea{resize:vertical;min-height:60px;}
-.checkbox-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);}
 
 /* PROFILE HEADER */
 .profile-hd{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
 .profile-avatar{width:56px;height:56px;border-radius:50%;background:var(--gold-dim);border:2px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--gold);flex-shrink:0;}
-.profile-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--text);}
+.profile-name{font-size:19px;font-weight:800;color:var(--text);}
 .profile-meta{font-size:11.5px;color:var(--text3);margin-top:2px;}
 .profile-badges{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}
 
@@ -174,10 +220,10 @@ tbody td{padding:9px 14px;vertical-align:middle;}
 @media(max-width:560px){.stat-row{grid-template-columns:1fr 1fr;}}
 .stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
 .stat-box .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:4px;}
-.stat-box .val{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--text);}
+.stat-box .val{font-size:18px;font-weight:800;color:var(--text);}
 
 .subtab-row{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border);}
-.subtab{background:none;border:none;padding:9px 4px;margin-right:16px;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;}
+.subtab{background:none;border:none;padding:9px 4px;margin-right:16px;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;}
 .subtab:hover{color:var(--text2);}
 .subtab.active{color:var(--gold);border-bottom-color:var(--gold);}
 .subtab .count-badge{background:var(--surface3);color:var(--text3);font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;}
@@ -188,16 +234,32 @@ tbody td{padding:9px 14px;vertical-align:middle;}
 .charge-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;}
 .charge-row:last-child{border-bottom:none;}
 
-.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 16px;font-size:13px;color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,.3);z-index:999;display:flex;align-items:center;gap:8px;animation:toastIn .3s ease;max-width:calc(100vw - 40px);}
-.toast.success{border-left:3px solid #4ade80;}
-.toast.error{border-left:3px solid #f87171;}
-.toast.info{border-left:3px solid #60a5fa;}
-@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
 .note-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12.5px;color:var(--text2);line-height:1.6;white-space:pre-wrap;min-height:60px;}
-
 .folio-hint{font-size:11.5px;color:var(--text3);}
 .folio-hint b{color:var(--text2);}
+
+/* ═══════════ TOAST (hardcoded light styling, same as All Bookings) ═══════════ */
+.toast {
+  position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm);
+  padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999;
+  display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; max-width: calc(100vw - 40px);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; font-weight: 600;
+}
+.toast.success { border-left: 3px solid #12b76a; }
+.toast.error   { border-left: 3px solid #f04438; }
+.toast.info    { border-left: 3px solid #2f6fed; }
+@keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
+
+/* Print */
+@media print {
+  #sidebarSlot, #topbarSlot, .toolbar, .act-btns, .pagination, .no-print { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .content { padding: 0 !important; overflow: visible !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ccc !important; }
+  @page { margin: 16mm; }
+}
 
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -206,46 +268,66 @@ tbody td{padding:9px 14px;vertical-align:middle;}
 </head>
 <body>
 
-<!-- BookingShell Targets -->
-<div id="booking-sidebar-target"></div>
-<div id="booking-topbar-target"></div>
+<div class="app">
+  <!-- Sidebar rendered here by booking-shell.js — untouched, stays on its own dark/blue theme -->
+  <div id="sidebarSlot"></div>
 
-<div class="main-wrap">
-  <div class="content">
-    <div class="section-header">
-      <div class="section-title">Guest Directory &amp; Folios</div>
-      <span class="section-title" style="color:var(--text2);text-transform:none;font-size:12px;letter-spacing:0;">Every charge a guest makes across the hotel, in one place</span>
-    </div>
+  <div class="main">
+    <!-- Topbar rendered here by booking-shell.js — untouched -->
+    <div id="topbarSlot"></div>
 
-    <div class="kpi-grid" id="kpiGrid"></div>
-
-    <div class="panel" style="padding:0;">
-      <div class="panel-head">
-        <div class="panel-title">All Guests</div>
-        <div style="font-size:11.5px;color:var(--text3);" id="guestCount">—</div>
+    <div class="content">
+      <div class="section-header">
+        <div class="section-title">Guest Directory &amp; Folios</div>
+        <span class="section-title" style="color:var(--text2);text-transform:none;font-size:12px;letter-spacing:0;">Every charge a guest makes across the hotel, in one place</span>
       </div>
-      <div style="padding:0 16px 4px;">
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <div class="search-wrap">
-              <span style="color:var(--text3);font-size:13px;">🔍</span>
-              <input type="text" placeholder="Name, phone, room…" id="gSearch" oninput="gPage=1;renderGuests()">
-            </div>
-            <select class="filter-sel" id="gFilter" onchange="gPage=1;renderGuests()">
-              <option value="">All Guests</option>
-              <option value="vip">VIP</option>
-              <option value="returning">Returning</option>
-              <option value="new">New</option>
-              <option value="balance">Outstanding Balance</option>
-            </select>
-          </div>
-          <span style="font-size:11px;color:var(--text3);white-space:nowrap;">Guests are registered from the <b style="color:var(--text2);">Booking</b> module</span>
+
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="panel" style="padding:0;">
+        <div class="panel-head">
+          <div class="panel-title">All Guests</div>
+          <div class="panel-sub" id="guestCount">—</div>
         </div>
-      </div>
-      <div class="guest-grid" id="guestGrid"></div>
-      <div class="pagination">
-        <span id="gPaginLabel">—</span>
-        <div class="page-btns" id="gPageBtns"></div>
+        <div style="padding:0 16px 4px;">
+          <div class="toolbar no-print">
+            <div class="toolbar-left">
+              <div class="search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" placeholder="Name, phone, room…" id="gSearch" oninput="gPage=1;renderGuests()">
+              </div>
+              <select class="filter-sel" id="gFilter" onchange="gPage=1;renderGuests()">
+                <option value="">All Guests</option>
+                <option value="vip">VIP</option>
+                <option value="returning">Returning</option>
+                <option value="new">New</option>
+                <option value="balance">Outstanding Balance</option>
+              </select>
+            </div>
+            <span style="font-size:11px;color:var(--text3);white-space:nowrap;">Guests are registered from the <b style="color:var(--text2);">Booking</b> module</span>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="bk-table">
+            <thead>
+              <tr>
+                <th>Guest</th>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Stays</th>
+                <th>Current Room</th>
+                <th>Spent (₦)</th>
+                <th>Balance (₦)</th>
+                <th class="no-print"></th>
+              </tr>
+            </thead>
+            <tbody id="guestBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="gPaginLabel">—</span>
+          <div class="page-btns" id="gPageBtns"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -256,7 +338,7 @@ tbody td{padding:9px 14px;vertical-align:middle;}
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Guest Profile</div>
-      <button class="modal-close" onclick="closeModal('profileModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('profileModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <div class="profile-hd">
@@ -266,7 +348,7 @@ tbody td{padding:9px 14px;vertical-align:middle;}
         <div class="profile-meta" id="pfMeta">—</div>
         <div class="profile-badges" id="pfBadges"></div>
       </div>
-      <button class="btn-outline" onclick="toggleVip()" id="pfVipBtn">☆ Mark VIP</button>
+      <button class="btn-outline" onclick="toggleVip()" id="pfVipBtn"><i class="fa-regular fa-star"></i> Mark VIP</button>
     </div>
 
     <div class="stat-row" id="pfStats"></div>
@@ -294,8 +376,8 @@ tbody td{padding:9px 14px;vertical-align:middle;}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
         <div class="folio-hint">Charges from <b>Restaurant, Bar &amp; Pool Bar</b> can be billed straight to this guest's room, then settled at checkout.</div>
         <div style="display:flex;gap:6px;">
-          <button class="btn-outline" onclick="openAddChargeModal()">＋ Add Charge</button>
-          <button class="btn-primary" onclick="settleAllCharges()">✓ Settle All</button>
+          <button class="btn-outline" onclick="openAddChargeModal()"><i class="fa-solid fa-plus"></i> Add Charge</button>
+          <button class="btn-primary" onclick="settleAllCharges()"><i class="fa-solid fa-check"></i> Settle All</button>
         </div>
       </div>
       <div class="tbl-wrap">
@@ -311,7 +393,7 @@ tbody td{padding:9px 14px;vertical-align:middle;}
       <div style="margin-top:10px;">
         <textarea class="form-textarea" id="pfNoteEdit" placeholder="Preferences, allergies, special requests, VIP handling instructions…"></textarea>
         <div style="margin-top:8px;text-align:right;">
-          <button class="btn-primary" onclick="saveNotes()">✓ Save Notes</button>
+          <button class="btn-primary" onclick="saveNotes()"><i class="fa-solid fa-check"></i> Save Notes</button>
         </div>
       </div>
     </div>
@@ -327,7 +409,7 @@ tbody td{padding:9px 14px;vertical-align:middle;}
   <div class="modal modal-sm">
     <div class="modal-header">
       <div class="modal-title">Add Room Charge</div>
-      <button class="modal-close" onclick="closeModal('addChargeModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('addChargeModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Source</label>
@@ -338,11 +420,11 @@ tbody td{padding:9px 14px;vertical-align:middle;}
       <div class="form-group"><label class="form-label">Amount (₦)</label><input class="form-input" type="number" id="acAmount" placeholder="0"></div>
       <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="acDate"></div>
       <div class="form-group span2"><label class="form-label">Charged By</label><input class="form-input" type="text" id="acStaff" placeholder="Staff name"></div>
-      <div class="form-group span2" style="font-size:10.5px;color:var(--text3);line-height:1.5;">Auto-filled from the logged-in staff session in production — defaulted here for demo. This charge is billed to the room and stays <b style="color:#f87171;">Pending</b> (unpaid) until settled at checkout.</div>
+      <div class="form-group span2" style="font-size:10.5px;color:var(--text3);line-height:1.5;">Auto-filled from the logged-in staff session in production — defaulted here for demo. This charge is billed to the room and stays <b style="color:var(--red);">Pending</b> (unpaid) until settled at checkout.</div>
     </div>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeModal('addChargeModal')">Cancel</button>
-      <button class="btn-primary" onclick="saveCharge()">✓ Charge to Room</button>
+      <button class="btn-primary" onclick="saveCharge()"><i class="fa-solid fa-check"></i> Charge to Room</button>
     </div>
   </div>
 </div>
@@ -352,256 +434,29 @@ tbody td{padding:9px 14px;vertical-align:middle;}
   <div class="modal modal-sm">
     <div class="modal-header">
       <div class="modal-title">Charge Details</div>
-      <button class="modal-close" onclick="closeModal('chargeDetailModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('chargeDetailModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div id="cdBody"></div>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeModal('chargeDetailModal')">Close</button>
-      <button class="btn-primary" id="cdSettleBtn" onclick="settleFromDetail()">✓ Mark as Settled</button>
+      <button class="btn-primary" id="cdSettleBtn" onclick="settleFromDetail()"><i class="fa-solid fa-check"></i> Mark as Settled</button>
     </div>
   </div>
 </div>
 
-<!-- ═══ BOOKING SHELL COMPONENT ═══ -->
+<script src="../component/booking-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════
-   BookingShell — module-scoped sidebar + topbar for Booking.
-   Nav is Booking-only (Dashboard, Rooms, All Bookings, Guests,
-   Reports & Revenue) — scoped to Booking module.
+   Shell
 ═══════════════════════════════════════ */
-const BookingShell = (function () {
-
-  const NAV_ITEMS = [
-    { key: 'dashboard', label: 'Dashboard',        href: 'booking-dashboard.html', icon: '◈' },
-    { key: 'rooms',     label: 'Rooms',             href: 'booking-rooms.html',     icon: '🛏' },
-    { key: 'bookings',  label: 'All Bookings',      href: 'booking-list.html',      icon: '📋' },
-    { key: 'guests',    label: 'Guests',            href: 'guests.html',            icon: '👤' },
-    { key: 'reports',   label: 'Reports & Revenue', href: 'booking-reports.html',   icon: '📊' },
-  ];
-
-  let stylesInjected = false;
-
-  function injectStyles() {
-    if (stylesInjected) return;
-    stylesInjected = true;
-    const css = `
-      :root{
-        --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
-        --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-        --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-        --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-        --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-        --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
-      }
-      [data-theme="dark"]{
-        --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
-        --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
-        --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
-        --sidebar-bg:#0a1520; --input-bg:#0d1a27; --modal-bg:#0a1520;
-      }
-      [data-theme="light"]{
-        --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
-        --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
-        --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
-        --sidebar-bg:#ffffff; --input-bg:#f0f4f9; --modal-bg:#f8fafc;
-      }
-
-      #booking-sidebar{ position:fixed; top:0; left:0; height:100%; width:256px; background:var(--sidebar-bg); border-right:1px solid var(--border); display:flex; flex-direction:column; z-index:200; overflow:hidden; flex-shrink:0; transition:transform .3s cubic-bezier(.4,0,.2,1); }
-      @media (max-width:768px){ #booking-sidebar{ transform:translateX(-100%); box-shadow:var(--shadow-lg); } #booking-sidebar.open{ transform:translateX(0); } }
-      .booking-sb-head{ display:flex; align-items:center; gap:10px; padding:22px 18px 20px; border-bottom:1px solid var(--border); flex-shrink:0; }
-      .booking-logo-mark{ width:36px; height:36px; background:linear-gradient(135deg,var(--gold),var(--gold-light)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:#000; flex-shrink:0; }
-      .booking-logo-text{ margin-left:10px; flex:1; overflow:hidden; }
-      .booking-logo-text .name{ font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:700; color:var(--gold); white-space:nowrap; line-height:1.2; }
-      .booking-logo-text .sub{ font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); margin-top:1px; white-space:nowrap; }
-      .booking-sb-section{ font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); padding:18px 18px 6px; flex-shrink:0; }
-      .booking-sb-nav{ flex:1; overflow-y:auto; padding:4px 10px; }
-      .booking-nav-item{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:var(--text2); font-size:13.5px; cursor:pointer; text-decoration:none; border:1px solid transparent; margin-bottom:2px; transition:all .2s; white-space:nowrap; }
-      .booking-nav-item:hover{ background:var(--surface2); color:var(--text); }
-      .booking-nav-item.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); font-weight:500; }
-      .booking-nav-item.active .booking-nav-icon{ color:var(--gold); }
-      .booking-nav-icon{ font-size:16px; width:20px; text-align:center; flex-shrink:0; }
-      .booking-nav-badge{ margin-left:auto; background:var(--gold); color:#000; font-size:10px; font-weight:700; padding:1px 6px; border-radius:20px; display:none; }
-      .booking-nav-badge.show{ display:inline-block; }
-      .booking-sb-footer{ padding:12px 10px; border-top:1px solid var(--border); flex-shrink:0; }
-      .booking-theme-btn{ display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); color:var(--text2); font-family:'Outfit',sans-serif; font-size:13px; cursor:pointer; transition:all .2s; }
-      .booking-theme-btn:hover{ background:var(--surface3); color:var(--text); }
-      .booking-theme-label{ flex:1; text-align:left; }
-      .booking-toggle-track{ width:34px; height:18px; background:var(--border2); border-radius:20px; position:relative; flex-shrink:0; transition:background .3s; }
-      .booking-toggle-track.on{ background:var(--gold); }
-      .booking-toggle-thumb{ position:absolute; top:2px; left:2px; width:14px; height:14px; background:#fff; border-radius:50%; transition:transform .3s; }
-      .booking-toggle-track.on .booking-toggle-thumb{ transform:translateX(16px); }
-      .booking-copyright{ font-size:10.5px; color:var(--text3); padding:0 18px 16px; flex-shrink:0; }
-
-      #booking-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:199; backdrop-filter:blur(2px); }
-      #booking-overlay.show{ display:block; }
-
-      #booking-topbar{ position:fixed; top:0; left:256px; right:0; z-index:100; height:62px; background:var(--bg); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; gap:12px; flex-shrink:0; }
-      @media (max-width:768px){ #booking-topbar{ left:0; } }
-      @media (max-width:480px){ #booking-topbar{ padding:0 14px; } }
-      .booking-hamburger{ display:none; background:var(--surface2); border:1px solid var(--border); color:var(--text); width:36px; height:36px; border-radius:10px; align-items:center; justify-content:center; font-size:16px; cursor:pointer; flex-shrink:0; }
-      @media (max-width:768px){ .booking-hamburger{ display:flex; } }
-      .booking-topbar-titlewrap{ flex:1; min-width:0; }
-      .booking-topbar-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .booking-topbar-subtitle{ font-size:11.5px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .booking-topbar-right{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
-      .booking-topbar-date{ font-size:12px; color:var(--text3); display:none; }
-      @media (min-width:640px){ .booking-topbar-date{ display:block; } }
-      .booking-api-badge{ display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; padding:3px 8px; border-radius:20px; background:rgba(251,191,36,.12); color:#fbbf24; border:1px solid rgba(251,191,36,.2); white-space:nowrap; }
-      .booking-api-badge.live{ background:var(--green-bg); color:var(--green); border-color:rgba(74,222,128,.3); }
-      .booking-api-badge .dot{ width:5px; height:5px; border-radius:50%; background:currentColor; animation:bookingBlink 2s infinite; }
-      @keyframes bookingBlink{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
-      .booking-notif-btn{ width:36px; height:36px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; position:relative; color:var(--text2); flex-shrink:0; }
-      .booking-notif-dot{ position:absolute; top:6px; right:6px; width:7px; height:7px; background:var(--gold); border-radius:50%; border:1.5px solid var(--bg); }
-      .booking-avatar{ width:36px; height:36px; background:var(--gold-dim); border:2px solid var(--gold-border); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; color:var(--gold); cursor:pointer; flex-shrink:0; }
-    `;
-    const style = document.createElement('style');
-    style.id = 'booking-shell-styles';
-    style.textContent = css;
-    document.head.appendChild(style);
-  }
-
-  function initials(name) {
-    if (!name) return 'B';
-    return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-  }
-
-  function navHtml(activeFile) {
-    return NAV_ITEMS.map(item => `
-      <a class="booking-nav-item${item.href === activeFile ? ' active' : ''}" href="${item.href}" data-nav-key="${item.key}">
-        <span class="booking-nav-icon">${item.icon}</span>
-        <span class="nav-text">${item.label}</span>
-        <span class="booking-nav-badge" id="booking-nav-badge-${item.key}"></span>
-      </a>`).join('');
-  }
-
-  function attach(opts) {
-    injectStyles();
-
-    const sidebarEl = document.querySelector(opts.sidebarTarget);
-    const topbarEl = document.querySelector(opts.topbarTarget);
-    const user = opts.user || { name: 'Booking Manager' };
-    const userInitials = user.initials || initials(user.name);
-    const activeFile = opts.activeFile || '';
-
-    sidebarEl.innerHTML = `
-      <aside id="booking-sidebar">
-        <div class="booking-sb-head">
-          <div class="booking-logo-mark">A</div>
-          <div class="booking-logo-text">
-            <div class="name">Aurum Hotel</div>
-            <div class="sub">Booking Module</div>
-          </div>
-        </div>
-        <div class="booking-sb-section">Booking (Rooms)</div>
-        <nav class="booking-sb-nav">${navHtml(activeFile)}</nav>
-        <div class="booking-sb-footer">
-          <button class="booking-theme-btn" id="bookingThemeBtn">
-            <span id="bookingThemeIcon">☀️</span>
-            <span class="booking-theme-label" id="bookingThemeLabel">Light Mode</span>
-            <div class="booking-toggle-track" id="bookingToggleTrack"><div class="booking-toggle-thumb"></div></div>
-          </button>
-        </div>
-        <div class="booking-copyright">© 2026 Aurum Hotel</div>
-      </aside>
-    `;
-
-    if (!document.getElementById('booking-overlay')) {
-      const overlay = document.createElement('div');
-      overlay.id = 'booking-overlay';
-      document.body.appendChild(overlay);
-      overlay.addEventListener('click', closeMobileSidebar);
-    }
-
-    topbarEl.innerHTML = `
-      <div id="booking-topbar">
-        <button class="booking-hamburger" id="bookingHamburger">☰</button>
-        <div class="booking-topbar-titlewrap">
-          <div class="booking-topbar-title">${opts.pageTitle || 'Booking (Rooms)'}</div>
-          ${opts.pageSubtitle ? `<div class="booking-topbar-subtitle">${opts.pageSubtitle}</div>` : ''}
-        </div>
-        <div class="booking-topbar-right">
-          <div class="booking-topbar-date" id="bookingTopDate"></div>
-          <div class="booking-api-badge" id="bookingApiBadge"><span class="dot"></span><span id="bookingApiBadgeText">${opts.apiMode || 'Demo'}</span></div>
-          <div class="booking-notif-btn" title="Notifications">🔔<div class="booking-notif-dot"></div></div>
-          <div class="booking-avatar" title="${user.name || ''}">${userInitials}</div>
-        </div>
-      </div>
-    `;
-
-    const dateEl = document.getElementById('bookingTopDate');
-    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-    const hamburger = document.getElementById('bookingHamburger');
-    if (hamburger) hamburger.addEventListener('click', openMobileSidebar);
-
-    let isDark = true;
-    const themeBtn = document.getElementById('bookingThemeBtn');
-    function applyTheme() {
-      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-      document.getElementById('bookingThemeIcon').textContent = isDark ? '☀️' : '🌙';
-      document.getElementById('bookingThemeLabel').textContent = isDark ? 'Light Mode' : 'Dark Mode';
-      document.getElementById('bookingToggleTrack').classList.toggle('on', !isDark);
-    }
-    themeBtn.addEventListener('click', () => {
-      isDark = !isDark;
-      applyTheme();
-      try { localStorage.setItem('aurum-theme', isDark ? 'dark' : 'light'); } catch (e) {}
-    });
-    try {
-      const saved = localStorage.getItem('aurum-theme');
-      if (saved === 'light') { isDark = false; }
-    } catch (e) {}
-    applyTheme();
-
-    function openMobileSidebar() {
-      document.getElementById('booking-sidebar').classList.add('open');
-      document.getElementById('booking-overlay').classList.add('show');
-      document.body.style.overflow = 'hidden';
-    }
-    function closeMobileSidebar() {
-      const sb = document.getElementById('booking-sidebar');
-      const ov = document.getElementById('booking-overlay');
-      if (sb) sb.classList.remove('open');
-      if (ov) ov.classList.remove('show');
-      document.body.style.overflow = '';
-    }
-
-    return {
-      setApiMode(mode) {
-        const badge = document.getElementById('bookingApiBadge');
-        const text = document.getElementById('bookingApiBadgeText');
-        if (!badge || !text) return;
-        text.textContent = mode;
-        badge.classList.toggle('live', mode === 'Live');
-      },
-      setPendingBadge(n) {
-        const el = document.getElementById('booking-nav-badge-bookings');
-        if (!el) return;
-        if (n > 0) { el.textContent = n; el.classList.add('show'); }
-        else el.classList.remove('show');
-      },
-      setTitle(title, subtitle) {
-        const t = document.querySelector('.booking-topbar-title');
-        if (t) t.textContent = title;
-        const s = document.querySelector('.booking-topbar-subtitle');
-        if (subtitle != null && s) s.textContent = subtitle;
-      },
-    };
-  }
-
-  return { attach };
-})();
-
-/* ═══════════════════════════════════════
-   INITIALIZE BOOKINGSHELL
-═══════════════════════════════════════ */
-const bookingShell = BookingShell.attach({
-  sidebarTarget: '#booking-sidebar-target',
-  topbarTarget: '#booking-topbar-target',
-  activeFile: 'guests.html',
-  pageTitle: 'Guest Profiles',
-  pageSubtitle: 'Directory & Folio Management',
-  user: { name: 'Booking Manager' }
+const shell = BookingShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'guests.html',
+  pageTitle:     'Guest Profiles',
+  pageSubtitle:  'Directory & Folio Management',
+  apiMode:       'Demo',
+  user:          { name: 'Booking Manager', initials: 'MG' },
 });
 
 /* ═══════════════════════════════════════
@@ -635,7 +490,6 @@ async function loadGuestsFromAPI(){
   try{
     const d = await apiCall('GET','/api/guests');
     if(Array.isArray(d) && d.length){ GUESTS = d; renderGuests(); }
-    const lbl=document.getElementById('apiModeLabel'); if(lbl) lbl.textContent='Live';
   }catch(e){ console.warn('[API] Using demo guest data:', e.message); }
 }
 function apiSave(method, path, body){
@@ -723,7 +577,7 @@ function isReturning(g){ return g.stays.length>1; }
 function currentRoom(g){ const active=g.stays.find(s=>s.status==='checkedin'); return active?active.room:null; }
 const SRC_CHIP = { 'Restaurant':'chip-restaurant','Bar':'chip-bar','Pool Bar':'chip-pool' };
 
-function renderPagination(btnId,labelId,page,total,size,cb,subCls){
+function renderPagination(btnId,labelId,page,total,size,cb){
   const totalPages=Math.max(1,Math.ceil(total/size));
   const from=total===0?0:(page-1)*size+1, to=Math.min(page*size,total);
   document.getElementById(labelId).textContent = total===0?'No records':`${from}–${to} of ${total}`;
@@ -746,22 +600,22 @@ function renderKpis(){
   const outstandingSum=outstandingGuests.reduce((s,g)=>s+guestOutstanding(g),0);
 
   document.getElementById('kpiGrid').innerHTML = `
-    <div class="kpi-card"><div class="kpi-accent">👤</div>
+    <div class="kpi-card"><div class="kpi-accent"><i class="fa-solid fa-user"></i></div>
       <div class="kpi-label">Total Guests</div><div class="kpi-value">${total}</div>
       <div class="kpi-trend info">In directory</div></div>
-    <div class="kpi-card"><div class="kpi-accent">⭐</div>
+    <div class="kpi-card"><div class="kpi-accent"><i class="fa-solid fa-star"></i></div>
       <div class="kpi-label">VIP Guests</div><div class="kpi-value">${vip}</div>
       <div class="kpi-trend up">Priority handling</div></div>
-    <div class="kpi-card"><div class="kpi-accent">🔁</div>
+    <div class="kpi-card"><div class="kpi-accent"><i class="fa-solid fa-rotate"></i></div>
       <div class="kpi-label">Returning Guests</div><div class="kpi-value">${returning}</div>
       <div class="kpi-trend up">2+ stays on file</div></div>
-    <div class="kpi-card"><div class="kpi-accent">₦</div>
-      <div class="kpi-label">Outstanding Balances</div><div class="kpi-value" style="font-size:${outstandingSum>=1000000?'20px':'26px'}">${fmtN(outstandingSum)}</div>
+    <div class="kpi-card"><div class="kpi-accent"><i class="fa-solid fa-sack-dollar"></i></div>
+      <div class="kpi-label">Outstanding Balances</div><div class="kpi-value" style="font-size:${outstandingSum>=1000000?'19px':'24px'}">${fmtN(outstandingSum)}</div>
       <div class="kpi-trend ${outstandingGuests.length?'warn':'up'}">${outstandingGuests.length} guest${outstandingGuests.length!==1?'s':''} with a balance</div></div>`;
 }
 
 /* ═══════════════════════════════════════
-   GUEST DIRECTORY
+   GUEST DIRECTORY (list view)
 ═══════════════════════════════════════ */
 function renderGuests(){
   const q=(document.getElementById('gSearch').value||'').toLowerCase();
@@ -784,31 +638,39 @@ function renderGuestsPage(){
   const total=filteredGuests.length;
   const start=(gPage-1)*PAGE_SIZE;
   const page=filteredGuests.slice(start,start+PAGE_SIZE);
-  document.getElementById('guestGrid').innerHTML = page.length===0
-    ? `<div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--text3);">No guests found</div>`
+  document.getElementById('guestBody').innerHTML = page.length===0
+    ? `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);">No guests found</td></tr>`
     : page.map(g=>{
       const bal=guestOutstanding(g);
-      const cardCls = g.vip ? 'vip' : isReturning(g) ? 'returning' : 'new';
       const room = currentRoom(g);
-      return `<div class="guest-card ${cardCls}" onclick="openProfile('${g.id}')">
-        <div class="gc-top">
-          <div class="gc-avatar">${initials(g.name)}</div>
-          <div style="min-width:0;">
-            <div class="gc-name">${g.name}</div>
-            <div class="gc-phone">${g.phone}</div>
+      const statusBadge = g.vip
+        ? `<span class="badge badge-vip"><i class="fa-solid fa-star"></i> VIP</span>`
+        : isReturning(g)
+          ? `<span class="badge badge-returning">Returning</span>`
+          : `<span class="badge badge-new">New</span>`;
+      return `<tr onclick="openProfile('${g.id}')">
+        <td class="mcard-head" data-label="Guest">
+          <div class="guest-id-cell">
+            <div class="guest-id-avatar">${initials(g.name)}</div>
+            <div>
+              <div class="guest-id-name">${g.name}</div>
+              <div class="guest-id-phone">${g.phone}</div>
+            </div>
           </div>
-        </div>
-        <div class="gc-badges">
-          ${g.vip?'<span class="badge badge-vip">⭐ VIP</span>':''}
-          ${isReturning(g)?'<span class="badge badge-returning">Returning</span>':!g.vip?'<span class="badge badge-new">New</span>':''}
-          ${bal>0?`<span class="badge badge-balance">Owes ${fmtN(bal)}</span>`:''}
-        </div>
-        <div class="gc-stats">
-          <span>${g.stays.length} stay${g.stays.length!==1?'s':''}</span>
-          <span>${room?'Room '+room:'Not in-house'}</span>
-          <span>Spent <b>${fmtN(guestSpend(g))}</b></span>
-        </div>
-      </div>`;
+          ${statusBadge}
+        </td>
+        <td data-label="ID">${g.idType} ${g.idNum||'—'}</td>
+        <td data-label="Status">${bal>0?`<span class="badge badge-balance">Owes ${fmtN(bal)}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
+        <td data-label="Stays">${g.stays.length}</td>
+        <td data-label="Current Room">${room?'Room '+room:'Not in-house'}</td>
+        <td data-label="Spent"><strong>${fmtN(guestSpend(g))}</strong></td>
+        <td data-label="Balance"><span style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:700;">${fmtN(bal)}</span></td>
+        <td class="mcard-actions no-print" onclick="event.stopPropagation()">
+          <div class="act-btns">
+            <button class="act-btn" onclick="openProfile('${g.id}')"><i class="fa-solid fa-eye"></i> View</button>
+          </div>
+        </td>
+      </tr>`;
     }).join('');
   renderPagination('gPageBtns','gPaginLabel',gPage,total,PAGE_SIZE,p=>{gPage=p;renderGuestsPage();});
 }
@@ -824,16 +686,16 @@ function openProfile(id){
   document.getElementById('pfName').textContent = g.name;
   document.getElementById('pfMeta').textContent = `${g.phone}${g.email?' · '+g.email:''} · ${g.idType} ${g.idNum||'—'}`;
   document.getElementById('pfBadges').innerHTML = `
-    ${g.vip?'<span class="badge badge-vip">⭐ VIP</span>':''}
+    ${g.vip?'<span class="badge badge-vip"><i class="fa-solid fa-star"></i> VIP</span>':''}
     ${isReturning(g)?'<span class="badge badge-returning">Returning Guest</span>':'<span class="badge badge-new">New Guest</span>'}
     ${guestOutstanding(g)>0?`<span class="badge badge-balance">Balance Due ${fmtN(guestOutstanding(g))}</span>`:''}`;
-  document.getElementById('pfVipBtn').textContent = g.vip ? '★ Remove VIP' : '☆ Mark VIP';
+  document.getElementById('pfVipBtn').innerHTML = g.vip ? '<i class="fa-solid fa-star"></i> Remove VIP' : '<i class="fa-regular fa-star"></i> Mark VIP';
 
   document.getElementById('pfStats').innerHTML = `
     <div class="stat-box"><div class="lbl">Room Revenue</div><div class="val">${fmtN(roomTotal(g))}</div></div>
     <div class="stat-box"><div class="lbl">Extra Charges</div><div class="val">${fmtN(chargeTotal(g))}</div></div>
-    <div class="stat-box"><div class="lbl">Total Paid</div><div class="val" style="color:#4ade80;">${fmtN(roomPaid(g)+chargeTotal(g)-chargeOutstanding(g))}</div></div>
-    <div class="stat-box"><div class="lbl">Balance Due</div><div class="val" style="color:${guestOutstanding(g)>0?'#f87171':'#4ade80'};">${fmtN(guestOutstanding(g))}</div></div>`;
+    <div class="stat-box"><div class="lbl">Total Paid</div><div class="val" style="color:var(--green);">${fmtN(roomPaid(g)+chargeTotal(g)-chargeOutstanding(g))}</div></div>
+    <div class="stat-box"><div class="lbl">Balance Due</div><div class="val" style="color:${guestOutstanding(g)>0?'var(--red)':'var(--green)'};">${fmtN(guestOutstanding(g))}</div></div>`;
 
   document.getElementById('pfHistCount').textContent = g.stays.length;
   document.getElementById('pfFolioCount').textContent = g.charges.length;
@@ -863,7 +725,7 @@ function renderStayHistory(g){
         <td style="font-weight:600;">${s.room}</td><td>${s.type}</td>
         <td>${fmtDate(s.checkin)}</td><td>${fmtDate(s.checkout)}</td>
         <td style="font-weight:600;">${fmtN(s.total)}</td>
-        <td style="color:#4ade80;">${fmtN(s.paid)}</td>
+        <td style="color:var(--green);">${fmtN(s.paid)}</td>
         <td><span class="chip chip-${s.status}">${s.status==='checkedin'?'Checked In':s.status==='checkout'?'Checked Out':'Reserved'}</span></td>
       </tr>`).join('');
 
@@ -893,7 +755,7 @@ function openChargeDetail(idx){
     <div class="charge-row"><span style="color:var(--text3);width:100px;">Source</span><span class="chip ${SRC_CHIP[c.source]||'chip-other'}">${c.source}</span></div>
     <div class="charge-row"><span style="color:var(--text3);width:100px;">Room</span><span>${c.room||'—'}</span></div>
     <div class="charge-row"><span style="color:var(--text3);width:100px;">Description</span><span>${c.desc}</span></div>
-    <div class="charge-row"><span style="color:var(--text3);width:100px;">Amount</span><span style="font-weight:700;color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:17px;">${fmtN(c.amount)}</span></div>
+    <div class="charge-row"><span style="color:var(--text3);width:100px;">Amount</span><span style="font-weight:700;color:var(--gold);font-size:17px;">${fmtN(c.amount)}</span></div>
     <div class="charge-row"><span style="color:var(--text3);width:100px;">Date</span><span>${fmtDate(c.date)}</span></div>
     <div class="charge-row"><span style="color:var(--text3);width:100px;">Charged By</span><span>${c.by||'—'}</span></div>
     <div class="charge-row"><span style="color:var(--text3);width:100px;">Status</span><span class="chip ${c.status==='Settled'?'chip-settled':'chip-pending'}">${c.status}</span></div>`;
@@ -980,9 +842,10 @@ function saveCharge(){
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 function backdrop(e,id){ if(e.target===document.getElementById(id)) closeModal(id); }
 function showToast(msg,type='success'){
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t=document.createElement('div');
   t.className=`toast ${type}`;
-  t.textContent=(type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ')+msg;
+  t.innerHTML=`<i class="fa-solid ${icon}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),3400);
 }

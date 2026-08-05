@@ -4,46 +4,44 @@
 <meta charset="UTF-8">
 <title>Plans | Gym & Fitness — Aurum Hotel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   html{ height:auto; visibility:hidden; }
   html.gym-ready{ visibility:visible; }
-  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
-  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
-  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
-  :root{
-    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-    --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
-  }
-  [data-theme="dark"]{
-    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
-    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
-    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
-    --sidebar-bg:#0a1520;
-  }
-  [data-theme="light"]{
-    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
-    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+
+  .content{
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px;
+    /* ── Light-theme override, scoped to content + modals only ──
+       matches gym-dashboard.html: sidebar/topbar stay on gym-shell.js's
+       own theme, only this content area + modals turn white/blue. ── */
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
     --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
-    --sidebar-bg:#ffffff;
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    background:var(--bg); color:var(--text);
   }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
   .section-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-  .section-title{ font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; }
+  .section-title{ font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:600; }
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
-  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
+  .panel-title{ font-size:13px; font-weight:700; color:var(--text); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#fff; font-weight:700; box-shadow:0 4px 10px rgba(47,111,237,0.28); }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
-  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline{ background:var(--surface); border-color:var(--border); color:var(--text); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
   .plan-list{ display:flex; flex-direction:column; gap:12px; padding:16px; }
@@ -54,28 +52,42 @@
   .plan-dot{ width:5px; height:5px; border-radius:50%; flex-shrink:0; }
   .plan-card-meta{ font-size:12px; color:var(--text2); font-weight:600; }
   .plan-card-notes{ font-size:12px; color:var(--text3); margin-top:8px; line-height:1.5; white-space:pre-line; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn{ background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
   .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
   .empty-note{ font-size:12.5px; color:var(--text3); padding:40px; text-align:center; }
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(15,20,40,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto;
+    /* re-declare the same light overrides for content that lives inside the modal — matches .content above and gym-dashboard.html's modal-overlay */
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  }
   .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
   .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
   .modal.mode-delete::before{ background:var(--red); }
   .modal-sm{ width:min(420px,96vw); }
   @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
-  .modal-close:hover{ color:var(--text); }
+  .modal-title{ font-family:inherit; font-size:19px; font-weight:800; color:var(--text); }
+  .modal-close{ background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:30px; height:30px; color:var(--text2); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+  .modal-close:hover{ color:var(--text); border-color:var(--gold-border); }
   .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
   @media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
   .form-group{ display:flex; flex-direction:column; gap:5px; }
   .form-group.span2{ grid-column:span 2; }
   @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
-  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
-  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
   .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:var(--gold-border); }
   .form-textarea{ resize:vertical; min-height:60px; }
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
@@ -84,6 +96,18 @@
   .color-swatch:hover{ transform:scale(1.1); }
   .color-swatch.on{ border-color:var(--text); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--text); }
   .plan-form{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+
+  .toast{
+    position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:10px;
+    padding:11px 16px; font-size:12.5px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999;
+    display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px);
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-weight:600;
+  }
+  .toast.success{ border-left:3px solid #12b76a; }
+  .toast.error{ border-left:3px solid #f04438; }
+  .toast.info{ border-left:3px solid #2f6fed; }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
@@ -92,18 +116,19 @@
 </head>
 <body>
 <div class="app">
+  <!-- Sidebar + topbar rendered by gym-shell.js — untouched, stays on its own theme -->
   <div id="sidebarSlot"></div>
   <div class="main">
     <div id="topbarSlot"></div>
     <div class="content">
       <div class="section-header">
         <div class="section-title">Membership Plans</div>
-        <button class="btn btn-primary btn-sm" onclick="showPlanForm()">＋ Add Plan</button>
+        <button class="btn btn-primary btn-sm" onclick="showPlanForm()"><i class="fa-solid fa-plus"></i> Add Plan</button>
       </div>
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title">All Plans</div>
-          <span style="font-size:11px;color:var(--text3);" id="planCount">—</span>
+          <span style="font-size:11px;color:var(--text3);font-weight:600;" id="planCount">—</span>
         </div>
         <div id="planFormWrap" style="display:none;"></div>
         <div class="plan-list" id="planList"></div>
@@ -116,12 +141,12 @@
   <div class="modal modal-sm mode-delete">
     <div class="modal-header">
       <div class="modal-title" style="color:var(--red);" id="deleteModalTitle">Delete Plan</div>
-      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;" id="deleteMsg"></p>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn btn-sm" style="background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()">🗑 Delete</button>
+      <button class="btn btn-sm" style="background:var(--red-bg);border-color:rgba(240,68,56,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
 </div>
@@ -141,7 +166,7 @@ async function save(k,v){ try{await storage.set(k,JSON.stringify(v),true);}catch
 
 let plans=[], members=[], editingPlanId=null, deleteTarget=null;
 const COLOR_TOKENS={gold:{bg:'var(--gold-dim)',fg:'var(--gold-light)',dot:'var(--gold)'},blue:{bg:'var(--blue-bg)',fg:'var(--blue)',dot:'var(--blue)'},purple:{bg:'var(--purple-bg)',fg:'var(--purple)',dot:'var(--purple)'},green:{bg:'var(--green-bg)',fg:'var(--green)',dot:'var(--green)'},amber:{bg:'var(--amber-bg)',fg:'var(--amber)',dot:'var(--amber)'}};
-function _esc(s){return(s==null?'':String(s)).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');}
+function _esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function fmtN(n){return'₦'+Math.round(n||0).toLocaleString('en-NG');}
 function genId(p){return p+Date.now()+Math.floor(Math.random()*1000);}
 
@@ -151,14 +176,14 @@ function renderPlanList(){
   el.innerHTML=plans.length===0?'<div class="empty-note">No plans yet — add one above.</div>':plans.map(p=>{
     const inUse=members.filter(m=>m.planId===p.id).length;
     const c=COLOR_TOKENS[p.color]||COLOR_TOKENS.blue;
-    return '<div class="plan-card"><div class="plan-card-top"><span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(p.name)+'</span><div class="plan-card-actions"><button class="act-btn" onclick="showPlanForm(\''+p.id+'\')">✏ Edit</button><button class="act-btn danger" onclick="openDeleteModal(\''+p.id+'\')">🗑</button></div></div><div class="plan-card-meta">'+fmtN(p.price)+' <span style="color:var(--text3);font-weight:400;">/ '+p.durationDays+' day'+(p.durationDays!==1?'s':'')+' · '+inUse+' member'+(inUse!==1?'s':'')+' enrolled</span></div>'+(p.notes?'<div class="plan-card-notes">'+_esc(p.notes)+'</div>':'')+'</div>';
+    return '<div class="plan-card"><div class="plan-card-top"><span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(p.name)+'</span><div class="plan-card-actions"><button class="act-btn" onclick="showPlanForm(\''+p.id+'\')"><i class="fa-solid fa-pen"></i> Edit</button><button class="act-btn danger" onclick="openDeleteModal(\''+p.id+'\')"><i class="fa-solid fa-trash"></i></button></div></div><div class="plan-card-meta">'+fmtN(p.price)+' <span style="color:var(--text3);font-weight:400;">/ '+p.durationDays+' day'+(p.durationDays!==1?'s':'')+' · '+inUse+' member'+(inUse!==1?'s':'')+' enrolled</span></div>'+(p.notes?'<div class="plan-card-notes">'+_esc(p.notes)+'</div>':'')+'</div>';
   }).join('');
 }
 function showPlanForm(id=null){
   editingPlanId=id;
   const p=id?plans.find(x=>x.id===id):{name:'',price:'',durationDays:'',notes:'',color:'blue'};
   const wrap=document.getElementById('planFormWrap');
-  wrap.innerHTML='<div class="plan-form"><div class="form-row"><div class="form-group"><label class="form-label">Plan Name</label><input class="form-input" id="pfName" placeholder="e.g. Basic"></div><div class="form-group"><label class="form-label">Price (₦)</label><input class="form-input" type="number" id="pfPrice" placeholder="0" min="0"></div><div class="form-group"><label class="form-label">Duration (days)</label><input class="form-input" type="number" id="pfDuration" placeholder="30" min="1"></div><div class="form-group"><label class="form-label">Color Tag</label><div class="color-swatches" id="pfColorRow">'+Object.keys(COLOR_TOKENS).map(c=>'<span class="color-swatch'+(c===p.color?' on':'')+'" data-color="'+c+'" style="background:'+COLOR_TOKENS[c].dot+'" title="'+c+'"></span>').join('')+'</div></div><div class="form-group span2"><label class="form-label">Notes / What\'s Included</label><textarea class="form-textarea" id="pfNotes" placeholder="Describe what members get on this plan…"></textarea></div></div><div class="modal-footer" style="margin-top:0;padding-top:12px;"><button class="btn btn-outline btn-sm" onclick="hidePlanForm()">Cancel</button><button class="btn btn-primary btn-sm" onclick="savePlan()">'+(id?'✓ Update Plan':'✓ Add Plan')+'</button></div></div>';
+  wrap.innerHTML='<div class="plan-form"><div class="form-row"><div class="form-group"><label class="form-label">Plan Name</label><input class="form-input" id="pfName" placeholder="e.g. Basic"></div><div class="form-group"><label class="form-label">Price (₦)</label><input class="form-input" type="number" id="pfPrice" placeholder="0" min="0"></div><div class="form-group"><label class="form-label">Duration (days)</label><input class="form-input" type="number" id="pfDuration" placeholder="30" min="1"></div><div class="form-group"><label class="form-label">Color Tag</label><div class="color-swatches" id="pfColorRow">'+Object.keys(COLOR_TOKENS).map(c=>'<span class="color-swatch'+(c===p.color?' on':'')+'" data-color="'+c+'" style="background:'+COLOR_TOKENS[c].dot+'" title="'+c+'"></span>').join('')+'</div></div><div class="form-group span2"><label class="form-label">Notes / What\'s Included</label><textarea class="form-textarea" id="pfNotes" placeholder="Describe what members get on this plan…"></textarea></div></div><div class="modal-footer" style="margin-top:0;padding-top:12px;"><button class="btn btn-outline btn-sm" onclick="hidePlanForm()">Cancel</button><button class="btn btn-primary btn-sm" onclick="savePlan()"><i class="fa-solid fa-check"></i> '+(id?'Update Plan':'Add Plan')+'</button></div></div>';
   document.getElementById('pfName').value=p.name;
   document.getElementById('pfPrice').value=p.price;
   document.getElementById('pfDuration').value=p.durationDays;
@@ -192,7 +217,14 @@ async function confirmDelete(){
   plans=plans.filter(x=>x.id!==deleteTarget.id);closeModal('deleteModal');renderPlanList();await save(KEY_PLANS,plans);showToast('Plan deleted.','error');deleteTarget=null;
 }
 function closeModal(id){document.getElementById(id).classList.remove('show');}
-function showToast(msg,t){const d=document.createElement('div');d.className='toast '+(t||'success');d.textContent=(t==='success'?'✓ ':'✕ ')+msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
+function showToast(msg,t){
+  const icon = t === 'success' ? 'fa-circle-check' : t === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const d=document.createElement('div');
+  d.className='toast '+(t||'success');
+  d.innerHTML='<i class="fa-solid '+icon+'"></i> '+msg;
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),3200);
+}
 document.getElementById('deleteModal').addEventListener('click',function(e){if(e.target===this)closeModal('deleteModal');});
 
 async function init(){

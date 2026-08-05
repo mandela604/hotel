@@ -1,39 +1,41 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" style="background:#080f18;">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="color-scheme" content="dark light">
+<meta name="color-scheme" content="light">
 <title>Production History | Aurum Kitchen</title>
-<style>html,body{background:#080f18;margin:0;}</style>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
+  /* This page owns layout + its own content only. Sidebar + topbar look/markup
+     live entirely in kitchen-shell.js and stay on the shared dark/blue theme.
+     The .content (and .modal-overlay, since the modal renders outside .content)
+     scopes below re-declare the SAME variable names with light values, so only
+     the main content area + its modals turn white — the sidebar never sees this. */
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{
-    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-    --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
-  }
-  [data-theme="dark"]{
-    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
-    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
-    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6); --modal-bg:#0c1824;
-  }
-  [data-theme="light"]{
-    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
-    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
-    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10); --modal-bg:#f8fafc;
-  }
+  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
   html, body{ height:100%; overflow-x:hidden; }
-  body{ font-family:'Outfit', system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  body{ font-family:'Outfit', system-ui, -apple-system, sans-serif; font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
-  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+
+  /* ── Light-theme variables, scoped to content + modal only ── */
+  .content, .modal-overlay{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+  }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:768px){ .content{ padding:16px; } }
   @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
@@ -48,6 +50,7 @@
 
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
   .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-right{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
   .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:240px; flex:1; }
@@ -56,7 +59,7 @@
   .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; }
   .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
   .btn-ghost:hover{ color:var(--gold); }
-  @media (max-width:900px){ .toolbar{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .flt-group{ width:100%; } .search-box{ max-width:100%; } .filter-select{ width:100%; } }
+  @media (max-width:900px){ .toolbar{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .toolbar-right{ justify-content:stretch; } .toolbar-right .btn{ flex:1; justify-content:center; } .flt-group{ width:100%; } .search-box{ max-width:100%; } .filter-select{ width:100%; } }
 
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
@@ -100,16 +103,18 @@
   .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; text-decoration:none; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-primary{ background:var(--gold); border-color:var(--gold); color:#fff; box-shadow:0 2px 10px var(--gold-dim); }
+  .btn-primary:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
-  .link-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; }
-  .link-chip:hover{ background:rgba(201,168,76,0.22); }
+  .link-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold); font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; }
+  .link-chip:hover{ background:rgba(47,111,237,0.18); }
 
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 30px 80px rgba(0,0,0,0.6); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
+  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 30px 80px rgba(15,34,55,0.25); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
   @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
   @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
@@ -165,11 +170,19 @@
           </div>
           <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+        <div class="toolbar-right">
+          <a class="btn btn-primary btn-sm" href="kitchen-production.html">+ New Production</a>
+          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+        </div>
       </div>
 
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">All Productions</div><span style="font-size:11px;color:var(--text3);" id="tblCount">—</span></div>
+        <div class="panel-head">
+          <div class="panel-title">All Productions</div>
+          <span style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
+          </span>
+        </div>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>No.</th><th>Meal</th><th>Qty</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>

@@ -172,7 +172,7 @@ body.aur-sb-collapsed .main { margin-left:68px; }
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title">Revenue by Department — Today</div>
-          <a class="panel-action" href="accounting.html">Full Report →</a>
+          <a class="panel-action" href="accounting/accounting-dashboard.html">Full Report →</a>
         </div>
         <div class="panel-body">
           <div class="rev-total" id="revTotal">₦0</div>
@@ -181,7 +181,7 @@ body.aur-sb-collapsed .main { margin-left:68px; }
         </div>
       </div>
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">Room Status Snapshot</div><a class="panel-action" href="booking.html">Booking →</a></div>
+        <div class="panel-head"><div class="panel-title">Room Status Snapshot</div><a class="panel-action" href="booking/booking-dashboard.html">Booking →</a></div>
         <div class="panel-body">
           <div class="room-status-grid" id="roomStatusGrid"></div>
         </div>
@@ -200,12 +200,12 @@ body.aur-sb-collapsed .main { margin-left:68px; }
         <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
         <div class="panel-body">
           <div class="quick-grid">
-            <a class="quick-btn" href="booking.html"><span class="quick-icon">🛏</span>New Booking<span class="quick-sub">Reserve or check-in a guest</span></a>
-            <a class="quick-btn" href="guests.html"><span class="quick-icon">👤</span>Guest Profiles<span class="quick-sub">Look up a guest or folio</span></a>
-            <a class="quick-btn" href="kitchen.html"><span class="quick-icon">👨‍🍳</span>New Production<span class="quick-sub">Log a kitchen run</span></a>
-            <a class="quick-btn" href="procurement.html"><span class="quick-icon">📦</span>New Request<span class="quick-sub">Raise a purchase request</span></a>
+            <a class="quick-btn" href="booking/booking-dashboard.html"><span class="quick-icon">🛏</span>New Booking<span class="quick-sub">Reserve or check-in a guest</span></a>
+            <a class="quick-btn" href="booking/guests.html"><span class="quick-icon">👤</span>Guest Profiles<span class="quick-sub">Look up a guest or folio</span></a>
+            <a class="quick-btn" href="kitchen/kitchen-production.html"><span class="quick-icon">👨‍🍳</span>New Production<span class="quick-sub">Log a kitchen run</span></a>
+            <a class="quick-btn" href="procurement/procurement-dashboard.html"><span class="quick-icon">📦</span>New Request<span class="quick-sub">Raise a purchase request</span></a>
             <a class="quick-btn" href="restaurant/restaurant-dashboard.html"><span class="quick-icon">🍽</span>Restaurant POS<span class="quick-sub">Ring up a sale</span></a>
-            <a class="quick-btn" href="accounting.html"><span class="quick-icon">📊</span>Accounting<span class="quick-sub">Shift reconciliation &amp; reports</span></a>
+            <a class="quick-btn" href="accounting/accounting-dashboard.html"><span class="quick-icon">📊</span>Accounting<span class="quick-sub">Shift reconciliation & reports</span></a>
           </div>
         </div>
       </div>
@@ -220,85 +220,49 @@ body.aur-sb-collapsed .main { margin-left:68px; }
   </div>
 </div>
 
+<script src="component/data-store.js"></script>
 <script>
 /* ═══════════════════════════════════════
-   STORAGE — reads shared demo data written by
-   the other modules (Accounting, Kitchen, Restaurant,
-   Pool Bar, Procurement, Booking) so this Overview page
-   reflects the same numbers as each module's own dashboard.
+   DATA — reads from the unified DataStore,
+   which automatically seeds demo data on first load.
 ═══════════════════════════════════════ */
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
-  return fallback;
-}
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtNShort(n){ n = Math.round(n||0); if (n>=1000000) return '₦'+(n/1000000).toFixed(1)+'M'; if (n>=1000) return '₦'+(n/1000).toFixed(0)+'k'; return '₦'+n.toLocaleString('en-NG'); }
-
-/* ═══ Demo fallback data — mirrors what each module's own dashboard shows ═══ */
-const DEMO_ROOM_TX = [
-  { amount:145000 }, { amount:98000 }, { amount:76000 }, { amount:132000 }, { amount:64000 }, { amount:120000 }, { amount:210000 },
-];
-const DEMO_RESTAURANT_SALES = [
-  { total:12000, status:'completed' }, { total:18000, status:'completed' }, { total:2500, status:'completed' },
-  { total:24300, status:'completed' }, { total:6000, status:'voided' }, { total:11000, status:'completed' },
-];
-const DEMO_POOLBAR_SALES = [ { total:4500 }, { total:11000 }, { total:2500 }, { total:9000 }, { total:4800 } ];
-const DEMO_ROOMS = { total:48, occupied:31, vacant:11, dirty:4, maintenance:2 };
-const DEMO_PROC_PENDING = 5; // purchase requests in the approval chain
-const DEMO_LOW_STOCK = 3;    // kitchen ingredients below reorder level
-const DEMO_STAFF_ONDUTY = 22;
-const DEMO_GYM_ACTIVE = 14;
-const DEMO_STORE_PENDING_REQ = 3;
-
-const DEMO_ACTIVITY = [
-  { dept:'Booking',      color:'gold',   text:'Room 402 checked in — Barr. Musa (3 nights)',                     time:'8 min ago',  href:'booking.html' },
-  { dept:'Kitchen',      color:'purple', text:'PROD-00096 — 30 plates Fried Rice sent to Restaurant',            time:'22 min ago', href:'kitchen.html' },
-  { dept:'Procurement',  color:'cyan',   text:'PR-010 moved to Admin Approval — Soft drinks restock',            time:'40 min ago', href:'procurement.html' },
-  { dept:'Restaurant',   color:'blue',   text:'SALE-1043 — ₦12,000 settled by Cash, Table 4',                    time:'1 hr ago',   href:'restaurant/restaurant-dashboard.html' },
-  { dept:'Pool Bar',     color:'green',  text:'PBS-1021 — 3x Heineken sold, ₦4,500',                             time:'1 hr ago',   href:'poolbar/poolbar-dashboard.html' },
-  { dept:'Guests',       color:'gold',   text:'Chief Dangote (VIP) charged ₦64,000 to Room 301 — Bar',           time:'2 hr ago',   href:'guests.html' },
-  { dept:'Accounting',   color:'amber',  text:'Shift (16 Jul, 9AM–9AM) reconciled — Tunde Adeyemi',              time:'3 hr ago',   href:'accounting.html' },
-  { dept:'Staff',        color:'blue',   text:'Ngozi Eze clocked in for Front Office shift',                     time:'4 hr ago',   href:'staff.html' },
-];
 
 const DOT_COLOR = { gold:'var(--gold)', blue:'var(--blue)', green:'var(--green)', amber:'var(--amber)', red:'var(--red)', purple:'var(--purple)', cyan:'var(--cyan)' };
 
 /* ═══════════════════════════════════════
    KPIs
 ═══════════════════════════════════════ */
-function renderKPIs(roomRev, restRev, poolRev){
-  const totalRev = roomRev + restRev + poolRev;
-  const occPct = Math.round(DEMO_ROOMS.occupied / DEMO_ROOMS.total * 100);
+function renderKPIs(roomRev, restRev, poolRev, rooms, procPending, lowStock){
+  const r = rooms || { total:48, occupied:31, vacant:11, dirty:4, maintenance:2 };
+  const occPct = Math.round(r.occupied / r.total * 100);
 
   document.getElementById('kpiGrid').innerHTML = `
-    <a class="kpi-card" href="accounting.html">
+    <a class="kpi-card" href="accounting/accounting-dashboard.html">
       <div class="kpi-accent">💰</div><div class="kpi-label">Today's Revenue</div>
-      <div class="kpi-value" style="color:var(--gold);">${fmtNShort(totalRev)}</div>
-      <div class="kpi-trend up">Across Rooms, Restaurant &amp; Pool Bar</div>
+      <div class="kpi-value" style="color:var(--gold);">${fmtNShort(roomRev + restRev + poolRev)}</div>
+      <div class="kpi-trend up">Across Rooms, Restaurant & Pool Bar</div>
     </a>
-    <a class="kpi-card" href="booking.html">
+    <a class="kpi-card" href="booking/booking-dashboard.html">
       <div class="kpi-accent">🛏</div><div class="kpi-label">Occupancy Rate</div>
       <div class="kpi-value">${occPct}%</div>
-      <div class="kpi-trend neutral">${DEMO_ROOMS.occupied} of ${DEMO_ROOMS.total} rooms occupied</div>
+      <div class="kpi-trend neutral">${r.occupied} of ${r.total} rooms occupied</div>
     </a>
-    <a class="kpi-card" href="guests.html">
+    <a class="kpi-card" href="booking/guests.html">
       <div class="kpi-accent">👤</div><div class="kpi-label">Guests In-House</div>
-      <div class="kpi-value">${DEMO_ROOMS.occupied}</div>
+      <div class="kpi-value">${r.occupied}</div>
       <div class="kpi-trend neutral">Checked in right now</div>
     </a>
-    <a class="kpi-card" href="procurement.html">
+    <a class="kpi-card" href="procurement/procurement-dashboard.html">
       <div class="kpi-accent">📦</div><div class="kpi-label">Procurement In Chain</div>
-      <div class="kpi-value" style="color:var(--cyan);">${DEMO_PROC_PENDING}</div>
+      <div class="kpi-value" style="color:var(--cyan);">${procPending}</div>
       <div class="kpi-trend warn">Awaiting approval</div>
     </a>
-    <a class="kpi-card" href="kitchen.html">
+    <a class="kpi-card" href="kitchen/kitchen-dashboard.html">
       <div class="kpi-accent">⚠️</div><div class="kpi-label">Low Stock Alerts</div>
-      <div class="kpi-value" style="color:${DEMO_LOW_STOCK>0?'var(--amber)':'var(--text)'};">${DEMO_LOW_STOCK}</div>
-      <div class="kpi-trend ${DEMO_LOW_STOCK>0?'warn':'up'}">${DEMO_LOW_STOCK>0?'Kitchen ingredients low':'✓ All stocked'}</div>
+      <div class="kpi-value" style="color:${lowStock>0?'var(--amber)':'var(--text)'};">${lowStock}</div>
+      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Kitchen ingredients low':'✓ All stocked'}</div>
     </a>`;
 }
 
@@ -327,40 +291,50 @@ function renderRevenue(roomRev, restRev, poolRev){
 /* ═══════════════════════════════════════
    ROOM STATUS
 ═══════════════════════════════════════ */
-function renderRoomStatus(){
+function renderRoomStatus(rooms){
+  const r = rooms || { total:48, occupied:31, vacant:11, dirty:4, maintenance:2 };
   document.getElementById('roomStatusGrid').innerHTML = `
-    <div class="rs-card occ"><div class="rs-lbl">Occupied</div><div class="rs-val">${DEMO_ROOMS.occupied}</div></div>
-    <div class="rs-card vac"><div class="rs-lbl">Vacant &amp; Ready</div><div class="rs-val">${DEMO_ROOMS.vacant}</div></div>
-    <div class="rs-card dirty"><div class="rs-lbl">Needs Housekeeping</div><div class="rs-val">${DEMO_ROOMS.dirty}</div></div>
-    <div class="rs-card maint"><div class="rs-lbl">Under Maintenance</div><div class="rs-val">${DEMO_ROOMS.maintenance}</div></div>`;
+    <div class="rs-card occ"><div class="rs-lbl">Occupied</div><div class="rs-val">${r.occupied}</div></div>
+    <div class="rs-card vac"><div class="rs-lbl">Vacant & Ready</div><div class="rs-val">${r.vacant}</div></div>
+    <div class="rs-card dirty"><div class="rs-lbl">Needs Housekeeping</div><div class="rs-val">${r.dirty}</div></div>
+    <div class="rs-card maint"><div class="rs-lbl">Under Maintenance</div><div class="rs-val">${r.maintenance}</div></div>`;
 }
 
 /* ═══════════════════════════════════════
    ACTIVITY FEED
 ═══════════════════════════════════════ */
-function renderActivity(){
-  document.getElementById('actCount').textContent = DEMO_ACTIVITY.length + ' updates';
-  document.getElementById('activityList').innerHTML = DEMO_ACTIVITY.map(a => `
-    <div class="act-item" onclick="location.href='${a.href}'">
-      <span class="act-dot" style="background:${DOT_COLOR[a.color]||'var(--gold)'}"></span>
-      <div><div class="act-text">${a.text}</div><div class="act-time">${a.dept} · ${a.time}</div></div>
+function renderActivity(activity){
+  const a = (activity && activity.length) ? activity : [
+    { dept:'Booking', color:'gold', text:'Room 402 checked in — Barr. Musa (3 nights)', time:'8 min ago', href:'booking/booking-dashboard.html' },
+    { dept:'Kitchen', color:'purple', text:'PROD-00096 — 30 plates Fried Rice sent to Restaurant', time:'22 min ago', href:'kitchen/kitchen-dashboard.html' },
+    { dept:'Restaurant', color:'blue', text:'SALE-1043 — ₦12,000 settled by Cash, Table 2', time:'1 hr ago', href:'restaurant/restaurant-dashboard.html' },
+    { dept:'Pool Bar', color:'green', text:'PBS-1021 — 3x Heineken sold, ₦10,500', time:'1 hr ago', href:'poolbar/poolbar-dashboard.html' },
+    { dept:'Accounting', color:'amber', text:'Shift reconciled — Tunde Adeyemi', time:'3 hr ago', href:'accounting/accounting-dashboard.html' },
+    { dept:'Staff', color:'blue', text:'Ngozi Eze clocked in for Front Office shift', time:'4 hr ago', href:'staff.html' },
+  ];
+  document.getElementById('actCount').textContent = a.length + ' updates';
+  document.getElementById('activityList').innerHTML = a.map(item => `
+    <div class="act-item" onclick="location.href='${item.href}'">
+      <span class="act-dot" style="background:${DOT_COLOR[item.color]||'var(--gold)'}"></span>
+      <div><div class="act-text">${item.text}</div><div class="act-time">${item.dept} · ${item.time}</div></div>
     </div>`).join('');
 }
 
 /* ═══════════════════════════════════════
    MODULE SNAPSHOTS
 ═══════════════════════════════════════ */
-function renderModules(restRev, poolRev){
+function renderModules(restRev, poolRev, rooms, lowStock, staffOnDuty, gymActive, storePendingReq, procPending){
+  const r = rooms || { total:48, occupied:31, vacant:11, dirty:4, maintenance:2 };
   const modules = [
-    { title:'Booking (Rooms)',  sub:`${DEMO_ROOMS.occupied}/${DEMO_ROOMS.total} occupied`, icon:'🛏', color:'gold',   href:'booking.html',                          badge:`${Math.round(DEMO_ROOMS.occupied/DEMO_ROOMS.total*100)}%`, badgeCls:'chip-ok' },
-    { title:'Guest Profiles',   sub:'Directory &amp; folios',                                icon:'👤', color:'gold',   href:'guests.html',                           badge:null },
-    { title:'Kitchen',          sub:`${DEMO_LOW_STOCK} low-stock ingredients`,               icon:'👨‍🍳', color:'purple', href:'kitchen.html',                         badge: DEMO_LOW_STOCK>0?String(DEMO_LOW_STOCK):'OK', badgeCls: DEMO_LOW_STOCK>0?'chip-warn':'chip-ok' },
-    { title:'Restaurant / Bar', sub:fmtN(restRev)+' today',                                  icon:'🍽', color:'blue',   href:'restaurant/restaurant-dashboard.html', badge:null },
-    { title:'Pool Bar',         sub:fmtN(poolRev)+' today',                                  icon:'🏊', color:'green',  href:'poolbar/poolbar-dashboard.html',       badge:null },
-    { title:'Gym',              sub:`${DEMO_GYM_ACTIVE} active members today`,               icon:'💪', color:'purple', href:'gym.html',                             badge:null },
-    { title:'Store',            sub:`${DEMO_STORE_PENDING_REQ} pending requisitions`,        icon:'🏬', color:'amber',  href:'store/dashboard.html',                 badge: DEMO_STORE_PENDING_REQ>0?String(DEMO_STORE_PENDING_REQ):null, badgeCls:'chip-warn' },
-    { title:'Staff Management', sub:`${DEMO_STAFF_ONDUTY} staff on duty`,                    icon:'👥', color:'blue',   href:'staff.html',                           badge:null },
-    { title:'Procurement',      sub:`${DEMO_PROC_PENDING} in approval chain`,                icon:'📦', color:'cyan',   href:'procurement.html',                     badge:String(DEMO_PROC_PENDING), badgeCls:'chip-warn' },
+    { title:'Booking (Rooms)',  sub:`${r.occupied}/${r.total} occupied`, icon:'🛏', color:'gold',   href:'booking/booking-dashboard.html', badge:`${Math.round(r.occupied/r.total*100)}%`, badgeCls:'chip-ok' },
+    { title:'Guest Profiles',   sub:'Directory & folios',            icon:'👤', color:'gold',   href:'booking/guests.html',            badge:null },
+    { title:'Kitchen',          sub:`${lowStock} low-stock ingredients`,  icon:'👨‍🍳', color:'purple', href:'kitchen/kitchen-dashboard.html',  badge: lowStock>0?String(lowStock):'OK', badgeCls: lowStock>0?'chip-warn':'chip-ok' },
+    { title:'Restaurant / Bar', sub:fmtN(restRev)+' today',              icon:'🍽', color:'blue',   href:'restaurant/restaurant-dashboard.html', badge:null },
+    { title:'Pool Bar',         sub:fmtN(poolRev)+' today',              icon:'🏊', color:'green',  href:'poolbar/poolbar-dashboard.html',  badge:null },
+    { title:'Gym',              sub:`${gymActive} active members today`, icon:'💪', color:'purple', href:'gym/gym-dashboard.html',          badge:null },
+    { title:'Store',            sub:`${storePendingReq} pending requisitions`, icon:'🏬', color:'amber', href:'store/store-dashboard.html', badge: storePendingReq>0?String(storePendingReq):null, badgeCls:'chip-warn' },
+    { title:'Staff Management', sub:`${staffOnDuty} staff on duty`,      icon:'👥', color:'blue',   href:'staff.html',                     badge:null },
+    { title:'Procurement',      sub:`${procPending} in approval chain`,  icon:'📦', color:'cyan',   href:'procurement/procurement-dashboard.html', badge:String(procPending), badgeCls:'chip-warn' },
   ];
   const iconBg = { gold:'var(--gold-dim)', blue:'var(--blue-bg)', green:'var(--green-bg)', purple:'var(--purple-bg)', amber:'var(--amber-bg)', cyan:'var(--cyan-bg)' };
   const iconFg = { gold:'var(--gold)', blue:'var(--blue)', green:'var(--green)', purple:'var(--purple)', amber:'var(--amber)', cyan:'var(--cyan)' };
@@ -373,43 +347,80 @@ function renderModules(restRev, poolRev){
 }
 
 /* ═══════════════════════════════════════
-   INIT
+   INIT — loads live data from DataStore
 ═══════════════════════════════════════ */
 async function init(){
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  document.getElementById('welcomeHi').textContent = `${greeting}, General Manager`;
+
+  // Get logged-in user
+  let userName = 'Guest';
+  try { const raw = localStorage.getItem('aurum_user'); if (raw) { const u = JSON.parse(raw); if (u && u.name) userName = u.name; } } catch (e) {}
+
+  document.getElementById('welcomeHi').textContent = `${greeting}, ${userName}`;
   document.getElementById('welcomeDate').textContent = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   document.getElementById('welcomeTime').textContent = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 
-  const roomTx    = await loadShared('accounting-room-tx', DEMO_ROOM_TX);
-  const restSales = await loadShared('restaurant-sales', DEMO_RESTAURANT_SALES);
-  const poolSales = await loadShared('poolbar-sales', DEMO_POOLBAR_SALES);
+  // Load data from DataStore — with inline fallbacks so it renders even before seeding
+  const roomTx    = await DataStore.get('ds_accounting_room_tx').catch(() => null) || [{amount:145000},{amount:98000},{amount:76000},{amount:132000},{amount:64000},{amount:120000},{amount:210000}];
+  const restSales = await DataStore.get('ds_restaurant_sales').catch(() => null) || [{total:12000,status:'completed'},{total:18000,status:'completed'},{total:11000,status:'completed'}];
+  const poolSales = await DataStore.get('ds_poolbar_sales').catch(() => null) || [{total:4500},{total:11000},{total:4800}];
+  const activity  = await DataStore.get(DataStore.ACTIVITY_KEY).catch(() => null);
+  const rooms     = await DataStore.get('ds_bookings_rooms').catch(() => null) || [];
+  const prs       = await DataStore.get('ds_procurement_prs').catch(() => null) || [];
+  const kitchenInv = await DataStore.get('ds_kitchen_inventory').catch(() => null) || [];
+  const staff     = await DataStore.get('ds_staff').catch(() => null) || [];
+  const gymCheckins = await DataStore.get('ds_gym_checkins').catch(() => null) || [];
+
+  // Compute room stats from live data
+  const totalRooms = rooms.length || 48;
+  const occupiedRooms = rooms.filter(r => r.status === 'occupied').length || 31;
+  const vacantRooms = rooms.filter(r => r.status === 'available').length || 11;
+  const roomsData = { total: totalRooms, occupied: occupiedRooms, vacant: vacantRooms, dirty: 4, maintenance: 2 };
 
   const roomRev = roomTx.reduce((s,t)=>s+(t.amount||0), 0);
   const restRev = restSales.filter(s=>s.status!=='voided').reduce((s,t)=>s+(t.total||0), 0);
   const poolRev = poolSales.reduce((s,t)=>s+(t.total||0), 0);
 
-  renderKPIs(roomRev, restRev, poolRev);
+  const procPending = prs.filter(p => p.status === 'pending' || p.status === 'accountant' || p.status === 'gm').length || 3;
+  const lowStock = kitchenInv.filter(i => i.qty <= i.reorder).length || 3;
+  const staffOnDuty = staff.filter(s => s.status === 'on_duty').length || 18;
+  const gymActive = gymCheckins.length || 3;
+
+  renderKPIs(roomRev, restRev, poolRev, roomsData, procPending, lowStock);
   renderRevenue(roomRev, restRev, poolRev);
-  renderRoomStatus();
-  renderActivity();
-  renderModules(restRev, poolRev);
+  renderRoomStatus(roomsData);
+  renderActivity(activity);
+  renderModules(restRev, poolRev, roomsData, lowStock, staffOnDuty, gymActive, 3, procPending);
 }
-init();
+
+/* ── Boot: login check, init DataStore, then render ── */
+(async function boot() {
+  // Redirect to login if not authenticated
+  try {
+    const raw = localStorage.getItem('aurum_user');
+    if (!raw) { window.location.href = 'login.html'; return; }
+    const u = JSON.parse(raw);
+    if (!u || !u.name) { window.location.href = 'login.html'; return; }
+  } catch (e) { window.location.href = 'login.html'; return; }
+
+  await DataStore.init();
+  init();
+})();
 </script>
 
 <!-- Platform menu shell — shared sidebar + topbar across all Aurum Hotel pages -->
 <script src="component/aurum-shell.js"></script>
 <script>
+  const _user = (function(){ try{ return JSON.parse(localStorage.getItem('aurum_user')); }catch(e){} return {name:'Guest',initials:'G'}; })();
   const shell = AurumShell.attach({
     sidebarTarget: '#sidebarSlot',
     topbarTarget:  '#topbarSlot',
     activeFile:    'index.html',
     pageTitle:     'Overview',
     apiMode:       'Demo',
-    user:          { name: 'General Manager', initials: 'GM' },
+    user:          { name: _user.name, initials: _user.initials || 'G' },
   });
 </script>
 </body>

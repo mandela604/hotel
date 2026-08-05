@@ -7,18 +7,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-  }
   html{ height:auto; }
-  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  body{ font-family:'Outfit',sans-serif; font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
-  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+
+  /* This page owns layout + its own content only. Sidebar + topbar look/markup
+     live entirely in restaurant-shell.js and stay on the shared dark/blue
+     theme. The .content (and .modal-overlay, since the Pay modal renders
+     outside .content) scopes below re-declare the SAME variable names with
+     light values, so only the main content area + its modal turn white —
+     the sidebar never sees this. */
+  .content, .modal-overlay{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+  }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
@@ -30,15 +44,14 @@
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
   .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
   .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
   .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
   /* Mode tabs */
-  .mode-tabs{ display:flex; gap:2px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:4px; box-shadow:var(--shadow); }
-  .mode-tab{ flex:1; text-align:center; padding:11px; border-radius:10px; background:none; border:none; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--text3); cursor:pointer; transition:all .2s; }
+  .mode-tabs{ display:flex; gap:2px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:4px; box-shadow:var(--shadow); flex-wrap:wrap; }
+  .mode-tab{ flex:1; min-width:150px; text-align:center; padding:11px; border-radius:10px; background:none; border:none; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--text3); cursor:pointer; transition:all .2s; }
   .mode-tab.active{ background:var(--gold-dim); color:var(--gold); }
   .mode-tab .sub{ display:block; font-size:10px; font-weight:400; color:var(--text3); margin-top:2px; }
 
@@ -98,14 +111,14 @@
   .form-input, .form-select{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:9px; padding:8px 11px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; outline:none; width:100%; }
   .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
   .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid transparent; }
-  .btn-primary{ background:var(--gold); color:#000; font-weight:700; }
+  .btn-primary{ background:var(--gold); color:#fff; font-weight:700; }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
   .btn-primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-success{ background:rgba(74,222,128,0.14); border-color:rgba(74,222,128,0.4); color:var(--green); font-weight:700; }
-  .btn-success:hover{ background:rgba(74,222,128,0.24); }
-  .btn-danger{ background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:var(--red); font-weight:700; }
+  .btn-success{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); font-weight:700; }
+  .btn-success:hover{ background:rgba(18,183,106,.2); }
+  .btn-danger{ background:var(--red-bg); border-color:rgba(240,68,56,.3); color:var(--red); font-weight:700; }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
 
   /* Active orders table */
@@ -115,14 +128,15 @@
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.open{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); }
-  .status-pill.on.served{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.open{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
+  .status-pill.on.served{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
   .status-pill.on.paid{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.cancelled{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .status-pill.on.cancelled{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
 
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
   .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .panel-body{ padding:16px 20px; }
   .tbl-wrap{ overflow-x:auto; }
   table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:820px; }
   thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
@@ -142,10 +156,10 @@
   .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
 
-  /* Modal (added for custom Pay confirmation — same shell pattern used on the other Restaurant pages) */
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  /* Modal (Pay confirmation — same shell pattern used on the other Restaurant pages) */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(420px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(420px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
   .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
   @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
@@ -157,7 +171,7 @@
   .val-total{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:700; color:var(--gold); margin-bottom:14px; }
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
 
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
   .toast.success{ border-left:3px solid var(--green); }
   .toast.error{ border-left:3px solid var(--red); }
   .toast.info{ border-left:3px solid var(--blue); }
@@ -180,6 +194,7 @@
       <div class="mode-tabs no-print">
         <button class="mode-tab active" id="tabBuild" onclick="switchView('build')">＋ New Order<span class="sub">Build a sale or open a tab</span></button>
         <button class="mode-tab" id="tabActive" onclick="switchView('active')">📋 Active &amp; Recent Orders<span class="sub">Serve, pay or cancel</span></button>
+        <button class="mode-tab" id="tabRequisition" onclick="switchView('requisition')">🧾 New Requisition<span class="sub">Request drinks from Store</span></button>
       </div>
 
       <!-- ═══ BUILD VIEW ═══ -->
@@ -263,6 +278,17 @@
         </div>
       </div>
 
+      <!-- ═══ NEW REQUISITION VIEW ═══ -->
+      <div class="view" id="view-requisition">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Raise a Requisition to Store</div>
+            <span style="font-size:11px;color:var(--text3);">Goes straight into the Store module's approval queue</span>
+          </div>
+          <div class="panel-body" id="requisitionFormPlaceholder"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -290,6 +316,7 @@
 </div>
 
 <script src="../component/restaurant-shell.js"></script>
+<script src="../component/grace-request-form.js"></script>
 <script>
 const shell = RestaurantShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -339,10 +366,12 @@ async function saveShared(key, value){
 }
 
 const DEMO_INVENTORY = [
-  { meal:'Egusi Soup',  qty:15, unit:'Portions', batch:'PROD-00094', received:'17/07/26', min:8 },
-  { meal:'Moi Moi',     qty:4,  unit:'Pieces',   batch:'PROD-00090', received:'16/07/26', min:8 },
-  { meal:'Jollof Rice', qty:0,  unit:'Plates',   batch:'PROD-00088', received:'16/07/26', min:6 },
-  { meal:'Fried Rice',  qty:18, unit:'Plates',   batch:'PROD-00085', received:'16/07/26', min:6 },
+  { meal:'Egusi Soup',  source:'Kitchen', qty:15, unit:'Portions', batch:'PROD-00094', received:'17/07/26', min:8 },
+  { meal:'Moi Moi',     source:'Kitchen', qty:4,  unit:'Pieces',   batch:'PROD-00090', received:'16/07/26', min:8 },
+  { meal:'Jollof Rice', source:'Kitchen', qty:0,  unit:'Plates',   batch:'PROD-00088', received:'16/07/26', min:6 },
+  { meal:'Fried Rice',  source:'Kitchen', qty:18, unit:'Plates',   batch:'PROD-00085', received:'16/07/26', min:6 },
+  { meal:'Chapman',     source:'Store',   qty:24, unit:'Bottles',  batch:'REQ-00031',  received:'17/07/26', min:10 },
+  { meal:'Heineken',    source:'Store',   qty:40, unit:'Bottles',  batch:'REQ-00031',  received:'17/07/26', min:15 },
 ];
 const DEMO_MENU = [
   {id:'m01',name:'Peppered Snail',category:'Starters',type:'food',price:4500,avail:true},
@@ -361,6 +390,7 @@ let cart = [];
 let mode = 'quick';
 let activeCat = 'All';
 let statusFilter = '';
+let requisitionForm = null;
 
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function invLevel(i){ return i.qty<=0 ? 'out' : (i.qty<=i.min ? 'low' : 'ok'); }
@@ -377,9 +407,12 @@ function todayDDMMYY(){ const d=new Date(); return `${String(d.getDate()).padSta
 function switchView(name){
   document.getElementById('view-build').classList.toggle('active', name==='build');
   document.getElementById('view-active').classList.toggle('active', name==='active');
+  document.getElementById('view-requisition').classList.toggle('active', name==='requisition');
   document.getElementById('tabBuild').classList.toggle('active', name==='build');
   document.getElementById('tabActive').classList.toggle('active', name==='active');
+  document.getElementById('tabRequisition').classList.toggle('active', name==='requisition');
   if (name==='active') renderOrdersTable();
+  if (name==='requisition') ensureRequisitionForm();
 }
 function switchMode(){
   mode = document.getElementById('fMode').value;
@@ -399,25 +432,26 @@ function renderKPIs(){
   const servedTabs = orders.filter(o=>o.status==='served').length;
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card">
-      <div class="kpi-accent">💰</div><div class="kpi-label">Today's Sales</div>
+      <div class="kpi-label">Today's Sales</div>
       <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
       <div class="kpi-trend up">${todaySales.length} sale${todaySales.length!==1?'s':''} rung up</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-accent">🔔</div><div class="kpi-label">Open Tabs</div>
+      <div class="kpi-label">Open Tabs</div>
       <div class="kpi-value" style="color:var(--blue);">${openTabs}</div>
       <div class="kpi-trend ${openTabs>0?'warn':'up'}">${openTabs>0?'Awaiting service':'✓ All clear'}</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-accent">🍽</div><div class="kpi-label">Served, Awaiting Payment</div>
+      <div class="kpi-label">Served, Awaiting Payment</div>
       <div class="kpi-value" style="color:var(--gold);">${servedTabs}</div>
       <div class="kpi-trend ${servedTabs>0?'warn':'up'}">${servedTabs>0?'Ready to close out':'None pending'}</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-accent">🍽</div><div class="kpi-label">Meals Available</div>
+      <div class="kpi-label">Meals Available</div>
       <div class="kpi-value">${inventory.filter(i=>i.qty>0).length}</div>
       <div class="kpi-trend neutral">Of ${inventory.length} tracked</div>
     </div>`;
+  shell.setPendingBadge && shell.setPendingBadge(openTabs);
 }
 
 /* ═══ PICKER ═══ */
@@ -651,6 +685,27 @@ function cancelOrder(id){
   apiSave('PATCH', `/api/restaurant/orders/${id}`, {status:'cancelled'});
   showToast(`${id} cancelled.`, 'error');
   renderOrdersTable(); renderKPIs();
+}
+
+/* ═══ NEW REQUISITION — reuses the shared Grace request form component.
+   Writes to req:<no> / req-index in the same storage adapter the Store
+   module reads, so a Restaurant requisition (for drinks/Store items)
+   shows up there immediately — no separate pipe needed. Kitchen-sourced
+   meals still flow through Transfers, not this form. ═══ */
+function ensureRequisitionForm(){
+  if (requisitionForm) return;
+  requisitionForm = GraceHotelRequestForm.attach('#requisitionFormPlaceholder', {
+    defaultMode: 'store_issue',
+    pageSize: 5,
+    showRecent: true,
+    departments: ['Restaurant'],
+    fulfillStores: ['Central Store'],
+    catalog: inventory.filter(i => i.source==='Store').map(i => ({ name: i.meal, unit: i.unit })),
+    currentUser: { name: 'Restaurant Manager' },
+    storage: storage,
+    onOpenRequest: (reqNo) => { window.location.href = `restaurant-pending-requisitions.html?req=${reqNo}`; },
+    onSubmit: () => { renderKPIs(); },
+  });
 }
 
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }

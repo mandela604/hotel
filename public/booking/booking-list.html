@@ -4,23 +4,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Aurum Hotel — All Bookings</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 /* This page owns layout + its own All Bookings content only. Sidebar +
    topbar look/markup live entirely in booking-shell.js — same split
-   used by booking-dashboard.html and booking-rooms.html. */
+   used by booking-dashboard.html and booking-rooms.html.
+   NOTE: sidebar/topbar are deliberately left on the shared dark/blue
+   theme vars from booking-shell.js. The .content and .modal-overlay
+   scopes below re-declare the SAME variable names with light values,
+   so only the main content area + modals turn white — the sidebar
+   never sees these overrides. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
 
 html, body { height: 100%; overflow-x: hidden; }
-body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background var(--transition), color var(--transition); }
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+  background: var(--bg); color: var(--text);
+  transition: background var(--transition), color var(--transition);
+}
 
 .app { display: flex; min-height: 100vh; }
 .main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
 @media (max-width: 768px) { .main { margin-left: 0 !important; } }
 
-.content { flex: 1; padding: 24px; min-width: 0; overflow-x: hidden; }
+.content {
+  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
+  /* ── Light-theme override, scoped to content + modals only ── */
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
+  --border: #eef0f6; --border2: #dfe3ec;
+  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
+  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
+  --input-bg: #f4f6fb; --modal-bg: #ffffff;
+  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
+  --green: #12b76a; --green-bg: #e9f9f0;
+  --red: #f04438; --red-bg: #feecec;
+  --amber: #f79009; --amber-bg: #fff4e5;
+  --blue: #2f6fed; --blue-bg: #eaf1ff;
+  --purple: #8b5cf6; --purple-bg: #f4efff;
+  background: var(--bg);
+  color: var(--text);
+}
 @media (max-width: 480px) { .content { padding: 14px; } }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
@@ -30,9 +55,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--te
 .toolbar-right { display: flex; gap: 7px; flex-shrink: 0; }
 .search-wrap { display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; transition: border-color 0.2s; flex: 1; min-width: 160px; max-width: 260px; }
 .search-wrap:focus-within { border-color: var(--gold-border); }
-.search-wrap input { background: none; border: none; outline: none; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 13px; width: 100%; }
+.search-wrap i { color: var(--text3); font-size: 12.5px; }
+.search-wrap input { background: none; border: none; outline: none; color: var(--text); font-family: inherit; font-size: 13px; width: 100%; }
 .search-wrap input::placeholder { color: var(--text3); }
-.filter-sel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 12.5px; cursor: pointer; outline: none; transition: border-color 0.2s; }
+.filter-sel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text); font-family: inherit; font-size: 12.5px; cursor: pointer; outline: none; transition: border-color 0.2s; }
 .filter-sel:focus { border-color: var(--gold-border); }
 input[type="date"].filter-sel { min-width: 0; }
 @media (max-width: 700px) {
@@ -45,55 +71,55 @@ input[type="date"].filter-sel { min-width: 0; }
 }
 
 /* ═══════════ BUTTONS ═══════════ */
-.btn-primary { background: var(--gold); color: #0a1520; border: none; border-radius: var(--radius-sm); padding: 9px 16px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-primary { background: var(--gold); color: #fff; border: 1px solid var(--gold); border-radius: var(--radius-sm); padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; box-shadow: 0 4px 10px rgba(47,111,237,0.28); }
 .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
-.btn-outline { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-primary i { font-size: 11px; }
+.btn-outline { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--text); cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
+.btn-outline i { color: var(--text3); font-size: 12px; }
 
 /* ═══════════ ACTIVE FILTER CHIPS (mobile-friendly status quick-pick) ═══════════ */
 .status-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
 .status-chips::-webkit-scrollbar { height: 0; }
-.sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: 'Outfit', sans-serif; }
+.sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .sc-btn:hover, .sc-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
 
 /* ═══════════ PANEL ═══════════ */
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; animation: fadeUp 0.4s ease both; overflow: hidden; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 14px; flex-wrap: wrap; gap: 8px; }
-.panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.panel-sub { font-size: 11.5px; color: var(--text3); }
+.panel-title { font-size: 14px; font-weight: 800; color: var(--text); }
+.panel-sub { font-size: 11.5px; color: var(--text3); font-weight: 600; }
 
 /* ═══════════ TABLE (desktop / tablet) ═══════════ */
 .table-wrap { overflow-x: auto; width: 100%; }
 .bk-table { width: 100%; border-collapse: collapse; min-width: 720px; }
-.bk-table thead th { text-align: left; padding: 9px 12px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.bk-table thead th { text-align: left; padding: 9px 12px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
 .bk-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
 .bk-table tbody tr:last-child { border-bottom: none; }
 .bk-table tbody tr:hover { background: var(--surface2); }
 .bk-table tbody td { padding: 9px 12px; color: var(--text); vertical-align: middle; font-size: 12.5px; }
 
-.room-badge { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.room-badge { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
 .rt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .dot-standard { background: var(--blue); } .dot-deluxe { background: var(--purple); } .dot-suite { background: var(--gold); } .dot-conf { background: #34d399; }
-.status-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.status-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .status-chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
 .chip-checkedin { background: var(--green-bg); color: var(--green); } .chip-checkedin::before { background: var(--green); }
 .chip-checkout  { background: var(--red-bg); color: var(--red); } .chip-checkout::before  { background: var(--red); }
 .chip-reserved  { background: var(--blue-bg); color: var(--blue); } .chip-reserved::before  { background: var(--blue); }
-.chip-vacant    { background: rgba(156,163,175,0.12); color: #9ca3af; } .chip-vacant::before  { background: #9ca3af; }
-.chip-maintenance { background: rgba(251,146,60,0.12); color: #fb923c; } .chip-maintenance::before { background: #fb923c; }
-.pay-chip { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; }
+.chip-vacant    { background: rgba(156,163,175,0.14); color: #6b7280; } .chip-vacant::before  { background: #9ca3af; }
+.chip-maintenance { background: var(--amber-bg); color: var(--amber); } .chip-maintenance::before { background: var(--amber); }
+.pay-chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
 .pay-full { background: var(--green-bg); color: var(--green); }
 .pay-deposit { background: var(--amber-bg); color: var(--amber); }
 .pay-pending { background: var(--red-bg); color: var(--red); }
 
 .act-btns { display: flex; gap: 4px; }
-.act-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; font-size: 11px; font-weight: 500; color: var(--text3); cursor: pointer; transition: all 0.15s; font-family: 'Outfit', sans-serif; }
+.act-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; font-size: 11px; font-weight: 700; color: var(--text3); cursor: pointer; transition: all 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
 .act-btn.edit:hover { border-color: var(--gold-border); color: var(--gold); }
-.act-btn.del:hover  { border-color: rgba(248,113,113,0.4); color: var(--red); }
+.act-btn.del:hover  { border-color: rgba(240,68,56,0.4); color: var(--red); }
 
-/* ═══════════ MOBILE CARD LIST — table restyles into stacked cards ═══════════
-   Real responsive collapse rather than just hiding columns: below 720px
-   the table head disappears and every row becomes a labeled card. */
+/* ═══════════ MOBILE CARD LIST — table restyles into stacked cards ═══════════ */
 @media (max-width: 720px) {
   .table-wrap { overflow-x: visible; }
   .bk-table { min-width: 0; }
@@ -111,7 +137,7 @@ input[type="date"].filter-sel { min-width: 0; }
   .bk-table tbody td:last-child { border-bottom: none; }
   .bk-table tbody td::before {
     content: attr(data-label); font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--text3); font-weight: 500; text-align: left; flex-shrink: 0;
+    color: var(--text3); font-weight: 600; text-align: left; flex-shrink: 0;
   }
   .bk-table tbody td.mcard-head { padding: 10px 10px 8px; border-bottom: 1px solid var(--border); }
   .bk-table tbody td.mcard-head::before { display: none; }
@@ -119,15 +145,15 @@ input[type="date"].filter-sel { min-width: 0; }
   .bk-table tbody td.mcard-actions { padding: 9px 10px 10px; }
   .bk-table tbody td.mcard-actions::before { display: none; }
   .bk-table tbody td.mcard-actions .act-btns { width: 100%; }
-  .bk-table tbody td.mcard-actions .act-btn { flex: 1; text-align: center; padding: 7px 0; }
+  .bk-table tbody td.mcard-actions .act-btn { flex: 1; text-align: center; justify-content: center; padding: 7px 0; }
 }
 
 /* ═══════════ SUMMARY ROW ═══════════ */
 .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface2); border-top: 1px solid var(--border); }
 .sr-item { text-align: center; padding: 10px 12px; border-right: 1px solid var(--border); }
 .sr-item:last-child { border-right: none; }
-.sr-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 3px; }
-.sr-val { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 700; color: var(--text); }
+.sr-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 3px; font-weight: 700; }
+.sr-val { font-size: 17px; font-weight: 800; color: var(--text); }
 @media (max-width: 560px) {
   .summary-row { grid-template-columns: repeat(2, 1fr); }
   .sr-item:nth-child(1), .sr-item:nth-child(2) { border-bottom: 1px solid var(--border); }
@@ -135,50 +161,64 @@ input[type="date"].filter-sel { min-width: 0; }
 }
 
 /* ═══════════ PAGINATION ═══════════ */
-.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; }
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
 .page-btns { display: flex; gap: 3px; flex-wrap: wrap; }
-.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; font-family: 'Outfit', sans-serif; padding: 0 7px; }
+.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; font-family: inherit; padding: 0 7px; font-weight: 600; }
 .page-btn:hover { border-color: var(--gold-border); color: var(--gold); }
-.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 600; }
+.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 700; }
 .page-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
 /* ═══════════ MODAL (shared booking form) ═══════════ */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(5px); z-index: 300; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; }
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(15,20,40,0.55); backdrop-filter: blur(5px); z-index: 300;
+  align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto;
+  /* re-declare the same light overrides for content that lives inside the modal */
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
+  --border: #eef0f6; --border2: #dfe3ec;
+  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
+  --input-bg: #f4f6fb; --modal-bg: #ffffff;
+  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
+  --green: #12b76a; --green-bg: #e9f9f0;
+  --red: #f04438; --red-bg: #feecec;
+  --amber: #f79009; --amber-bg: #fff4e5;
+  --blue: #2f6fed; --blue-bg: #eaf1ff;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+}
 .modal-overlay.show { display: flex; }
-.modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; width: min(680px, 96vw); box-shadow: 0 30px 80px rgba(0,0,0,0.6); animation: modalIn 0.25s cubic-bezier(.4,0,.2,1); margin: auto; }
+.modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; width: min(680px, 96vw); box-shadow: 0 30px 80px rgba(15,20,40,0.25); animation: modalIn 0.25s cubic-bezier(.4,0,.2,1); margin: auto; }
 @media (max-width: 480px) { .modal { padding: 18px; border-radius: 14px; } }
-.confirm-modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px; width: min(380px, 90vw); box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: modalIn 0.2s ease; margin: 80px auto auto; }
+.confirm-modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px; width: min(380px, 90vw); box-shadow: 0 20px 60px rgba(15,20,40,0.25); animation: modalIn 0.2s ease; margin: 80px auto auto; }
 @keyframes modalIn { from{opacity:0;transform:translateY(14px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--text); }
-.modal-close { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; line-height: 1; transition: color 0.2s; }
-.modal-close:hover { color: var(--text); }
+.modal-title { font-size: 19px; font-weight: 800; color: var(--text); }
+.modal-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; color: var(--text2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.modal-close:hover { color: var(--text); border-color: var(--gold-border); }
 
 .form-section { margin-bottom: 16px; }
-.form-section-title { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); font-weight: 600; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--gold-border); }
+.form-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); font-weight: 800; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--gold-border); display: flex; align-items: center; gap: 7px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 @media (max-width: 500px) { .form-grid, .form-grid-3 { grid-template-columns: 1fr; } }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group.span2 { grid-column: span 2; }
 @media (max-width: 500px) { .form-group.span2 { grid-column: span 1; } }
-.form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; }
-.form-input, .form-select { background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 13px; outline: none; transition: border-color 0.2s; width: 100%; }
+.form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; }
+.form-input, .form-select { background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-family: inherit; font-size: 13px; outline: none; transition: border-color 0.2s; width: 100%; }
 .form-input:focus, .form-select:focus { border-color: var(--gold-border); }
-.form-input[readonly] { opacity: 0.55; cursor: default; }
+.form-input[readonly] { opacity: 0.6; cursor: default; }
 
 .amount-box { background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: var(--radius-sm); padding: 10px 12px; }
-.amount-box.blue { background: rgba(96,165,250,0.08); border-color: rgba(96,165,250,0.2); }
-.amount-box.red  { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.2); }
-.amount-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--gold); margin-bottom: 3px; }
+.amount-box.blue { background: var(--blue-bg); border-color: rgba(47,111,237,0.2); }
+.amount-box.red  { background: var(--red-bg); border-color: rgba(240,68,56,0.2); }
+.amount-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--gold); margin-bottom: 3px; font-weight: 700; }
 .amount-box.blue .amount-label { color: var(--blue); }
 .amount-box.red  .amount-label { color: var(--red); }
-.amount-value { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--gold-light); }
-.amount-box.blue .amount-value { color: #93c5fd; }
-.amount-box.red  .amount-value { color: #fca5a5; }
-.amount-sub { font-size: 10px; color: rgba(201,168,76,0.7); margin-top: 1px; }
-.amount-box.blue .amount-sub { color: rgba(147,197,253,0.7); }
-.amount-box.red  .amount-sub { color: rgba(252,165,165,0.7); }
+.amount-value { font-size: 20px; font-weight: 800; color: var(--gold); }
+.amount-box.blue .amount-value { color: var(--blue); }
+.amount-box.red  .amount-value { color: var(--red); }
+.amount-sub { font-size: 10px; color: rgba(47,111,237,0.75); margin-top: 1px; font-weight: 600; }
+.amount-box.blue .amount-sub { color: rgba(47,111,237,0.7); }
+.amount-box.red  .amount-sub { color: rgba(240,68,56,0.7); }
 
 .num-pair { display: flex; align-items: center; }
 .num-pair button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 32px; height: 38px; font-size: 14px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -191,20 +231,25 @@ input[type="date"].filter-sel { min-width: 0; }
 @media (max-width: 480px) { .modal-footer { flex-direction: column-reverse; } .modal-footer button { width: 100%; justify-content: center; } }
 
 .guest-search-wrap { position: relative; }
-.guest-dropdown { position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 400; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 12px 40px rgba(0,0,0,0.35); overflow: hidden; display: none; max-height: 220px; overflow-y: auto; }
+.guest-dropdown { position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 400; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 12px 40px rgba(15,20,40,0.18); overflow: hidden; display: none; max-height: 220px; overflow-y: auto; }
 .guest-dropdown.show { display: block; }
 .guest-opt { padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
 .guest-opt:last-child { border-bottom: none; }
 .guest-opt:hover { background: var(--surface2); }
-.guest-opt-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.guest-opt-name { font-size: 13px; font-weight: 700; color: var(--text); }
 .guest-opt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
-.returning-tag { display: inline-block; font-size: 9px; background: var(--gold-dim); color: var(--gold); padding: 1px 5px; border-radius: 8px; margin-left: 5px; }
+.returning-tag { display: inline-block; font-size: 9px; background: var(--gold-dim); color: var(--gold); padding: 1px 6px; border-radius: 8px; margin-left: 5px; font-weight: 700; }
 
 /* ═══════════ TOAST ═══════════ */
-.toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px; color: var(--text); box-shadow: 0 8px 28px rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; max-width: calc(100vw - 40px); }
-.toast.success { border-left: 3px solid var(--green); }
-.toast.error   { border-left: 3px solid var(--red); }
-.toast.info    { border-left: 3px solid var(--blue); }
+.toast {
+  position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm);
+  padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999;
+  display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; max-width: calc(100vw - 40px);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; font-weight: 600;
+}
+.toast.success { border-left: 3px solid #12b76a; }
+.toast.error   { border-left: 3px solid #f04438; }
+.toast.info    { border-left: 3px solid #2f6fed; }
 @keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
 
@@ -226,11 +271,11 @@ input[type="date"].filter-sel { min-width: 0; }
 <body>
 
 <div class="app">
-  <!-- Sidebar rendered here by booking-shell.js -->
+  <!-- Sidebar rendered here by booking-shell.js — untouched, stays on its own dark/blue theme -->
   <div id="sidebarSlot"></div>
 
   <div class="main">
-    <!-- Topbar rendered here by booking-shell.js -->
+    <!-- Topbar rendered here by booking-shell.js — untouched -->
     <div id="topbarSlot"></div>
 
     <div class="content">
@@ -246,7 +291,7 @@ input[type="date"].filter-sel { min-width: 0; }
       <div class="toolbar no-print">
         <div class="toolbar-left">
           <div class="search-wrap">
-            <span style="color:var(--text3);font-size:13px;">🔍</span>
+            <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" placeholder="Guest, room, phone…" id="bkSearch" oninput="bkPage=1;filterBookings()">
           </div>
           <select class="filter-sel" id="bkType" onchange="bkPage=1;filterBookings()">
@@ -260,8 +305,8 @@ input[type="date"].filter-sel { min-width: 0; }
           <input type="date" class="filter-sel" id="bkTo"   onchange="bkPage=1;filterBookings()" title="Check-in to">
         </div>
         <div class="toolbar-right">
-          <button class="btn-outline" onclick="window.print()">🖨 Print</button>
-          <button class="btn-primary" onclick="openBookingModal()">＋ New Booking</button>
+          <button class="btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+          <button class="btn-primary" onclick="openBookingModal()"><i class="fa-solid fa-plus"></i> New Booking</button>
         </div>
       </div>
 
@@ -311,11 +356,11 @@ input[type="date"].filter-sel { min-width: 0; }
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="modalTitle">New Booking</div>
-      <button class="modal-close" onclick="closeModal('bookingModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('bookingModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <div class="form-section">
-      <div class="form-section-title">👤 Guest Information</div>
+      <div class="form-section-title"><i class="fa-solid fa-user"></i> Guest Information</div>
       <div class="form-grid">
         <div class="form-group span2">
           <label class="form-label">Guest Full Name</label>
@@ -334,7 +379,7 @@ input[type="date"].filter-sel { min-width: 0; }
     </div>
 
     <div class="form-section">
-      <div class="form-section-title">🛏 Room &amp; Stay</div>
+      <div class="form-section-title"><i class="fa-solid fa-bed"></i> Room &amp; Stay</div>
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Room Number</label>
           <select class="form-select" id="fRoom" onchange="onRoomChange()"><option value="">Select room…</option></select>
@@ -352,7 +397,7 @@ input[type="date"].filter-sel { min-width: 0; }
     </div>
 
     <div class="form-section">
-      <div class="form-section-title">₦ Billing &amp; Payment</div>
+      <div class="form-section-title"><i class="fa-solid fa-sack-dollar"></i> Billing &amp; Payment</div>
       <div class="form-grid-3">
         <div class="form-group"><label class="form-label">Rate / Night (₦)</label><input class="form-input" type="number" id="fRate" placeholder="0" oninput="calcAmount()"></div>
         <div class="form-group"><label class="form-label">Discount (%)</label><input class="form-input" type="number" id="fDiscount" placeholder="0" min="0" max="100" oninput="calcAmount()"></div>
@@ -371,14 +416,14 @@ input[type="date"].filter-sel { min-width: 0; }
     </div>
 
     <div class="form-section">
-      <div class="form-section-title">📝 Notes</div>
+      <div class="form-section-title"><i class="fa-regular fa-note-sticky"></i> Notes</div>
       <div class="form-group"><textarea class="form-input" style="min-height:60px;resize:vertical;" id="fNotes" placeholder="Late check-in, dietary needs, extra bedding, special requests…"></textarea></div>
     </div>
 
     <div class="modal-footer">
-      <button class="btn-outline" id="modalDeleteBtn" style="display:none;border-color:rgba(248,113,113,0.3);color:var(--red);" onclick="openDeleteFromEdit()">🗑 Delete Booking</button>
+      <button class="btn-outline" id="modalDeleteBtn" style="display:none;border-color:rgba(240,68,56,0.3);color:var(--red);" onclick="openDeleteFromEdit()"><i class="fa-solid fa-trash"></i> Delete Booking</button>
       <button class="btn-outline" onclick="closeModal('bookingModal')">Cancel</button>
-      <button class="btn-primary" onclick="saveBooking()">✓ Save Booking</button>
+      <button class="btn-primary" onclick="saveBooking()"><i class="fa-solid fa-check"></i> Save Booking</button>
     </div>
   </div>
 </div>
@@ -386,11 +431,11 @@ input[type="date"].filter-sel { min-width: 0; }
 <!-- ══ DELETE CONFIRM ══ -->
 <div class="modal-overlay" id="deleteModal" onclick="handleModalBackdrop(event,'deleteModal')">
   <div class="confirm-modal">
-    <h3 style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--red);margin-bottom:8px;">Delete Booking</h3>
+    <h3 style="font-size:18px;font-weight:800;color:var(--red);margin-bottom:8px;">Delete Booking</h3>
     <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Delete booking for <strong id="delGuest"></strong> in Room <strong id="delRoom"></strong>? This cannot be undone.</p>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button class="btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
-      <button style="background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:var(--radius-sm);padding:9px 16px;color:var(--red);cursor:pointer;font-family:'Outfit',sans-serif;font-size:13px;transition:all 0.2s;" onclick="confirmDelete()">🗑 Delete</button>
+      <button style="background:var(--red-bg);border:1px solid rgba(240,68,56,0.3);border-radius:var(--radius-sm);padding:9px 16px;color:var(--red);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
 </div>
@@ -585,19 +630,19 @@ function renderBkPage() {
         const bal = calcBal(b);
         return `<tr onclick="openEdit(${oi})">
           <td class="mcard-head" data-label="Room"><span class="room-badge"><span class="rt-dot ${DOT_CLASS[b.type]}"></span>${b.room} · ${b.type}</span><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||'—'}</span></td>
-          <td data-label="Guest"><div style="text-align:right;"><div style="font-weight:500;font-size:12.5px;">${b.guest}</div><div style="font-size:10.5px;color:var(--text3);">${b.phone}</div></div></td>
+          <td data-label="Guest"><div style="text-align:right;"><div style="font-weight:600;font-size:12.5px;">${b.guest}</div><div style="font-size:10.5px;color:var(--text3);">${b.phone}</div></div></td>
           <td data-label="Check-in">${fmtDate(b.checkin)}</td>
           <td data-label="Check-out">${fmtDate(b.checkout)}</td>
           <td data-label="Nights">${nights(b.checkin,b.checkout)||'—'}</td>
           <td data-label="Total"><strong>${fmtN(calcTotal(b))}</strong></td>
           <td data-label="Paid"><span style="color:var(--green);">${fmtN(b.paid||0)}</span></td>
-          <td data-label="Balance"><span style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:600;">${fmtN(bal)}</span></td>
+          <td data-label="Balance"><span style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:700;">${fmtN(bal)}</span></td>
           <td data-label="Payment"><div style="text-align:right;"><div style="font-size:11.5px;">${b.payMethod}</div><span class="pay-chip ${PAY_CLS[b.payStatus]||'pay-pending'}">${b.payStatus}</span></div></td>
           <td data-label="Status"><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||'—'}</span></td>
           <td class="no-print mcard-actions" onclick="event.stopPropagation()">
             <div class="act-btns">
-              <button class="act-btn edit" onclick="openEdit(${oi})">✏ Edit</button>
-              <button class="act-btn del"  onclick="openDelete(${oi})">🗑 Delete</button>
+              <button class="act-btn edit" onclick="openEdit(${oi})"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button class="act-btn del"  onclick="openDelete(${oi})"><i class="fa-solid fa-trash"></i> Delete</button>
             </div>
           </td>
         </tr>`;
@@ -842,9 +887,10 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 function handleModalBackdrop(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
 
 function showToast(msg, type = 'success') {
+  const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = (type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : 'ℹ ') + msg;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }

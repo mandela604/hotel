@@ -24,6 +24,7 @@ const GymShell = (function () {
     { key: 'members',   label: 'Members',           href: 'gym-members.html',   icon: '👤', badgeKey: 'expiring' },
     { key: 'plans',     label: 'Membership Plans',  href: 'gym-plans.html',     icon: '🏷' },
     { key: 'checkins',  label: 'Check-in Log',      href: 'gym-checkins.html',  icon: '✓',  badgeKey: 'pending' },
+    { key: 'revenue',   label: 'Revenue',           href: 'gym-revenue.html',   icon: '📊' },
   ];
 
   let stylesInjected = false;
@@ -33,51 +34,53 @@ const GymShell = (function () {
     stylesInjected = true;
     const css = `
       :root{
-        --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
-        --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-        --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-        --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-        --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-        --purple:#a78bfa; --purple-bg:rgba(167,139,250,0.12);
+        --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.12); --gold-border:rgba(47,111,237,0.25);
+        --green:#12b76a; --green-bg:rgba(18,183,106,0.12);
+        --red:#f04438; --red-bg:rgba(240,68,56,0.12);
+        --amber:#f79009; --amber-bg:rgba(247,144,9,0.12);
+        --blue:#2f6fed; --blue-bg:rgba(47,111,237,0.12);
+        --purple:#8b5cf6; --purple-bg:rgba(139,92,246,0.12);
       }
       [data-theme="dark"]{
-        --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
-        --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
+        --bg:#081540; --surface:#0a1848; --surface2:#0e2158; --surface3:#122868;
+        --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.14); --text:#ffffff; --text2:#aab0d0; --text3:#8891bd;
         --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
-        --sidebar-bg:#0a1520;
+        --sidebar-bg:linear-gradient(180deg,#0a1848 0%,#0c1c58 100%); --input-bg:#0a1848; --modal-bg:#0a1848;
       }
       [data-theme="light"]{
-        --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
-        --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
+        --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+        --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
         --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
-        --sidebar-bg:#ffffff;
+        --sidebar-bg:#ffffff; --input-bg:#f4f6fb; --modal-bg:#ffffff;
       }
 
-      #gym-sidebar{ position:fixed; top:0; left:0; height:100%; width:250px; background:var(--sidebar-bg); border-right:1px solid var(--border); display:flex; flex-direction:column; z-index:200; overflow:hidden; flex-shrink:0; transition:transform .3s cubic-bezier(.4,0,.2,1); }
+      #gym-sidebar{ position:fixed; top:0; left:0; height:100%; width:256px; background:var(--sidebar-bg); border-right:1px solid var(--border); display:flex; flex-direction:column; z-index:200; overflow:hidden; flex-shrink:0; transition:transform .3s cubic-bezier(.4,0,.2,1); }
       @media (max-width:768px){ #gym-sidebar{ transform:translateX(-100%); box-shadow:var(--shadow-lg); } #gym-sidebar.open{ transform:translateX(0); } }
-      .gym-sb-head{ display:flex; align-items:center; gap:10px; padding:20px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
-      .gym-logo-mark{ width:34px; height:34px; background:linear-gradient(135deg,var(--gold),var(--gold-light)); border-radius:9px; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:700; color:#000; flex-shrink:0; text-decoration:none; }
-      .gym-logo-text{ flex:1; min-width:0; }
-      .gym-logo-text .name{ font-family:'Cormorant Garamond',serif; font-size:16.5px; font-weight:700; color:var(--gold); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .gym-logo-text .sub{ font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); margin-top:1px; white-space:nowrap; }
+      .gym-sb-head{ display:flex; align-items:center; gap:10px; padding:22px 18px 20px; border-bottom:1px solid var(--border); flex-shrink:0; }
+      .gym-logo-mark{ width:36px; height:36px; background:linear-gradient(135deg,var(--gold),var(--gold-light)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:16px; font-weight:700; color:#fff; flex-shrink:0; text-decoration:none; }
+      .gym-logo-text{ margin-left:10px; flex:1; overflow:hidden; }
+      .gym-logo-text .name{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:18px; font-weight:700; color:var(--gold); white-space:nowrap; line-height:1.2; }
+      .gym-logo-text .sub{ font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); margin-top:1px; white-space:nowrap; }
       .gym-back-link{ display:flex; align-items:center; gap:6px; padding:10px 18px; font-size:11.5px; color:var(--text3); text-decoration:none; border-bottom:1px solid var(--border); transition:color .15s; flex-shrink:0; }
       .gym-back-link:hover{ color:var(--gold); }
-      .gym-sb-section{ font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); padding:16px 18px 6px; flex-shrink:0; }
+      .gym-sb-section{ font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); padding:18px 18px 6px; flex-shrink:0; }
       .gym-sb-nav{ flex:1; overflow-y:auto; padding:4px 10px; }
       .gym-nav-item{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:var(--text2); font-size:13.5px; cursor:pointer; text-decoration:none; border:1px solid transparent; margin-bottom:2px; transition:all .2s; white-space:nowrap; }
       .gym-nav-item:hover{ background:var(--surface2); color:var(--text); }
       .gym-nav-item.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); font-weight:500; }
       .gym-nav-item.active .gym-nav-icon{ color:var(--gold); }
-      .gym-nav-icon{ font-size:15px; width:18px; text-align:center; flex-shrink:0; }
-      .gym-nav-badge{ margin-left:auto; background:var(--gold); color:#000; font-size:10px; font-weight:700; padding:1px 6px; border-radius:20px; }
+      .gym-nav-icon{ font-size:16px; width:20px; text-align:center; flex-shrink:0; }
+      .gym-nav-badge{ margin-left:auto; background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:20px; display:none; }
+      .gym-nav-badge.show{ display:inline-block; }
       .gym-sb-footer{ padding:12px 10px; border-top:1px solid var(--border); flex-shrink:0; }
-      .gym-theme-btn{ display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); color:var(--text2); font-family:'Outfit',sans-serif; font-size:13px; cursor:pointer; transition:all .2s; }
+      .gym-theme-btn{ display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); color:var(--text2); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; cursor:pointer; transition:all .2s; }
       .gym-theme-btn:hover{ background:var(--surface3); color:var(--text); }
       .gym-theme-label{ flex:1; text-align:left; }
       .gym-toggle-track{ width:34px; height:18px; background:var(--border2); border-radius:20px; position:relative; flex-shrink:0; transition:background .3s; }
       .gym-toggle-track.on{ background:var(--gold); }
       .gym-toggle-thumb{ position:absolute; top:2px; left:2px; width:14px; height:14px; background:#fff; border-radius:50%; transition:transform .3s; }
       .gym-toggle-track.on .gym-toggle-thumb{ transform:translateX(16px); }
+      .gym-copyright{ font-size:10.5px; color:var(--text3); padding:0 18px 16px; flex-shrink:0; }
 
       #gym-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:199; backdrop-filter:blur(2px); }
       #gym-overlay.show{ display:block; }
@@ -87,13 +90,13 @@ const GymShell = (function () {
       .gym-hamburger{ display:none; background:var(--surface2); border:1px solid var(--border); color:var(--text); width:36px; height:36px; border-radius:10px; align-items:center; justify-content:center; font-size:16px; cursor:pointer; flex-shrink:0; }
       @media (max-width:768px){ .gym-hamburger{ display:flex; } }
       .gym-topbar-titlewrap{ flex:1; min-width:0; }
-      .gym-topbar-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; }
-      .gym-topbar-sub{ font-size:11px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .gym-topbar-title{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:20px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .gym-topbar-sub{ font-size:11.5px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .gym-topbar-right{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
       .gym-topbar-date{ font-size:12px; color:var(--text3); display:none; }
       @media (min-width:640px){ .gym-topbar-date{ display:block; } }
-      .gym-api-badge{ display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; padding:3px 8px; border-radius:20px; background:rgba(251,191,36,.12); color:#fbbf24; border:1px solid rgba(251,191,36,.2); white-space:nowrap; }
-      .gym-api-badge.live{ background:var(--green-bg); color:var(--green); border-color:rgba(74,222,128,.3); }
+      .gym-api-badge{ display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; padding:3px 8px; border-radius:20px; background:var(--amber-bg); color:var(--amber); border:1px solid rgba(247,144,9,.2); white-space:nowrap; }
+      .gym-api-badge.live{ background:var(--green-bg); color:var(--green); border-color:rgba(18,183,106,.3); }
       .gym-api-badge .dot{ width:5px; height:5px; border-radius:50%; background:currentColor; animation:gymBlink 2s infinite; }
       @keyframes gymBlink{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
       .gym-notif-btn{ width:36px; height:36px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; position:relative; color:var(--text2); flex-shrink:0; }
@@ -118,8 +121,8 @@ const GymShell = (function () {
     const topbarEl = document.querySelector(opts.topbarTarget);
     const user = opts.user || { name: 'Gym Attendant' };
     const userInitials = user.initials || initials(user.name);
+    const activeFile = opts.activeFile || '';
 
-    // ── Sidebar ──
     sidebarEl.innerHTML = `
       <aside id="gym-sidebar">
         <div class="gym-sb-head">
@@ -133,10 +136,10 @@ const GymShell = (function () {
         <div class="gym-sb-section">Gym & Fitness</div>
         <nav class="gym-sb-nav">
           ${NAV_ITEMS.map(item => `
-            <a class="gym-nav-item${item.href === opts.activeFile ? ' active' : ''}" href="${item.href}">
+            <a class="gym-nav-item${item.href === activeFile ? ' active' : ''}" href="${item.href}" data-nav-key="${item.key}">
               <span class="gym-nav-icon">${item.icon}</span>
-              <span>${item.label}</span>
-              ${item.badgeKey ? `<span class="gym-nav-badge" id="gymBadge_${item.badgeKey}" style="display:none;"></span>` : ''}
+              <span class="nav-text">${item.label}</span>
+              ${item.badgeKey ? `<span class="gym-nav-badge" id="gymBadge_${item.badgeKey}"></span>` : ''}
             </a>`).join('')}
         </nav>
         <div class="gym-sb-footer">
@@ -146,10 +149,10 @@ const GymShell = (function () {
             <div class="gym-toggle-track" id="gymToggleTrack"><div class="gym-toggle-thumb"></div></div>
           </button>
         </div>
+        <div class="gym-copyright">© 2026 Aurum Hotel</div>
       </aside>
     `;
 
-    // ── Overlay for mobile ──
     if (!document.getElementById('gym-overlay')) {
       const overlay = document.createElement('div');
       overlay.id = 'gym-overlay';
@@ -157,7 +160,6 @@ const GymShell = (function () {
       overlay.addEventListener('click', closeMobileSidebar);
     }
 
-    // ── Topbar ──
     topbarEl.innerHTML = `
       <div id="gym-topbar">
         <button class="gym-hamburger" id="gymHamburger">☰</button>
@@ -174,16 +176,13 @@ const GymShell = (function () {
       </div>
     `;
 
-    // Date
     const dateEl = document.getElementById('gymTopDate');
     if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-    // Mobile hamburger
     const hamburger = document.getElementById('gymHamburger');
     if (hamburger) hamburger.addEventListener('click', openMobileSidebar);
 
-    // Theme toggle
-    let isDark = true;
+    let isDark = false;
     const themeBtn = document.getElementById('gymThemeBtn');
     function applyTheme() {
       document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -198,7 +197,7 @@ const GymShell = (function () {
     });
     try {
       const saved = localStorage.getItem('aurum-theme');
-      if (saved === 'light') { isDark = false; }
+      if (saved === 'dark') { isDark = true; }
     } catch (e) {}
     applyTheme();
 
@@ -215,7 +214,6 @@ const GymShell = (function () {
       document.body.style.overflow = '';
     }
 
-    // ── Public API ──
     return {
       setApiMode(mode) {
         const badge = document.getElementById('gymApiBadge');
@@ -227,14 +225,20 @@ const GymShell = (function () {
       setPendingBadge(n) {
         const el = document.getElementById('gymBadge_pending');
         if (!el) return;
-        if (n > 0) { el.textContent = n; el.style.display = ''; }
-        else el.style.display = 'none';
+        if (n > 0) { el.textContent = n; el.classList.add('show'); }
+        else el.classList.remove('show');
       },
       setExpiringBadge(n) {
         const el = document.getElementById('gymBadge_expiring');
         if (!el) return;
-        if (n > 0) { el.textContent = n; el.style.display = ''; }
-        else el.style.display = 'none';
+        if (n > 0) { el.textContent = n; el.classList.add('show'); }
+        else el.classList.remove('show');
+      },
+      setTitle(title, subtitle) {
+        const t = document.querySelector('.gym-topbar-title');
+        if (t) t.textContent = title;
+        const s = document.querySelector('.gym-topbar-sub');
+        if (subtitle != null && s) s.textContent = subtitle;
       },
     };
   }

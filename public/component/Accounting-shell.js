@@ -8,6 +8,11 @@
      Dashboard → Shift Reconciliation → Revenue Breakdown →
      Transactions → Reports
    It does not show the rest of the hotel suite.
+
+   Also mirrors Kitchen/Booking's "Back to Main Suite" link: a
+   dedicated row right under the header, same wording/placement.
+   The old footer-based back link has been removed to avoid
+   duplication.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -47,7 +52,7 @@
   }
   .acc-head{ display:flex; align-items:center; justify-content:space-between; padding:20px 16px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .acc-logo{ width:34px; height:34px; background:linear-gradient(135deg,var(--gold),var(--gold-light)); border-radius:10px;
-    display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:700; color:#000; flex-shrink:0; }
+    display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:700; color:#000; flex-shrink:0; text-decoration:none; }
   .acc-brand{ margin-left:10px; flex:1; overflow:hidden; }
   .acc-brand .name{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--gold); white-space:nowrap; line-height:1.2; }
   .acc-brand .sub{ font-size:8.5px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); margin-top:1px; white-space:nowrap; }
@@ -60,6 +65,12 @@
   #acc-sidebar.collapsed .acc-head{ justify-content:center; padding:20px 0 18px; flex-direction:column; gap:8px; }
   #acc-sidebar.collapsed .acc-navitem{ justify-content:center; padding:11px 0; gap:0; }
   #acc-sidebar.collapsed .acc-nav{ padding:8px; }
+
+  .acc-backlink{ display:flex; align-items:center; gap:6px; padding:10px 16px; font-size:11.5px; color:var(--text3);
+    text-decoration:none; border-bottom:1px solid var(--border); transition:color .15s; flex-shrink:0; }
+  .acc-backlink:hover{ color:var(--gold); }
+  #acc-sidebar.collapsed .acc-backlink{ justify-content:center; padding:10px 0; }
+  #acc-sidebar.collapsed .acc-backlink .acc-backlabel{ display:none; }
 
   .acc-navlabel{ font-size:9px; letter-spacing:2.2px; text-transform:uppercase; color:var(--text3); padding:16px 16px 6px; }
   .acc-nav{ flex:1; overflow-y:auto; padding:4px 10px; }
@@ -79,11 +90,6 @@
   .acc-themebtn:hover{ background:var(--surface3); color:var(--text); }
   #acc-sidebar.collapsed .acc-themelabel{ display:none; }
   #acc-sidebar.collapsed .acc-themebtn{ justify-content:center; padding:9px; }
-  .acc-back{ display:flex; align-items:center; gap:8px; padding:9px 12px; margin-top:6px; border-radius:var(--radius-sm);
-    color:var(--text3); font-size:11.5px; text-decoration:none; border:1px solid var(--border); transition:all .2s; }
-  .acc-back:hover{ color:var(--gold); border-color:var(--gold-border); background:var(--gold-dim); }
-  #acc-sidebar.collapsed .acc-back span.acc-backlabel{ display:none; }
-  #acc-sidebar.collapsed .acc-back{ justify-content:center; padding:9px; }
 
   #acc-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:199; backdrop-filter:blur(2px); }
   #acc-overlay.show{ display:block; }
@@ -134,13 +140,16 @@
       <div id="acc-overlay"></div>
       <aside id="acc-sidebar">
         <div class="acc-head">
-          <div class="acc-logo">A</div>
+          <a class="acc-logo" href="../index.html" title="Back to Aurum Hotel">A</a>
           <div class="acc-brand">
             <div class="name">Aurum Accounting</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="acc-collapse" id="acc-collapseBtn" title="Toggle sidebar">◀</button>
         </div>
+        <a class="acc-backlink" href="../index.html">
+          <span>←</span><span class="acc-backlabel">Back to Main Suite</span>
+        </a>
         <div class="acc-navlabel">Accounting</div>
         <nav class="acc-nav" id="acc-nav">
           ${NAV.map(n => `
@@ -155,9 +164,6 @@
             <span id="acc-themeIcon">☀️</span>
             <span class="acc-themelabel" id="acc-themeLabel">Light Mode</span>
           </button>
-          <a class="acc-back" href="index.html" title="Back to hotel suite">
-            <span>←</span><span class="acc-backlabel">Hotel Suite</span>
-          </a>
         </div>
       </aside>`;
 
