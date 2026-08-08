@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Profit &amp; Loss | Aurum Accounting</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  /* Same split as every other module page: sidebar/topbar live entirely in
+     accounting-shell.js on the shared dark/blue theme. .content and
+     .modal-overlay re-declare the SAME variable names with light values so
+     only the main area + modals turn white. */
+  html{ height:auto; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content, .modal-overlay{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+  }
+  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .print-header{ display:none; }
+  .print-header h2{ font-size:18px; font-weight:800; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
+
+  /* ═══ KPI CARDS ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:21px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:17px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+
+  /* ═══ TOOLBAR ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px;
+    display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; position:relative; z-index:20; overflow:visible; }
+  .toolbar-left{ display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-right{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; position:relative; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
+  .btn-ghost:hover{ color:var(--gold); }
+  @media (max-width:900px){ .toolbar{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .toolbar-right{ justify-content:stretch; } .toolbar-right .btn{ flex:1; justify-content:center; } .flt-group{ width:100%; } }
+
+  /* ═══ DATE RANGE PICKER — same component as accounting-reports.html:
+     one box, click to open a calendar popover, pick a start + end day
+     (or jump by month/year, or use This Month/This Year), then Apply. ═══ */
+  .daterange-trigger{
+    display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border);
+    border-radius:10px; padding:8px 12px; cursor:pointer; font-size:12.5px; color:var(--text); font-family:inherit;
+    transition:border-color .2s; white-space:nowrap; min-width:220px;
+  }
+  .daterange-trigger:hover, .daterange-trigger.open{ border-color:var(--gold-border); }
+  .daterange-trigger i.fa-calendar{ color:var(--text3); font-size:12px; }
+  .daterange-trigger span{ flex:1; font-weight:600; }
+  .daterange-trigger i.fa-chevron-down{ color:var(--text3); font-size:9px; transition:transform .2s; }
+  .daterange-trigger.open i.fa-chevron-down{ transform:rotate(180deg); }
+
+  .drp-pop{
+    display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:400; width:296px;
+    background:var(--modal-bg); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-lg);
+    padding:14px; animation:drpIn .16s ease;
+  }
+  .drp-pop.open{ display:block; }
+  @keyframes drpIn{ from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+  .drp-nav{ display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+  .drp-navbtn{ width:26px; height:26px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px; flex-shrink:0; transition:all .15s; }
+  .drp-navbtn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .drp-nav-selects{ flex:1; display:flex; gap:6px; }
+  .drp-nav-selects select{ flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 6px; font-size:12px; color:var(--text); font-family:inherit; cursor:pointer; outline:none; color-scheme:light; }
+
+  .drp-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:10px; }
+  .drp-dow{ font-size:9px; font-weight:700; color:var(--text3); text-align:center; padding:4px 0; text-transform:uppercase; }
+  .drp-day{ position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text); cursor:pointer; border-radius:8px; transition:background .1s; }
+  .drp-day:hover{ background:var(--gold-dim); }
+  .drp-day.outside{ color:var(--text3); opacity:.35; }
+  .drp-day.in-range{ background:var(--gold-dim); border-radius:0; }
+  .drp-day.range-start{ background:var(--gold); color:#fff; border-radius:8px 0 0 8px; }
+  .drp-day.range-end{ background:var(--gold); color:#fff; border-radius:0 8px 8px 0; }
+  .drp-day.range-start.range-end{ border-radius:8px; }
+  .drp-day.today::after{ content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:3px; height:3px; border-radius:50%; background:var(--blue); }
+  .drp-day.range-start.today::after, .drp-day.range-end.today::after{ background:#fff; }
+
+  .drp-quick{ display:flex; gap:6px; margin-bottom:12px; }
+  .drp-quick button{ flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px; font-size:11px; font-weight:700; color:var(--text2); cursor:pointer; font-family:inherit; transition:all .15s; }
+  .drp-quick button:hover{ border-color:var(--gold-border); color:var(--gold); }
+
+  .drp-footer{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:10px; border-top:1px solid var(--border); }
+  .drp-selected-text{ font-size:10.5px; color:var(--text3); font-weight:600; }
+  .drp-footer-btns{ display:flex; gap:6px; }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; text-decoration:none; font-family:inherit; }
+  .btn-primary{ background:var(--gold); color:#fff; font-weight:700; box-shadow:0 2px 10px var(--gold-dim); }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+
+  /* ═══ TWO-COLUMN INCOME / EXPENSES PANELS ═══
+     .panel-grid is a two-column grid; grid items default to
+     align-items:stretch, so both .panel cards are ALREADY the same
+     height (set by whichever side has more rows/taller content).
+     What's missing without the flex changes below is getting each
+     panel's OWN footer to actually sit at that shared bottom edge —
+     otherwise the footer just follows directly after that panel's own
+     (possibly shorter) table, landing at a different height than the
+     other panel's footer. Making .panel a flex column and letting
+     .tbl-wrap grow (flex:1) pushes pagination + panel-foot-total down
+     to the bottom of the now-equal-height card, so both totals bars
+     land on the same line no matter how many rows either table has. */
+  .panel-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:stretch; }
+  @media (max-width:920px){ .panel-grid{ grid-template-columns:1fr; } }
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both;
+    display:flex; flex-direction:column; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:15px 18px 12px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13.5px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .panel-title i{ color:var(--gold); font-size:12px; }
+  .panel-sub{ font-size:11px; color:var(--text3); font-weight:600; }
+
+  .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; flex:1 1 auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12px; min-width:460px; }
+  thead th{ text-align:left; padding:8px 12px; font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.right{ text-align:right; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:9px 12px; color:var(--text); vertical-align:middle; }
+  tbody td.right{ text-align:right; }
+  .empty-row td{ text-align:center; padding:26px; color:var(--text3); white-space:normal; }
+  .cat-chip{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; color:var(--text2); }
+  .cat-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .cat-dot.income{ background:var(--blue); } .cat-dot.expense{ background:var(--red); }
+  .row-actions{ display:flex; gap:4px; }
+  .icon-btn{ background:var(--surface2); border:1px solid var(--border); border-radius:6px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text3); font-size:10.5px; transition:all .15s; }
+  .icon-btn:hover.edit{ border-color:var(--gold-border); color:var(--gold); }
+  .icon-btn.del:hover{ border-color:rgba(240,68,56,.4); color:var(--red); }
+  .panel-foot-total{ display:flex; align-items:center; justify-content:space-between; padding:11px 18px; border-top:1px solid var(--border); background:var(--surface2); font-size:12.5px; font-weight:700; flex-shrink:0; }
+
+  /* ═══ Per-table pagination — max 7 rows/page, independent for
+     Income vs Expenses ═══ */
+  .tbl-pagination{ display:flex; align-items:center; justify-content:space-between; padding:9px 18px; border-top:1px solid var(--border); font-size:11px; color:var(--text3); flex-wrap:wrap; gap:8px; flex-shrink:0; }
+  .tbl-pagination .page-btns{ display:flex; gap:3px; }
+  .tbl-pagination .page-btn{ min-width:24px; height:24px; border-radius:6px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10.5px; padding:0 6px; font-family:inherit; }
+  .tbl-pagination .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .tbl-pagination .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
+  .tbl-pagination .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  @media (max-width:600px){
+    table{ min-width:0; }
+    thead{ display:none; }
+    table, tbody, tr, td{ display:block; width:100%; }
+    tbody tr{ border:1px solid var(--border); border-radius:10px; margin:9px; padding:2px 2px 0; }
+    tbody td{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; border-bottom:1px dashed var(--border); text-align:right; }
+    tbody td:last-child{ border-bottom:none; }
+    tbody td::before{ content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; text-align:left; flex-shrink:0; }
+    .empty-row{ display:block; } .empty-row td{ display:block; text-align:center; } .empty-row td::before{ content:none; }
+  }
+
+  /* ═══ STATEMENT OF ACCOUNT — accordion: click the header to expand /
+     collapse, so it can sit under the tables without hogging vertical
+     space when you don't need it open. Print always forces it open
+     (see @media print) and only this panel prints. ═══ */
+  .statement-panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both; }
+  /* Heading is centered as a block (title + "All time" subtitle both
+     text-align:center), with the chevron pulled out of the flex flow
+     via position:absolute so it doesn't push the centered text off to
+     one side. */
+  .statement-toggle{ width:100%; display:flex; align-items:center; justify-content:center; gap:14px; padding:20px 24px; background:none; border:none; cursor:pointer; text-align:center; font-family:inherit; border-bottom:2px solid var(--gold-border); transition:background .15s, border-color .2s; position:relative; }
+  .statement-toggle:hover{ background:var(--surface2); }
+  .st-title{ font-size:16px; font-weight:800; color:var(--text); text-align:center; }
+  .st-sub{ font-size:11.5px; color:var(--text3); margin-top:3px; font-weight:600; text-align:center; }
+  .statement-chevron{ color:var(--text3); font-size:13px; transition:transform .25s; flex-shrink:0; position:absolute; right:24px; top:50%; transform:translateY(-50%); }
+  @media (max-width:480px){ .statement-chevron{ right:14px; } }
+  .statement-panel.collapsed .statement-toggle{ border-bottom-color:transparent; }
+  .statement-panel.collapsed .statement-chevron{ transform:translateY(-50%) rotate(-90deg); }
+  .stmt-body{ max-height:3000px; overflow:hidden; transition:max-height .3s ease, padding .3s ease; }
+  .statement-panel.collapsed .stmt-body{ max-height:0; }
+  .stmt-block{ max-width:520px; margin:0 auto; padding:22px 24px 20px; }
+  .stmt-section-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:1.5px; color:var(--gold); font-weight:800; margin:16px 0 8px; }
+  .stmt-section-label:first-child{ margin-top:0; }
+  .stmt-line{ display:flex; align-items:center; justify-content:space-between; padding:6px 4px; font-size:12.5px; color:var(--text2); }
+  .stmt-line .amt{ font-weight:600; color:var(--text); }
+  .stmt-line.neg .amt{ color:var(--red); }
+  .stmt-subtotal{ display:flex; align-items:center; justify-content:space-between; padding:9px 4px; margin-top:4px; border-top:1px solid var(--border); font-size:13.5px; font-weight:800; color:var(--text); }
+  .stmt-subtotal .amt{ color:var(--gold); }
+  .stmt-subtotal.expense .amt{ color:var(--red); }
+  .stmt-net{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; margin-top:18px; border-radius:12px; background:var(--green-bg); border:1px solid rgba(18,183,106,.25); }
+  .stmt-net.loss{ background:var(--red-bg); border-color:rgba(240,68,56,.25); }
+  .stmt-net .lbl{ font-size:13px; font-weight:800; color:var(--text); }
+  .stmt-net .lbl small{ display:block; font-size:10.5px; font-weight:600; color:var(--text3); margin-top:2px; }
+  .stmt-net .amt{ font-size:22px; font-weight:800; color:var(--green); }
+  .stmt-net.loss .amt{ color:var(--red); }
+  .stmt-empty{ text-align:center; padding:22px; color:var(--text3); font-size:12.5px; }
+
+  /* ═══ MODAL ═══ */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(480px,96vw); box-shadow:0 30px 80px rgba(15,34,55,0.25); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
+  .confirm-modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:14px; padding:22px; width:min(360px,90vw); box-shadow:0 20px 60px rgba(15,34,55,.25); animation:modalIn .2s ease; margin:80px auto auto; }
+  @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-size:18px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:9px; }
+  .modal-title i{ color:var(--gold); font-size:16px; }
+  .modal-close{ background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:30px; height:30px; color:var(--text2); font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+  .modal-close:hover{ color:var(--text); border-color:var(--gold-border); }
+  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:420px){ .form-grid{ grid-template-columns:1fr; } }
+  .form-label{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .form-input, .form-select{ background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
+  .modal-footer{ display:flex; gap:10px; justify-content:flex-end; margin-top:6px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  @media (max-width:420px){ .modal-footer{ flex-direction:column-reverse; } .modal-footer button{ width:100%; justify-content:center; } }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  /* ═══ PRINT — only the Statement of Account prints, forced open even
+     if the accordion is currently collapsed on screen. KPI cards and
+     the Income/Expenses management tables are working views, not part
+     of the printable document, so they're excluded. ═══ */
+  @media print{
+    #sidebarSlot, #topbarSlot, .toolbar, .row-actions, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    .content{ padding:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .kpi-row, .panel-grid{ display:none !important; }
+    .statement-panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .statement-toggle{ cursor:default !important; border-bottom:2px solid #000 !important; }
+    .statement-chevron{ display:none !important; }
+    .stmt-body{ max-height:none !important; }
+    .print-header{ display:block !important; margin-bottom:14px; }
+  }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:13px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-weight:600; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; }
+  .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
+  .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
+  .toast.info{ border-left:3px solid #2f6fed; } .toast.info i{ color:#2f6fed; }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @media (max-width:480px){ .toast{ left:14px; right:14px; bottom:14px; max-width:none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="print-header"><h2>Aurum Hotel — Statement of Account (Profit &amp; Loss)</h2><p id="printSub"></p></div>
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="toolbar no-print">
+        <div class="toolbar-left">
+          <!-- ═══ Single date-range box — same component as accounting-reports.html ═══ -->
+          <div class="flt-group" id="dateFilterWrap">
+            <span class="flt-label">Period</span>
+            <button type="button" class="daterange-trigger" id="drpTrigger">
+              <i class="fa-regular fa-calendar"></i>
+              <span id="drpLabel">All Time</span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+
+            <div class="drp-pop" id="drpPop">
+              <div class="drp-nav">
+                <button type="button" class="drp-navbtn" id="drpPrev"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="drp-nav-selects">
+                  <select id="drpMonthSel"></select>
+                  <select id="drpYearSel"></select>
+                </div>
+                <button type="button" class="drp-navbtn" id="drpNext"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+              <div class="drp-grid" id="drpGrid"></div>
+              <div class="drp-quick">
+                <button type="button" data-q="month">This Month</button>
+                <button type="button" data-q="year">This Year</button>
+              </div>
+              <div class="drp-footer">
+                <span class="drp-selected-text" id="drpSelectedText">Pick a start date</span>
+                <div class="drp-footer-btns">
+                  <button type="button" class="btn btn-outline btn-sm" id="drpCancel">Cancel</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="drpApply">Apply</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-outline btn-sm" onclick="printStatement()"><i class="fa-solid fa-print"></i> Print Statement</button>
+          <button class="btn btn-outline btn-sm" onclick="openEntryModal('income')"><i class="fa-solid fa-plus"></i> Add Income</button>
+          <button class="btn btn-primary btn-sm" onclick="openEntryModal('expense')"><i class="fa-solid fa-plus"></i> Add Expense</button>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="fa-solid fa-arrow-trend-up"></i> Income</div>
+            <span class="panel-sub" id="incCount">—</span>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Department</th><th>Description</th><th class="right">Amount (₦)</th><th class="no-print"></th></tr></thead>
+              <tbody id="incomeBody"></tbody>
+            </table>
+          </div>
+          <div class="tbl-pagination no-print" id="incomePagination"></div>
+          <div class="panel-foot-total"><span>Total Income</span><span style="color:var(--blue);" id="incomeFootTotal">₦0</span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="fa-solid fa-arrow-trend-down"></i> Operating Expenses</div>
+            <span class="panel-sub" id="expCount">—</span>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Category</th><th>Description</th><th class="right">Amount (₦)</th><th class="no-print"></th></tr></thead>
+              <tbody id="expenseBody"></tbody>
+            </table>
+          </div>
+          <div class="tbl-pagination no-print" id="expensePagination"></div>
+          <div class="panel-foot-total"><span>Total Expenses</span><span style="color:var(--red);" id="expenseFootTotal">₦0</span></div>
+        </div>
+      </div>
+
+      <!-- ═══ STATEMENT OF ACCOUNT — accordion, expanded by default.
+           Printing (see @media print above) forces this open regardless
+           of on-screen state and hides everything else on the page. ═══ -->
+      <div class="statement-panel" id="statementPanel">
+        <button type="button" class="statement-toggle" id="stmtToggle" onclick="toggleStatement()">
+          <div>
+            <div class="st-title">Statement of Account — Profit &amp; Loss</div>
+            <div class="st-sub" id="stmtPeriodLabel">All time</div>
+          </div>
+          <i class="fa-solid fa-chevron-down statement-chevron"></i>
+        </button>
+        <div class="stmt-body" id="stmtBody">
+          <div class="stmt-block" id="stmtBlock"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD / EDIT ENTRY MODAL (shared by Income & Expense) ═══ -->
+<div class="modal-overlay" id="entryModal" onclick="handleModalBackdrop(event,'entryModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-file-invoice-dollar"></i> <span id="entryModalTitle">Add Income</span></div>
+      <button class="modal-close" onclick="closeModal('entryModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="feDate"></div>
+      <div class="form-group"><label class="form-label" id="feCatLabel">Department</label>
+        <select class="form-select" id="feCategory"></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Description</label><input class="form-input" type="text" id="feDesc" placeholder="e.g. Room revenue – July Week 3"></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Amount (₦)</label><input class="form-input" type="number" id="feAmount" placeholder="0" min="0"></div>
+      <div class="form-group"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="feBy" placeholder="Staff name"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('entryModal')">Cancel</button>
+      <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()"><i class="fa-solid fa-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DELETE CONFIRM ═══ -->
+<div class="modal-overlay" id="deleteModal" onclick="handleModalBackdrop(event,'deleteModal')">
+  <div class="confirm-modal">
+    <h3 style="font-size:17px;font-weight:800;color:var(--red);margin-bottom:8px;">Delete Entry</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Delete <strong id="delEntryDesc"></strong>? This cannot be undone.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+      <button style="background:var(--red-bg);border:1px solid rgba(240,68,56,0.3);border-radius:10px;padding:9px 16px;color:var(--red);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;" onclick="confirmDeleteEntry()"><i class="fa-solid fa-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../component/accounting-shell.js"></script>
+<script src="accounting-seed.js"></script>
+<script>
+const shell = AccountingShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'profit-loss.html',
+  pageTitle:     'Profit & Loss',
+  pageSubtitle:  'Income, expenses & net profit',
+  user:          { initials: 'AC' },
+});
+
+/* ═══════════════════════════════════════════════
+   DATA SERVICE — same try-API/catch-demo shape used across the
+   platform. Flip CONFIG.USE_DEMO to false (and set CONFIG.API_BASE)
+   once a real ledger API exists — nothing else on this page changes.
+   Demo fixtures now live in accounting-seed.js (INCOME_DEPARTMENTS /
+   EXPENSE_CATEGORIES / DEMO_INCOME / DEMO_EXPENSES) — nothing is
+   hardcoded on this page anymore.
+═══════════════════════════════════════════════ */
+const CONFIG = { USE_DEMO: true, API_BASE: '', API_KEY: '' };
+shell.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+
+const { INCOME_DEPARTMENTS, EXPENSE_CATEGORIES, DEMO_INCOME, DEMO_EXPENSES } = AccountingSeed;
+
+const storage = window.storage || {
+  async get(key){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v}; },
+  async set(key, value){ localStorage.setItem(key, value); return {key, value}; },
+};
+const KEY_INCOME   = 'accounting-income';
+const KEY_EXPENSES = 'accounting-expenses';
+const PAGE_SIZE = 7; // Income / Expenses tables — max rows per page
+
+async function loadShared(key, fallback) {
+  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p) && p.length) return p; } } catch(e) {}
+  return fallback;
+}
+async function saveShared(key, value) { try { await storage.set(key, JSON.stringify(value), true); } catch(e) {} }
+async function fetchFromAPI(path) {
+  const opts = { headers: {} };
+  if (CONFIG.API_KEY) opts.headers['Authorization'] = `Bearer ${CONFIG.API_KEY}`;
+  const res = await fetch(CONFIG.API_BASE + path, opts);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+/* getAccountingData() — try the real API first, fall back to demo/shared
+   storage on failure. Same { income, expenses } shape either way. */
+async function getAccountingData() {
+  if (!CONFIG.USE_DEMO) {
+    try {
+      const data = await fetchFromAPI('/api/accounting/pnl');
+      return { income: data.income, expenses: data.expenses };
+    } catch (err) {
+      console.warn('[P&L] API unavailable, falling back to demo data:', err.message);
+    }
+  }
+  const income   = await loadShared(KEY_INCOME, DEMO_INCOME);
+  const expenses = await loadShared(KEY_EXPENSES, DEMO_EXPENSES);
+  await Promise.all([ saveShared(KEY_INCOME, income), saveShared(KEY_EXPENSES, expenses) ]);
+  return { income, expenses };
+}
+async function saveAccountingData(income, expenses) {
+  await Promise.all([ saveShared(KEY_INCOME, income), saveShared(KEY_EXPENSES, expenses) ]);
+}
+
+let income = [];
+let expenses = [];
+let dateFrom = '';
+let dateTo = '';
+let incomePage = 1;
+let expensePage = 1;
+let entryKind = 'income';   // which modal mode is currently open
+let editId = null;
+let deleteTarget = null;    // { kind, id }
+
+function fmtN(n) { return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDateShort(d) { if (!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDateFull(d) { if (!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}); }
+function uid(prefix) { return prefix + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function inRange(d) {
+  if (!d) return false;
+  if (dateFrom && d < dateFrom) return false;
+  if (dateTo && d > dateTo) return false;
+  return true;
+}
+function filteredIncome() { return income.filter(e => inRange(e.date)); }
+function filteredExpenses() { return expenses.filter(e => inRange(e.date)); }
+
+/* ═══════════════════════════════════════════════
+   KPI CARDS
+═══════════════════════════════════════════════ */
+function renderKPIs() {
+  const inc = filteredIncome();
+  const exp = filteredExpenses();
+  const totalIncome = inc.reduce((s,e)=>s+e.amount,0);
+  const totalExpenses = exp.reduce((s,e)=>s+e.amount,0);
+  const grossProfit = totalIncome; // = Total Income for now (no per-item cost tracked yet)
+  const netProfit = grossProfit - totalExpenses;
+  const netMargin = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
+  const positive = netProfit >= 0;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Income</div></div>
+      <div class="kpi-value" style="color:var(--blue);">${fmtN(totalIncome)}</div>
+      <div class="kpi-trend neutral">${inc.length} entr${inc.length!==1?'ies':'y'}</div>
+    </div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-file-invoice-dollar"></i></div><div class="kpi-label">Total Expenses</div></div>
+      <div class="kpi-value" style="color:var(--red);">${fmtN(totalExpenses)}</div>
+      <div class="kpi-trend neutral">${exp.length} entr${exp.length!==1?'ies':'y'}</div>
+    </div>
+    <div class="kpi-card acc-purple">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-coins"></i></div><div class="kpi-label">Gross Profit</div></div>
+      <div class="kpi-value" style="color:var(--purple);">${fmtN(grossProfit)}</div>
+      <div class="kpi-trend neutral">= Total Income (for now)</div>
+    </div>
+    <div class="kpi-card ${positive?'acc-green':'acc-red'}">
+      <div class="kpi-top"><div class="kpi-ic ${positive?'ic-green':'ic-red'}"><i class="fa-solid ${positive?'fa-chart-line':'fa-chart-line-down'}"></i></div><div class="kpi-label">Net Profit</div></div>
+      <div class="kpi-value" style="color:${positive?'var(--green)':'var(--red)'};">${fmtN(netProfit)}</div>
+      <div class="kpi-trend ${positive?'up':'down'}">${netMargin.toFixed(1)}% margin</div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   SHARED TABLE PAGINATION — 7 rows/page, independent state per table
+═══════════════════════════════════════════════ */
+function renderTblPagination(containerId, total, page, onPage) {
+  const el = document.getElementById(containerId);
+  if (total <= PAGE_SIZE) { el.innerHTML = ''; return; }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const from = (page-1)*PAGE_SIZE + 1, to = Math.min(page*PAGE_SIZE, total);
+  const mk = (label, p, disabled, active) =>
+    `<button class="page-btn${active?' active':''}" ${disabled?'disabled':''} data-p="${p}">${label}</button>`;
+  let btns = mk('<i class="fa-solid fa-chevron-left"></i>', page-1, page===1, false);
+  let s = Math.max(1, page-2), e = Math.min(totalPages, s+4); s = Math.max(1, e-4);
+  for (let i=s; i<=e; i++) btns += mk(String(i), i, false, i===page);
+  btns += mk('<i class="fa-solid fa-chevron-right"></i>', page+1, page>=totalPages, false);
+  el.innerHTML = `<span>${from}–${to} of ${total}</span><div class="page-btns">${btns}</div>`;
+  el.querySelectorAll('[data-p]').forEach(btn => btn.addEventListener('click', () => onPage(parseInt(btn.dataset.p, 10))));
+}
+
+/* ═══════════════════════════════════════════════
+   INCOME / EXPENSE TABLES — each paginated at PAGE_SIZE (7); the
+   footer total always reflects every filtered row, not just the
+   visible page.
+═══════════════════════════════════════════════ */
+function renderIncomeTable() {
+  const all = filteredIncome().slice().sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('incCount').textContent = all.length + ' entr' + (all.length!==1?'ies':'y');
+
+  const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  if (incomePage > totalPages) incomePage = totalPages;
+  const rows = all.slice((incomePage-1)*PAGE_SIZE, incomePage*PAGE_SIZE);
+
+  document.getElementById('incomeBody').innerHTML = rows.length===0
+    ? `<tr class="empty-row"><td colspan="5">No income recorded for this period.</td></tr>`
+    : rows.map(e => `
+      <tr>
+        <td data-label="Date">${fmtDate(e.date)}</td>
+        <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span>${e.department}</span></td>
+        <td data-label="Description">${e.description}</td>
+        <td data-label="Amount" class="right" style="font-weight:700;color:var(--blue);">${fmtN(e.amount)}</td>
+        <td class="no-print" style="width:60px;">
+          <div class="row-actions">
+            <button class="icon-btn edit" onclick="openEntryModal('income','${e.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
+            <button class="icon-btn del" onclick="openDeleteConfirm('income','${e.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>`).join('');
+
+  renderTblPagination('incomePagination', all.length, incomePage, (p) => { incomePage = p; renderIncomeTable(); });
+  document.getElementById('incomeFootTotal').textContent = fmtN(all.reduce((s,e)=>s+e.amount,0));
+}
+
+function renderExpenseTable() {
+  const all = filteredExpenses().slice().sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('expCount').textContent = all.length + ' entr' + (all.length!==1?'ies':'y');
+
+  const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  if (expensePage > totalPages) expensePage = totalPages;
+  const rows = all.slice((expensePage-1)*PAGE_SIZE, expensePage*PAGE_SIZE);
+
+  document.getElementById('expenseBody').innerHTML = rows.length===0
+    ? `<tr class="empty-row"><td colspan="5">No expenses recorded for this period.</td></tr>`
+    : rows.map(e => `
+      <tr>
+        <td data-label="Date">${fmtDate(e.date)}</td>
+        <td data-label="Category"><span class="cat-chip"><span class="cat-dot expense"></span>${e.category}</span></td>
+        <td data-label="Description">${e.description}</td>
+        <td data-label="Amount" class="right" style="font-weight:700;color:var(--red);">${fmtN(e.amount)}</td>
+        <td class="no-print" style="width:60px;">
+          <div class="row-actions">
+            <button class="icon-btn edit" onclick="openEntryModal('expense','${e.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
+            <button class="icon-btn del" onclick="openDeleteConfirm('expense','${e.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>`).join('');
+
+  renderTblPagination('expensePagination', all.length, expensePage, (p) => { expensePage = p; renderExpenseTable(); });
+  document.getElementById('expenseFootTotal').textContent = fmtN(all.reduce((s,e)=>s+e.amount,0));
+}
+
+/* ═══════════════════════════════════════════════
+   STATEMENT OF ACCOUNT (accordion body)
+═══════════════════════════════════════════════ */
+function renderStatement() {
+  const inc = filteredIncome();
+  const exp = filteredExpenses();
+
+  const periodLabel = (dateFrom || dateTo) ? `${dateFrom ? fmtDate(dateFrom) : 'Start'} – ${dateTo ? fmtDate(dateTo) : 'Present'}` : 'All time';
+  document.getElementById('stmtPeriodLabel').textContent = periodLabel;
+
+  if (inc.length === 0 && exp.length === 0) {
+    document.getElementById('stmtBlock').innerHTML = `<div class="stmt-empty">No income or expenses recorded for this period yet.</div>`;
+    return;
+  }
+
+  const incByDept = {};
+  inc.forEach(e => { incByDept[e.department] = (incByDept[e.department]||0) + e.amount; });
+  const expByCat = {};
+  exp.forEach(e => { expByCat[e.category] = (expByCat[e.category]||0) + e.amount; });
+
+  const totalIncome = inc.reduce((s,e)=>s+e.amount,0);
+  const totalExpenses = exp.reduce((s,e)=>s+e.amount,0);
+  const grossProfit = totalIncome;
+  const netProfit = grossProfit - totalExpenses;
+  const netMargin = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
+  const positive = netProfit >= 0;
+
+  document.getElementById('stmtBlock').innerHTML = `
+    <div class="stmt-section-label">Income by Department</div>
+    ${Object.keys(incByDept).length === 0 ? `<div class="stmt-line" style="color:var(--text3);font-style:italic;">No income recorded</div>` :
+      Object.entries(incByDept).sort((a,b)=>b[1]-a[1]).map(([d,amt]) => `<div class="stmt-line"><span>${d}</span><span class="amt">${fmtN(amt)}</span></div>`).join('')}
+    <div class="stmt-subtotal"><span>Total Income (Gross Profit)</span><span class="amt">${fmtN(grossProfit)}</span></div>
+
+    <div class="stmt-section-label">Operating Expenses</div>
+    ${Object.keys(expByCat).length === 0 ? `<div class="stmt-line" style="color:var(--text3);font-style:italic;">No expenses recorded</div>` :
+      Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).map(([c,amt]) => `<div class="stmt-line neg"><span>${c}</span><span class="amt">(${fmtN(amt)})</span></div>`).join('')}
+    <div class="stmt-subtotal expense"><span>Total Operating Expenses</span><span class="amt">(${fmtN(totalExpenses)})</span></div>
+
+    <div class="stmt-net ${positive?'':'loss'}">
+      <div class="lbl">${positive?'Net Profit':'Net Loss'}<small>${netMargin.toFixed(1)}% of income</small></div>
+      <div class="amt">${fmtN(Math.abs(netProfit))}</div>
+    </div>`;
+}
+
+function renderAll() { renderKPIs(); renderIncomeTable(); renderExpenseTable(); renderStatement(); }
+
+/* ═══════════════════════════════════════════════
+   STATEMENT ACCORDION
+═══════════════════════════════════════════════ */
+function toggleStatement() {
+  document.getElementById('statementPanel').classList.toggle('collapsed');
+}
+
+/* ═══════════════════════════════════════════════
+   PRINT — Statement of Account only (see @media print). Force the
+   accordion open first so a collapsed statement never prints blank.
+═══════════════════════════════════════════════ */
+function printStatement() {
+  document.getElementById('statementPanel').classList.remove('collapsed');
+  const periodLabel = (dateFrom || dateTo) ? `${dateFrom ? fmtDateFull(dateFrom) : 'Start'} — ${dateTo ? fmtDateFull(dateTo) : 'Present'}` : 'All available records';
+  document.getElementById('printSub').textContent = periodLabel;
+  // Let the DOM update (accordion re-expand) before the print dialog opens.
+  setTimeout(() => window.print(), 50);
+}
+
+/* ═══════════════════════════════════════════════
+   ADD / EDIT ENTRY MODAL (shared by Income & Expense)
+═══════════════════════════════════════════════ */
+function populateCategorySelect(kind) {
+  const sel = document.getElementById('feCategory');
+  const list = kind === 'income' ? INCOME_DEPARTMENTS : EXPENSE_CATEGORIES;
+  sel.innerHTML = list.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function openEntryModal(kind, id) {
+  entryKind = kind;
+  editId = id || null;
+  const isIncome = kind === 'income';
+
+  document.getElementById('entryModalTitle').textContent = (editId ? 'Edit ' : 'Add ') + (isIncome ? 'Income' : 'Expense');
+  document.getElementById('feCatLabel').textContent = isIncome ? 'Department' : 'Category';
+  document.getElementById('entrySaveBtn').className = 'btn ' + (isIncome ? 'btn-outline' : 'btn-primary');
+  populateCategorySelect(kind);
+
+  if (editId) {
+    const source = isIncome ? income : expenses;
+    const rec = source.find(e => e.id === editId);
+    if (rec) {
+      document.getElementById('feDate').value     = rec.date;
+      document.getElementById('feCategory').value = isIncome ? rec.department : rec.category;
+      document.getElementById('feDesc').value      = rec.description;
+      document.getElementById('feAmount').value    = rec.amount;
+      document.getElementById('feBy').value        = rec.recordedBy || '';
+    }
+  } else {
+    document.getElementById('feDate').value   = new Date().toISOString().split('T')[0];
+    document.getElementById('feDesc').value   = '';
+    document.getElementById('feAmount').value = '';
+    document.getElementById('feBy').value     = '';
+  }
+  document.getElementById('entryModal').classList.add('show');
+}
+
+async function saveEntry() {
+  const date = document.getElementById('feDate').value;
+  const cat  = document.getElementById('feCategory').value;
+  const desc = document.getElementById('feDesc').value.trim();
+  const amt  = parseFloat(document.getElementById('feAmount').value);
+  const by   = document.getElementById('feBy').value.trim();
+
+  if (!date || !desc || isNaN(amt) || amt <= 0) {
+    showToast('Please fill in date, description and a valid amount.', 'error');
+    return;
+  }
+
+  const isIncome = entryKind === 'income';
+  const list = isIncome ? income : expenses;
+
+  if (editId) {
+    const rec = list.find(e => e.id === editId);
+    if (rec) {
+      rec.date = date; rec.description = desc; rec.amount = amt; rec.recordedBy = by;
+      if (isIncome) rec.department = cat; else rec.category = cat;
+    }
+  } else {
+    const rec = { id: uid(isIncome ? 'inc' : 'exp'), date, description: desc, amount: amt, recordedBy: by };
+    if (isIncome) rec.department = cat; else rec.category = cat;
+    list.push(rec);
+    // A brand-new entry should be visible right away — jump to page 1
+    // of its table rather than leaving the user on whatever page they
+    // were paginated to before adding it.
+    if (isIncome) incomePage = 1; else expensePage = 1;
+  }
+
+  await saveAccountingData(income, expenses);
+  showToast(`${isIncome ? 'Income' : 'Expense'} ${editId ? 'updated' : 'saved'}.`, 'success');
+  closeModal('entryModal');
+  editId = null;
+  renderAll();
+}
+
+function openDeleteConfirm(kind, id) {
+  const list = kind === 'income' ? income : expenses;
+  const rec = list.find(e => e.id === id);
+  if (!rec) return;
+  deleteTarget = { kind, id };
+  document.getElementById('delEntryDesc').textContent = rec.description;
+  document.getElementById('deleteModal').classList.add('show');
+}
+async function confirmDeleteEntry() {
+  if (!deleteTarget) return;
+  if (deleteTarget.kind === 'income') income = income.filter(e => e.id !== deleteTarget.id);
+  else expenses = expenses.filter(e => e.id !== deleteTarget.id);
+  await saveAccountingData(income, expenses);
+  closeModal('deleteModal');
+  deleteTarget = null;
+  showToast('Entry deleted.', 'info');
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════
+   DATE RANGE PICKER — same component/behaviour as accounting-reports.html,
+   feeding this page's existing dateFrom/dateTo (which inRange() /
+   filteredIncome() / filteredExpenses() already key off).
+═══════════════════════════════════════════════ */
+let viewMonth = new Date().getMonth();
+let viewYear  = new Date().getFullYear();
+let pendingStart = null, pendingEnd = null; // Date objects, picked but not yet Applied
+
+const trigger  = document.getElementById('drpTrigger');
+const pop      = document.getElementById('drpPop');
+const monthSel = document.getElementById('drpMonthSel');
+const yearSel  = document.getElementById('drpYearSel');
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function parseYMD(k){ const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d); }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+
+function updateTriggerLabel() {
+  const label = document.getElementById('drpLabel');
+  if (!dateFrom && !dateTo) { label.textContent = 'All Time'; return; }
+  label.textContent = (dateFrom === dateTo) ? fmtDateShort(dateFrom) : `${fmtDateShort(dateFrom)} – ${fmtDateShort(dateTo)}`;
+}
+
+function initSelects() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  monthSel.innerHTML = months.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  const nowY = new Date().getFullYear();
+  const years = [];
+  for (let y = nowY - 6; y <= nowY + 1; y++) years.push(y);
+  yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+}
+
+function openPop() {
+  if (dateFrom) {
+    const [y,m] = dateFrom.split('-').map(Number);
+    viewYear = y; viewMonth = m-1;
+    pendingStart = parseYMD(dateFrom);
+    pendingEnd = dateTo ? parseYMD(dateTo) : null;
+  } else {
+    pendingStart = null; pendingEnd = null;
+  }
+  trigger.classList.add('open');
+  pop.classList.add('open');
+  renderCalendar();
+}
+function closePop() {
+  trigger.classList.remove('open');
+  pop.classList.remove('open');
+}
+trigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  pop.classList.contains('open') ? closePop() : openPop();
+});
+document.addEventListener('click', (e) => {
+  if (pop.classList.contains('open') && !pop.contains(e.target) && e.target !== trigger) closePop();
+});
+pop.addEventListener('click', (e) => e.stopPropagation());
+
+document.getElementById('drpPrev').addEventListener('click', () => shiftView(-1));
+document.getElementById('drpNext').addEventListener('click', () => shiftView(1));
+function shiftView(delta) {
+  viewMonth += delta;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  renderCalendar();
+}
+monthSel.addEventListener('change', () => { viewMonth = +monthSel.value; renderCalendar(); });
+yearSel.addEventListener('change', () => { viewYear = +yearSel.value; renderCalendar(); });
+
+function renderCalendar() {
+  monthSel.value = viewMonth;
+  yearSel.value = viewYear;
+
+  const grid = document.getElementById('drpGrid');
+  const dows = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let html = dows.map(d => `<div class="drp-dow">${d}</div>`).join('');
+
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  const startOffset = firstOfMonth.getDay();
+  const gridStart = new Date(viewYear, viewMonth, 1 - startOffset);
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(gridStart); d.setDate(gridStart.getDate() + i);
+    const outside = d.getMonth() !== viewMonth;
+    let cls = 'drp-day' + (outside ? ' outside' : '');
+    if (sameDay(d, today)) cls += ' today';
+
+    if (pendingStart && sameDay(d, pendingStart)) cls += ' range-start';
+    if (pendingEnd && sameDay(d, pendingEnd)) cls += ' range-end';
+    if (pendingStart && pendingEnd && d > pendingStart && d < pendingEnd) cls += ' in-range';
+    if (pendingStart && !pendingEnd && sameDay(d, pendingStart)) cls += ' range-end';
+
+    html += `<div class="${cls}" data-date="${ymd(d)}">${d.getDate()}</div>`;
+  }
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.drp-day').forEach(el => {
+    el.addEventListener('click', () => pickDay(parseYMD(el.dataset.date)));
+  });
+
+  updateSelectedText();
+}
+function pickDay(d) {
+  if (!pendingStart || (pendingStart && pendingEnd)) {
+    pendingStart = d; pendingEnd = null;
+  } else if (d < pendingStart) {
+    pendingEnd = pendingStart; pendingStart = d;
+  } else {
+    pendingEnd = d;
+  }
+  renderCalendar();
+}
+function updateSelectedText() {
+  const el = document.getElementById('drpSelectedText');
+  if (!pendingStart) { el.textContent = 'Pick a start date'; return; }
+  if (!pendingEnd) { el.textContent = fmtDateShort(ymd(pendingStart)) + ' → pick an end date'; return; }
+  el.textContent = sameDay(pendingStart, pendingEnd)
+    ? fmtDateShort(ymd(pendingStart))
+    : `${fmtDateShort(ymd(pendingStart))} – ${fmtDateShort(ymd(pendingEnd))}`;
+}
+document.querySelectorAll('.drp-quick button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.q === 'month') {
+      pendingStart = new Date(viewYear, viewMonth, 1);
+      pendingEnd = new Date(viewYear, viewMonth + 1, 0);
+    } else {
+      pendingStart = new Date(viewYear, 0, 1);
+      pendingEnd = new Date(viewYear, 11, 31);
+    }
+    renderCalendar();
+  });
+});
+document.getElementById('drpCancel').addEventListener('click', closePop);
+document.getElementById('drpApply').addEventListener('click', () => {
+  if (!pendingStart) { closePop(); return; }
+  const start = pendingStart, end = pendingEnd || pendingStart;
+  dateFrom = ymd(start); dateTo = ymd(end);
+  updateTriggerLabel();
+  closePop();
+  incomePage = 1; expensePage = 1;
+  renderAll();
+});
+
+function clearFilters() {
+  dateFrom = ''; dateTo = '';
+  pendingStart = null; pendingEnd = null;
+  updateTriggerLabel();
+  incomePage = 1; expensePage = 1;
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════ */
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function handleModalBackdrop(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal('entryModal'); closeModal('deleteModal'); } });
+
+function showToast(msg, type = 'success') {
+  const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+async function init() {
+  initSelects();
+  updateTriggerLabel();
+  document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="5"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
+  document.getElementById('expenseBody').innerHTML = `<tr class="empty-row"><td colspan="5"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
+  try {
+    const data = await getAccountingData();
+    income = data.income;
+    expenses = data.expenses;
+    renderAll();
+  } catch (err) {
+    console.error('[P&L] Failed to load accounting data:', err);
+    document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="5" style="color:var(--red);">Couldn't load data. Please refresh.</td></tr>`;
+    document.getElementById('expenseBody').innerHTML = `<tr class="empty-row"><td colspan="5" style="color:var(--red);">Couldn't load data. Please refresh.</td></tr>`;
+    showToast('Failed to load accounting data.', 'error');
+  }
+}
+init();
+</script>
+</body>
+</html>

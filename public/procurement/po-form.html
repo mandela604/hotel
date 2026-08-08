@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>New Purchase Order | Aurum Procurement</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  /* Same layout split as every other procurement page: sidebar/topbar
+     markup lives in procurement-shell.js on the shared dark/blue theme;
+     .content re-declares the same variable names with light values so
+     only the main area turns white. Same palette + Segoe UI + Font
+     Awesome + kpi/chip system as dashboard.html / requisition-history.html / po-history.html. */
+  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
+  html{ height:auto; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text);
+  }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
+
+  /* Panel */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .panel-title i{ color:var(--gold); font-size:12px; }
+  .panel-body{ padding:18px 20px 20px; }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Form */
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:18px; }
+  @media (max-width:900px){ .form-grid{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:520px){ .form-grid{ grid-template-columns:1fr; } }
+  .form-group{ display:flex; flex-direction:column; gap:5px; }
+  .form-label{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .form-input, .form-select, textarea.form-input{ background:var(--input-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
+
+  /* Items — one live "entry line" to type a new item into, plus a
+     running list below of items already added via the + button. */
+  .items-head-row, .entry-row{ display:grid; grid-template-columns:1fr 90px 140px 140px 34px; gap:10px; align-items:center; }
+  .items-head-row{ padding:0 4px 8px; }
+  .items-head-row span{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; }
+  .entry-row{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:10px; padding:8px; margin-bottom:14px; }
+  .entry-subtotal{ font-weight:700; color:var(--text3); font-size:13px; text-align:right; padding-right:4px; }
+  .item-add{ width:28px; height:28px; border-radius:8px; border:1px solid var(--gold-border); background:var(--gold); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .15s; flex-shrink:0; }
+  .item-add:hover{ background:var(--gold-light); transform:translateY(-1px); }
+
+  /* Autocomplete dropdown under the item-name field — remembers items
+     used before (this session's additions, plus past purchase orders). */
+  .entry-name-wrap{ position:relative; }
+  .item-suggest-dropdown{ display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:50; background:var(--modal-bg); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-lg); max-height:220px; overflow-y:auto; }
+  .item-suggest-dropdown.show{ display:block; }
+  .item-suggest-opt{ padding:9px 12px; cursor:pointer; font-size:13px; color:var(--text); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .item-suggest-opt:last-child{ border-bottom:none; }
+  .item-suggest-opt:hover{ background:var(--surface2); }
+  .item-suggest-opt .sn{ font-weight:600; }
+  .item-suggest-opt .sp{ font-size:11px; color:var(--text3); white-space:nowrap; }
+
+  /* Added-items table — a real <table> (with a real <thead>) so it's
+     structured for printing/exporting, not a stack of separate boxes.
+     One shared background/border for the whole block; rows are just
+     divided by hairlines. */
+  .items-table-wrap{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:6px; }
+  .items-table{ width:100%; border-collapse:collapse; background:var(--surface); }
+  .items-table thead th{ text-align:left; padding:9px 12px; font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  .items-table thead th.center{ text-align:center; }
+  .items-table thead th.right{ text-align:right; }
+  .items-table tbody tr{ border-bottom:1px solid var(--border); }
+  .items-table tbody tr:last-child{ border-bottom:none; }
+  .items-table tbody td{ padding:10px 12px; font-size:13px; color:var(--text); vertical-align:middle; }
+  .items-table tbody td.center{ text-align:center; }
+  .items-table tbody td.right{ text-align:right; }
+  .items-table td.item-subtotal{ font-weight:700; color:var(--text); }
+  .items-table .item-remove{ width:28px; height:28px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .15s; margin:0 auto; }
+  .items-table .item-remove:hover{ border-color:rgba(240,68,56,.4); color:var(--red); }
+  .items-empty{ display:none; padding:14px; text-align:center; color:var(--text3); font-size:12px; border:1px dashed var(--border2); border-radius:10px; margin-bottom:6px; }
+  .items-empty.show{ display:block; }
+
+  /* Total row + threshold hint */
+  .total-row{ display:flex; align-items:center; justify-content:flex-end; gap:14px; padding:14px 4px 4px; border-top:1px solid var(--border); margin-top:14px; }
+  .total-label{ font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .total-value{ font-size:24px; font-weight:800; color:var(--gold); }
+
+  .threshold-hint{ display:none; align-items:flex-start; gap:10px; background:var(--amber-bg); border:1px solid rgba(247,144,9,.3); border-radius:10px; padding:11px 13px; margin-top:12px; }
+  .threshold-hint.show{ display:flex; }
+  .threshold-hint i{ color:var(--amber); font-size:15px; margin-top:1px; flex-shrink:0; }
+  .threshold-hint-title{ font-size:12.5px; font-weight:700; color:#7a4a00; }
+  .threshold-hint-sub{ font-size:11.5px; color:#8a5a10; margin-top:2px; line-height:1.5; }
+
+  .approval-path{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px; font-size:11px; color:var(--text3); font-weight:600; }
+  .approval-path .step{ display:inline-flex; align-items:center; gap:5px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:4px 10px; color:var(--text2); }
+  .approval-path .step i{ font-size:9px; color:var(--gold); }
+  .approval-path .arrow{ color:var(--text3); font-size:10px; }
+
+  .form-actions{ display:flex; justify-content:flex-end; gap:10px; padding-top:18px; margin-top:6px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  @media (max-width:480px){ .form-actions{ flex-direction:column-reverse; } .form-actions button{ width:100%; justify-content:center; } }
+
+  .btn{ display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; }
+  .btn-primary{ background:var(--gold); color:#fff; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm); padding:11px 16px; font-size:13px; color:#1c2440; box-shadow:0 8px 28px rgba(15,20,40,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-weight:600; }
+  .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
+  .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
+  .toast.info{ border-left:3px solid #2f6fed; } .toast.info i{ color:#2f6fed; }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div>
+        <div class="section-title">Create Purchase Order</div>
+      </div>
+
+      <!-- ═══ FORM ═══ -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><i class="fa-solid fa-cart-shopping"></i> Purchase Order Details</div>
+        </div>
+        <div class="panel-body">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Department</label>
+              <select class="form-select" id="fDept">
+                <option value="">Select department…</option>
+                <option>Housekeeping</option>
+                <option>Kitchen</option>
+                <option>Restaurant</option>
+                <option>Front Desk</option>
+                <option>Maintenance</option>
+                <option>Pool &amp; Bar</option>
+                <option>Admin</option>
+                <option>IT</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Priority</label>
+              <select class="form-select" id="fPriority">
+                <option>Normal</option>
+                <option>Urgent</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Supplier (optional)</label>
+              <input class="form-input" type="text" id="fSupplier" placeholder="e.g. Zenith Supplies Ltd.">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Requested By</label>
+              <input class="form-input" type="text" id="fRequestedBy" placeholder="Staff name">
+            </div>
+          </div>
+
+          <div class="items-head-row">
+            <span>Item to Purchase</span><span>Qty</span><span>Unit Price (₦)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
+          </div>
+
+          <!-- Entry line: type an item here (autocomplete suggests items you've
+               bought before), click + to add it to the table below. Clears
+               itself after each add so you can keep entering items one by one. -->
+          <div class="entry-row">
+            <div class="entry-name-wrap">
+              <input class="form-input" type="text" id="entryName" placeholder="e.g. 20L Vegetable Oil" autocomplete="off">
+              <div class="item-suggest-dropdown" id="itemSuggestDropdown"></div>
+            </div>
+            <input class="form-input" type="number" min="1" value="1" id="entryQty">
+            <input class="form-input" type="number" min="0" step="0.01" placeholder="0" id="entryPrice">
+            <div class="entry-subtotal" id="entrySubtotal">₦0</div>
+            <button class="item-add" type="button" id="addEntryBtn" title="Add item to list"><i class="fa-solid fa-plus"></i></button>
+          </div>
+
+          <div class="items-empty" id="itemsEmptyMsg">No items added yet — enter an item above and click the + button.</div>
+          <div class="items-table-wrap" id="itemsTableWrap">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Item to Purchase</th>
+                  <th class="center">Qty</th>
+                  <th class="right">Unit Price (₦)</th>
+                  <th class="right">Subtotal (₦)</th>
+                  <th class="center"></th>
+                </tr>
+              </thead>
+              <tbody id="itemsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="total-row">
+            <span class="total-label">Grand Total</span>
+            <span class="total-value" id="grandTotal">₦0</span>
+          </div>
+
+          <div class="threshold-hint" id="thresholdHint">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+              <div class="threshold-hint-title">This order is above ₦100,000</div>
+              <div class="threshold-hint-sub">It can still be created, but will also need Admin (MD) approval in addition to the standard Accountant and Manager approval.</div>
+            </div>
+          </div>
+
+          <div class="approval-path" id="approvalPath"></div>
+
+          <div class="form-group" style="margin-top:16px">
+            <label class="form-label">Notes (optional)</label>
+            <textarea class="form-input" id="fNotes" style="min-height:56px;resize:vertical" placeholder="Delivery instructions, justification, urgency context…"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-outline" id="cancelFormBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+            <button class="btn btn-primary" id="createBtn"><i class="fa-solid fa-check"></i> Create Purchase Order</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="procurement-shell.js"></script>
+<script src="procurement-api.js"></script>
+<script src="procurement-modals.js"></script>
+<script>
+const shell = ProcurementShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'new-purchase-order.html',
+  pageTitle:     'New Purchase Order',
+  pageSubtitle:  'Create and track purchase orders',
+  apiMode:       (window.ProcurementAPI && ProcurementAPI.CONFIG && ProcurementAPI.CONFIG.USE_PROD) ? 'Live' : 'Demo',
+  user:          { name: 'Procurement Officer', initials: 'PO' },
+});
+
+const MD_THRESHOLD = 100000;
+
+/* This page still writes into the exact same store po-history.html and
+   requisition-history.html already read from (ProcurementAPI.DEMO_PR),
+   so a PO created here still shows up on those pages — this page just
+   no longer displays its own copy of that list. If that array isn't
+   available for any reason, fall back to a local one instead of
+   crashing the page. */
+if (!window.ProcurementAPI) window.ProcurementAPI = { DEMO_PR: [] };
+if (!Array.isArray(ProcurementAPI.DEMO_PR)) ProcurementAPI.DEMO_PR = [];
+
+function persist(){
+  // Same localStorage key po-history.html's "Reset Demo" already uses —
+  // keeps this page's writes consistent with how the rest of the app
+  // already persists procurement data between reloads.
+  try { localStorage.setItem('hotel-procurement', JSON.stringify(ProcurementAPI.DEMO_PR)); } catch (e) {}
+}
+
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function showToast(msg, type='success'){
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM AUTOCOMPLETE — remembers item names (and their
+   last price) both from this session and from every past
+   purchase order already in ProcurementAPI.DEMO_PR, so
+   typing something used before offers it as a suggestion.
+═══════════════════════════════════════════════ */
+const ITEM_CATALOG_KEY = 'hotel-procurement-item-catalog';
+let itemCatalog = [];
+
+function loadItemCatalog(){
+  try {
+    const raw = localStorage.getItem(ITEM_CATALOG_KEY);
+    itemCatalog = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(itemCatalog)) itemCatalog = [];
+  } catch (e) { itemCatalog = []; }
+  // First run: seed from whatever purchase-order history already exists,
+  // so suggestions aren't empty just because this browser is new.
+  if (!itemCatalog.length){
+    const seen = new Set();
+    (ProcurementAPI.DEMO_PR || []).forEach(pr => {
+      (pr.items || []).forEach(it => {
+        const key = (it.name||'').trim().toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        itemCatalog.push({ name: it.name.trim(), price: it.price || 0 });
+      });
+    });
+    if (itemCatalog.length) saveItemCatalog();
+  }
+}
+function saveItemCatalog(){
+  try { localStorage.setItem(ITEM_CATALOG_KEY, JSON.stringify(itemCatalog)); } catch (e) {}
+}
+function rememberItem(name, price){
+  const key = name.trim().toLowerCase();
+  if (!key) return;
+  itemCatalog = itemCatalog.filter(it => it.name.toLowerCase() !== key);
+  itemCatalog.unshift({ name: name.trim(), price });
+  if (itemCatalog.length > 100) itemCatalog.length = 100;
+  saveItemCatalog();
+}
+
+function showItemSuggestions(query){
+  const dd = document.getElementById('itemSuggestDropdown');
+  const q = query.trim().toLowerCase();
+  if (!q){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
+  const matches = itemCatalog.filter(it => it.name.toLowerCase().includes(q)).slice(0, 6);
+  if (!matches.length){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
+  dd._matches = matches;
+  dd.innerHTML = matches.map((it,i) => `
+    <div class="item-suggest-opt" data-i="${i}">
+      <span class="sn">${escapeHtml(it.name)}</span>
+      <span class="sp">${fmtN(it.price)}</span>
+    </div>`).join('');
+  dd.classList.add('show');
+  dd.querySelectorAll('.item-suggest-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const m = dd._matches[parseInt(opt.dataset.i, 10)];
+      document.getElementById('entryName').value = m.name;
+      document.getElementById('entryPrice').value = m.price || '';
+      updateEntryPreview();
+      dd.classList.remove('show');
+      document.getElementById('entryQty').focus();
+    });
+  });
+}
+function hideItemSuggestions(){
+  document.getElementById('itemSuggestDropdown').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════
+   ITEMS LIST — entering an item and clicking + (or
+   pressing Enter) pushes it into `items`, then clears
+   the entry line so the next item can be typed in.
+═══════════════════════════════════════════════ */
+let items = [];
+
+function updateEntryPreview(){
+  const qty = parseFloat(document.getElementById('entryQty').value) || 0;
+  const price = parseFloat(document.getElementById('entryPrice').value) || 0;
+  document.getElementById('entrySubtotal').textContent = fmtN(qty * price);
+}
+
+function addItemFromEntry(){
+  const nameEl = document.getElementById('entryName');
+  const qtyEl = document.getElementById('entryQty');
+  const priceEl = document.getElementById('entryPrice');
+  const name = nameEl.value.trim();
+  const qty = parseFloat(qtyEl.value) || 0;
+  const price = parseFloat(priceEl.value) || 0;
+
+  if (!name){ showToast('Enter an item name.', 'error'); nameEl.focus(); return; }
+  if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
+  if (price <= 0){ showToast('Enter a unit price.', 'error'); priceEl.focus(); return; }
+
+  items.push({ name, qty, price, subtotal: qty * price });
+  rememberItem(name, price);
+  renderItemsList();
+  recalcTotals();
+
+  nameEl.value = '';
+  qtyEl.value = 1;
+  priceEl.value = '';
+  updateEntryPreview();
+  hideItemSuggestions();
+  nameEl.focus();
+}
+
+function removeItem(idx){
+  items.splice(idx, 1);
+  renderItemsList();
+  recalcTotals();
+}
+
+function renderItemsList(){
+  const wrap  = document.getElementById('itemsTableWrap');
+  const empty = document.getElementById('itemsEmptyMsg');
+  const tbody = document.getElementById('itemsBody');
+
+  if (!items.length){
+    wrap.style.display = 'none';
+    empty.classList.add('show');
+    tbody.innerHTML = '';
+    return;
+  }
+  empty.classList.remove('show');
+  wrap.style.display = 'block';
+  tbody.innerHTML = items.map((it, i) => `
+    <tr>
+      <td>${escapeHtml(it.name)}</td>
+      <td class="center">${it.qty}</td>
+      <td class="right">${fmtN(it.price)}</td>
+      <td class="right item-subtotal">${fmtN(it.subtotal)}</td>
+      <td class="center"><button class="item-remove" type="button" data-idx="${i}" title="Remove item"><i class="fa-solid fa-trash"></i></button></td>
+    </tr>`).join('');
+  tbody.querySelectorAll('.item-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeItem(parseInt(btn.dataset.idx, 10)));
+  });
+}
+
+function recalcTotals(){
+  const total = items.reduce((s,i)=>s+i.subtotal, 0);
+  document.getElementById('grandTotal').textContent = fmtN(total);
+  const needsMD = total > MD_THRESHOLD;
+  document.getElementById('thresholdHint').classList.toggle('show', needsMD);
+  renderApprovalPath(needsMD);
+}
+
+function renderApprovalPath(needsMD){
+  const steps = ['Accountant', 'Manager'];
+  if (needsMD) steps.push('Admin (MD)');
+  steps.push('Approved', 'Fulfilled');
+  document.getElementById('approvalPath').innerHTML =
+    `<span style="color:var(--text3);font-weight:700;">Approval path:</span>` +
+    steps.map((s,i) => `${i>0?'<i class="fa-solid fa-arrow-right arrow"></i>':''}<span class="step"><i class="fa-solid fa-circle"></i>${s}</span>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   CREATE
+═══════════════════════════════════════════════ */
+function nextNumber(){
+  const n = ProcurementAPI.DEMO_PR.length + 1;
+  const year = new Date().getFullYear();
+  const seq = String(n).padStart(3,'0');
+  return { prNo: `PR-${year}-${seq}`, poNo: `PO-${year}-${seq}` };
+}
+
+function resetForm(){
+  document.getElementById('fDept').value = '';
+  document.getElementById('fPriority').value = 'Normal';
+  document.getElementById('fSupplier').value = '';
+  document.getElementById('fRequestedBy').value = (shell.getUser && shell.getUser().name) || '';
+  document.getElementById('fNotes').value = '';
+  document.getElementById('entryName').value = '';
+  document.getElementById('entryQty').value = 1;
+  document.getElementById('entryPrice').value = '';
+  updateEntryPreview();
+  hideItemSuggestions();
+  items = [];
+  renderItemsList();
+  recalcTotals();
+}
+
+function createPO(){
+  const dept = document.getElementById('fDept').value;
+
+  if (!dept){ showToast('Please select a department.', 'error'); return; }
+  if (!items.length){ showToast('Add at least one item before creating the purchase order.', 'error'); return; }
+
+  const total = items.reduce((s,i)=>s+i.subtotal, 0);
+  const needsMD = total > MD_THRESHOLD;
+  const { prNo, poNo } = nextNumber();
+
+  const pr = {
+    id: 'pr_' + Date.now(),
+    prNo, poNo,
+    dept,
+    priority: document.getElementById('fPriority').value,
+    supplier: document.getElementById('fSupplier').value.trim(),
+    by: document.getElementById('fRequestedBy').value.trim() || 'Procurement Officer',
+    notes: document.getElementById('fNotes').value.trim(),
+    items: items.map(i => ({ ...i })),
+    item: items.map(i=>i.name).join(', '),
+    totalAmount: total,
+    needsMDApproval: needsMD,
+    date: new Date().toISOString().slice(0,10),
+    approvalStage: 'pending',
+  };
+  ProcurementAPI.DEMO_PR.unshift(pr);
+  persist();
+  showToast(`${pr.poNo} created and marked Pending.`, 'success');
+
+  if (shell.setPendingBadge){
+    shell.setPendingBadge(ProcurementAPI.DEMO_PR.filter(p=>['pending','accountant','gm','md'].includes(p.approvalStage)).length);
+  }
+
+  resetForm();
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+loadItemCatalog();
+
+document.getElementById('addEntryBtn').addEventListener('click', addItemFromEntry);
+['entryQty','entryPrice'].forEach(id => document.getElementById(id).addEventListener('input', updateEntryPreview));
+document.getElementById('entryName').addEventListener('input', e => showItemSuggestions(e.target.value));
+document.getElementById('entryName').addEventListener('focus', e => { if (e.target.value) showItemSuggestions(e.target.value); });
+document.addEventListener('click', e => {
+  if (!e.target.closest('.entry-name-wrap')) hideItemSuggestions();
+});
+['entryName','entryQty','entryPrice'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Escape'){ hideItemSuggestions(); return; }
+    if (e.key === 'Enter'){ e.preventDefault(); addItemFromEntry(); }
+  });
+});
+document.getElementById('cancelFormBtn').addEventListener('click', () => { resetForm(); showToast('Form cleared.', 'info'); });
+document.getElementById('createBtn').addEventListener('click', createPO);
+
+resetForm();
+</script>
+</body>
+</html>

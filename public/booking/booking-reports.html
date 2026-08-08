@@ -20,9 +20,10 @@ body {
 .main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
 @media (max-width: 768px) { .main { margin-left: 0 !important; } }
 
-/* ── Light-theme content area — identical token names & values to booking-list.html ── */
-.content {
-  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
+/* ── Light-theme content area — identical token names & values to booking-list.html.
+     .modal-overlay is included here too so the report-detail modal gets the same
+     light palette even though it renders outside .content in the DOM. ── */
+.content, .modal-overlay {
   --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
   --border: #eef0f6; --border2: #dfe3ec;
   --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
@@ -34,13 +35,13 @@ body {
   --amber: #f79009; --amber-bg: #fff4e5;
   --blue: #2f6fed; --blue-bg: #eaf1ff;
   --purple: #8b5cf6; --purple-bg: #f4efff;
-  background: var(--bg); color: var(--text);
 }
+.content { flex: 1; padding: 24px; min-width: 0; overflow-x: hidden; background: var(--bg); color: var(--text); }
 @media (max-width: 480px) { .content { padding: 14px; } }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
 /* ═══════════ TOOLBAR ═══════════ */
-.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
 .toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
 .toolbar-right { display: flex; gap: 7px; flex-shrink: 0; }
 .filter-sel {
@@ -58,6 +59,14 @@ input[type="date"].filter-sel { min-width: 0; }
   .filter-sel { width: 100%; }
 }
 
+/* ═══════════ ROLE NOTICE (non-manager/admin today-only banner) ═══════════ */
+.role-note {
+  display: none; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600;
+  color: var(--amber); background: var(--amber-bg); border: 1px solid rgba(247,144,9,.25);
+  border-radius: 9px; padding: 7px 12px; margin-bottom: 10px;
+}
+.role-note i { font-size: 11px; }
+
 /* ═══════════ BUTTONS — same as booking-list.html ═══════════ */
 .btn-primary {
   background: var(--gold); color: #fff; border: 1px solid var(--gold);
@@ -68,6 +77,12 @@ input[type="date"].filter-sel { min-width: 0; }
 }
 .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
 .btn-primary i { font-size: 11px; }
+.btn-outline {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 14px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--text);
+  cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
 
 /* ═══════════ QUICK RANGE CHIPS ═══════════ */
 .status-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; margin-bottom: 10px; }
@@ -78,8 +93,9 @@ input[type="date"].filter-sel { min-width: 0; }
   color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: inherit;
 }
 .sc-btn:hover, .sc-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+.sc-btn:disabled { cursor: default; pointer-events: none; }
 
-/* ═══════════ KPI ROW — 7 cards in one scrollable row ═══════════ */
+/* ═══════════ KPI ROW — 7 cards in one scrollable row, now with icons ═══════════ */
 .kpi-row {
   display: flex; gap: 10px; overflow-x: auto; margin-bottom: 14px;
   padding-bottom: 4px; -webkit-overflow-scrolling: touch;
@@ -87,7 +103,7 @@ input[type="date"].filter-sel { min-width: 0; }
 }
 .kpi-row::-webkit-scrollbar { display: none; }
 .kpi-card {
-  flex: 0 0 auto; min-width: 148px;
+  flex: 0 0 auto; min-width: 158px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px 16px;
   box-shadow: var(--shadow); position: relative; overflow: hidden;
@@ -103,7 +119,16 @@ input[type="date"].filter-sel { min-width: 0; }
 .kpi-card.purple::before { background: var(--purple); }
 .kpi-card.blue2::before { background: #0ea5e9; }
 .kpi-card.teal::before  { background: #14b8a6; }
-.kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; margin-bottom: 5px; white-space: nowrap; }
+.kpi-ic-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.kpi-ic-sm { width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.kpi-ic-sm.gold  { background: var(--gold-dim); color: var(--gold); }
+.kpi-ic-sm.green { background: var(--green-bg); color: var(--green); }
+.kpi-ic-sm.red   { background: var(--red-bg); color: var(--red); }
+.kpi-ic-sm.purple{ background: var(--purple-bg); color: var(--purple); }
+.kpi-ic-sm.amber { background: var(--amber-bg); color: var(--amber); }
+.kpi-ic-sm.blue2 { background: rgba(14,165,233,.12); color: #0ea5e9; }
+.kpi-ic-sm.teal  { background: rgba(20,184,166,.12); color: #14b8a6; }
+.kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; white-space: nowrap; }
 .kpi-val   { font-size: 18px; font-weight: 800; color: var(--text); white-space: nowrap; }
 .kpi-val.green  { color: var(--green); }
 .kpi-val.red    { color: var(--red); }
@@ -131,7 +156,7 @@ input[type="date"].filter-sel { min-width: 0; }
   letter-spacing: 1.2px; color: var(--text3); font-weight: 700;
   background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap;
 }
-.bk-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.bk-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
 .bk-table tbody tr:last-child { border-bottom: none; }
 .bk-table tbody tr:hover { background: var(--surface2); }
 .bk-table tbody td { padding: 9px 12px; color: var(--text); vertical-align: middle; font-size: 12.5px; }
@@ -187,9 +212,39 @@ input[type="date"].filter-sel { min-width: 0; }
 .page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 700; }
 .page-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
-/* ═══════════ PRINT REPORT ═══════════ */
+/* ═══════════ REPORT DETAIL MODAL ═══════════ */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,26,42,0.55); backdrop-filter: blur(5px); z-index: 300; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; width: min(560px,96vw); box-shadow: 0 30px 80px rgba(15,34,55,0.25); animation: modalIn 0.25s cubic-bezier(.4,0,.2,1); margin: auto; }
+@media (max-width: 480px) { .modal { padding: 18px; border-radius: 14px; } }
+@keyframes modalIn { from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-title { font-size: 18px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 9px; }
+.modal-title i { color: var(--gold); font-size: 16px; }
+.modal-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; color: var(--text2); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.modal-close:hover { color: var(--text); border-color: var(--gold-border); }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin-bottom: 14px; }
+@media (max-width: 480px) { .detail-grid { grid-template-columns: 1fr; } }
+.detail-item { display: flex; flex-direction: column; gap: 3px; }
+.detail-item.span2 { grid-column: span 2; }
+@media (max-width: 480px) { .detail-item.span2 { grid-column: span 1; } }
+.detail-label { font-size: 9.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 600; }
+.detail-value { font-size: 13.5px; color: var(--text); font-weight: 500; }
+.detail-value.muted { color: var(--text3); font-weight: 400; font-style: italic; }
+.modal-sub-title { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); font-weight: 700; margin: 16px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--gold-border); }
+.recipe-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 16px; }
+.ing-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.ing-row:last-child { border-bottom: none; }
+.ing-name { color: var(--text2); } .ing-qty { color: var(--text); font-weight: 600; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2, #dfe3ec); border-radius: 5px; }
+
+/* ═══════════ PRINT (generic browser Ctrl+P fallback) ═══════════ */
 @media print {
-  #sidebarSlot, #topbarSlot, .status-chips, .toolbar, .no-print { display: none !important; }
+  #sidebarSlot, #topbarSlot, .status-chips, .toolbar, .role-note, .no-print, .modal-overlay { display: none !important; }
   .main { margin-left: 0 !important; }
   .content { padding: 0 !important; overflow: visible !important; background: #fff !important; }
   body { background: #fff !important; color: #000 !important; }
@@ -197,7 +252,6 @@ input[type="date"].filter-sel { min-width: 0; }
   .kpi-row { overflow: visible !important; flex-wrap: wrap !important; }
   .kpi-card { min-width: 120px !important; flex: 1 !important; }
   .bk-table { min-width: 0 !important; }
-  /* Print header is injected into the DOM before printing */
 }
 
 /* ═══════════ TOAST ═══════════ */
@@ -214,10 +268,6 @@ input[type="date"].filter-sel { min-width: 0; }
 .toast.info    { border-left: 3px solid #2f6fed; }
 @keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
-
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2, #dfe3ec); border-radius: 5px; }
 </style>
 </head>
 <body>
@@ -230,20 +280,17 @@ input[type="date"].filter-sel { min-width: 0; }
 
     <div class="content">
 
-      <!-- ── QUICK RANGE CHIPS ── -->
-      <div class="status-chips no-print" id="rangeChips">
-        <button class="sc-btn active" data-r="all"   onclick="applyRange('all',this)">All Time</button>
-        <button class="sc-btn" data-r="today"  onclick="applyRange('today',this)">Today</button>
-        <button class="sc-btn" data-r="7"      onclick="applyRange('7',this)">Last 7 Days</button>
-        <button class="sc-btn" data-r="30"     onclick="applyRange('30',this)">Last 30 Days</button>
-        <button class="sc-btn" data-r="month"  onclick="applyRange('month',this)">This Month</button>
-      </div>
+      <!-- ── QUICK RANGE CHIPS — rebuilt at runtime by applyRoleUI() ── -->
+      <div class="status-chips no-print" id="rangeChips"></div>
+      <div class="role-note no-print" id="roleNotice"></div>
 
       <!-- ── TOOLBAR (filters + Generate button) ── -->
       <div class="toolbar no-print">
         <div class="toolbar-left">
-          <input type="date" class="filter-sel" id="repFrom" onchange="clearRangeChips()" title="Check-in from">
-          <input type="date" class="filter-sel" id="repTo"   onchange="clearRangeChips()" title="Check-in to">
+          <div id="dateRangeWrap" style="display:flex;gap:8px;">
+            <input type="date" class="filter-sel" id="repFrom" onchange="clearRangeChips()" title="Check-in from">
+            <input type="date" class="filter-sel" id="repTo"   onchange="clearRangeChips()" title="Check-in to">
+          </div>
           <select class="filter-sel" id="repType" onchange="repPage=1;generateReport()">
             <option value="">All Types</option>
             <option value="Standard">Standard</option>
@@ -268,9 +315,6 @@ input[type="date"].filter-sel { min-width: 0; }
         <div class="toolbar-right">
           <button class="btn-primary" onclick="repPage=1;generateReport()">
             <i class="fa-solid fa-chart-bar"></i> Generate Report
-          </button>
-          <button class="btn-primary" style="background:#6b7280;border-color:#6b7280;box-shadow:none;" onclick="printReport()">
-            <i class="fa-solid fa-print"></i> Print
           </button>
         </div>
       </div>
@@ -323,14 +367,30 @@ input[type="date"].filter-sel { min-width: 0; }
   </div>
 </div>
 
-<!-- Hidden print header — shown only during window.print() -->
-<div id="printHeader" style="display:none">
-  <div style="text-align:center;margin-bottom:18px;border-bottom:2px solid #2f6fed;padding-bottom:14px;">
-    <div style="font-size:22px;font-weight:900;color:#2f6fed;letter-spacing:1px;">GRACE HOTEL</div>
-    <div style="font-size:13px;color:#6b7280;margin-top:2px;">Revenue & Booking Report</div>
-    <div style="font-size:12px;color:#9aa1b3;margin-top:4px;" id="printMeta"></div>
+<!-- ── REPORT DETAIL MODAL — opens on row click ── -->
+<div class="modal-overlay" id="reportDetailModal" onclick="handleBackdrop(event,'reportDetailModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-receipt"></i> <span id="rdTitle">Booking Detail</span></div>
+      <button class="modal-close" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item"><span class="detail-label">Room</span><span class="detail-value" id="rdRoom">—</span></div>
+      <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value" id="rdStatus">—</span></div>
+      <div class="detail-item span2"><span class="detail-label">Guest</span><span class="detail-value" id="rdGuest">—</span></div>
+      <div class="detail-item"><span class="detail-label">Phone</span><span class="detail-value" id="rdPhone">—</span></div>
+      <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value" id="rdEmail">—</span></div>
+      <div class="detail-item"><span class="detail-label">ID</span><span class="detail-value" id="rdId">—</span></div>
+      <div class="detail-item"><span class="detail-label">Recorded By</span><span class="detail-value" id="rdRecordedBy">—</span></div>
+      <div class="detail-item"><span class="detail-label">Check-in</span><span class="detail-value" id="rdCheckin">—</span></div>
+      <div class="detail-item"><span class="detail-label">Check-out</span><span class="detail-value" id="rdCheckout">—</span></div>
+      <div class="detail-item"><span class="detail-label">Nights</span><span class="detail-value" id="rdNights">—</span></div>
+      <div class="detail-item span2"><span class="detail-label">Notes</span><span class="detail-value" id="rdNotes">—</span></div>
+    </div>
+    <div class="modal-sub-title">Billing Breakdown</div>
+    <div class="recipe-box" id="rdBilling"></div>
+    <div class="modal-footer"><button class="btn-outline" onclick="closeDetailModal()">Close</button></div>
   </div>
-  <div id="printKpiPrint" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px;"></div>
 </div>
 
 <script src="../component/booking-shell.js"></script>
@@ -349,8 +409,15 @@ const shell = BookingShell.attach({
 });
 
 /* ═══════════════════════════════════════════════
-   Storage shim
+   DATA SERVICE — the ONLY place in this page that knows whether
+   data is coming from a real API or from demo/local storage.
+   Flip cfg.USE_DEMO to false (or point cfg.API_BASE at a real host)
+   once the backend exists, and nothing below this block needs to
+   change — same shape comes back either way: { rooms, bookings, session }.
 ═══════════════════════════════════════════════ */
+const cfg = { API_BASE: '', API_KEY: '', USE_DEMO: true };
+shell.setApiMode(cfg.USE_DEMO ? 'Demo' : 'Live');
+
 const storage = window.storage || {
   async get(key){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v}; },
   async set(key, value){ localStorage.setItem(key, value); return {key, value}; },
@@ -387,12 +454,10 @@ const DEMO_BOOKINGS = [
   {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',    notes:''},
 ];
 
-let allRooms = [];
-let bookings = [];
-let filteredRep = [];
-let repPage = 1;
-const PAGE_REP = 12;
-const TODAY = new Date().toISOString().split('T')[0];
+/* Demo signed-in user. In production this comes back from the API's
+   session/me endpoint — swap the object below out and the rest of the
+   page (applyRoleUI) doesn't change, since it only reads `.role`. */
+const DEMO_SESSION = { name: 'Booking Manager', initials: 'MG', role: 'manager' };
 
 async function loadShared(key, fallback) {
   try {
@@ -404,6 +469,39 @@ async function loadShared(key, fallback) {
 async function saveShared(key, value) {
   try { await storage.set(key, JSON.stringify(value), true); } catch(e) {}
 }
+async function fetchFromAPI(path) {
+  const opts = { headers: {} };
+  if (cfg.API_KEY) opts.headers['Authorization'] = `Bearer ${cfg.API_KEY}`;
+  const res = await fetch(cfg.API_BASE + path, opts);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+/* getReportData() — try the real API first, fall back to demo/shared
+   storage on failure. Same { rooms, bookings, session } shape either
+   way, so nothing downstream needs to know or care which path ran. */
+async function getReportData() {
+  if (!cfg.USE_DEMO) {
+    try {
+      const data = await fetchFromAPI('/api/reports/bookings');
+      return { rooms: data.rooms, bookings: data.bookings, session: data.session };
+    } catch (err) {
+      console.warn('[Reports] API unavailable, falling back to demo data:', err.message);
+    }
+  }
+  const rooms    = await loadShared(KEY_ROOMS, DEMO_ROOMS);
+  const bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
+  await Promise.all([ saveShared(KEY_ROOMS, rooms), saveShared(KEY_BOOKINGS, bookings) ]);
+  return { rooms, bookings, session: DEMO_SESSION };
+}
+
+let allRooms = [];
+let bookings = [];
+let filteredRep = [];
+let repPage = 1;
+let currentSession = null;
+const PAGE_REP = 12;
+const TODAY = new Date().toISOString().split('T')[0];
 
 /* ═══════════════════════════════════════════════
    HELPERS
@@ -420,7 +518,47 @@ const CHIP_LBL   = {checkedin:'Checked In',checkout:'Check-out',reserved:'Reserv
 const PAY_CLS    = {'Fully Paid':'pay-full','Deposit Paid':'pay-deposit','Pending':'pay-pending'};
 
 /* ═══════════════════════════════════════════════
-   QUICK RANGE
+   ROLE-BASED ACCESS
+   Only manager/admin sessions get the full range picker (All Time,
+   Last 7/30 Days, This Month) and free date inputs. Everyone else is
+   locked to Today so the numbers they see can't sprawl beyond the
+   current shift.
+═══════════════════════════════════════════════ */
+const RANGE_CHIPS_FULL = [
+  { r:'all',   label:'All Time' },
+  { r:'today', label:'Today' },
+  { r:'7',     label:'Last 7 Days' },
+  { r:'30',    label:'Last 30 Days' },
+  { r:'month', label:'This Month' },
+];
+function isPrivileged() {
+  return !!currentSession && (currentSession.role === 'manager' || currentSession.role === 'admin');
+}
+function applyRoleUI() {
+  const chipsWrap = document.getElementById('rangeChips');
+  const dateWrap  = document.getElementById('dateRangeWrap');
+  const notice    = document.getElementById('roleNotice');
+
+  if (isPrivileged()) {
+    chipsWrap.innerHTML = RANGE_CHIPS_FULL.map(c =>
+      `<button class="sc-btn${c.r==='all'?' active':''}" data-r="${c.r}" onclick="applyRange('${c.r}',this)">${c.label}</button>`
+    ).join('');
+    dateWrap.style.display = '';
+    notice.style.display = 'none';
+    document.getElementById('repFrom').value = '';
+    document.getElementById('repTo').value   = '';
+  } else {
+    chipsWrap.innerHTML = `<button class="sc-btn active" data-r="today" disabled>Today</button>`;
+    dateWrap.style.display = 'none';
+    document.getElementById('repFrom').value = TODAY;
+    document.getElementById('repTo').value   = TODAY;
+    notice.style.display = 'flex';
+    notice.innerHTML = `<i class="fa-solid fa-lock"></i> Showing today's data only — full-range reports require manager or admin access.`;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   QUICK RANGE (manager/admin only — button is absent otherwise)
 ═══════════════════════════════════════════════ */
 function fmtISO(d) { return d.toISOString().split('T')[0]; }
 function applyRange(r, btn) {
@@ -471,7 +609,7 @@ function renderPagination(btnId, labelId, page, total, size, cb) {
 }
 
 /* ═══════════════════════════════════════════════
-   KPI ROW — 7 cards, always one line (horizontal scroll on small screens)
+   KPI ROW — 7 cards, each with an icon badge, always one line
 ═══════════════════════════════════════════════ */
 function renderKPI(rows) {
   const totRev    = rows.reduce((s,b) => s+calcTotal(b), 0);
@@ -483,30 +621,21 @@ function renderKPI(rows) {
   const fullyPaid = rows.filter(b=>b.payStatus==='Fully Paid').length;
 
   const cards = [
-    { label:'Total Revenue',    val:fmtN(totRev),        sub:`${rows.length} bookings`,   cls:'',       vcls:'' },
-    { label:'Collected',        val:fmtN(totPaid),       sub:`${collRate}% collection`,   cls:'green',  vcls:'green' },
-    { label:'Balance Due',      val:fmtN(totBal),        sub:'Outstanding',               cls:'red',    vcls:'red' },
-    { label:'Total Nights',     val:nights_.toLocaleString(), sub:'room-nights booked',   cls:'purple', vcls:'purple' },
-    { label:'Avg Rate / Night', val:fmtN(avgNight),      sub:'blended across types',      cls:'blue2',  vcls:'blue2' },
-    { label:'Fully Paid',       val:fullyPaid,           sub:`of ${rows.length} bookings`,cls:'teal',   vcls:'teal' },
+    { label:'Total Revenue',    val:fmtN(totRev),        sub:`${rows.length} bookings`,   cls:'',       vcls:'',       icon:'fa-sack-dollar',          ic:'gold' },
+    { label:'Collected',        val:fmtN(totPaid),       sub:`${collRate}% collection`,   cls:'green',  vcls:'green',  icon:'fa-circle-check',         ic:'green' },
+    { label:'Balance Due',      val:fmtN(totBal),        sub:'Outstanding',               cls:'red',    vcls:'red',    icon:'fa-triangle-exclamation', ic:'red' },
+    { label:'Total Nights',     val:nights_.toLocaleString(), sub:'room-nights booked',   cls:'purple', vcls:'purple', icon:'fa-moon',                 ic:'purple' },
+    { label:'Avg Rate / Night', val:fmtN(avgNight),      sub:'blended across types',      cls:'blue2',  vcls:'blue2',  icon:'fa-tag',                  ic:'blue2' },
+    { label:'Fully Paid',       val:fullyPaid,           sub:`of ${rows.length} bookings`,cls:'teal',   vcls:'teal',   icon:'fa-check-double',         ic:'teal' },
     { label:'Avg Stay',         val:(rows.length>0 ? (nights_/rows.length).toFixed(1) : '0') + ' nts',
-                                                         sub:'per booking',               cls:'amber',  vcls:'amber' },
+                                                         sub:'per booking',               cls:'amber',  vcls:'amber',  icon:'fa-calendar-days',        ic:'amber' },
   ];
 
   document.getElementById('kpiRow').innerHTML = cards.map(c =>
     `<div class="kpi-card ${c.cls}">
-      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-ic-row"><div class="kpi-ic-sm ${c.ic}"><i class="fa-solid ${c.icon}"></i></div><div class="kpi-label">${c.label}</div></div>
       <div class="kpi-val ${c.vcls}">${c.val}</div>
       <div class="kpi-sub">${c.sub}</div>
-    </div>`
-  ).join('');
-
-  /* Also build the compact print version */
-  document.getElementById('printKpiPrint').innerHTML = cards.map(c =>
-    `<div style="background:#f4f6fb;border:1px solid #eef0f6;border-radius:8px;padding:10px 12px;">
-      <div style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#9aa1b3;font-weight:700;margin-bottom:3px;">${c.label}</div>
-      <div style="font-size:14px;font-weight:800;color:#1c2440;">${c.val}</div>
-      <div style="font-size:9px;color:#9aa1b3;margin-top:1px;">${c.sub}</div>
     </div>`
   ).join('');
 }
@@ -537,14 +666,9 @@ function generateReport() {
   if (type)   parts.push(type);
   if (status) parts.push(CHIP_LBL[status]||status);
   if (pay)    parts.push(pay);
-  if (from || to) parts.push(`${from ? fmtDate(from) : 'Start'} → ${to ? fmtDate(to) : 'Present'}`);
+  if (from || to) parts.push(from && to && from === to ? fmtDate(from) : `${from ? fmtDate(from) : 'Start'} → ${to ? fmtDate(to) : 'Present'}`);
   if (parts.length) title = parts.join(' · ');
   document.getElementById('repTitle').textContent = title;
-
-  /* Update print meta */
-  document.getElementById('printMeta').textContent =
-    `Generated: ${new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}` +
-    (parts.length ? `  ·  Filter: ${parts.join(', ')}` : '  ·  All records');
 
   renderKPI(filteredRep);
 
@@ -572,8 +696,9 @@ function renderRepPage() {
   document.getElementById('repBody').innerHTML = page.length===0
     ? `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);">No records match the selected filters.</td></tr>`
     : page.map(b => {
+        const oi  = bookings.indexOf(b);
         const bal = calcBal(b);
-        return `<tr>
+        return `<tr onclick="openDetailModal(${oi})">
           <td class="mcard-head" data-label="Room">
             <span class="room-badge"><span class="rt-dot ${DOT_CLASS[b.type]}"></span>${b.room} · ${b.type}</span>
           </td>
@@ -600,36 +725,42 @@ function renderRepPage() {
 }
 
 /* ═══════════════════════════════════════════════
-   PRINT — inserts hotel header then calls window.print()
+   REPORT DETAIL MODAL
 ═══════════════════════════════════════════════ */
-function printReport() {
-  /* Show the print header only during print */
-  const header = document.getElementById('printHeader');
-  header.style.display = 'block';
+function openDetailModal(oi) {
+  const b = bookings[oi]; if (!b) return;
+  document.getElementById('rdTitle').textContent = `Room ${b.room} · ${b.guest || 'Vacant'}`;
+  document.getElementById('rdRoom').textContent = `${b.room} · ${b.type}`;
+  document.getElementById('rdStatus').innerHTML = `<span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||'—'}</span>`;
+  document.getElementById('rdGuest').textContent = b.guest || '—';
+  document.getElementById('rdPhone').textContent = b.phone || '—';
+  document.getElementById('rdEmail').textContent = b.email || '—';
+  document.getElementById('rdId').textContent = `${b.idType||''} · ${b.idNum||'—'}`;
+  document.getElementById('rdRecordedBy').textContent = b.recordedBy || '—';
+  document.getElementById('rdCheckin').textContent = fmtDate(b.checkin);
+  document.getElementById('rdCheckout').textContent = fmtDate(b.checkout);
+  document.getElementById('rdNights').textContent = `${nights(b.checkin,b.checkout)||0} nights`;
 
-  /* Build a style block for print-only visibility */
-  const style = document.createElement('style');
-  style.id = 'printOnlyStyle';
-  style.textContent = `
-    @media print {
-      #printHeader { display: block !important; margin-bottom: 20px; }
-      .no-print, #sidebarSlot, #topbarSlot, .toolbar, .status-chips { display: none !important; }
-      .main { margin-left: 0 !important; }
-      .content { padding: 0 !important; }
-    }
-    @media screen { #printHeader { display: none !important; } }
+  const notesEl = document.getElementById('rdNotes');
+  notesEl.textContent = b.notes || 'No notes recorded.';
+  notesEl.classList.toggle('muted', !b.notes);
+
+  const total = calcTotal(b), bal = calcBal(b);
+  document.getElementById('rdBilling').innerHTML = `
+    <div class="ing-row"><span class="ing-name">Rate / Night</span><span class="ing-qty">${fmtN(b.rate)}</span></div>
+    <div class="ing-row"><span class="ing-name">Nights</span><span class="ing-qty">${nights(b.checkin,b.checkout)||0}</span></div>
+    <div class="ing-row"><span class="ing-name">Discount</span><span class="ing-qty">${b.discount||0}%</span></div>
+    <div class="ing-row"><span class="ing-name">Gross Total</span><span class="ing-qty" style="font-weight:800;">${fmtN(total)}</span></div>
+    <div class="ing-row"><span class="ing-name">Paid</span><span class="ing-qty" style="color:var(--green);font-weight:700;">${fmtN(b.paid||0)}</span></div>
+    <div class="ing-row"><span class="ing-name">Balance</span><span class="ing-qty" style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:800;">${fmtN(bal)}</span></div>
+    <div class="ing-row"><span class="ing-name">Payment Method</span><span class="ing-qty">${b.payMethod||'—'}</span></div>
+    <div class="ing-row"><span class="ing-name">Payment Status</span><span class="ing-qty"><span class="pay-chip ${PAY_CLS[b.payStatus]||'pay-pending'}">${b.payStatus||'—'}</span></span></div>
   `;
-  document.head.appendChild(style);
-
-  window.print();
-
-  /* Clean up after print dialog closes */
-  setTimeout(() => {
-    header.style.display = 'none';
-    const s = document.getElementById('printOnlyStyle');
-    if (s) s.remove();
-  }, 1000);
+  document.getElementById('reportDetailModal').classList.add('show');
 }
+function closeDetailModal() { document.getElementById('reportDetailModal').classList.remove('show'); }
+function handleBackdrop(e, id) { if (e.target === document.getElementById(id)) closeDetailModal(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetailModal(); });
 
 /* ═══════════════════════════════════════════════
    TOAST
@@ -644,13 +775,22 @@ function showToast(msg, type='success') {
 }
 
 /* ═══════════════════════════════════════════════
-   INIT
+   INIT — loading / error states around the single data service call
 ═══════════════════════════════════════════════ */
 async function init() {
-  allRooms = await loadShared(KEY_ROOMS, DEMO_ROOMS);
-  bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
-  await Promise.all([saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings)]);
-  generateReport();
+  document.getElementById('repBody').innerHTML = `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);"><i class="fa-solid fa-spinner fa-spin"></i> Loading report data…</td></tr>`;
+  try {
+    const { rooms, bookings: bk, session } = await getReportData();
+    allRooms = rooms;
+    bookings = bk;
+    currentSession = session;
+    applyRoleUI();
+    generateReport();
+  } catch (err) {
+    console.error('[Reports] Failed to load report data:', err);
+    document.getElementById('repBody').innerHTML = `<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> Couldn't load report data. Please refresh the page.</td></tr>`;
+    showToast('Failed to load report data.', 'error');
+  }
 }
 init();
 </script>

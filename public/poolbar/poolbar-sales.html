@@ -1,94 +1,95 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" style="background:#080f18;">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="color-scheme" content="dark light">
-<title>Sales | Aurum Pool Bar</title>
-
-<!-- ═══ CRITICAL INLINE CSS — applied before any network request, so the
-     dark background paints immediately. This is what actually kills the
-     white flash: the Google Fonts stylesheet below is render-blocking,
-     so without this, the browser shows nothing (default white) until
-     that request finishes. This tiny block guarantees dark-first paint. ═══ -->
-<style>html,body{background:#080f18;margin:0;}</style>
-
-<!-- ═══ Fonts loaded asynchronously (preload + swap on load) so they never
-     block first paint. Falls back to system fonts instantly, then swaps
-     in Cormorant/Outfit once they arrive — no flash, no invisible text. ═══ -->
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<title>Sales | Grace Pool Bar</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-  }
   html, body{ height:100%; overflow:hidden; }
-  body{ font-family:'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  body{
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+    font-size:13px; transition:background .3s,color .3s;
+  }
   .app{ display:flex; height:100vh; overflow:hidden; }
   .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; min-height:0; min-width:0; }
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0;
+    background:var(--bg); color:var(--text);
+  }
   @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
   @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; flex-shrink:0; }
+  /* ═══ KPI CARDS — same shape/tokens as the dashboard, plus the
+     top accent border used on Orders / Requisition History. ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; display:flex; flex-direction:column; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-card.revenue{ background:linear-gradient(160deg, rgba(74,222,128,.07), var(--surface) 60%); border-color:rgba(74,222,128,.22); }
-  .kpi-card.revenue::before{ background:linear-gradient(90deg,var(--green),transparent); }
-  .kpi-card.revenue .kpi-label{ color:var(--green); }
-  .kpi-card.units{ background:linear-gradient(160deg, rgba(96,165,250,.07), var(--surface) 60%); border-color:rgba(96,165,250,.22); }
-  .kpi-card.units::before{ background:linear-gradient(90deg,var(--blue),transparent); }
-  .kpi-card.units .kpi-label{ color:var(--blue); }
-  .kpi-card.voided{ background:linear-gradient(160deg, rgba(248,113,113,.07), var(--surface) 60%); border-color:rgba(248,113,113,.22); }
-  .kpi-card.voided::before{ background:linear-gradient(90deg,var(--red),transparent); }
-  .kpi-card.voided .kpi-label{ color:var(--red); }
-  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
-  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
-  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
-  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); }
+  .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
   .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
   .toolbar-row.top{ justify-content:space-between; }
   .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
   .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; color-scheme:light; }
   .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
-  .filter-date{ cursor:default; color-scheme:dark; }
-  [data-theme="light"] .filter-date{ color-scheme:light; }
+  .filter-date{ cursor:default; }
   .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.completed{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
-  .status-pill.on.voided{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .status-pill.on.completed{ background:var(--green-bg); border-color:rgba(18,183,106,.4); color:var(--green); }
+  .status-pill.on.voided{ background:var(--red-bg); border-color:rgba(240,68,56,.4); color:var(--red); }
   .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold-light); font-size:11px; font-weight:500; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
-  .active-chip button{ background:none; border:none; color:var(--gold-light); cursor:pointer; font-size:12px; line-height:1; padding:0; display:flex; }
-  .active-chip button:hover{ color:#fff; }
-  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold); font-size:11px; font-weight:600; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
+  .active-chip button{ background:none; border:none; color:var(--gold); cursor:pointer; font-size:11px; line-height:1; padding:0; display:flex; }
+  .active-chip button:hover{ color:var(--gold-light); }
+  .toolbar-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; font-weight:600; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
   .btn-ghost:hover{ color:var(--gold); }
 
   @media (max-width:900px){
@@ -98,16 +99,17 @@
     .search-box{ max-width:100%; }
     .filter-select, .filter-date{ width:100%; }
     .status-pills{ flex-wrap:wrap; }
-    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .toolbar-actions{ width:100%; }
+    .toolbar-actions > .btn{ flex:1; justify-content:center; }
     .btn-ghost{ align-self:flex-start; }
   }
 
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; min-width:0; flex-shrink:0; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
   .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
   table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:840px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
   thead th[data-sortkey]:hover{ color:var(--gold); }
   thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
   thead th.no-sort{ cursor:default; }
@@ -120,11 +122,6 @@
   .items-summary{ max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
   .items-summary .more{ color:var(--text3); }
 
-  /* ═══════════════════════════════════════════
-     MOBILE / TABLET — the table collapses into
-     stacked cards below 880px instead of relying
-     on horizontal scroll, so nothing gets "lost".
-  ═══════════════════════════════════════════ */
   @media (max-width:880px){
     .tbl-wrap{ overflow-x:visible; }
     table{ min-width:0; width:100%; }
@@ -147,29 +144,32 @@
     tbody td::before{ padding-top:0; }
   }
 
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-  .chip-completed{ background:var(--green-bg); color:var(--green); } .chip-completed::before{ background:var(--green); }
-  .chip-voided{ background:var(--red-bg); color:var(--red); } .chip-voided::before{ background:var(--red); }
-  .chip-pay{ background:var(--gold-dim); color:var(--gold-light); } .chip-pay::before{ background:var(--gold); }
+  .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .chip i{ font-size:7px; }
+  .chip-completed{ background:var(--green-bg); color:var(--green); }
+  .chip-voided{ background:var(--red-bg); color:var(--red); }
+  .chip-pay{ background:var(--gold-dim); color:var(--gold); }
 
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-danger{ background:rgba(248,113,113,0.1); border-color:rgba(248,113,113,0.3); color:var(--red); font-weight:700; }
-  .btn-danger:hover{ background:rgba(248,113,113,0.18); }
+  /* Order button — matches Aurum Restaurant's .btn-order treatment exactly: solid blue fill, white text/icon */
+  .btn-order{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:700; }
+  .btn-order:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
+  .btn-danger{ background:rgba(240,68,56,0.1); border-color:rgba(240,68,56,0.3); color:var(--red); font-weight:700; }
+  .btn-danger:hover{ background:rgba(240,68,56,0.18); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
   .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .act-btn.void{ border-color:rgba(248,113,113,0.35); color:var(--red); background:var(--red-bg); font-weight:600; }
-  .act-btn.void:hover{ border-color:var(--red); background:rgba(248,113,113,0.2); color:var(--red); }
+  .act-btn.void{ border-color:rgba(240,68,56,0.35); color:var(--red); background:var(--red-bg); font-weight:700; }
+  .act-btn.void:hover{ border-color:var(--red); background:rgba(240,68,56,0.2); color:var(--red); }
 
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; padding:0 7px; }
   .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
   .summary-bar{ display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface2); border-top:1px solid var(--border); }
@@ -177,10 +177,10 @@
   .sb-item{ text-align:center; padding:12px 12px; border-right:1px solid var(--border); }
   .sb-item:last-child{ border-right:none; }
   @media (max-width:560px){ .sb-item:nth-child(2){ border-right:none; } }
-  .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
-  .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
+  .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; font-weight:600; }
+  .sb-val{ font-size:17px; font-weight:800; color:var(--text); }
 
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:var(--shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
   .toast.success{ border-left:3px solid var(--green); }
   .toast.error{ border-left:3px solid var(--red); }
   .toast.info{ border-left:3px solid var(--blue); }
@@ -202,18 +202,16 @@
     .print-header{ display:block !important; margin-bottom:14px; }
   }
   .print-header{ display:none; }
-  .print-header h2{ font-family:'Cormorant Garamond',serif; font-size:18px; }
+  .print-header h2{ font-size:18px; font-weight:800; }
   .print-header p{ font-size:11px; color:#555; margin-top:3px; }
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- Sidebar is rendered here by poolbar-shell.js — unchanged -->
   <div id="sidebarSlot"></div>
 
   <div class="main">
-    <!-- Topbar is rendered here by poolbar-shell.js — unchanged -->
     <div id="topbarSlot"></div>
 
     <div class="content">
@@ -235,7 +233,7 @@
             <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
               <span class="flt-label">Search</span>
               <div class="search-box">
-                <span style="color:var(--text3);font-size:12px;">🔍</span>
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
                 <input type="text" id="fSearch" placeholder="Sale #, item, staff, location…" oninput="page=1;render()">
               </div>
             </div>
@@ -263,9 +261,12 @@
                 <option value="total_asc">Total (Low → High)</option>
               </select>
             </div>
-            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="printSales()">🖨 Print</button>
+          <div class="toolbar-actions">
+            <button class="btn btn-order btn-sm" onclick="window.location.href='poolbar-orders.html'"><i class="fa-solid fa-cart-plus"></i> Order</button>
+            <button class="btn btn-outline btn-sm" onclick="printSales()"><i class="fa-solid fa-print"></i> Print</button>
+          </div>
         </div>
         <div class="toolbar-row" id="chipsRow" style="display:none;">
           <div class="active-chips" id="activeChips"></div>
@@ -273,7 +274,7 @@
       </div>
 
       <div class="panel">
-        <div class="print-header"><h2>Aurum Hotel — Pool Bar Sales Report</h2><p id="printSub"></p></div>
+        <div class="print-header"><h2>Grace Hotel — Pool Bar Sales Report</h2><p id="printSub"></p></div>
         <div class="panel-head">
           <div class="panel-title">Sales</div>
           <span class="toolbar-count" id="tblCount">—</span>
@@ -464,6 +465,11 @@ function buildDetailSale(s){
   };
 }
 
+/* ═══════════════════════════════════════════
+   KPI CARDS — same markup pattern as the dashboard: kpi-top (colored
+   icon box + label), kpi-value, kpi-trend, plus the top accent border
+   from Orders / Requisition History (acc-green/acc-blue/acc-red/acc-purple).
+═══════════════════════════════════════════ */
 function renderKPIs(rows){
   const completed = rows.filter(s => s.status === 'completed');
   const voided    = rows.filter(s => s.status === 'voided');
@@ -471,27 +477,23 @@ function renderKPIs(rows){
   const units     = completed.reduce((sum,s)=>sum+itemsQty(s),0);
 
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-accent">🧾</div>
-      <div class="kpi-label">Total Sales</div>
-      <div class="kpi-value" style="color:var(--gold);">${rows.length}</div>
+    <div class="kpi-card acc-blue">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-receipt"></i></div><div class="kpi-label">Total Sales</div></div>
+      <div class="kpi-value" style="color:var(--blue);">${rows.length}</div>
       <div class="kpi-trend neutral">${completed.length} completed · ${voided.length} voided</div>
     </div>
-    <div class="kpi-card revenue">
-      <div class="kpi-accent" style="color:var(--green)">💰</div>
-      <div class="kpi-label">Total Revenue</div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Total Revenue</div></div>
       <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
       <div class="kpi-trend up">From completed sales</div>
     </div>
-    <div class="kpi-card units">
-      <div class="kpi-accent" style="color:var(--blue)">📦</div>
-      <div class="kpi-label">Units Sold</div>
-      <div class="kpi-value" style="color:var(--blue);">${units}</div>
+    <div class="kpi-card acc-purple">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Units Sold</div></div>
+      <div class="kpi-value" style="color:var(--purple);">${units}</div>
       <div class="kpi-trend info">Across ${completed.length} sale${completed.length!==1?'s':''}</div>
     </div>
-    <div class="kpi-card voided">
-      <div class="kpi-accent" style="color:var(--red)">✕</div>
-      <div class="kpi-label">Voided Sales</div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Voided Sales</div></div>
       <div class="kpi-value" style="color:var(--red);">${voided.length}</div>
       <div class="kpi-trend ${voided.length>0?'warn':'up'}">${voided.length>0?'Stock restored':'None on record'}</div>
     </div>`;
@@ -570,7 +572,7 @@ function renderActiveChips(){
   const wrap = document.getElementById('activeChips');
   if (chips.length === 0) { chipsRow.style.display = 'none'; wrap.innerHTML = ''; return; }
   chipsRow.style.display = '';
-  wrap.innerHTML = chips.map((c, i) => `<span class="active-chip">${c.label}<button data-chip="${i}">✕</button></span>`).join('');
+  wrap.innerHTML = chips.map((c, i) => `<span class="active-chip">${c.label}<button data-chip="${i}"><i class="fa-solid fa-xmark"></i></button></span>`).join('');
   wrap.querySelectorAll('[data-chip]').forEach(btn => {
     btn.addEventListener('click', () => { chips[parseInt(btn.dataset.chip, 10)].clear(); page = 1; render(); });
   });
@@ -601,15 +603,15 @@ function renderPagination(total){
   const mk = (label, p, disabled, active) => {
     const b = document.createElement('button');
     b.className = 'page-btn' + (active ? ' active' : '');
-    b.textContent = label; b.disabled = !!disabled;
+    b.innerHTML = label; b.disabled = !!disabled;
     b.addEventListener('click', () => { page = p; renderTable(); });
     return b;
   };
-  wrap.appendChild(mk('‹', page - 1, page === 1, false));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>', page - 1, page === 1, false));
   let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
   start = Math.max(1, end - 4);
   for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
-  wrap.appendChild(mk('›', page + 1, page >= totalPages, false));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>', page + 1, page >= totalPages, false));
 }
 
 function renderSummaryBar(rows){
@@ -639,18 +641,18 @@ function renderTable(){
     ? `<tr class="empty-row"><td colspan="9">No sales match your filters.</td></tr>`
     : pageRows.map(s => `
       <tr onclick="openDetail('${s.id}')">
-        <td class="nowrap" data-label="Sale No." style="font-weight:600;">${s.id}</td>
+        <td class="nowrap" data-label="Sale No." style="font-weight:700;">${s.id}</td>
         <td class="items-summary" data-label="Items">${itemsSummary(s)}</td>
-        <td class="nowrap" data-label="Total" style="font-weight:600;color:var(--gold);">${fmtN(s.total)}</td>
-        <td class="nowrap" data-label="Payment"><span class="chip chip-pay">${s.method}</span></td>
+        <td class="nowrap" data-label="Total" style="font-weight:700;color:var(--gold);">${fmtN(s.total)}</td>
+        <td class="nowrap" data-label="Payment"><span class="chip chip-pay"><i class="fa-solid fa-circle"></i>${s.method}</span></td>
         <td class="nowrap" data-label="Staff">${s.staff || '—'}</td>
         <td class="nowrap" data-label="Location">${s.table || '—'}</td>
         <td class="nowrap" data-label="Date &amp; Time">${s.date}</td>
-        <td class="nowrap" data-label="Status"><span class="chip chip-${s.status}">${s.status === 'completed' ? 'Completed' : 'Voided'}</span></td>
+        <td class="nowrap" data-label="Status"><span class="chip chip-${s.status}"><i class="fa-solid fa-circle"></i>${s.status === 'completed' ? 'Completed' : 'Voided'}</span></td>
         <td class="no-print nowrap" data-label="Actions" onclick="event.stopPropagation()">
           <div class="act-btns">
-            <button class="act-btn" onclick="openDetail('${s.id}')">👁 View</button>
-            ${s.status === 'completed' ? `<button class="act-btn void" onclick="openVoidDirect('${s.id}')">✕ Void</button>` : ''}
+            <button class="act-btn" onclick="openDetail('${s.id}')"><i class="fa-solid fa-eye"></i> View</button>
+            ${s.status === 'completed' ? `<button class="act-btn void" onclick="openVoidDirect('${s.id}')"><i class="fa-solid fa-ban"></i> Void</button>` : ''}
           </div>
         </td>
       </tr>`).join('');
@@ -730,7 +732,8 @@ function printSales(){
 function showToast(msg, type='success'){
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }

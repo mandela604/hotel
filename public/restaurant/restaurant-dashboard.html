@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Dashboard | Aurum Restaurant</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   /* This page only owns layout + its own KPI/panel content.
@@ -14,12 +14,15 @@
      area turns white — the sidebar never sees these overrides. */
   :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
   html, body{ height:100%; overflow:hidden; }
-  body{ font-family:'Outfit',sans-serif; font-size:14px; transition:background .3s,color .3s; }
+  body{
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+    font-size:13px; transition:background .3s,color .3s;
+  }
   .app{ display:flex; height:100vh; overflow:hidden; }
   .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  /* ── Light-theme variables, scoped to content only ── */
+  /* ── Light-theme variables, scoped to content only — same tokens as Pool Bar ── */
   .content{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec;
@@ -35,25 +38,38 @@
     flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0;
     background:var(--bg); color:var(--text);
   }
-  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+  @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
-  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; margin-bottom:2px; }
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
 
-  /* KPI */
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  /* ═══ KPI CARDS — same icon-box system as poolbar-sales.html / poolbar-reports.html ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; position:relative; overflow:hidden;
-    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; text-decoration:none; display:block; animation:fadeUp .4s ease both; }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; text-decoration:none; display:flex; flex-direction:column; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
-  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
-  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; }
-  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
   /* Row / Panel */
   .row{ display:grid; grid-template-columns:1.3fr .7fr; gap:14px; }
@@ -61,37 +77,37 @@
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); min-width:0; }
   @media (max-width:420px){ .panel{ padding:14px; } }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
-  .panel-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:.8px; text-transform:uppercase; }
-  .panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:500; white-space:nowrap; background:none; border:none; font-family:'Outfit',sans-serif; cursor:pointer; }
+  .panel-title{ font-size:12px; font-weight:800; color:var(--text); letter-spacing:.8px; text-transform:uppercase; }
+  .panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:600; white-space:nowrap; background:none; border:none; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
   .panel-action:hover{ color:var(--gold-light); }
   .empty-note{ font-size:12.5px; color:var(--text3); padding:14px 0; text-align:center; }
 
   /* Revenue bars */
-  .rev-total{ font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:700; color:var(--gold); line-height:1; }
+  .rev-total{ font-size:26px; font-weight:800; color:var(--gold); line-height:1; }
   .rev-sub-label{ font-size:11px; color:var(--text3); margin:4px 0 16px; }
   .bar-row{ margin-bottom:12px; } .bar-row:last-child{ margin-bottom:0; }
   .bar-meta{ display:flex; justify-content:space-between; margin-bottom:5px; }
-  .bar-name{ font-size:12.5px; color:var(--text2); } .bar-count{ font-size:11.5px; color:var(--text3); }
+  .bar-name{ font-size:12.5px; color:var(--text2); } .bar-count{ font-size:11.5px; color:var(--text3); font-weight:600; }
   .bar-track{ height:6px; background:var(--surface3); border-radius:20px; overflow:hidden; }
   .bar-fill{ height:100%; border-radius:20px; background:linear-gradient(90deg,var(--gold),var(--gold-light)); transition:width 1.2s cubic-bezier(.4,0,.2,1); }
   .bar-fill.blue{ background:linear-gradient(90deg,#60a5fa,#93c5fd); }
-  .bar-fill.purple{ background:linear-gradient(90deg,#a78bfa,#c4b5fd); }
+  .bar-fill.purple{ background:linear-gradient(90deg,var(--purple),#c4b5fd); }
 
   /* List rows */
   .list-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; cursor:pointer; }
   .list-row:last-child{ border-bottom:none; padding-bottom:0; }
-  .list-row:hover .list-name{ color:var(--gold-light); }
+  .list-row:hover .list-name{ color:var(--gold); }
   .list-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   .list-body{ flex:1; min-width:0; }
   .list-name{ font-size:12.5px; color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .15s; }
   .list-meta{ font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; flex-shrink:0; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-  .chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
-  .chip-low{ background:var(--amber-bg); color:var(--amber); } .chip-low::before{ background:var(--amber); }
-  .chip-out{ background:var(--red-bg); color:var(--red); } .chip-out::before{ background:var(--red); }
-  .chip-ok{ background:var(--green-bg); color:var(--green); } .chip-ok::before{ background:var(--green); }
+  .chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; flex-shrink:0; }
+  .chip i{ font-size:6px; }
+  .chip-sent{ background:var(--blue-bg); color:var(--blue); }
+  .chip-low{ background:var(--amber-bg); color:var(--amber); }
+  .chip-out{ background:var(--red-bg); color:var(--red); }
+  .chip-ok{ background:var(--green-bg); color:var(--green); }
 
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   ::-webkit-scrollbar{ width:6px; height:6px; }
@@ -104,10 +120,6 @@
     body{ background:#fff !important; color:#000 !important; }
     .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
   }
-
-
-
-  
 </style>
 </head>
 <body>
@@ -131,7 +143,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Revenue Breakdown — Today</div>
-            <button class="panel-action" onclick="location.href='restaurant-reports.html'">Full Report →</button>
+            <button class="panel-action" onclick="location.href='restaurant-reports.html'"><i class="fa-solid fa-arrow-right"></i> Full Report</button>
           </div>
           <div class="rev-total" id="revTotal">₦0</div>
           <div class="rev-sub-label">Restaurant sales, from meals served today</div>
@@ -140,7 +152,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Restaurant Inventory Status</div>
-            <button class="panel-action" onclick="location.href='restaurant-inventory.html'">View All →</button>
+            <button class="panel-action" onclick="location.href='restaurant-inventory.html'"><i class="fa-solid fa-arrow-right"></i> View All</button>
           </div>
           <div id="invSnap"></div>
         </div>
@@ -150,14 +162,14 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Pending Transfers from Kitchen</div>
-            <button class="panel-action" onclick="location.href='restaurant-transfers.html'">Review All →</button>
+            <button class="panel-action" onclick="location.href='restaurant-transfers.html'"><i class="fa-solid fa-arrow-right"></i> Review All</button>
           </div>
           <div id="pendingXfer"></div>
         </div>
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Low Stock Alerts</div>
-            <button class="panel-action" onclick="location.href='restaurant-inventory.html'">Open Inventory →</button>
+            <button class="panel-action" onclick="location.href='restaurant-inventory.html'"><i class="fa-solid fa-arrow-right"></i> Open Inventory</button>
           </div>
           <div id="lowStock"></div>
         </div>
@@ -237,6 +249,12 @@ async function loadShared(key, fallback){
   return fallback;
 }
 
+/* ═══════════════════════════════════════════
+   KPI CARDS — same markup/CSS pattern as poolbar-sales.html and
+   poolbar-reports.html: kpi-top (colored fa-icon box + label),
+   kpi-value, kpi-trend, plus the top accent border
+   (acc-green / acc-blue / acc-red / acc-purple / acc-amber).
+═══════════════════════════════════════════ */
 function renderKPIs(inventory, transfers, sales){
   const pending  = transfers.length;
   const lowStock = inventory.filter(i => invLevel(i) !== 'ok').length;
@@ -244,24 +262,24 @@ function renderKPIs(inventory, transfers, sales){
   const plates   = inventory.reduce((s,i)=>s+i.qty,0);
 
   document.getElementById('kpiRow').innerHTML = `
-    <a class="kpi-card" href="restaurant-transfers.html">
-      <div class="kpi-label">Pending Transfers</div>
+    <a class="kpi-card acc-blue" href="restaurant-transfers.html">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Pending Transfers</div></div>
       <div class="kpi-value" style="color:var(--blue);">${pending}</div>
-      <div class="kpi-trend ${pending>0?'warn':'up'}">${pending>0?'⚠ Awaiting review':'✓ All clear'}</div>
+      <div class="kpi-trend ${pending>0?'warn':'up'}">${pending>0?'Awaiting review':'All clear'}</div>
     </a>
-    <a class="kpi-card" href="restaurant-inventory.html">
-      <div class="kpi-label">Low Stock Alerts</div>
+    <a class="kpi-card acc-amber" href="restaurant-inventory.html">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock Alerts</div></div>
       <div class="kpi-value" style="color:var(--amber);">${lowStock}</div>
-      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs kitchen transfer':'✓ All above threshold'}</div>
+      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs kitchen transfer':'All above threshold'}</div>
     </a>
-    <a class="kpi-card" href="restaurant-sales.html">
-      <div class="kpi-label">Today's Sales</div>
-      <div class="kpi-value" style="font-size:22px;">${fmtN(today)}</div>
+    <a class="kpi-card acc-green" href="restaurant-sales.html">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Today's Sales</div></div>
+      <div class="kpi-value" style="color:var(--green);">${fmtN(today)}</div>
       <div class="kpi-trend up">${sales.length} sale${sales.length!==1?'s':''} recorded</div>
     </a>
-    <a class="kpi-card" href="restaurant-inventory.html">
-      <div class="kpi-label">Plates On Hand</div>
-      <div class="kpi-value">${plates}</div>
+    <a class="kpi-card acc-purple" href="restaurant-inventory.html">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Plates On Hand</div></div>
+      <div class="kpi-value" style="color:var(--purple);">${plates}</div>
       <div class="kpi-trend neutral">Across ${inventory.length} meals</div>
     </a>`;
 
@@ -293,7 +311,7 @@ function renderInventorySnapshot(inventory){
       <a class="list-row" href="restaurant-inventory.html">
         <span class="list-dot" style="background:${lvl==='ok'?'var(--green)':lvl==='low'?'var(--amber)':'var(--red)'}"></span>
         <div class="list-body"><div class="list-name">${i.meal}</div><div class="list-meta">${i.qty} ${i.unit} on hand · batch ${i.batch}</div></div>
-        <span class="chip ${LEVEL_CHIP[lvl]}">${LEVEL_LABEL[lvl]}</span>
+        <span class="chip ${LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${LEVEL_LABEL[lvl]}</span>
       </a>`; }).join('');
 }
 
@@ -305,7 +323,7 @@ function renderPendingTransfers(transfers){
       <a class="list-row" href="restaurant-transfers.html">
         <span class="list-dot" style="background:var(--blue)"></span>
         <div class="list-body"><div class="list-name">${t.no} — ${t.meal}</div><div class="list-meta">${t.qty} ${t.unit} · from ${t.from} · ${t.date}</div></div>
-        <span class="chip chip-sent">Sent</span>
+        <span class="chip chip-sent"><i class="fa-solid fa-circle"></i>Sent</span>
       </a>`).join('');
 }
 
@@ -318,7 +336,7 @@ function renderLowStock(inventory){
       <a class="list-row" href="restaurant-inventory.html">
         <span class="list-dot" style="background:${lvl==='out'?'var(--red)':'var(--amber)'}"></span>
         <div class="list-body"><div class="list-name">${i.meal}</div><div class="list-meta">${i.qty} ${i.unit} on hand · reorder at ${i.min}</div></div>
-        <span class="chip ${lvl==='out'?'chip-out':'chip-low'}">${lvl==='out'?'OUT':'LOW'}</span>
+        <span class="chip ${lvl==='out'?'chip-out':'chip-low'}"><i class="fa-solid fa-circle"></i>${lvl==='out'?'OUT':'LOW'}</span>
       </a>`; }).join('');
 }
 

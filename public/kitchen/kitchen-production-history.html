@@ -44,6 +44,11 @@
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:100px; }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; margin-bottom:10px; flex-shrink:0; }
+  .kpi-icon-gold{ background:var(--gold-dim); color:var(--gold); }
+  .kpi-icon-blue{ background:var(--blue-bg); color:var(--blue); }
+  .kpi-icon-green{ background:var(--green-bg); color:var(--green); }
+  .kpi-icon-red{ background:var(--red-bg); color:var(--red); }
   .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
   .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:700; color:var(--text); line-height:1; }
   .kpi-trend{ font-size:11px; color:var(--text3); margin-top:auto; }
@@ -89,6 +94,7 @@
   .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
   .chip-draft{ background:var(--surface3); color:var(--text3); } .chip-draft::before{ background:var(--text3); }
+  .chip-saved{ background:var(--amber-bg); color:var(--amber); } .chip-saved::before{ background:var(--amber); }
   .chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
   .chip-accepted{ background:var(--green-bg); color:var(--green); } .chip-accepted::before{ background:var(--green); }
   .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
@@ -159,8 +165,9 @@
           </div>
           <div class="flt-group"><span class="flt-label">Status</span>
             <select class="filter-select" id="fStatus" onchange="page=1;render()">
-              <option value="">All Statuses</option><option value="draft">Draft</option><option value="sent">Sent</option>
-              <option value="accepted">Accepted</option><option value="rejected">Rejected</option><option value="completed">Completed</option>
+              <option value="">All Statuses</option><option value="draft">Draft</option><option value="saved">Saved</option>
+              <option value="sent">Awaiting Approval</option><option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option><option value="completed">Completed</option>
             </select>
           </div>
           <div class="flt-group"><span class="flt-label">Type</span>
@@ -185,7 +192,7 @@
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>No.</th><th>Meal</th><th>Qty</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
+            <thead><tr><th>No.</th><th>Meals</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
             <tbody id="tblBody"></tbody>
           </table>
         </div>
@@ -204,16 +211,17 @@
     </div>
     <div class="detail-grid">
       <div class="detail-item"><span class="detail-label">Production No.</span><span class="detail-value" id="pmNo">—</span></div>
+      <div class="detail-item"><span class="detail-label">Batch No.</span><span class="detail-value" id="pmBatch">—</span></div>
       <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value" id="pmStatus">—</span></div>
-      <div class="detail-item"><span class="detail-label">Meal</span><span class="detail-value" id="pmMeal">—</span></div>
-      <div class="detail-item"><span class="detail-label">Quantity</span><span class="detail-value" id="pmQty">—</span></div>
       <div class="detail-item"><span class="detail-label">Destination Type</span><span class="detail-value" id="pmType">—</span></div>
       <div class="detail-item"><span class="detail-label">Prepared By</span><span class="detail-value" id="pmBy">—</span></div>
       <div class="detail-item"><span class="detail-label">Time</span><span class="detail-value" id="pmTime">—</span></div>
-      <div class="detail-item"><span class="detail-label">Linked Order</span><span class="detail-value" id="pmLinkedOrder">—</span></div>
+      <div class="detail-item span2"><span class="detail-label">Sent To / Linked Order</span><span class="detail-value" id="pmDest">—</span></div>
       <div class="detail-item span2"><span class="detail-label">Remarks</span><span class="detail-value" id="pmRemarks">—</span></div>
     </div>
-    <div class="modal-sub-title">Recipe Used — Ingredients Deducted</div>
+    <div class="modal-sub-title">Meals</div>
+    <div class="recipe-box" id="pmMeals"></div>
+    <div class="modal-sub-title">Ingredients Deducted</div>
     <div class="recipe-box" id="pmDeductions"></div>
     <div id="pmTransferWrap" style="margin-top:14px;display:none;">
       <div class="modal-sub-title" style="margin-top:0;">Linked Transfer</div>
@@ -230,7 +238,7 @@ const shell = KitchenShell.attach({
   topbarTarget:  '#topbarSlot',
   activeFile:    'kitchen-production-history.html',
   pageTitle:     'Production History',
-  pageSubtitle:  'Every production run — drafts, sent, accepted, rejected, completed',
+  pageSubtitle:  'Every production run — drafts, saved, awaiting approval, completed',
   apiMode:       'Demo',
   user:          { name: 'Head Chef', initials: 'HC' },
 });
@@ -246,37 +254,85 @@ async function loadShared(key, fallback){
 
 const KEY_PRODUCTIONS = 'kitchen-productions';
 
+/* Demo records match the ACTUAL shape saved by grace-kitchen-production.js:
+   meals[] and ingredients[] are arrays of {name, qty, unit} — not the old
+   flat meal/qty/unit/deductions[{ing,...}] shape, which is what was
+   producing "undefined" cells once a real production got saved. */
 const DEMO_PRODUCTIONS = [
-  { no:'PROD-00096', meal:'Fried Rice',   qty:30, unit:'Plates',  type:'rts', status:'sent',      time:'10:30 AM', by:'Head Chef', remarks:'Lunch preparation', linkedOrder:'',
-    deductions:[ {ing:'Rice',qty:3.00,unit:'kg'}, {ing:'Oil',qty:0.30,unit:'Ltr'}, {ing:'Curry',qty:0.60,unit:'kg'}, {ing:'Green Peas',qty:0.45,unit:'kg'}, {ing:'Chicken',qty:1.50,unit:'kg'}, {ing:'Seasoning',qty:0.09,unit:'kg'} ], transferNo:'KTN-00045' },
-  { no:'PROD-00095', meal:'Jollof Rice',  qty:20, unit:'Plates',  type:'rts', status:'accepted',  time:'10:15 AM', by:'Head Chef', remarks:'', linkedOrder:'',
-    deductions:[ {ing:'Rice',qty:2.00,unit:'kg'}, {ing:'Oil',qty:0.24,unit:'Ltr'}, {ing:'Tomato',qty:0.60,unit:'kg'}, {ing:'Pepper',qty:0.30,unit:'kg'}, {ing:'Chicken',qty:1.00,unit:'kg'}, {ing:'Seasoning',qty:0.06,unit:'kg'} ], transferNo:'KTN-00044' },
-  { no:'PROD-00094', meal:'Egusi Soup',   qty:15, unit:'Portions',type:'rts', status:'accepted',  time:'10:00 AM', by:'Sous Chef', remarks:'', linkedOrder:'',
-    deductions:[ {ing:'Egusi',qty:0.90,unit:'kg'}, {ing:'Palm Oil',qty:0.30,unit:'Ltr'}, {ing:'Spinach',qty:0.60,unit:'kg'}, {ing:'Chicken',qty:0.60,unit:'kg'}, {ing:'Seasoning',qty:0.045,unit:'kg'} ], transferNo:'KTN-00043' },
-  { no:'PROD-00093', meal:'Pepper Soup',  qty:2,  unit:'Portions',type:'coo', status:'completed', time:'09:45 AM', by:'Head Chef', remarks:'', linkedOrder:'ORD-1053',
-    deductions:[ {ing:'Chicken',qty:0.16,unit:'kg'}, {ing:'Pepper',qty:0.04,unit:'kg'}, {ing:'Seasoning',qty:0.008,unit:'kg'}, {ing:'Scent Leaf',qty:0.02,unit:'kg'} ], transferNo:'' },
-  { no:'PROD-00092', meal:'Moi Moi',      qty:25, unit:'Pieces',  type:'rts', status:'rejected',  time:'09:30 AM', by:'Sous Chef', remarks:'', linkedOrder:'',
-    deductions:[ {ing:'Beans Flour',qty:2.00,unit:'kg'}, {ing:'Oil',qty:0.25,unit:'Ltr'}, {ing:'Egg',qty:1.25,unit:'pcs'}, {ing:'Seasoning',qty:0.05,unit:'kg'} ], transferNo:'KTN-00042' },
+  { no:'PROD-00096', batchNo:'BATCH-00050', type:'rts', status:'sent', time:'10:30 AM', by:'Head Chef', remarks:'Lunch preparation',
+    destination:'Main Restaurant / POS', linkedOrder:'', transferNo:'KTN-00045',
+    meals:[ {name:'Fried Rice', qty:30, unit:'Plates'} ],
+    ingredients:[ {name:'Rice',qty:3.00,unit:'kg'}, {name:'Oil',qty:0.30,unit:'Ltr'}, {name:'Curry',qty:0.60,unit:'kg'}, {name:'Green Peas',qty:0.45,unit:'kg'}, {name:'Chicken',qty:1.50,unit:'kg'}, {name:'Seasoning',qty:0.09,unit:'kg'} ] },
+  { no:'PROD-00095', batchNo:'BATCH-00049', type:'rts', status:'accepted', time:'10:15 AM', by:'Head Chef', remarks:'',
+    destination:'Main Restaurant / POS', linkedOrder:'', transferNo:'KTN-00044',
+    meals:[ {name:'Jollof Rice', qty:20, unit:'Plates'} ],
+    ingredients:[ {name:'Rice',qty:2.00,unit:'kg'}, {name:'Oil',qty:0.24,unit:'Ltr'}, {name:'Tomato',qty:0.60,unit:'kg'}, {name:'Pepper',qty:0.30,unit:'kg'}, {name:'Chicken',qty:1.00,unit:'kg'}, {name:'Seasoning',qty:0.06,unit:'kg'} ] },
+  { no:'PROD-00094', batchNo:'BATCH-00048', type:'rts', status:'accepted', time:'10:00 AM', by:'Sous Chef', remarks:'',
+    destination:'Pool Bar', linkedOrder:'', transferNo:'KTN-00043',
+    meals:[ {name:'Egusi Soup', qty:15, unit:'Portions'} ],
+    ingredients:[ {name:'Egusi',qty:0.90,unit:'kg'}, {name:'Palm Oil',qty:0.30,unit:'Ltr'}, {name:'Spinach',qty:0.60,unit:'kg'}, {name:'Chicken',qty:0.60,unit:'kg'}, {name:'Seasoning',qty:0.045,unit:'kg'} ] },
+  { no:'PROD-00093', batchNo:'BATCH-00047', type:'coo', status:'completed', time:'09:45 AM', by:'Head Chef', remarks:'',
+    destination:'', linkedOrder:'ORD-1053', transferNo:'',
+    meals:[ {name:'Pepper Soup', qty:2, unit:'Portions'} ],
+    ingredients:[ {name:'Chicken',qty:0.16,unit:'kg'}, {name:'Pepper',qty:0.04,unit:'kg'}, {name:'Seasoning',qty:0.008,unit:'kg'}, {name:'Scent Leaf',qty:0.02,unit:'kg'} ] },
+  { no:'PROD-00092', batchNo:'BATCH-00046', type:'rts', status:'rejected', time:'09:30 AM', by:'Sous Chef', remarks:'',
+    destination:'Room Service', linkedOrder:'', transferNo:'KTN-00042',
+    meals:[ {name:'Moi Moi', qty:25, unit:'Pieces'} ],
+    ingredients:[ {name:'Beans Flour',qty:2.00,unit:'kg'}, {name:'Oil',qty:0.25,unit:'Ltr'}, {name:'Egg',qty:1.25,unit:'pcs'}, {name:'Seasoning',qty:0.05,unit:'kg'} ] },
 ];
 
 let productions = [];
 let page = 1;
 const PAGE_SIZE = 10;
 let filtered = [];
-const STATUS_LBL = { draft:'Draft', sent:'Sent', accepted:'Accepted', rejected:'Rejected', completed:'Completed' };
+const STATUS_LBL = { draft:'Draft', saved:'Saved', sent:'Awaiting Approval', accepted:'Accepted', rejected:'Rejected', completed:'Completed' };
 const TYPE_LBL = { rts:'Ready-to-Serve', coo:'Cook-on-Order' };
-function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
+function fmtQty(n){ return (Math.round((n||0)*100)/100).toString(); }
+
+// 'time' is stored as a 12-hour string ("10:30 AM") going forward, but this
+// defends the display against any older 24-hour ("14:30") values too.
+function formatTime12(t){
+  if (!t) return '—';
+  if (/am|pm/i.test(t)) return t.trim();
+  const m = String(t).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return t;
+  let h = parseInt(m[1], 10);
+  const min = m[2];
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${min} ${ampm}`;
+}
+
+function mealSummary(p){
+  const meals = p.meals || [];
+  if (!meals.length) return '—';
+  const first = meals[0];
+  const label = `${first.name} (${fmtQty(first.qty)} ${first.unit || ''})`.trim();
+  return meals.length > 1 ? `${label} +${meals.length - 1} more` : label;
+}
 
 function renderKPIs(){
   const total = productions.length;
-  const sent = productions.filter(p=>p.status==='sent').length;
-  const accepted = productions.filter(p=>p.status==='accepted').length;
+  const awaiting = productions.filter(p=>p.status==='sent').length;
+  const accepted = productions.filter(p=>p.status==='accepted' || p.status==='completed').length;
   const rejected = productions.filter(p=>p.status==='rejected').length;
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total Productions</div><div class="kpi-value">${total}</div><div class="kpi-trend">All-time record</div></div>
-    <div class="kpi-card"><div class="kpi-label">Awaiting Restaurant</div><div class="kpi-value" style="color:var(--blue);">${sent}</div><div class="kpi-trend">Sent, not yet accepted</div></div>
-    <div class="kpi-card"><div class="kpi-label">Accepted</div><div class="kpi-value" style="color:var(--green);">${accepted}</div><div class="kpi-trend">Confirmed into Restaurant stock</div></div>
-    <div class="kpi-card"><div class="kpi-label">Rejected</div><div class="kpi-value" style="color:${rejected>0?'var(--red)':'var(--text)'};">${rejected}</div><div class="kpi-trend">${rejected>0?'Review needed':'None on record'}</div></div>`;
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-icon-gold"><i class="fa-solid fa-layer-group"></i></div>
+      <div class="kpi-label">Total Productions</div><div class="kpi-value">${total}</div><div class="kpi-trend">All-time record</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-icon-blue"><i class="fa-solid fa-truck-fast"></i></div>
+      <div class="kpi-label">Awaiting Approval</div><div class="kpi-value" style="color:var(--blue);">${awaiting}</div><div class="kpi-trend">Sent, not yet accepted</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="kpi-label">Accepted / Completed</div><div class="kpi-value" style="color:var(--green);">${accepted}</div><div class="kpi-trend">Confirmed by destination</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-icon-red"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div class="kpi-label">Rejected</div><div class="kpi-value" style="color:${rejected>0?'var(--red)':'var(--text)'};">${rejected}</div><div class="kpi-trend">${rejected>0?'Review needed':'None on record'}</div>
+    </div>`;
 }
 
 function clearFilters(){
@@ -288,7 +344,7 @@ function getFiltered(){
   const st = document.getElementById('fStatus').value;
   const ty = document.getElementById('fType').value;
   return productions.filter(p => {
-    const mq = !q || p.no.toLowerCase().includes(q) || p.meal.toLowerCase().includes(q);
+    const mq = !q || p.no.toLowerCase().includes(q) || (p.meals||[]).some(m => (m.name||'').toLowerCase().includes(q));
     return mq && (!st||p.status===st) && (!ty||p.type===ty);
   });
 }
@@ -310,14 +366,13 @@ function renderTable(){
   const start=(page-1)*PAGE_SIZE;
   const pageRows = rows.slice(start,start+PAGE_SIZE);
   document.getElementById('tblBody').innerHTML = pageRows.length===0
-    ? `<tr class="empty-row"><td colspan="6">No productions found</td></tr>`
+    ? `<tr class="empty-row"><td colspan="5">No productions found</td></tr>`
     : pageRows.map(p => `<tr onclick="openProductionModal('${p.no}')">
         <td data-label="No." style="font-weight:600;">${p.no}</td>
-        <td data-label="Meal">${p.meal}</td>
-        <td data-label="Qty">${p.qty} ${p.unit}</td>
-        <td data-label="Type"><span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type]}</span></td>
-        <td data-label="Status"><span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span></td>
-        <td data-label="Time">${p.time}</td>
+        <td data-label="Meals">${mealSummary(p)}</td>
+        <td data-label="Type"><span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type] || p.type}</span></td>
+        <td data-label="Status"><span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span></td>
+        <td data-label="Time">${formatTime12(p.time)}</td>
       </tr>`).join('');
   renderPagination(rows.length);
 }
@@ -327,20 +382,29 @@ function openProductionModal(no){
   const p = productions.find(x=>x.no===no); if (!p) return;
   document.getElementById('pmTitle').textContent = `Production ${p.no}`;
   document.getElementById('pmNo').textContent = p.no;
-  document.getElementById('pmStatus').innerHTML = `<span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span>`;
-  document.getElementById('pmMeal').textContent = p.meal;
-  document.getElementById('pmQty').textContent = `${p.qty} ${p.unit}`;
-  document.getElementById('pmType').innerHTML = `<span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type]}</span>`;
+  document.getElementById('pmBatch').textContent = p.batchNo || '—';
+  document.getElementById('pmStatus').innerHTML = `<span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span>`;
+  document.getElementById('pmType').innerHTML = `<span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type] || p.type}</span>`;
   document.getElementById('pmBy').textContent = p.by || '—';
-  document.getElementById('pmTime').textContent = p.time || '—';
-  const lo = document.getElementById('pmLinkedOrder');
-  if (p.type==='coo' && p.linkedOrder) { lo.textContent=p.linkedOrder; lo.classList.remove('muted'); } else { lo.textContent='Not applicable'; lo.classList.add('muted'); }
+  document.getElementById('pmTime').textContent = formatTime12(p.time);
+
+  const dest = document.getElementById('pmDest');
+  if (p.type === 'rts') { dest.textContent = p.destination || '—'; dest.classList.toggle('muted', !p.destination); }
+  else { dest.textContent = p.linkedOrder || 'Not applicable'; dest.classList.toggle('muted', !p.linkedOrder); }
+
   const rm = document.getElementById('pmRemarks');
   if (p.remarks) { rm.textContent=p.remarks; rm.classList.remove('muted'); } else { rm.textContent='No remarks recorded.'; rm.classList.add('muted'); }
-  const ded = p.deductions || [];
+
+  const meals = p.meals || [];
+  document.getElementById('pmMeals').innerHTML = meals.length===0
+    ? `<div style="font-size:12px;color:var(--text3);">No meals recorded.</div>`
+    : meals.map(m => `<div class="ing-row"><span class="ing-name">${m.name}</span><span class="ing-qty">${fmtQty(m.qty)} ${m.unit||''}</span></div>`).join('');
+
+  const ded = p.ingredients || [];
   document.getElementById('pmDeductions').innerHTML = ded.length===0
     ? `<div style="font-size:12px;color:var(--text3);">No inventory deduction recorded (draft or unmapped recipe).</div>`
-    : ded.map(d => `<div class="ing-row"><span class="ing-name">${d.ing}</span><span class="ing-qty">−${fmtQty(d.qty)} ${d.unit}</span></div>`).join('');
+    : ded.map(d => `<div class="ing-row"><span class="ing-name">${d.name}</span><span class="ing-qty">−${fmtQty(d.qty)} ${d.unit||''}</span></div>`).join('');
+
   const xw = document.getElementById('pmTransferWrap');
   if (p.transferNo) { xw.style.display=''; document.getElementById('pmTransferLink').textContent = `🚚 View Transfer ${p.transferNo} →`; window._pmActiveTransfer = p.transferNo; }
   else xw.style.display='none';

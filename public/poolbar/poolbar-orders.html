@@ -2,45 +2,73 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<title>Orders | Aurum Pool Bar</title>
+<title>Orders | Grace Pool Bar</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-  }
+  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
   html{ height:auto; }
-  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  body{
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+    font-size:13px; background:var(--bg); color:var(--text); min-height:100vh; transition:background .3s,color .3s;
+  }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
-  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
+
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    flex:1; padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px;
+    background:var(--bg); color:var(--text);
+  }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  /* ═══ KPI CARDS — same pattern as Dashboard ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:112px; animation:fadeUp .4s ease both; }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); transition:transform .2s,box-shadow .2s,border-color .2s; display:flex; flex-direction:column; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
-  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
-  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.down{ color:var(--red); }
 
   /* Mode tabs */
   .mode-tabs{ display:flex; gap:2px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:4px; box-shadow:var(--shadow); flex-wrap:wrap; }
-  .mode-tab{ flex:1; min-width:150px; text-align:center; padding:11px; border-radius:10px; background:none; border:none; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--text3); cursor:pointer; transition:all .2s; }
+  .mode-tab{ flex:1; min-width:150px; text-align:center; padding:11px; border-radius:10px; background:none; border:none; font-family:inherit; font-size:13px; font-weight:700; color:var(--text3); cursor:pointer; transition:all .2s; }
+  .mode-tab i{ margin-right:6px; }
   .mode-tab.active{ background:var(--gold-dim); color:var(--gold); }
-  .mode-tab .sub{ display:block; font-size:10px; font-weight:400; color:var(--text3); margin-top:2px; }
+  .mode-tab .sub{ display:block; font-size:10px; font-weight:600; color:var(--text3); margin-top:2px; }
+  .tab-badge{ display:none; align-items:center; justify-content:center; min-width:19px; height:19px; padding:0 5px; border-radius:50%;
+    background:var(--blue); color:#fff; font-size:10.5px; font-weight:800; margin-left:6px; vertical-align:middle; }
+  .tab-badge.show{ display:inline-flex; }
 
   .view{ display:none; }
   .view.active{ display:block; }
@@ -50,119 +78,127 @@
   .menu-picker{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .mp-header{ padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .cat-tabs{ display:flex; gap:4px; flex-wrap:wrap; }
-  .cat-tab{ background:none; border:1px solid var(--border); border-radius:8px; padding:4px 11px; font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:500; color:var(--text3); cursor:pointer; white-space:nowrap; }
+  .cat-tab{ background:none; border:1px solid var(--border); border-radius:8px; padding:4px 11px; font-family:inherit; font-size:11.5px; font-weight:600; color:var(--text3); cursor:pointer; white-space:nowrap; }
   .cat-tab:hover, .cat-tab.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:160px; max-width:220px; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box i{ color:var(--text3); font-size:12px; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
   .mi-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; padding:14px; }
-  .mi-tile{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px; cursor:pointer; transition:all .15s; text-align:left; width:100%; font-family:'Outfit',sans-serif; position:relative; overflow:hidden; }
+  .mi-tile{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px; cursor:pointer; transition:all .15s; text-align:left; width:100%; font-family:inherit; position:relative; overflow:hidden; }
   .mi-tile:hover{ border-color:var(--gold-border); background:var(--gold-dim); }
   .mi-tile:disabled{ opacity:.5; cursor:not-allowed; }
   .mi-tile:disabled:hover{ border-color:var(--border); background:var(--surface2); }
-  .mi-cat{ font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:4px; }
-  .mi-name{ font-size:13px; font-weight:600; color:var(--text); margin-bottom:5px; }
-  .mi-price{ font-size:12.5px; color:var(--gold); font-weight:600; margin-bottom:5px; }
-  .mi-stock{ font-size:10.5px; color:var(--text3); }
-  .mi-stock.low{ color:var(--amber); } .mi-stock.out{ color:var(--red); font-weight:600; }
+  .mi-cat{ font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:4px; font-weight:700; }
+  .mi-name{ font-size:13px; font-weight:700; color:var(--text); margin-bottom:5px; }
+  .mi-price{ font-size:12.5px; color:var(--gold); font-weight:700; margin-bottom:5px; }
+  .mi-stock{ font-size:10.5px; color:var(--text3); font-weight:600; }
+  .mi-stock.low{ color:var(--amber); } .mi-stock.out{ color:var(--red); font-weight:700; }
   .mi-badge{ position:absolute; top:8px; right:8px; font-size:8.5px; font-weight:700; text-transform:uppercase; padding:2px 6px; border-radius:20px; background:var(--red-bg); color:var(--red); }
-  .empty-note{ font-size:12.5px; color:var(--text3); padding:24px; text-align:center; grid-column:1/-1; }
+  .empty-note{ font-size:12.5px; color:var(--text3); padding:24px; text-align:center; grid-column:1/-1; font-weight:600; }
 
   .cart-panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; position:sticky; top:16px; }
   .cart-head{ padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-  .cart-title{ font-size:13px; font-weight:600; color:var(--text); }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:4px 8px; }
+  .cart-title{ font-size:13px; font-weight:800; color:var(--text); }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; padding:4px 8px; display:inline-flex; align-items:center; gap:5px; }
   .btn-ghost:hover{ color:var(--gold); }
   .cart-body{ flex:1; overflow-y:auto; padding:8px 14px; min-height:80px; max-height:260px; }
-  .cart-empty{ text-align:center; padding:24px 12px; color:var(--text3); font-size:12.5px; }
+  .cart-empty{ text-align:center; padding:24px 12px; color:var(--text3); font-size:12.5px; font-weight:600; }
   .ci{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
   .ci:last-child{ border-bottom:none; }
-  .ci-name{ flex:1; font-size:12.5px; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ci-name{ flex:1; font-size:12.5px; color:var(--text); font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ci-qty{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
-  .ci-qty button{ background:var(--surface2); border:1px solid var(--border); color:var(--text); width:22px; height:22px; border-radius:6px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
+  .ci-qty button{ background:var(--surface2); border:1px solid var(--border); color:var(--text); width:22px; height:22px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; }
   .ci-qty button:hover{ background:var(--gold-dim); color:var(--gold); border-color:var(--gold-border); }
-  .ci-qty span{ font-size:12.5px; font-weight:600; min-width:18px; text-align:center; }
-  .ci-price{ font-size:12px; color:var(--gold); min-width:60px; text-align:right; flex-shrink:0; }
-  .ci-del{ background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; padding:2px 4px; flex-shrink:0; }
+  .ci-qty span{ font-size:12.5px; font-weight:700; min-width:18px; text-align:center; }
+  .ci-price{ font-size:12px; color:var(--gold); font-weight:700; min-width:60px; text-align:right; flex-shrink:0; }
+  .ci-del{ background:none; border:none; color:var(--text3); cursor:pointer; font-size:12px; padding:2px 4px; flex-shrink:0; }
   .ci-del:hover{ color:var(--red); }
   .cart-footer{ border-top:1px solid var(--border); padding:14px 16px; }
-  .ct-row{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--text2); margin-bottom:6px; align-items:center; }
-  .ct-row.total{ font-size:15px; font-weight:600; color:var(--text); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
-  .ct-row.total .ct-val{ color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:19px; }
+  .ct-row{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--text2); font-weight:600; margin-bottom:6px; align-items:center; }
+  .ct-row.total{ font-size:15px; font-weight:800; color:var(--text); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+  .ct-row.total .ct-val{ color:var(--gold); font-size:19px; }
   .disc-input{ width:50px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:3px 6px; color:var(--text); font-size:12px; text-align:center; outline:none; }
   .disc-input:focus{ border-color:var(--gold-border); }
   .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
-  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
-  .form-input, .form-select{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:9px; padding:8px 11px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; outline:none; width:100%; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .form-input, .form-select{ background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:8px 11px; color:var(--text); font-family:inherit; font-size:12.5px; outline:none; width:100%; }
   .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid transparent; }
-  .btn-primary{ background:var(--gold); color:#000; font-weight:700; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; transition:all .2s; border:1px solid transparent; }
+  .btn-primary{ background:var(--gold); color:#fff; font-weight:700; }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
   .btn-primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-success{ background:rgba(74,222,128,0.14); border-color:rgba(74,222,128,0.4); color:var(--green); font-weight:700; }
-  .btn-success:hover{ background:rgba(74,222,128,0.24); }
+  .btn-success{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); font-weight:700; }
+  .btn-success:hover{ background:rgba(18,183,106,0.22); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
 
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:space-between; }
   .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
-  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); white-space:nowrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.open{ background:var(--blue-bg); border-color:rgba(96,165,250,.4); color:var(--blue); }
-  .status-pill.on.served{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
+  .status-pill.on.open{ background:var(--blue-bg); border-color:rgba(47,111,237,.4); color:var(--blue); }
+  .status-pill.on.served{ background:var(--green-bg); border-color:rgba(18,183,106,.4); color:var(--green); }
   .status-pill.on.paid{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.cancelled{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
+  .status-pill.on.cancelled{ background:var(--red-bg); border-color:rgba(240,68,56,.4); color:var(--red); }
 
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .panel-title{ font-size:12.5px; font-weight:800; color:var(--text); }
+  .panel-note{ font-size:11px; color:var(--text3); font-weight:600; }
   .panel-body{ padding:16px 20px; }
   .tbl-wrap{ overflow-x:auto; }
   table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:820px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
   tbody tr{ border-bottom:1px solid var(--border); }
   tbody tr:last-child{ border-bottom:none; }
   tbody tr:hover{ background:var(--surface2); }
   tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
-  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; }
-  .chip-open{ background:var(--blue-bg); color:var(--blue); } .chip-open::before{ background:var(--blue); }
-  .chip-served{ background:var(--green-bg); color:var(--green); } .chip-served::before{ background:var(--green); }
-  .chip-paid{ background:var(--gold-dim); color:var(--gold-light); } .chip-paid::before{ background:var(--gold); }
-  .chip-cancelled{ background:var(--red-bg); color:var(--red); } .chip-cancelled::before{ background:var(--red); }
-  .chip-source{ background:var(--surface3); color:var(--text3); }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; font-weight:600; }
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .chip i{ font-size:7px; }
+  .chip-open{ background:var(--blue-bg); color:var(--blue); }
+  .chip-served{ background:var(--green-bg); color:var(--green); }
+  .chip-paid{ background:var(--gold-dim); color:var(--gold-light); }
+  .chip-cancelled{ background:var(--red-bg); color:var(--red); }
   .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:700; color:var(--text2); cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
 
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,20,45,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(420px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(420px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
   .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
   @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+  .modal-title{ font-size:17px; font-weight:800; color:var(--text); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:16px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
   .modal-close:hover{ color:var(--text); }
-  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
+  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; font-weight:600; }
   .val-note strong{ color:var(--text); }
-  .val-total{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:700; color:var(--gold); margin-bottom:14px; }
+  .val-total{ font-size:22px; font-weight:800; color:var(--gold); margin-bottom:14px; }
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
 
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
-  .toast.success{ border-left:3px solid var(--green); }
-  .toast.error{ border-left:3px solid var(--red); }
-  .toast.info{ border-left:3px solid var(--blue); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; font-weight:600; color:var(--text); box-shadow:var(--shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); } .toast.success i{ color:var(--green); }
+  .toast.error{ border-left:3px solid var(--red); } .toast.error i{ color:var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); } .toast.info i{ color:var(--blue); }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+
+  @media print{
+    #pbs-sidebar, #pbs-topbar, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+  }
 </style>
 </head>
 <body>
@@ -175,9 +211,9 @@
       <div class="kpi-row" id="kpiRow"></div>
 
       <div class="mode-tabs no-print">
-        <button class="mode-tab active" id="tabBuild" onclick="switchView('build')">＋ New Order<span class="sub">Quick sale or open tab</span></button>
-        <button class="mode-tab" id="tabActive" onclick="switchView('active')">📋 Active &amp; Recent Orders<span class="sub">Serve, pay or cancel</span></button>
-        <button class="mode-tab" id="tabRequisition" onclick="switchView('requisition')">🧾 New Requisition<span class="sub">Request stock from Store</span></button>
+        <button class="mode-tab active" id="tabBuild" onclick="switchView('build')"><i class="fa-solid fa-plus"></i>New Order<span class="sub">Quick sale or open tab</span></button>
+        <button class="mode-tab" id="tabActive" onclick="switchView('active')"><i class="fa-solid fa-clipboard-list"></i>Active &amp; Recent Orders<span class="tab-badge" id="activeOrdersBadge"></span><span class="sub">Serve, pay or cancel</span></button>
+        <button class="mode-tab" id="tabRequisition" onclick="switchView('requisition')"><i class="fa-solid fa-file-circle-plus"></i>New Requisition<span class="sub">Request stock from Store</span></button>
       </div>
 
       <!-- ═══ BUILD VIEW ═══ -->
@@ -186,14 +222,14 @@
           <div class="menu-picker">
             <div class="mp-header">
               <div class="cat-tabs" id="catTabs"></div>
-              <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" id="itemSearch" placeholder="Search item…" oninput="renderPicker()"></div>
+              <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="itemSearch" placeholder="Search item…" oninput="renderPicker()"></div>
             </div>
             <div class="mi-grid" id="itemGrid"></div>
           </div>
           <div class="cart-panel">
             <div class="cart-head">
               <div class="cart-title" id="cartTitleLbl">Quick Sale</div>
-              <button class="btn-ghost" onclick="clearCart()">Clear</button>
+              <button class="btn-ghost" onclick="clearCart()"><i class="fa-solid fa-rotate-left"></i>Clear</button>
             </div>
             <div class="cart-body" id="cartBody"><div class="cart-empty">Tap an item to add it</div></div>
             <div class="cart-footer">
@@ -230,7 +266,7 @@
                 <label class="form-label">Notes (optional)</label>
                 <input class="form-input" type="text" id="fNotes" placeholder="Special requests…">
               </div>
-              <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;" id="submitBtn" onclick="submitOrder()">✓ Complete Sale</button>
+              <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;" id="submitBtn" onclick="submitOrder()"><i class="fa-solid fa-check"></i>Complete Sale</button>
             </div>
           </div>
         </div>
@@ -246,11 +282,12 @@
             <div class="status-pill paid" data-status="paid"><span class="pdot" style="background:var(--gold)"></span>Paid</div>
             <div class="status-pill cancelled" data-status="cancelled"><span class="pdot" style="background:var(--red)"></span>Cancelled</div>
           </div>
+          <button class="act-btn" onclick="window.print()"><i class="fa-solid fa-print"></i>Print</button>
         </div>
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Orders</div>
-            <span style="font-size:11px;color:var(--text3);" id="ordCount">—</span>
+            <span class="panel-note" id="ordCount">—</span>
           </div>
           <div class="tbl-wrap">
             <table>
@@ -266,7 +303,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Raise a Requisition to Store</div>
-            <span style="font-size:11px;color:var(--text3);">Goes straight into the Store module's approval queue</span>
+            <span class="panel-note">Goes straight into the Store module's approval queue</span>
           </div>
           <div class="panel-body" id="requisitionFormPlaceholder"></div>
         </div>
@@ -281,7 +318,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Confirm Payment</div>
-      <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('payModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="val-note">Closing out <strong id="payOrderName"></strong>. This records the sale, deducts stock, and marks the tab as paid.</div>
     <div class="val-total" id="payOrderTotal">₦0</div>
@@ -293,7 +330,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('payModal')">Cancel</button>
-      <button class="btn btn-success btn-sm" onclick="confirmPayOrder()">✓ Confirm Payment</button>
+      <button class="btn btn-success btn-sm" onclick="confirmPayOrder()"><i class="fa-solid fa-check"></i>Confirm Payment</button>
     </div>
   </div>
 </div>
@@ -309,6 +346,8 @@ const shell = PoolBarShell.attach({
   pageSubtitle:  'Quick sales, open tabs, and requisitions to Store',
   apiMode:       'Demo',
   user:          { name: 'Pool Bar Manager', initials: 'PB' },
+  backHref:      'poolbar-sales.html',
+  backLabel:     'Back to Sales',
 });
 
 const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
@@ -331,10 +370,11 @@ const storage = window.storage || {
   async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
 };
 
-const KEY_STOCK     = 'poolbar-stock';
-const KEY_SALES     = 'poolbar-sales';
-const KEY_MOVEMENTS = 'poolbar-movements';
-const KEY_ORDERS    = 'poolbar-orders';
+const KEY_STOCK       = 'poolbar-stock';
+const KEY_SALES       = 'poolbar-sales';
+const KEY_MOVEMENTS   = 'poolbar-movements';
+const KEY_ORDERS      = 'poolbar-orders';
+const KEY_TRANSFERS   = 'poolbar-store-transfers'; // count of requisitions raised to Store from this page
 
 async function loadShared(key, fallback){
   try {
@@ -373,6 +413,7 @@ let stock = [];
 let sales = [];
 let orders = [];
 let movements = [];
+let transfersToday = 0;
 let cart = [];
 let mode = 'quick';
 let activeCat = 'All';
@@ -405,37 +446,52 @@ function switchMode(){
   mode = document.getElementById('fMode').value;
   document.getElementById('cartTitleLbl').textContent = mode==='quick' ? 'Quick Sale' : 'Open Tab';
   document.getElementById('payMethodGroup').style.display = mode==='quick' ? '' : 'none';
-  document.getElementById('submitBtn').textContent = mode==='quick' ? '✓ Complete Sale' : '✓ Open Tab';
+  document.getElementById('submitBtn').innerHTML = mode==='quick'
+    ? '<i class="fa-solid fa-check"></i>Complete Sale'
+    : '<i class="fa-solid fa-check"></i>Open Tab';
 }
 
-/* ═══ KPIs ═══ */
+/* ═══ KPIs — Completed / Store Transfers / Rejected / Units Received ═══ */
 function renderKPIs(){
   const today = todayDDMMYY();
-  const todaySales = sales.filter(s => s.status==='completed' && s.date.startsWith(today));
-  const revenue = todaySales.reduce((s,x)=>s+x.total,0);
-  const openTabs = orders.filter(o=>o.status==='open').length;
-  const servedTabs = orders.filter(o=>o.status==='served').length;
+  const completedToday = sales.filter(s => s.status==='completed' && s.date.startsWith(today));
+  const rejectedToday = orders.filter(o => o.status==='cancelled' && o.date.startsWith(today));
+  const unitsOnHand = stock.reduce((s,i)=>s+i.qty,0);
+
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-accent">💰</div><div class="kpi-label">Today's Sales</div>
-      <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
-      <div class="kpi-trend up">${todaySales.length} sale${todaySales.length!==1?'s':''} rung up</div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Completed</div></div>
+      <div class="kpi-value">${completedToday.length}</div>
+      <div class="kpi-trend up">${fmtN(completedToday.reduce((s,x)=>s+x.total,0))} in sales today</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-accent">🔔</div><div class="kpi-label">Open Tabs</div>
-      <div class="kpi-value" style="color:var(--blue);">${openTabs}</div>
-      <div class="kpi-trend ${openTabs>0?'warn':'up'}">${openTabs>0?'Awaiting service':'✓ All clear'}</div>
+    <div class="kpi-card acc-blue">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Store Transfers</div></div>
+      <div class="kpi-value">${transfersToday}</div>
+      <div class="kpi-trend neutral">${transfersToday>0?'Requisitions sent today':'None sent today'}</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-accent">🍹</div><div class="kpi-label">Served, Awaiting Payment</div>
-      <div class="kpi-value" style="color:var(--gold);">${servedTabs}</div>
-      <div class="kpi-trend ${servedTabs>0?'warn':'up'}">${servedTabs>0?'Ready to close out':'None pending'}</div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected</div></div>
+      <div class="kpi-value">${rejectedToday.length}</div>
+      <div class="kpi-trend ${rejectedToday.length>0?'down':'up'}">${rejectedToday.length>0?'Cancelled today':'None cancelled today'}</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-accent">📦</div><div class="kpi-label">Items In Stock</div>
-      <div class="kpi-value">${stock.filter(i=>i.qty>0).length}</div>
-      <div class="kpi-trend neutral">Of ${stock.length} tracked</div>
+    <div class="kpi-card acc-purple">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Units Received</div></div>
+      <div class="kpi-value">${unitsOnHand}</div>
+      <div class="kpi-trend neutral">Across ${stock.length} tracked items</div>
     </div>`;
+
+  updateActiveOrdersBadge();
+}
+
+/* Blue circled count on the "Active & Recent Orders" tab — mirrors the
+   sidebar's pending-requisition badge. Counts orders still needing
+   attention (open tabs + served-but-unpaid). */
+function updateActiveOrdersBadge(){
+  const active = orders.filter(o => o.status==='open' || o.status==='served').length;
+  const badge = document.getElementById('activeOrdersBadge');
+  if (!badge) return;
+  if (active > 0) { badge.textContent = active; badge.classList.add('show'); }
+  else badge.classList.remove('show');
 }
 
 /* ═══ PICKER (single source: Pool Bar Stock) ═══ */
@@ -495,7 +551,7 @@ function renderCart(){
       <div class="ci-name">${c.key}</div>
       <div class="ci-qty"><button onclick="adjustQty('${c.key.replace(/'/g,"\\'")}',-1)">−</button><span>${c.qty}</span><button onclick="adjustQty('${c.key.replace(/'/g,"\\'")}',1)">+</button></div>
       <div class="ci-price">${fmtN(c.price*c.qty)}</div>
-      <button class="ci-del" onclick="removeFromCart('${c.key.replace(/'/g,"\\'")}')">✕</button>
+      <button class="ci-del" onclick="removeFromCart('${c.key.replace(/'/g,"\\'")}')"><i class="fa-solid fa-xmark"></i></button>
     </div>`).join('');
   updateTotals();
 }
@@ -574,19 +630,19 @@ function renderOrdersTable(){
     ? `<tr class="empty-row"><td colspan="9">No orders match this filter.</td></tr>`
     : rows.map(o => `
       <tr>
-        <td style="font-weight:600;">${o.id}</td>
+        <td style="font-weight:700;">${o.id}</td>
         <td>${o.table}</td>
         <td>${o.items.length} item${o.items.length!==1?'s':''}</td>
-        <td style="font-weight:600;color:var(--gold);">${fmtN(o.total)}</td>
+        <td style="font-weight:700;color:var(--gold);">${fmtN(o.total)}</td>
         <td>${o.payMethod||'—'}</td>
         <td>${o.staff}</td>
         <td>${o.date}</td>
-        <td><span class="chip chip-${o.status}">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span></td>
+        <td><span class="chip chip-${o.status}"><i class="fa-solid fa-circle"></i>${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span></td>
         <td class="no-print">
           <div class="act-btns">
-            ${o.status==='open'?`<button class="act-btn" onclick="markServed('${o.id}')">Served</button>`:''}
-            ${o.status==='served'?`<button class="act-btn" onclick="openPayModal('${o.id}')">Pay</button>`:''}
-            ${(o.status==='open'||o.status==='served')?`<button class="act-btn" onclick="cancelOrder('${o.id}')">Cancel</button>`:''}
+            ${o.status==='open'?`<button class="act-btn" onclick="markServed('${o.id}')"><i class="fa-solid fa-bell-concierge"></i>Served</button>`:''}
+            ${o.status==='served'?`<button class="act-btn" onclick="openPayModal('${o.id}')"><i class="fa-solid fa-naira-sign"></i>Pay</button>`:''}
+            ${(o.status==='open'||o.status==='served')?`<button class="act-btn" onclick="cancelOrder('${o.id}')"><i class="fa-solid fa-ban"></i>Cancel</button>`:''}
           </div>
         </td>
       </tr>`).join('');
@@ -643,7 +699,8 @@ document.getElementById('payModal').addEventListener('click', function(e){ if (e
 /* ═══ NEW REQUISITION — reuses the shared Grace request form component.
    Writes to req:<no> / req-index in the same storage adapter the Store
    module (store.html / store-approval.html) reads, so a Pool Bar
-   requisition shows up there immediately — no separate pipe needed. ═══ */
+   requisition shows up there immediately — no separate pipe needed.
+   Each submission increments the "Store Transfers" KPI. ═══ */
 function ensureRequisitionForm(){
   if (requisitionForm) return;
   requisitionForm = GraceHotelRequestForm.attach('#requisitionFormPlaceholder', {
@@ -656,14 +713,19 @@ function ensureRequisitionForm(){
     currentUser: { name: 'Pool Bar Manager' },
     storage: storage,
     onOpenRequest: (reqNo) => { window.location.href = `poolbar-pending-requisitions.html?req=${reqNo}`; },
-    onSubmit: () => { shell.setPendingBadge && shell.setPendingBadge((orders.filter(o=>o.status==='open').length)); },
+    onSubmit: async () => {
+      transfersToday++;
+      await saveShared(KEY_TRANSFERS, [{ date: todayDDMMYY(), count: transfersToday }]);
+      renderKPIs();
+    },
   });
 }
 
 function showToast(msg, type='success'){
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i>${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
@@ -682,6 +744,9 @@ async function init(){
   sales  = await loadShared(KEY_SALES, DEMO_SALES);
   orders = await loadShared(KEY_ORDERS, DEMO_ORDERS);
   movements = await loadShared(KEY_MOVEMENTS, []);
+  const today = todayDDMMYY();
+  const transferRec = await loadShared(KEY_TRANSFERS, []);
+  transfersToday = (transferRec[0] && transferRec[0].date===today) ? transferRec[0].count : 0;
   await Promise.all([
     saveShared(KEY_STOCK, stock), saveShared(KEY_SALES, sales),
     saveShared(KEY_ORDERS, orders), saveShared(KEY_MOVEMENTS, movements),

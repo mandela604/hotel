@@ -1,231 +1,303 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" style="background:#080f18;">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="color-scheme" content="dark light">
+<meta name="color-scheme" content="light">
 <title>Shift Reconciliation | Aurum Accounting</title>
-
-<style>html,body{background:#080f18;margin:0;}</style>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{
-    --gold:#c9a84c; --gold-light:#e8c96a; --gold-dim:rgba(201,168,76,0.12); --gold-border:rgba(201,168,76,0.25);
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-  }
-  [data-theme="dark"]{
-    --bg:#080f18; --surface:#111e2b; --surface2:#162435; --surface3:#1c2e40;
-    --border:#1e3045; --border2:#243850; --text:#e8f0f8; --text2:#a8bece; --text3:#6a8a9e;
-    --input-bg:#0d1a27; --modal-bg:#0a1520;
-    --shadow:0 8px 32px rgba(0,0,0,0.5); --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
-  }
-  [data-theme="light"]{
-    --bg:#eef2f7; --surface:#ffffff; --surface2:#f4f7fb; --surface3:#e8edf5;
-    --border:#dce4ef; --border2:#ccd6e5; --text:#0f2237; --text2:#4a6580; --text3:#8aa0b8;
-    --input-bg:#f0f4f9; --modal-bg:#f8fafc;
-    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
-  }
+  /* This page owns layout + its own content only. Sidebar + topbar look/markup
+     live entirely in accounting-shell.js and stay on the shared dark/blue
+     theme. The .content scope below re-declares the SAME variable names
+     with light values, so only the main content area turns white — the
+     sidebar never sees this. Same palette + fonts + icon system as
+     accounting-reports.html (Segoe UI stack, Font Awesome, kpi-top/kpi-ic cards,
+     single-box date-range popover).
+     NOTE: the View/Reconcile modal lives in shift-reconciliation-detail.js
+     (a reusable component, same folder as this page) — this page no longer
+     owns any modal markup or CSS for it. Demo data for this page lives in
+     accounting-seed.js, not hardcoded here — see AccountingSeed below.
+     Row/action clicks use event delegation (data-key/data-dept + one
+     addEventListener), not inline onclick="" attributes, so they aren't
+     fragile against CSP or interpolation edge cases. */
   html{ height:auto; }
-  body{ font-family:'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
-  .app{ display:flex; min-height:100vh; }
-  .main{ flex:1; display:flex; flex-direction:column; min-width:0; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
-  .content{ flex:1; padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; }
-  @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
-  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
-  .shift-banner{ background:linear-gradient(135deg, var(--gold-dim), transparent 60%); border:1px solid var(--gold-border); border-radius:14px; padding:12px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .shift-banner .sb-icon{ font-size:19px; flex-shrink:0; }
-  .shift-banner .sb-text{ flex:1; min-width:220px; font-size:12px; color:var(--text2); line-height:1.5; }
-  .shift-banner .sb-text b{ color:var(--gold-light); }
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text);
+  }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
-  @media (max-width:1000px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
-  @media (max-width:480px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; min-height:112px; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; }
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
+
+  .print-header{ display:none; }
+  .print-header h2{ font-size:18px; font-weight:800; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
+
+  /* ═══ KPI CARDS — same shape/tokens as accounting-reports.html ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:46px; opacity:.16; line-height:1; pointer-events:none; }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
-  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
-  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
 
-  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
-  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
-  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
-  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
-  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:240px; flex:1; }
+  /* Toolbar — same pattern as accounting-reports.html: pill groups, filter selects */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; overflow:visible; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; position:relative; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:240px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; color-scheme:dark; }
-  [data-theme="light"] .filter-date{ color-scheme:light; }
-  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; color-scheme:light; }
+  .filter-select:focus{ border-color:var(--gold-border); }
   .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
-  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
-  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.open{ background:var(--amber-bg); border-color:rgba(251,191,36,.4); color:var(--amber); }
-  .status-pill.on.reconciled{ background:var(--green-bg); border-color:rgba(74,222,128,.4); color:var(--green); }
-  .status-pill.on.variance{ background:var(--red-bg); border-color:rgba(248,113,113,.4); color:var(--red); }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
-  .btn-ghost:hover{ color:var(--gold); }
+  .status-pill i{ font-size:10px; }
+  .status-pill.on{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.open{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
+  .status-pill.on.ok{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.bad{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
 
-  @media (max-width:700px){
+  @media (max-width:900px){
     .toolbar-row.top{ flex-direction:column; align-items:stretch; }
     .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .toolbar-actions{ flex-direction:column; align-items:stretch; }
     .flt-group{ width:100%; }
     .search-box{ max-width:100%; }
-    .filter-select, .filter-date{ width:100%; }
-    .status-pills{ flex-wrap:wrap; }
-    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .filter-select{ width:100%; }
   }
 
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-primary{ background:var(--gold); color:#fff; }
+  .btn-primary:hover{ background:var(--gold-light); }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
+
+  /* ═══ DATE RANGE PICKER — identical component to accounting-reports.html ═══ */
+  .daterange-trigger{
+    display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border);
+    border-radius:10px; padding:8px 12px; cursor:pointer; font-size:12.5px; color:var(--text); font-family:inherit;
+    transition:border-color .2s; white-space:nowrap; min-width:220px;
+  }
+  .daterange-trigger:hover, .daterange-trigger.open{ border-color:var(--gold-border); }
+  .daterange-trigger i.fa-calendar{ color:var(--text3); font-size:12px; }
+  .daterange-trigger span{ flex:1; font-weight:600; }
+  .daterange-trigger i.fa-chevron-down{ color:var(--text3); font-size:9px; transition:transform .2s; }
+  .daterange-trigger.open i.fa-chevron-down{ transform:rotate(180deg); }
+
+  .drp-pop{
+    display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:400; width:296px;
+    background:var(--modal-bg); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-lg);
+    padding:14px; animation:drpIn .16s ease;
+  }
+  .drp-pop.open{ display:block; }
+  @keyframes drpIn{ from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+  .drp-nav{ display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+  .drp-navbtn{ width:26px; height:26px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px; flex-shrink:0; transition:all .15s; }
+  .drp-navbtn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .drp-nav-selects{ flex:1; display:flex; gap:6px; }
+  .drp-nav-selects select{ flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:5px 6px; font-size:12px; color:var(--text); font-family:inherit; cursor:pointer; outline:none; color-scheme:light; }
+
+  .drp-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:10px; }
+  .drp-dow{ font-size:9px; font-weight:700; color:var(--text3); text-align:center; padding:4px 0; text-transform:uppercase; }
+  .drp-day{ position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text); cursor:pointer; border-radius:8px; transition:background .1s; }
+  .drp-day:hover{ background:var(--gold-dim); }
+  .drp-day.outside{ color:var(--text3); opacity:.35; }
+  .drp-day.in-range{ background:var(--gold-dim); border-radius:0; }
+  .drp-day.range-start{ background:var(--gold); color:#fff; border-radius:8px 0 0 8px; }
+  .drp-day.range-end{ background:var(--gold); color:#fff; border-radius:0 8px 8px 0; }
+  .drp-day.range-start.range-end{ border-radius:8px; }
+  .drp-day.today::after{ content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:3px; height:3px; border-radius:50%; background:var(--blue); }
+  .drp-day.range-start.today::after, .drp-day.range-end.today::after{ background:#fff; }
+
+  .drp-quick{ display:flex; gap:6px; margin-bottom:12px; }
+  .drp-quick button{ flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px; font-size:11px; font-weight:700; color:var(--text2); cursor:pointer; font-family:inherit; transition:all .15s; }
+  .drp-quick button:hover{ border-color:var(--gold-border); color:var(--gold); }
+
+  .drp-footer{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:10px; border-top:1px solid var(--border); }
+  .drp-selected-text{ font-size:10.5px; color:var(--text3); font-weight:600; }
+  .drp-footer-btns{ display:flex; gap:6px; }
+
+  /* Panel / Table */
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
-  .tbl-wrap{ overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:960px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
   thead th.center{ text-align:center; }
-  tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
   tbody tr:last-child{ border-bottom:none; }
   tbody tr:hover{ background:var(--surface2); }
   tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
   tbody td.center{ text-align:center; }
-  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
 
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-  .chip-open{ background:var(--amber-bg); color:var(--amber); } .chip-open::before{ background:var(--amber); }
-  .chip-ok{ background:var(--green-bg); color:var(--green); } .chip-ok::before{ background:var(--green); }
-  .chip-bad{ background:var(--red-bg); color:var(--red); } .chip-bad::before{ background:var(--red); }
+  .dept-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); font-weight:600; }
+  .dept-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
-  .btn-primary{ background:var(--gold); color:#000; font-weight:600; }
-  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
-  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
-  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-sm{ padding:6px 12px; font-size:11.5px; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip i{ font-size:6px; }
+  .chip-open{ background:var(--amber-bg); color:var(--amber); }
+  .chip-ok{ background:var(--green-bg); color:var(--green); }
+  .chip-bad{ background:var(--red-bg); color:var(--red); }
+
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:700; color:var(--text2); cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .act-btn.reconcile{ border-color:rgba(251,191,36,.4); color:var(--amber); background:var(--amber-bg); }
-  .act-btn.reconcile:hover{ border-color:var(--amber); background:rgba(251,191,36,.22); }
+  .act-btn.reconcile{ border-color:rgba(247,144,9,.4); color:var(--amber); background:var(--amber-bg); }
+  .act-btn.reconcile:hover{ border-color:var(--amber); background:rgba(247,144,9,.18); }
 
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; padding:0 7px; }
   .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
-  .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(520px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
-  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
-  .modal.mode-ok::before{ background:var(--green); }
-  .modal.mode-bad::before{ background:var(--red); }
-  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
-  .modal-close:hover{ color:var(--text); }
-  .modal-meta{ font-size:12px; color:var(--text3); margin-bottom:16px; line-height:1.6; }
-  .modal-meta b{ color:var(--text); }
-  .breakdown-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-bottom:16px; }
-  @media (max-width:460px){ .breakdown-grid{ grid-template-columns:1fr; } }
-  .bd-item{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
-  .bd-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; margin-bottom:4px; }
-  .bd-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
-  .form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
-  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
-  .form-label.req::after{ content:' *'; color:var(--red); }
-  .form-input, .form-textarea{ background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
-  .form-input:focus, .form-textarea:focus{ border-color:var(--gold-border); }
-  .form-textarea{ resize:vertical; min-height:60px; }
-  .variance-box{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:12px 0 16px; text-align:center; }
-  .variance-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; margin-bottom:4px; }
-  .variance-val{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; }
-  .variance-val.ok{ color:var(--green); } .variance-val.bad{ color:var(--red); } .variance-val.neutral{ color:var(--text3); }
-  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
-
-  /* Reconciliation history — audit trail shown inside the View modal */
-  .history-section{ margin-top:6px; }
-  .history-head{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--gold); font-weight:600; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
-  .history-entry{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:8px; }
-  .history-entry:last-child{ margin-bottom:0; }
-  .history-row-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px; }
-  .history-actor{ font-size:12.5px; font-weight:600; color:var(--text); }
-  .history-time{ font-size:10.5px; color:var(--text3); white-space:nowrap; }
-  .history-meta{ font-size:11.5px; color:var(--text2); display:flex; gap:12px; flex-wrap:wrap; margin-bottom:3px; }
-  .history-meta span b{ color:var(--text); }
-  .history-note{ font-size:11.5px; color:var(--text2); font-style:italic; margin-top:4px; line-height:1.4; }
-  .history-tag{ font-size:8.5px; text-transform:uppercase; font-weight:700; letter-spacing:.5px; padding:1px 7px; border-radius:20px; }
-  .history-tag.initial{ background:var(--blue-bg); color:var(--blue); }
-  .history-tag.correction{ background:var(--amber-bg); color:var(--amber); }
-  .empty-note{ font-size:12px; color:var(--text3); padding:10px 0; text-align:center; }
-
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(0,0,0,0.3); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
-  .toast.success{ border-left:3px solid var(--green); }
-  .toast.error{ border-left:3px solid var(--red); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:12.5px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-weight:600; }
+  .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
+  .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
 
   @media print{
-    #acc-sidebar, #acc-topbar, .toolbar, .pagination, .act-btn, .no-print{ display:none !important; }
+    #acc-sidebar, #acc-topbar, .toolbar, .no-print{ display:none !important; }
     .main{ margin-left:0 !important; }
     body{ background:#fff !important; color:#000 !important; }
-    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .panel, .kpi-card{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+    .print-header{ display:block !important; margin-bottom:14px; }
   }
 </style>
 </head>
 <body>
 <div class="app">
-  <div id="sidebarSlot"></div>
-  <div class="main">
-    <div id="topbarSlot"></div>
-    <div class="content">
 
-      <div class="shift-banner no-print">
-        <div class="sb-icon">🕘</div>
-        <div class="sb-text" id="bannerText"></div>
+  <!-- Sidebar is rendered here by accounting-shell.js -->
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <!-- Topbar is rendered here by accounting-shell.js -->
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+      <div class="print-header"><h2>Aurum Hotel — Shift Reconciliation Report</h2><p id="printSub"></p></div>
+
+      <div>
+        <div class="section-title">Shift Reconciliation</div>
       </div>
 
       <div class="kpi-row" id="kpiRow"></div>
 
+      <!-- Toolbar — department + status pills, search, date range, sort, print -->
       <div class="toolbar no-print">
         <div class="toolbar-row top">
           <div class="toolbar-left">
             <div class="flt-group">
+              <span class="flt-label">Department</span>
+              <div class="status-pills" id="deptPills">
+                <div class="status-pill on" data-dept="">All</div>
+                <div class="status-pill" data-dept="Rooms"><i class="fa-solid fa-circle" style="color:var(--purple)"></i>Rooms</div>
+                <div class="status-pill" data-dept="Restaurant"><i class="fa-solid fa-circle" style="color:var(--green)"></i>Restaurant</div>
+                <div class="status-pill" data-dept="Pool Bar"><i class="fa-solid fa-circle" style="color:var(--amber)"></i>Pool Bar</div>
+              </div>
+            </div>
+            <div class="flt-group">
               <span class="flt-label">Status</span>
               <div class="status-pills" id="statusPills">
                 <div class="status-pill on all" data-status="">All</div>
-                <div class="status-pill open" data-status="open"><span class="pdot" style="background:var(--amber)"></span>Awaiting Count</div>
-                <div class="status-pill reconciled" data-status="ok"><span class="pdot" style="background:var(--green)"></span>Reconciled</div>
-                <div class="status-pill variance" data-status="bad"><span class="pdot" style="background:var(--red)"></span>Variance</div>
+                <div class="status-pill open" data-status="open"><i class="fa-solid fa-circle" style="color:var(--amber)"></i>Awaiting Count</div>
+                <div class="status-pill ok" data-status="ok"><i class="fa-solid fa-circle" style="color:var(--green)"></i>Reconciled</div>
+                <div class="status-pill bad" data-status="bad"><i class="fa-solid fa-circle" style="color:var(--red)"></i>Variance</div>
               </div>
             </div>
             <div class="flt-group" style="flex:1;min-width:180px;max-width:240px;">
               <span class="flt-label">Search</span>
-              <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" id="fSearch" placeholder="Staff name…" oninput="page=1;render()"></div>
+              <div class="search-box"><i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i><input type="text" id="fSearch" placeholder="Staff name…" oninput="page=1;render()"></div>
             </div>
-            <div class="flt-group"><span class="flt-label">From</span><input type="date" class="filter-date" id="fFrom" onchange="page=1;render()"></div>
-            <div class="flt-group"><span class="flt-label">To</span><input type="date" class="filter-date" id="fTo" onchange="page=1;render()"></div>
+
+            <!-- ═══ Single date-range box — click opens the calendar popover ═══ -->
+            <div class="flt-group">
+              <span class="flt-label">Date Range</span>
+              <button type="button" class="daterange-trigger" id="drpTrigger">
+                <i class="fa-regular fa-calendar"></i>
+                <span id="drpLabel">All Dates</span>
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+
+              <div class="drp-pop" id="drpPop">
+                <div class="drp-nav">
+                  <button type="button" class="drp-navbtn" id="drpPrev"><i class="fa-solid fa-chevron-left"></i></button>
+                  <div class="drp-nav-selects">
+                    <select id="drpMonthSel"></select>
+                    <select id="drpYearSel"></select>
+                  </div>
+                  <button type="button" class="drp-navbtn" id="drpNext"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                <div class="drp-grid" id="drpGrid"></div>
+                <div class="drp-quick">
+                  <button type="button" data-q="month">This Month</button>
+                  <button type="button" data-q="year">This Year</button>
+                </div>
+                <div class="drp-footer">
+                  <span class="drp-selected-text" id="drpSelectedText">Pick a start date</span>
+                  <div class="drp-footer-btns">
+                    <button type="button" class="btn btn-outline btn-sm" id="drpCancel">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="drpApply">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="flt-group">
               <span class="flt-label">Sort By</span>
               <select class="filter-select" id="fSort" onchange="page=1;render()">
@@ -234,22 +306,24 @@
                 <option value="variance_desc">Variance (High → Low)</option>
               </select>
             </div>
-            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+          <div class="toolbar-actions">
+            <button class="btn btn-outline btn-sm" onclick="printReport()"><i class="fa-solid fa-print"></i> Print</button>
+          </div>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">Shift Reconciliation Log</div>
+          <div class="panel-title">Shift Reconciliation Log — one cashier per department, per shift</div>
           <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
         </div>
         <div class="tbl-wrap">
           <table>
             <thead>
               <tr>
-                <th>Shift (9AM–9AM)</th><th>Staff</th><th class="center">Opening Float</th>
+                <th>Department</th><th>Shift (9AM–9AM)</th><th>Staff</th><th class="center">Opening Float</th>
                 <th class="center">Cash Sales</th><th class="center">Expected Cash</th>
                 <th class="center">Actual Cash</th><th class="center">Variance</th><th class="center">Status</th>
                 <th class="no-print center">Actions</th>
@@ -268,65 +342,32 @@
   </div>
 </div>
 
-<!-- VIEW MODAL (reconciled shifts) -->
-<div class="modal-overlay" id="viewModal">
-  <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="vTitle">Shift Detail</div><button class="modal-close" onclick="closeModal('viewModal')">✕</button></div>
-    <div class="modal-meta" id="vMeta"></div>
-    <div class="breakdown-grid" id="vBreakdown"></div>
-    <div class="variance-box"><div class="variance-label">Variance</div><div class="variance-val" id="vVarianceVal">—</div></div>
-    <div class="history-section">
-      <div class="history-head">Reconciliation History</div>
-      <div id="vHistory"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('viewModal')">Close</button>
-      <button class="btn btn-primary btn-sm" id="vCorrectBtn" onclick="startCorrection()">✎ Correct Entry</button>
-    </div>
-  </div>
-</div>
-
-<!-- RECONCILE MODAL (open shifts, and corrections to reconciled shifts) -->
-<div class="modal-overlay" id="reconcileModal">
-  <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="rTitle">Reconcile Shift</div><button class="modal-close" onclick="closeModal('reconcileModal')">✕</button></div>
-    <div class="modal-meta" id="rMeta"></div>
-    <div class="breakdown-grid" id="rBreakdown"></div>
-    <div class="form-group">
-      <label class="form-label req">Your Name (performing this count)</label>
-      <input class="form-input" type="text" id="rActorName" placeholder="e.g. Amaka Okonkwo (Duty Manager)">
-    </div>
-    <div class="form-group">
-      <label class="form-label req">Actual Cash Counted (₦)</label>
-      <input class="form-input" type="number" id="rActualCash" placeholder="0" min="0" oninput="updateVariancePreview()">
-    </div>
-    <div class="variance-box"><div class="variance-label">Variance (Actual − Expected)</div><div class="variance-val neutral" id="rVarianceVal">₦0</div></div>
-    <div class="form-group">
-      <label class="form-label">Notes <span style="text-transform:none;color:var(--text3);">(explain any shortfall, overage, or reason for a correction)</span></label>
-      <textarea class="form-textarea" id="rNotes" placeholder="Optional…"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('reconcileModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="confirmReconcile()">✓ Confirm Reconciliation</button>
-    </div>
-  </div>
-</div>
-
 <script src="../component/accounting-shell.js"></script>
+<!-- Demo/seed data for this module — see file header for why this exists
+     as its own file instead of being hardcoded inline. -->
+<script src="accounting-seed.js"></script>
+<!-- Shift Reconciliation detail/reconcile modal — Accounting-module component,
+     not the shared /component folder, since it speaks accounting vocabulary
+     (shifts, cash counts, variance) rather than being generic UI chrome. -->
+<script src="shift-reconciliation-detail.js"></script>
 <script>
 const shell = AccountingShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'accounting-reconciliation.html',
   pageTitle:     'Shift Reconciliation',
-  pageSubtitle:  'Count cash against expected revenue for every shift',
+  pageSubtitle:  'One cashier, one department, one shift — count cash against expected revenue',
   apiMode:       'Demo',
   user:          { name: 'Finance Manager', initials: 'FM' },
 });
 
 /* ═══════════════════════════════════════════
-   SHIFT-DAY LOGIC — duplicated from accounting-dashboard.html
-   (each Accounting page owns this standalone, by design).
+   SEED DATA — pulled from accounting-seed.js, not hardcoded here.
+═══════════════════════════════════════════ */
+const { DEPARTMENTS, DEPT_COLOR, DEMO_ROOM_TX, DEMO_RESTAURANT_SALES, DEMO_POOLBAR_SALES, DEMO_SHIFTS, VARIANCE_TOLERANCE } = AccountingSeed;
+
+/* ═══════════════════════════════════════════
+   SHIFT-DAY LOGIC
 ═══════════════════════════════════════════ */
 const SHIFT_START_HOUR = 9;
 function pad2(n){ return String(n).padStart(2,'0'); }
@@ -337,7 +378,6 @@ function shiftKeyFor(dt){
   return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
 }
 function fmtTime(d){ return d.toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit',hour12:true}); }
-function fmtHourLabel(h){ const suffix = h>=12?'PM':'AM'; const hh = h%12===0?12:h%12; return `${hh}:00 ${suffix}`; }
 function shiftRangeLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
@@ -345,7 +385,8 @@ function shiftRangeLabel(key){
   const opt = {day:'numeric', month:'short'};
   return `${start.toLocaleDateString('en-GB',opt)}, ${fmtTime(start)} → ${end.toLocaleDateString('en-GB',opt)}, ${fmtTime(end)}`;
 }
-function shiftDateOnly(key){ const [y,m,d]=key.split('-').map(Number); return new Date(y,m-1,d); }
+function shortDateLabel(key){ const [y,m,d] = key.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function fullDateLabel(key){ const [y,m,d] = key.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}); }
 function parseTxDate(str){
   if (!str) return null;
   const [datePart, timePart, ampm] = str.split(' ');
@@ -384,41 +425,34 @@ async function loadShared(key, fallback){
 async function saveShared(key, value){ try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); } }
 
 const KEY_RECON_LOG = 'accounting-reconciliation-log';
+const KEY_SHIFTS = 'accounting-shifts';
 
-/* Same demo seed shape as accounting-dashboard.html so both pages agree */
-const DEMO_ROOM_TX = [
-  { id:'RM-2044', desc:'Room 312 — Checkout (Dr. Balogun)', amount:145000, method:'Room Charge', staff:'Adewale O.', date:'17/07/26 08:40 AM' },
-  { id:'RM-2043', desc:'Room 204 — Check-in (Mr. Adeyemi)', amount:98000,  method:'POS',         staff:'Adewale O.', date:'17/07/26 09:14 AM' },
-  { id:'RM-2042', desc:'Room 109 — Checkout (Ms. Okafor)',  amount:76000,  method:'Cash',         staff:'Ngozi Eze',  date:'17/07/26 08:05 AM' },
-  { id:'RM-2041', desc:'Room 402 — Check-in (Barr. Musa)',  amount:132000, method:'Transfer',     staff:'Adewale O.', date:'16/07/26 11:20 PM' },
-  { id:'RM-2040', desc:'Room 108 — Checkout (Mrs. Bello)',  amount:64000,  method:'Cash',         staff:'Kabiru Aliyu',date:'16/07/26 08:52 AM' },
-  { id:'RM-2039', desc:'Room 210 — Checkout (Mr. Yusuf)',   amount:52000,  method:'Cash',         staff:'Amaka Okonkwo',date:'15/07/26 09:40 AM' },
-];
-const DEMO_RESTAURANT_SALES = [
-  { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', date:'17/07/26 11:05 AM', status:'completed' },
-  { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000}], total:18000, method:'POS', staff:'Tunde A.', table:'Table 2', date:'17/07/26 10:40 AM', status:'completed' },
-  { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', date:'17/07/26 09:52 AM', status:'completed' },
-  { id:'SALE-1038', items:[{meal:'Suya Platter',qty:2,price:5500}], total:11000, method:'Cash', staff:'Tunde A.', table:'Table 6', date:'17/07/26 12:20 AM', status:'completed' },
-  { id:'SALE-1030', items:[{meal:'Jollof Rice',qty:4,price:5500}], total:22000, method:'Cash', staff:'Amaka O.', table:'Table 1', date:'15/07/26 07:10 PM', status:'completed' },
-];
-const DEMO_POOLBAR_SALES = [
-  { id:'PBS-1021', item:'Heineken',  qty:3, total:4500,  method:'Cash',     staff:'Bola Nwosu', time:'17/07/26 11:15 AM' },
-  { id:'PBS-1020', item:'Mojito',    qty:2, total:11000, method:'POS',      staff:'Bola Nwosu', time:'17/07/26 10:50 AM' },
-  { id:'PBS-1018', item:'Heineken',  qty:6, total:9000,  method:'Cash',     staff:'Emeka U.',   time:'17/07/26 01:05 AM' },
-  { id:'PBS-1012', item:'Guinness',  qty:4, total:6400,  method:'Cash',     staff:'Bola Nwosu', time:'15/07/26 06:30 PM' },
-];
-const DEMO_SHIFTS = [
-  { key:'2026-07-17', staff:'Amaka Okonkwo (Front Office Cashier)', openingFloat:50000, actualCash:null, status:'open', notes:'' },
-  { key:'2026-07-16', staff:'Tunde Adeyemi (Front Office Cashier)', openingFloat:50000, actualCash:399500, status:'reconciled', notes:'' },
-  { key:'2026-07-15', staff:'Amaka Okonkwo (Front Office Cashier)', openingFloat:50000, actualCash:255000, status:'reconciled', notes:'Short by ₦5,000 — under investigation.' },
-];
-/* Seed history so the two already-reconciled demo shifts above have a
-   matching audit entry to display, instead of an empty trail. */
-const DEMO_RECON_LOG = [
-  { key:'2026-07-16', actor:'Tunde Adeyemi (Front Office Cashier)', actualCash:399500, expected:399500, variance:0, notes:'', type:'initial', date:'16/07/26 09:05 AM' },
-  { key:'2026-07-15', actor:'Amaka Okonkwo (Front Office Cashier)', actualCash:255000, expected:260000, variance:-5000, notes:'Short by ₦5,000 — under investigation.', type:'initial', date:'15/07/26 09:10 AM' },
-];
+/* ═══════════════════════════════════════════
+   SHAPE VALIDATION — this is what actually fixes the "undefined" cells.
+   Loading whatever happens to be sitting in localStorage under
+   KEY_SHIFTS without checking its shape is how a shift row ends up
+   missing `dept` or `staff` (e.g. left over from an earlier version of
+   this page, or corrupted by hand-editing storage during testing).
+   Anything that doesn't look like a real shift record gets thrown out
+   and the whole array is reseeded from AccountingSeed.DEMO_SHIFTS
+   instead of rendering broken rows.
+═══════════════════════════════════════════ */
+function isValidShift(s){
+  return s
+    && typeof s.key === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.key)
+    && typeof s.dept === 'string' && DEPARTMENTS.includes(s.dept)
+    && typeof s.staff === 'string' && s.staff.trim().length > 0
+    && typeof s.openingFloat === 'number'
+    && (s.status === 'open' || s.status === 'reconciled')
+    && (s.status === 'open' || typeof s.actualCash === 'number'); // reconciled shifts must have a resolved number, never the literal 'auto'
+}
+function isValidShiftsArray(arr){
+  return Array.isArray(arr) && arr.length > 0 && arr.every(isValidShift);
+}
 
+/* ═══════════════════════════════════════════
+   SHIFTS — one row per DEPARTMENT per shift day.
+═══════════════════════════════════════════ */
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 
 function buildTransactions(roomTx, restSales, poolSales){
@@ -440,31 +474,102 @@ let shifts = [];
 let reconLog = [];
 let page = 1;
 let statusFilter = '';
-let activeKey = null;
-let correctionMode = false;
-const VARIANCE_TOLERANCE = 500; // ₦ — within this counts as "Reconciled" not "Variance"
+let deptFilter = '';
 
-function cashForShift(key){ return transactions.filter(t => t.method==='Cash' && shiftKeyFor(t.date)===key).reduce((s,t)=>s+t.amount,0); }
-function grossForShift(key){ return transactions.filter(t => shiftKeyFor(t.date)===key).reduce((s,t)=>s+t.amount,0); }
-function txCountForShift(key){ return transactions.filter(t => shiftKeyFor(t.date)===key).length; }
-function expectedCash(shift){ return shift.openingFloat + cashForShift(shift.key); }
+function findShift(key, dept){ return shifts.find(s => s.key === key && s.dept === dept); }
+function txForShift(dept, key){ return transactions.filter(t => t.dept === dept && shiftKeyFor(t.date) === key); }
+function cashForShift(dept, key){ return txForShift(dept, key).filter(t => t.method === 'Cash').reduce((s,t)=>s+t.amount,0); }
+function grossForShift(dept, key){ return txForShift(dept, key).reduce((s,t)=>s+t.amount,0); }
+function txCountForShift(dept, key){ return txForShift(dept, key).length; }
+function expectedCash(shift){ return shift.openingFloat + cashForShift(shift.dept, shift.key); }
+function methodBreakdown(dept, key){
+  const rows = {};
+  txForShift(dept, key).forEach(t => { rows[t.method] = (rows[t.method]||0) + t.amount; });
+  return rows;
+}
 function shiftHealth(shift){
   if (shift.status !== 'reconciled') return 'open';
   const v = shift.actualCash - expectedCash(shift);
   return Math.abs(v) <= VARIANCE_TOLERANCE ? 'ok' : 'bad';
 }
-function historyForShift(key){
-  return reconLog.filter(h => h.key === key).sort((a,b) => parseTxDate(b.date) - parseTxDate(a.date));
+function historyForShift(dept, key){
+  return reconLog.filter(h => h.key === key && h.dept === dept).sort((a,b) => parseTxDate(b.date) - parseTxDate(a.date));
 }
 
 /* ═══════════════════════════════════════════
-   BANNER + KPIs
+   SHIFT RECONCILIATION DETAIL COMPONENT — one instance for this page.
+   Handles the view (breakdown/methods/variance/history) and the
+   reconcile/correct form; this page only builds the payload and
+   persists what comes back through onReconcile.
 ═══════════════════════════════════════════ */
-function renderBanner(){
-  document.getElementById('bannerText').innerHTML =
-    `<b>Shift Day accounting</b> — a shift runs <b>${fmtHourLabel(SHIFT_START_HOUR)} → ${fmtHourLabel(SHIFT_START_HOUR)} the next day</b>. ` +
-    `Count the cash drawer against expected cash sales to close out each shift.`;
+const shiftDetail = ShiftReconciliationDetail.create({ varianceTolerance: VARIANCE_TOLERANCE });
+
+function buildShiftPayload(key, dept){
+  const s = findShift(key, dept);
+  if (!s) return null;
+  const history = historyForShift(dept, key);
+  const mb = methodBreakdown(dept, key);
+  return {
+    dept, key,
+    rangeLabel: shiftRangeLabel(key),
+    staff: s.staff,
+    openingFloat: s.openingFloat,
+    txCount: txCountForShift(dept, key),
+    grossSales: grossForShift(dept, key),
+    cashSales: cashForShift(dept, key),
+    expectedCash: expectedCash(s),
+    status: s.status,
+    actualCash: s.actualCash,
+    notes: s.notes,
+    lastActor: history[0] ? history[0].actor : s.staff,
+    varianceTolerance: VARIANCE_TOLERANCE,
+    methodBreakdown: Object.keys(mb).map(m => ({ method:m, amount:mb[m] })),
+    history,
+  };
 }
+
+function openShift(key, dept){
+  const payload = buildShiftPayload(key, dept);
+  if (!payload) { console.warn('[Reconciliation] No shift found for', key, dept); return; }
+  shiftDetail.open(payload, { onReconcile: handleReconcile, onSuccess: handleReconcileSuccess });
+}
+
+async function handleReconcile(result){
+  const s = findShift(result.key, result.dept);
+  if (!s) throw new Error('Shift record not found — please refresh and try again.');
+
+  s.actualCash = result.actualCash;
+  s.status = 'reconciled';
+  s.notes = result.notes;
+
+  reconLog.unshift({
+    key: result.key, dept: result.dept, actor: result.actor,
+    actualCash: result.actualCash, expected: result.expected, variance: result.variance,
+    notes: result.notes, type: result.isCorrection ? 'correction' : 'initial',
+    date: nowStamp(),
+  });
+
+  await Promise.all([ saveShared(KEY_SHIFTS, shifts), saveShared(KEY_RECON_LOG, reconLog) ]);
+  apiSave('PATCH', `/api/accounting/shifts/${result.dept}/${result.key}`, {
+    actualCash: result.actualCash, notes: result.notes, status:'reconciled',
+    actor: result.actor, type: result.isCorrection ? 'correction' : 'initial',
+  });
+}
+
+function handleReconcileSuccess(result){
+  const verb = result.isCorrection ? 'corrected' : 'reconciled';
+  showToast(
+    result.health === 'ok'
+      ? `${result.dept} — ${result.rangeLabel} ${verb} by ${result.actor} — within tolerance.`
+      : `${result.dept} — ${result.rangeLabel} ${verb} by ${result.actor} — variance flagged for review.`,
+    result.health === 'ok' ? 'success' : 'error'
+  );
+  render();
+}
+
+/* ═══════════════════════════════════════════
+   KPIs
+═══════════════════════════════════════════ */
 function renderKPIs(){
   const open = shifts.filter(s=>s.status==='open').length;
   const reconciled = shifts.filter(s=>shiftHealth(s)==='ok').length;
@@ -472,23 +577,23 @@ function renderKPIs(){
   const totalVarianceAmt = shifts.filter(s=>s.status==='reconciled').reduce((sum,s)=>sum+(s.actualCash-expectedCash(s)),0);
 
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-accent">🕘</div><div class="kpi-label">Awaiting Count</div>
+    <div class="kpi-card acc-amber">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Awaiting Count</div></div>
       <div class="kpi-value" style="color:${open>0?'var(--amber)':'var(--text)'};">${open}</div>
-      <div class="kpi-trend ${open>0?'warn':'up'}">${open>0?'⚠ Needs cash count':'✓ All closed out'}</div>
+      <div class="kpi-trend ${open>0?'warn':'up'}">${open>0?'Needs cash count':'All closed out'}</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-accent">✓</div><div class="kpi-label">Reconciled</div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Reconciled</div></div>
       <div class="kpi-value" style="color:var(--green);">${reconciled}</div>
       <div class="kpi-trend up">Within ${fmtN(VARIANCE_TOLERANCE)} tolerance</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-accent">⚠</div><div class="kpi-label">Flagged for Variance</div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Flagged for Variance</div></div>
       <div class="kpi-value" style="color:${variance>0?'var(--red)':'var(--text)'};">${variance}</div>
       <div class="kpi-trend ${variance>0?'warn':'up'}">${variance>0?'Needs investigation':'None on record'}</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-accent">₦</div><div class="kpi-label">Net Variance (All Time)</div>
+    <div class="kpi-card acc-blue">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Net Cash Variance (All Time)</div></div>
       <div class="kpi-value" style="color:${totalVarianceAmt<0?'var(--red)':totalVarianceAmt>0?'var(--green)':'var(--text)'};">${totalVarianceAmt>=0?'+':''}${fmtN(totalVarianceAmt)}</div>
       <div class="kpi-trend neutral">Across reconciled shifts</div>
     </div>`;
@@ -496,13 +601,23 @@ function renderKPIs(){
 }
 
 /* ═══════════════════════════════════════════
-   STATUS PILLS + FILTER + SORT
+   DEPARTMENT + STATUS PILLS
 ═══════════════════════════════════════════ */
+function bindDeptPills(){
+  document.querySelectorAll('#deptPills .status-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      deptFilter = p.dataset.dept;
+      document.querySelectorAll('#deptPills .status-pill').forEach(x=>x.classList.remove('on'));
+      p.classList.add('on');
+      page = 1; render();
+    });
+  });
+}
 function bindStatusPills(){
-  document.querySelectorAll('.status-pill').forEach(p => {
+  document.querySelectorAll('#statusPills .status-pill').forEach(p => {
     p.addEventListener('click', () => {
       statusFilter = p.dataset.status;
-      document.querySelectorAll('.status-pill').forEach(x=>x.classList.remove('on'));
+      document.querySelectorAll('#statusPills .status-pill').forEach(x=>x.classList.remove('on'));
       p.classList.add('on');
       page = 1; render();
     });
@@ -510,44 +625,164 @@ function bindStatusPills(){
 }
 function clearFilters(){
   document.getElementById('fSearch').value = '';
-  document.getElementById('fFrom').value = '';
-  document.getElementById('fTo').value = '';
   document.getElementById('fSort').value = 'date_desc';
-  statusFilter = '';
-  document.querySelectorAll('.status-pill').forEach(x=>x.classList.remove('on'));
-  document.querySelector('.status-pill.all').classList.add('on');
+  statusFilter = ''; deptFilter = '';
+  document.querySelectorAll('#statusPills .status-pill').forEach(x=>x.classList.remove('on'));
+  document.querySelector('#statusPills .status-pill.all').classList.add('on');
+  document.querySelectorAll('#deptPills .status-pill').forEach(x=>x.classList.remove('on'));
+  document.querySelector('#deptPills .status-pill[data-dept=""]').classList.add('on');
+  clearDateRange();
   page = 1; render();
 }
-function getFiltered(){
-  const q = document.getElementById('fSearch').value.toLowerCase();
-  const from = document.getElementById('fFrom').value;
-  const to = document.getElementById('fTo').value;
-  const sort = document.getElementById('fSort').value;
+
+/* ═══════════════════════════════════════════
+   DATE RANGE — identical popover component to accounting-reports.html.
+   rangeFrom/rangeTo (YYYY-MM-DD) filter the shift's own `key` date.
+═══════════════════════════════════════════ */
+let rangeFrom = '', rangeTo = '';
+let viewMonth = new Date().getMonth();
+let viewYear  = new Date().getFullYear();
+let pendingStart = null, pendingEnd = null;
+
+const trigger   = document.getElementById('drpTrigger');
+const pop       = document.getElementById('drpPop');
+const monthSel  = document.getElementById('drpMonthSel');
+const yearSel   = document.getElementById('drpYearSel');
+
+function setRange(from, to){ rangeFrom = from; rangeTo = to; updateTriggerLabel(); }
+function clearDateRange(){ setRange('', ''); }
+function updateTriggerLabel(){
+  const label = document.getElementById('drpLabel');
+  if (!rangeFrom || !rangeTo) { label.textContent = 'All Dates'; return; }
+  label.textContent = rangeFrom === rangeTo ? shortDateLabel(rangeFrom) : `${shortDateLabel(rangeFrom)} – ${shortDateLabel(rangeTo)}`;
+}
+function initSelects(){
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  monthSel.innerHTML = months.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  const nowY = new Date().getFullYear();
+  const years = []; for (let y = nowY - 6; y <= nowY + 1; y++) years.push(y);
+  yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+}
+function openPop(){
+  if (rangeFrom) {
+    const [y,m] = rangeFrom.split('-').map(Number);
+    viewYear = y; viewMonth = m-1;
+    pendingStart = parseYMD(rangeFrom);
+    pendingEnd = rangeTo ? parseYMD(rangeTo) : null;
+  } else { pendingStart = null; pendingEnd = null; }
+  trigger.classList.add('open'); pop.classList.add('open'); renderCalendar();
+}
+function closePop(){ trigger.classList.remove('open'); pop.classList.remove('open'); }
+trigger.addEventListener('click', (e) => { e.stopPropagation(); pop.classList.contains('open') ? closePop() : openPop(); });
+document.addEventListener('click', (e) => { if (pop.classList.contains('open') && !pop.contains(e.target) && e.target !== trigger) closePop(); });
+pop.addEventListener('click', (e) => e.stopPropagation());
+
+function parseYMD(k){ const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d); }
+document.getElementById('drpPrev').addEventListener('click', () => { shiftView(-1); });
+document.getElementById('drpNext').addEventListener('click', () => { shiftView(1); });
+function shiftView(delta){
+  viewMonth += delta;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  renderCalendar();
+}
+monthSel.addEventListener('change', () => { viewMonth = +monthSel.value; renderCalendar(); });
+yearSel.addEventListener('change', () => { viewYear = +yearSel.value; renderCalendar(); });
+
+function renderCalendar(){
+  monthSel.value = viewMonth; yearSel.value = viewYear;
+  const grid = document.getElementById('drpGrid');
+  const dows = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let html = dows.map(d => `<div class="drp-dow">${d}</div>`).join('');
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  const startOffset = firstOfMonth.getDay();
+  const gridStart = new Date(viewYear, viewMonth, 1 - startOffset);
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (let i = 0; i < 42; i++){
+    const d = new Date(gridStart); d.setDate(gridStart.getDate() + i);
+    const outside = d.getMonth() !== viewMonth;
+    let cls = 'drp-day' + (outside ? ' outside' : '');
+    if (sameDay(d, today)) cls += ' today';
+    if (pendingStart && sameDay(d, pendingStart)) cls += ' range-start';
+    if (pendingEnd && sameDay(d, pendingEnd)) cls += ' range-end';
+    if (pendingStart && pendingEnd && d > pendingStart && d < pendingEnd) cls += ' in-range';
+    if (pendingStart && !pendingEnd && sameDay(d, pendingStart)) cls += ' range-end';
+    html += `<div class="${cls}" data-date="${ymd(d)}">${d.getDate()}</div>`;
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.drp-day').forEach(el => { el.addEventListener('click', () => pickDay(parseYMD(el.dataset.date))); });
+  updateSelectedText();
+}
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function pickDay(d){
+  if (!pendingStart || (pendingStart && pendingEnd)) { pendingStart = d; pendingEnd = null; }
+  else if (d < pendingStart) { pendingEnd = pendingStart; pendingStart = d; }
+  else { pendingEnd = d; }
+  renderCalendar();
+}
+function updateSelectedText(){
+  const el = document.getElementById('drpSelectedText');
+  if (!pendingStart) { el.textContent = 'Pick a start date'; return; }
+  if (!pendingEnd) { el.textContent = shortDateLabel(ymd(pendingStart)) + ' → pick an end date'; return; }
+  el.textContent = sameDay(pendingStart, pendingEnd) ? shortDateLabel(ymd(pendingStart)) : `${shortDateLabel(ymd(pendingStart))} – ${shortDateLabel(ymd(pendingEnd))}`;
+}
+document.querySelectorAll('.drp-quick button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.q === 'month') { pendingStart = new Date(viewYear, viewMonth, 1); pendingEnd = new Date(viewYear, viewMonth + 1, 0); }
+    else { pendingStart = new Date(viewYear, 0, 1); pendingEnd = new Date(viewYear, 11, 31); }
+    renderCalendar();
+  });
+});
+document.getElementById('drpCancel').addEventListener('click', closePop);
+document.getElementById('drpApply').addEventListener('click', () => {
+  if (!pendingStart) { closePop(); return; }
+  const start = pendingStart, end = pendingEnd || pendingStart;
+  setRange(ymd(start), ymd(end));
+  closePop(); page = 1; render();
+});
+
+/* ═══════════════════════════════════════════
+   FILTER + SORT
+═══════════════════════════════════════════ */
+function getFiltered(ignoreFilters){
+  const q = ignoreFilters ? '' : document.getElementById('fSearch').value.toLowerCase();
+  const sort = ignoreFilters ? 'date_desc' : document.getElementById('fSort').value;
 
   let rows = shifts.filter(s => {
     const mq = !q || s.staff.toLowerCase().includes(q);
-    const mh = !statusFilter || shiftHealth(s) === statusFilter;
-    let md = true;
-    const sd = shiftDateOnly(s.key);
-    if (from) { const f = new Date(from+'T00:00:00'); if (sd < f) md = false; }
-    if (to) { const t = new Date(to+'T00:00:00'); if (sd > t) md = false; }
-    return mq && mh && md;
+    const mh = ignoreFilters || !statusFilter || shiftHealth(s) === statusFilter;
+    const md = ignoreFilters || !deptFilter || s.dept === deptFilter;
+    let mDate = true;
+    if (!ignoreFilters && rangeFrom && rangeTo) {
+      mDate = s.key >= rangeFrom && s.key <= rangeTo;
+    }
+    return mq && mh && md && mDate;
   });
 
   rows.sort((a,b) => {
-    if (sort === 'date_asc') return a.key.localeCompare(b.key);
+    if (sort === 'date_asc') return a.key.localeCompare(b.key) || a.dept.localeCompare(b.dept);
     if (sort === 'variance_desc') {
       const va = a.status==='reconciled' ? Math.abs(a.actualCash-expectedCash(a)) : -1;
       const vb = b.status==='reconciled' ? Math.abs(b.actualCash-expectedCash(b)) : -1;
       return vb - va;
     }
-    return b.key.localeCompare(a.key);
+    return b.key.localeCompare(a.key) || a.dept.localeCompare(b.dept);
   });
   return rows;
 }
 
 /* ═══════════════════════════════════════════
    TABLE + PAGINATION
+
+   Row/action clicks: ONE delegated listener on #tblBody instead of an
+   inline onclick="" string per row/button. Each <tr> and <button> just
+   carries data-key/data-dept; the listener reads those off
+   e.target.closest(...). This is what actually fixes "clicking
+   Reconcile doesn't open the modal" — inline handlers can silently
+   fail under a strict Content-Security-Policy (no 'unsafe-inline'),
+   and they're one string-escaping bug away from breaking whenever a
+   value (like the "Pool Bar" department name) gets interpolated into
+   an HTML attribute. Delegation sidesteps both problems entirely.
 ═══════════════════════════════════════════ */
 const HEALTH_CHIP = { open:'chip-open', ok:'chip-ok', bad:'chip-bad' };
 const HEALTH_LABEL = { open:'Awaiting Count', ok:'Reconciled', bad:'Variance' };
@@ -559,11 +794,11 @@ function renderPagination(total){
   const to = Math.min(page*CFG.PAGE_SIZE, total);
   document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
   const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
-  const mk = (label,p,disabled,active) => { const b=document.createElement('button'); b.className='page-btn'+(active?' active':''); b.textContent=label; b.disabled=!!disabled; b.onclick=()=>{page=p;renderTable();}; return b; };
-  wrap.appendChild(mk('‹',page-1,page===1,false));
+  const mk = (label,p,disabled,active) => { const b=document.createElement('button'); b.className='page-btn'+(active?' active':''); b.innerHTML=label; b.disabled=!!disabled; b.onclick=()=>{page=p;renderTable();}; return b; };
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>',page-1,page===1,false));
   let start=Math.max(1,page-2), end=Math.min(totalPages,start+4); start=Math.max(1,end-4);
   for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
-  wrap.appendChild(mk('›',page+1,page>=totalPages,false));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>',page+1,page>=totalPages,false));
 }
 
 let _filteredCache = [];
@@ -574,187 +809,129 @@ function renderTable(){
   const pageRows = rows.slice(start, start+CFG.PAGE_SIZE);
 
   document.getElementById('tblBody').innerHTML = pageRows.length===0
-    ? `<tr class="empty-row"><td colspan="9">No shifts match your filters.</td></tr>`
+    ? `<tr class="empty-row"><td colspan="10">No shifts match your filters.</td></tr>`
     : pageRows.map(s => {
         const health = shiftHealth(s);
-        const cash = cashForShift(s.key);
+        const cash = cashForShift(s.dept, s.key);
         const expected = expectedCash(s);
         const variance = s.status==='reconciled' ? (s.actualCash - expected) : null;
-        const rowClick = health==='open' ? `openReconcile('${s.key}')` : `openView('${s.key}')`;
-        return `<tr onclick="${rowClick}">
+        const dept = s.dept || '—';
+        const staff = s.staff || '—';
+        return `<tr data-key="${s.key}" data-dept="${dept}">
+          <td><span class="dept-chip"><span class="dept-dot" style="background:${DEPT_COLOR[s.dept] || 'var(--text3)'}"></span>${dept}</span></td>
           <td style="font-weight:600;">${shiftRangeLabel(s.key)}</td>
-          <td>${s.staff}</td>
+          <td>${staff}</td>
           <td class="center">${fmtN(s.openingFloat)}</td>
           <td class="center">${fmtN(cash)}</td>
           <td class="center" style="font-weight:600;">${fmtN(expected)}</td>
           <td class="center">${s.status==='reconciled' ? fmtN(s.actualCash) : '—'}</td>
           <td class="center" style="font-weight:600;color:${variance===null?'var(--text3)':Math.abs(variance)<=VARIANCE_TOLERANCE?'var(--green)':'var(--red)'};">${variance===null?'—':(variance>=0?'+':'')+fmtN(variance)}</td>
-          <td class="center"><span class="chip ${HEALTH_CHIP[health]}">${HEALTH_LABEL[health]}</span></td>
-          <td class="no-print center" onclick="event.stopPropagation()">
-            ${health==='open' ? `<button class="act-btn reconcile" onclick="openReconcile('${s.key}')">🕘 Reconcile</button>` : `<button class="act-btn" onclick="openView('${s.key}')">👁 View</button>`}
+          <td class="center"><span class="chip ${HEALTH_CHIP[health]}"><i class="fa-solid fa-circle"></i>${HEALTH_LABEL[health]}</span></td>
+          <td class="no-print center">
+            ${health==='open'
+              ? `<button class="act-btn reconcile" data-key="${s.key}" data-dept="${dept}"><i class="fa-solid fa-clock"></i> Reconcile</button>`
+              : `<button class="act-btn" data-key="${s.key}" data-dept="${dept}"><i class="fa-solid fa-eye"></i> View</button>`}
           </td>
         </tr>`;
       }).join('');
 
   renderPagination(rows.length);
 }
+
+/* Bound once, at startup — #tblBody exists in the initial HTML markup,
+   so this doesn't need to wait for the first render(). */
+function bindTableDelegation(){
+  document.getElementById('tblBody').addEventListener('click', (e) => {
+    const row = e.target.closest('tr[data-key]');
+    if (!row) return;
+    openShift(row.dataset.key, row.dataset.dept);
+  });
+}
+
 function render(){
   renderKPIs();
-  _filteredCache = getFiltered();
+  _filteredCache = getFiltered(false);
   renderTable();
 }
 
-/* ═══════════════════════════════════════════
-   VIEW MODAL — now includes the full reconciliation
-   history (audit trail) for this shift.
-═══════════════════════════════════════════ */
-function breakdownHtml(key){
-  const rooms = transactions.filter(t=>shiftKeyFor(t.date)===key && t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
-  const rest  = transactions.filter(t=>shiftKeyFor(t.date)===key && t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
-  const pool  = transactions.filter(t=>shiftKeyFor(t.date)===key && t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
-  const cash  = cashForShift(key);
-  return `
-    <div class="bd-item"><div class="bd-label">🛏 Rooms Revenue</div><div class="bd-val">${fmtN(rooms)}</div></div>
-    <div class="bd-item"><div class="bd-label">🍽 Restaurant Revenue</div><div class="bd-val">${fmtN(rest)}</div></div>
-    <div class="bd-item"><div class="bd-label">🏊 Pool Bar Revenue</div><div class="bd-val">${fmtN(pool)}</div></div>
-    <div class="bd-item"><div class="bd-label">💵 Total Cash Sales</div><div class="bd-val">${fmtN(cash)}</div></div>`;
-}
-function historyHtml(key){
-  const entries = historyForShift(key);
-  if (entries.length === 0) return `<div class="empty-note">No reconciliation entries recorded yet.</div>`;
-  return entries.map(h => `
-    <div class="history-entry">
-      <div class="history-row-top">
-        <span class="history-actor">${h.actor}</span>
-        <span class="history-tag ${h.type}">${h.type==='initial'?'Initial Count':'Correction'}</span>
-      </div>
-      <div class="history-meta">
-        <span>Actual: <b>${fmtN(h.actualCash)}</b></span>
-        <span>Expected: <b>${fmtN(h.expected)}</b></span>
-        <span>Variance: <b style="color:${Math.abs(h.variance)<=VARIANCE_TOLERANCE?'var(--green)':'var(--red)'};">${h.variance>=0?'+':''}${fmtN(h.variance)}</b></span>
-      </div>
-      <div class="history-time">${h.date}</div>
-      ${h.notes ? `<div class="history-note">"${h.notes}"</div>` : ''}
-    </div>`).join('');
-}
-function openView(key){
-  const s = shifts.find(x=>x.key===key); if (!s) return;
-  activeKey = key;
-  const health = shiftHealth(s);
-  const expected = expectedCash(s);
-  const variance = s.actualCash - expected;
-  document.querySelector('#viewModal .modal').classList.remove('mode-ok','mode-bad');
-  document.querySelector('#viewModal .modal').classList.add(health==='ok'?'mode-ok':'mode-bad');
-  document.getElementById('vTitle').textContent = shiftRangeLabel(key);
-  document.getElementById('vMeta').innerHTML = `Cashier: <b>${s.staff}</b> &nbsp;·&nbsp; Opening float <b>${fmtN(s.openingFloat)}</b> &nbsp;·&nbsp; ${txCountForShift(key)} transaction${txCountForShift(key)!==1?'s':''} this shift`;
-  document.getElementById('vBreakdown').innerHTML = breakdownHtml(key) + `
-    <div class="bd-item"><div class="bd-label">Expected Cash</div><div class="bd-val">${fmtN(expected)}</div></div>
-    <div class="bd-item"><div class="bd-label">Actual Cash Counted</div><div class="bd-val">${fmtN(s.actualCash)}</div></div>`;
-  const vEl = document.getElementById('vVarianceVal');
-  vEl.textContent = (variance>=0?'+':'') + fmtN(variance);
-  vEl.className = 'variance-val ' + (health==='ok'?'ok':'bad');
-  document.getElementById('vHistory').innerHTML = historyHtml(key);
-  document.getElementById('viewModal').classList.add('show');
-}
-function startCorrection(){
-  const key = activeKey;
-  closeModal('viewModal');
-  openReconcile(key, true);
-}
-
-/* ═══════════════════════════════════════════
-   RECONCILE MODAL — used both for the first count on an
-   open shift, and for logging a correction to an already
-   reconciled one (isCorrection=true).
-═══════════════════════════════════════════ */
-function openReconcile(key, isCorrection=false){
-  const s = shifts.find(x=>x.key===key); if (!s) return;
-  activeKey = key;
-  correctionMode = isCorrection;
-  const expected = expectedCash(s);
-  document.getElementById('rTitle').textContent = isCorrection ? 'Correct Reconciliation' : 'Reconcile Shift';
-  document.getElementById('rMeta').innerHTML = `Cashier: <b>${s.staff}</b> &nbsp;·&nbsp; Opening float <b>${fmtN(s.openingFloat)}</b> &nbsp;·&nbsp; ${txCountForShift(key)} transaction${txCountForShift(key)!==1?'s':''} this shift`
-    + (isCorrection ? ` &nbsp;·&nbsp; <span style="color:var(--amber);">Amending a previous count — this will be logged as a correction.</span>` : '');
-  document.getElementById('rBreakdown').innerHTML = breakdownHtml(key) + `
-    <div class="bd-item" style="grid-column:1/-1;"><div class="bd-label">Expected Cash (Opening Float + Cash Sales)</div><div class="bd-val" style="color:var(--gold);">${fmtN(expected)}</div></div>`;
-  document.getElementById('rActorName').value = '';
-  document.getElementById('rActualCash').value = isCorrection ? s.actualCash : '';
-  document.getElementById('rNotes').value = isCorrection ? s.notes : '';
-  updateVariancePreview();
-  document.getElementById('reconcileModal').classList.add('show');
-}
-function updateVariancePreview(){
-  const s = shifts.find(x=>x.key===activeKey); if (!s) return;
-  const expected = expectedCash(s);
-  const actual = parseFloat(document.getElementById('rActualCash').value) || 0;
-  const variance = actual - expected;
-  const el = document.getElementById('rVarianceVal');
-  el.textContent = (variance>=0?'+':'') + fmtN(variance);
-  el.className = 'variance-val ' + (Math.abs(variance)<=VARIANCE_TOLERANCE ? 'ok' : 'bad');
-}
-async function confirmReconcile(){
-  const s = shifts.find(x=>x.key===activeKey); if (!s) return;
-  const actor = document.getElementById('rActorName').value.trim();
-  const actual = document.getElementById('rActualCash').value;
-  if (!actor) { showToast('Enter your name — every reconciliation is logged.', 'error'); return; }
-  if (actual === '' || parseFloat(actual) < 0) { showToast('Enter the actual cash counted.', 'error'); return; }
-
-  const expected = expectedCash(s);
-  const actualCash = parseFloat(actual);
-  const variance = actualCash - expected;
-  const notes = document.getElementById('rNotes').value.trim();
-  const stamp = nowStamp();
-
-  s.actualCash = actualCash;
-  s.status = 'reconciled';
-  s.notes = notes;
-
-  reconLog.unshift({
-    key: s.key, actor, actualCash, expected, variance, notes,
-    type: correctionMode ? 'correction' : 'initial',
-    date: stamp,
-  });
-
-  await Promise.all([ saveShared('accounting-shifts', shifts), saveShared(KEY_RECON_LOG, reconLog) ]);
-  apiSave('PATCH', `/api/accounting/shifts/${s.key}`, { actualCash, notes, status:'reconciled', actor, type: correctionMode?'correction':'initial' });
-
-  closeModal('reconcileModal');
-  const health = shiftHealth(s);
-  const verb = correctionMode ? 'corrected' : 'reconciled';
-  showToast(health==='ok' ? `${shiftRangeLabel(s.key)} ${verb} by ${actor} — within tolerance.` : `${shiftRangeLabel(s.key)} ${verb} by ${actor} — variance flagged for review.`, health==='ok'?'success':'error');
-  render();
-}
-
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-['viewModal','reconcileModal'].forEach(id => document.getElementById(id).addEventListener('click', function(e){ if (e.target===this) closeModal(id); }));
-
 function showToast(msg, type='success'){
+  const icon = type==='success' ? 'fa-circle-check' : 'fa-circle-xmark';
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = (type==='success'?'✓ ':'✕ ') + msg;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
 
 /* ═══════════════════════════════════════════
-   INIT
+   PRINT
+═══════════════════════════════════════════ */
+function printReport(){
+  const period = (rangeFrom && rangeTo)
+    ? (rangeFrom === rangeTo ? fullDateLabel(rangeFrom) : `${fullDateLabel(rangeFrom)} — ${fullDateLabel(rangeTo)}`)
+    : 'All available records';
+  const dept = deptFilter || 'All Departments';
+  document.getElementById('printSub').textContent = `${period} · Department: ${dept} · Generated ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}`;
+  window.print();
+}
+
+/* ═══════════════════════════════════════════
+   INIT — demo shifts marked actualCash:'auto' get their actual cash
+   computed from the real ledger (expected + a small deliberate
+   demoVariance where provided), so the numbers on screen always tie
+   out to the transactions above instead of being hand-typed and
+   possibly inconsistent. Loaded storage data is shape-validated
+   (isValidShiftsArray) before use — anything that doesn't look like a
+   real shift record triggers a clean reseed instead of rendering
+   "undefined" cells.
 ═══════════════════════════════════════════ */
 async function init(){
-  renderBanner();
+  initSelects();
+  bindDeptPills();
+  bindStatusPills();
+  bindTableDelegation();
+
   const roomTx    = await loadShared('accounting-room-tx', DEMO_ROOM_TX);
   const restSales = await loadShared('restaurant-sales', DEMO_RESTAURANT_SALES);
   const poolSales = await loadShared('poolbar-sales', DEMO_POOLBAR_SALES);
-  shifts = await loadShared('accounting-shifts', DEMO_SHIFTS);
-  reconLog = await loadShared(KEY_RECON_LOG, DEMO_RECON_LOG);
+  transactions = buildTransactions(roomTx, restSales, poolSales);
+
+  let loadedShifts = await loadShared(KEY_SHIFTS, null);
+  if (!isValidShiftsArray(loadedShifts)) {
+    if (loadedShifts) console.warn('[Reconciliation] Stored shift data failed validation — reseeding from AccountingSeed.DEMO_SHIFTS.');
+    loadedShifts = null;
+  }
+  shifts = loadedShifts;
+
+  let loadedLog = await loadShared(KEY_RECON_LOG, null);
+  reconLog = Array.isArray(loadedLog) ? loadedLog : null;
+
+  if (!shifts) {
+    shifts = DEMO_SHIFTS.map(s => ({ ...s }));
+    shifts.forEach(s => {
+      if (s.actualCash === 'auto') {
+        const expected = s.openingFloat + cashForShift(s.dept, s.key);
+        s.actualCash = expected + (s.demoVariance || 0);
+      }
+      delete s.demoVariance;
+    });
+    reconLog = null; // force the log to be rebuilt to match the fresh shifts below
+  }
+  if (!reconLog) {
+    reconLog = shifts.filter(s => s.status === 'reconciled').map(s => ({
+      key: s.key, dept: s.dept, actor: s.staff, actualCash: s.actualCash,
+      expected: expectedCash(s), variance: s.actualCash - expectedCash(s),
+      notes: s.notes, type: 'initial',
+      date: (() => { const [y,m,d] = s.key.split('-').map(Number); return `${pad2(d)}/${pad2(m)}/${String(y).slice(-2)} 09:05 AM`; })(),
+    }));
+  }
 
   await Promise.all([
     saveShared('accounting-room-tx', roomTx),
-    saveShared('accounting-shifts', shifts),
+    saveShared(KEY_SHIFTS, shifts),
     saveShared(KEY_RECON_LOG, reconLog),
   ]);
 
-  transactions = buildTransactions(roomTx, restSales, poolSales);
-  bindStatusPills();
   render();
 }
 init();

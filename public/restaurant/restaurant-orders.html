@@ -54,6 +54,9 @@
   .mode-tab{ flex:1; min-width:150px; text-align:center; padding:11px; border-radius:10px; background:none; border:none; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--text3); cursor:pointer; transition:all .2s; }
   .mode-tab.active{ background:var(--gold-dim); color:var(--gold); }
   .mode-tab .sub{ display:block; font-size:10px; font-weight:400; color:var(--text3); margin-top:2px; }
+  .tab-badge{ display:none; align-items:center; justify-content:center; min-width:19px; height:19px; padding:0 5px; border-radius:50%;
+    background:var(--blue); color:#fff; font-size:10.5px; font-weight:800; margin-left:6px; vertical-align:middle; }
+  .tab-badge.show{ display:inline-flex; }
 
   .view{ display:none; }
   .view.active{ display:block; }
@@ -193,7 +196,7 @@
 
       <div class="mode-tabs no-print">
         <button class="mode-tab active" id="tabBuild" onclick="switchView('build')">＋ New Order<span class="sub">Build a sale or open a tab</span></button>
-        <button class="mode-tab" id="tabActive" onclick="switchView('active')">📋 Active &amp; Recent Orders<span class="sub">Serve, pay or cancel</span></button>
+        <button class="mode-tab" id="tabActive" onclick="switchView('active')">📋 Active &amp; Recent Orders<span class="tab-badge" id="activeOrdersBadge"></span><span class="sub">Serve, pay or cancel</span></button>
         <button class="mode-tab" id="tabRequisition" onclick="switchView('requisition')">🧾 New Requisition<span class="sub">Request drinks from Store</span></button>
       </div>
 
@@ -326,6 +329,8 @@ const shell = RestaurantShell.attach({
   pageSubtitle:  'Quick sales from Inventory, or open tabs from the full Menu',
   apiMode:       'Demo',
   user:          { name: 'Restaurant Manager', initials: 'RM' },
+  backHref:      'restaurant-sales.html',
+  backLabel:     'Back to Sales',
 });
 
 const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
@@ -451,7 +456,19 @@ function renderKPIs(){
       <div class="kpi-value">${inventory.filter(i=>i.qty>0).length}</div>
       <div class="kpi-trend neutral">Of ${inventory.length} tracked</div>
     </div>`;
-  shell.setPendingBadge && shell.setPendingBadge(openTabs);
+
+  updateActiveOrdersBadge();
+}
+
+/* Blue circled count on the "Active & Recent Orders" tab — mirrors the
+   Pool Bar Orders page. Counts orders still needing attention
+   (open tabs + served-but-unpaid). */
+function updateActiveOrdersBadge(){
+  const active = orders.filter(o => o.status==='open' || o.status==='served').length;
+  const badge = document.getElementById('activeOrdersBadge');
+  if (!badge) return;
+  if (active > 0) { badge.textContent = active; badge.classList.add('show'); }
+  else badge.classList.remove('show');
 }
 
 /* ═══ PICKER ═══ */

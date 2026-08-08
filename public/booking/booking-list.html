@@ -9,11 +9,11 @@
 /* This page owns layout + its own All Bookings content only. Sidebar +
    topbar look/markup live entirely in booking-shell.js — same split
    used by booking-dashboard.html and booking-rooms.html.
-   NOTE: sidebar/topbar are deliberately left on the shared dark/blue
-   theme vars from booking-shell.js. The .content and .modal-overlay
-   scopes below re-declare the SAME variable names with light values,
-   so only the main content area + modals turn white — the sidebar
-   never sees these overrides. */
+   Data (rooms/bookings/guests/session) comes from services/booking-data.js.
+   Permission checks (who can create/edit/delete/discount) come from
+   services/permissions.js. This page owns NO demo data and NO storage
+   logic of its own anymore — flipping CONFIG.USE_DEMO in booking-data.js
+   is the only change needed to go live. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
@@ -29,9 +29,8 @@ body {
 .main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
 @media (max-width: 768px) { .main { margin-left: 0 !important; } }
 
-.content {
-  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
-  /* ── Light-theme override, scoped to content + modals only ── */
+/* ── Light-theme variables, scoped to content + modals only ── */
+.content, .modal-overlay {
   --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
   --border: #eef0f6; --border2: #dfe3ec;
   --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
@@ -43,11 +42,42 @@ body {
   --amber: #f79009; --amber-bg: #fff4e5;
   --blue: #2f6fed; --blue-bg: #eaf1ff;
   --purple: #8b5cf6; --purple-bg: #f4efff;
+}
+.content {
+  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
 }
 @media (max-width: 480px) { .content { padding: 14px; } }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ═══════════ KPI CARDS ═══════════ */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+@media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; } }
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 14px 12px; position: relative; overflow: hidden;
+  box-shadow: var(--shadow); cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; display: flex; flex-direction: column; animation: fadeUp .4s ease both; }
+.kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+.kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--gold-border); }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+.kpi-card.acc-green::before { background: linear-gradient(90deg, var(--green), transparent); }
+.kpi-card.acc-blue::before { background: linear-gradient(90deg, var(--blue), transparent); }
+.kpi-card.acc-red::before { background: linear-gradient(90deg, var(--red), transparent); }
+.kpi-card.acc-amber::before { background: linear-gradient(90deg, var(--amber), transparent); }
+.kpi-card.acc-purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+.kpi-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+.kpi-ic { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.ic-blue { background: var(--blue-bg); color: var(--blue); }
+.ic-green { background: var(--green-bg); color: var(--green); }
+.ic-amber { background: var(--amber-bg); color: var(--amber); }
+.ic-purple { background: var(--purple-bg); color: var(--purple); }
+.ic-red { background: var(--red-bg); color: var(--red); }
+.kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; line-height: 1.3; }
+.kpi-value { font-size: 22px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
+@media (max-width: 420px) { .kpi-value { font-size: 18px; } }
+.kpi-trend { font-size: 10.5px; font-weight: 600; color: var(--text3); margin-top: auto; }
+.kpi-trend.up { color: var(--green); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.down { color: var(--red); } .kpi-trend.neutral { color: var(--text3); } .kpi-trend.info { color: var(--blue); }
 
 /* ═══════════ TOOLBAR ═══════════ */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -78,7 +108,7 @@ input[type="date"].filter-sel { min-width: 0; }
 .btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
 .btn-outline i { color: var(--text3); font-size: 12px; }
 
-/* ═══════════ ACTIVE FILTER CHIPS (mobile-friendly status quick-pick) ═══════════ */
+/* ═══════════ ACTIVE FILTER CHIPS ═══════════ */
 .status-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
 .status-chips::-webkit-scrollbar { height: 0; }
 .sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: inherit; }
@@ -102,24 +132,26 @@ input[type="date"].filter-sel { min-width: 0; }
 .room-badge { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
 .rt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .dot-standard { background: var(--blue); } .dot-deluxe { background: var(--purple); } .dot-suite { background: var(--gold); } .dot-conf { background: #34d399; }
-.status-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-.status-chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
-.chip-checkedin { background: var(--green-bg); color: var(--green); } .chip-checkedin::before { background: var(--green); }
-.chip-checkout  { background: var(--red-bg); color: var(--red); } .chip-checkout::before  { background: var(--red); }
-.chip-reserved  { background: var(--blue-bg); color: var(--blue); } .chip-reserved::before  { background: var(--blue); }
-.chip-vacant    { background: rgba(156,163,175,0.14); color: #6b7280; } .chip-vacant::before  { background: #9ca3af; }
-.chip-maintenance { background: var(--amber-bg); color: var(--amber); } .chip-maintenance::before { background: var(--amber); }
-.pay-chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
+.status-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.status-chip i { font-size: 6px; }
+.chip-checkedin { background: var(--green-bg); color: var(--green); }
+.chip-checkout  { background: var(--red-bg); color: var(--red); }
+.chip-reserved  { background: var(--blue-bg); color: var(--blue); }
+.chip-vacant    { background: rgba(156,163,175,0.14); color: #6b7280; }
+.chip-maintenance { background: var(--amber-bg); color: var(--amber); }
+.pay-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
+.pay-chip i { font-size: 6px; }
 .pay-full { background: var(--green-bg); color: var(--green); }
 .pay-deposit { background: var(--amber-bg); color: var(--amber); }
 .pay-pending { background: var(--red-bg); color: var(--red); }
 
-.act-btns { display: flex; gap: 4px; }
+.act-btns { display: flex; gap: 4px; align-items: center; }
 .act-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; font-size: 11px; font-weight: 700; color: var(--text3); cursor: pointer; transition: all 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
 .act-btn.edit:hover { border-color: var(--gold-border); color: var(--gold); }
 .act-btn.del:hover  { border-color: rgba(240,68,56,0.4); color: var(--red); }
+.act-view-only { font-size: 10.5px; color: var(--text3); font-style: italic; }
 
-/* ═══════════ MOBILE CARD LIST — table restyles into stacked cards ═══════════ */
+/* ═══════════ MOBILE CARD LIST ═══════════ */
 @media (max-width: 720px) {
   .table-wrap { overflow-x: visible; }
   .bk-table { min-width: 0; }
@@ -172,16 +204,6 @@ input[type="date"].filter-sel { min-width: 0; }
 .modal-overlay {
   display: none; position: fixed; inset: 0; background: rgba(15,20,40,0.55); backdrop-filter: blur(5px); z-index: 300;
   align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto;
-  /* re-declare the same light overrides for content that lives inside the modal */
-  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
-  --border: #eef0f6; --border2: #dfe3ec;
-  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
-  --input-bg: #f4f6fb; --modal-bg: #ffffff;
-  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
-  --green: #12b76a; --green-bg: #e9f9f0;
-  --red: #f04438; --red-bg: #feecec;
-  --amber: #f79009; --amber-bg: #fff4e5;
-  --blue: #2f6fed; --blue-bg: #eaf1ff;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
 }
 .modal-overlay.show { display: flex; }
@@ -194,6 +216,8 @@ input[type="date"].filter-sel { min-width: 0; }
 .modal-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; color: var(--text2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .modal-close:hover { color: var(--text); border-color: var(--gold-border); }
 
+.modal-perm-notice { display: none; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--amber); background: var(--amber-bg); border: 1px solid rgba(247,144,9,.25); border-radius: 9px; padding: 8px 13px; margin-bottom: 14px; }
+
 .form-section { margin-bottom: 16px; }
 .form-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); font-weight: 800; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--gold-border); display: flex; align-items: center; gap: 7px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -202,10 +226,12 @@ input[type="date"].filter-sel { min-width: 0; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group.span2 { grid-column: span 2; }
 @media (max-width: 500px) { .form-group.span2 { grid-column: span 1; } }
-.form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; }
+.form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; display: flex; align-items: center; gap: 5px; }
+.form-label .lock-tag { font-size: 8.5px; background: var(--surface3); color: var(--text3); padding: 1px 5px; border-radius: 6px; letter-spacing: .5px; }
 .form-input, .form-select { background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-family: inherit; font-size: 13px; outline: none; transition: border-color 0.2s; width: 100%; }
 .form-input:focus, .form-select:focus { border-color: var(--gold-border); }
 .form-input[readonly] { opacity: 0.6; cursor: default; }
+.form-input:disabled, .form-select:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface3); }
 
 .amount-box { background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: var(--radius-sm); padding: 10px 12px; }
 .amount-box.blue { background: var(--blue-bg); border-color: rgba(47,111,237,0.2); }
@@ -225,6 +251,7 @@ input[type="date"].filter-sel { min-width: 0; }
 .num-pair button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); border-right: none; }
 .num-pair button:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
 .num-pair button:hover { background: var(--gold-dim); color: var(--gold); }
+.num-pair button:disabled { opacity: 0.5; cursor: not-allowed; }
 .num-pair input { flex: 1; border-radius: 0; border-left: none; border-right: none; text-align: center; }
 
 .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
@@ -247,15 +274,15 @@ input[type="date"].filter-sel { min-width: 0; }
   display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; max-width: calc(100vw - 40px);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; font-weight: 600;
 }
-.toast.success { border-left: 3px solid #12b76a; }
-.toast.error   { border-left: 3px solid #f04438; }
-.toast.info    { border-left: 3px solid #2f6fed; }
+.toast.success { border-left: 3px solid #12b76a; } .toast.success i { color: #12b76a; }
+.toast.error   { border-left: 3px solid #f04438; } .toast.error i { color: #f04438; }
+.toast.info    { border-left: 3px solid #2f6fed; } .toast.info i { color: #2f6fed; }
 @keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
 
 /* Print */
 @media print {
-  #sidebarSlot, #topbarSlot, .toolbar, .status-chips, .act-btns, .pagination, .no-print { display: none !important; }
+  #sidebarSlot, #topbarSlot, .toolbar, .status-chips, .act-btns, .pagination, .no-print, .kpi-row { display: none !important; }
   .main { margin-left: 0 !important; }
   .content { padding: 0 !important; overflow: visible !important; }
   body { background: #fff !important; color: #000 !important; }
@@ -280,6 +307,8 @@ input[type="date"].filter-sel { min-width: 0; }
 
     <div class="content">
 
+      <div class="kpi-row" id="kpiRow"></div>
+
       <div class="status-chips no-print" id="statusChips" style="margin-bottom:10px;">
         <button class="sc-btn active" data-s="" onclick="setStatusChip('',this)">All</button>
         <button class="sc-btn" data-s="checkedin" onclick="setStatusChip('checkedin',this)">Checked In</button>
@@ -292,21 +321,21 @@ input[type="date"].filter-sel { min-width: 0; }
         <div class="toolbar-left">
           <div class="search-wrap">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" placeholder="Guest, room, phone…" id="bkSearch" oninput="bkPage=1;filterBookings()">
+            <input type="text" placeholder="Guest, room, phone…" id="bkSearch" oninput="filterBookings()">
           </div>
-          <select class="filter-sel" id="bkType" onchange="bkPage=1;filterBookings()">
+          <select class="filter-sel" id="bkType" onchange="filterBookings()">
             <option value="">All Types</option>
             <option value="Standard">Standard</option>
             <option value="Deluxe">Deluxe</option>
             <option value="Suite">Suite</option>
             <option value="Conference">Conference</option>
           </select>
-          <input type="date" class="filter-sel" id="bkFrom" onchange="bkPage=1;filterBookings()" title="Check-in from">
-          <input type="date" class="filter-sel" id="bkTo"   onchange="bkPage=1;filterBookings()" title="Check-in to">
+          <input type="date" class="filter-sel" id="bkFrom" onchange="filterBookings()" title="Check-in from">
+          <input type="date" class="filter-sel" id="bkTo"   onchange="filterBookings()" title="Check-in to">
         </div>
         <div class="toolbar-right">
           <button class="btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-          <button class="btn-primary" onclick="openBookingModal()"><i class="fa-solid fa-plus"></i> New Booking</button>
+          <button class="btn-primary" id="newBookingBtn" onclick="openBookingModal()"><i class="fa-solid fa-plus"></i> New Booking</button>
         </div>
       </div>
 
@@ -359,6 +388,8 @@ input[type="date"].filter-sel { min-width: 0; }
       <button class="modal-close" onclick="closeModal('bookingModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
+    <div class="modal-perm-notice" id="modalPermNotice"><i class="fa-solid fa-lock"></i> View only — you don't have permission to edit this booking.</div>
+
     <div class="form-section">
       <div class="form-section-title"><i class="fa-solid fa-user"></i> Guest Information</div>
       <div class="form-grid">
@@ -400,7 +431,7 @@ input[type="date"].filter-sel { min-width: 0; }
       <div class="form-section-title"><i class="fa-solid fa-sack-dollar"></i> Billing &amp; Payment</div>
       <div class="form-grid-3">
         <div class="form-group"><label class="form-label">Rate / Night (₦)</label><input class="form-input" type="number" id="fRate" placeholder="0" oninput="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Discount (%)</label><input class="form-input" type="number" id="fDiscount" placeholder="0" min="0" max="100" oninput="calcAmount()"></div>
+        <div class="form-group"><label class="form-label">Discount (%) <span class="lock-tag" id="discLockTag" style="display:none;">Admin only</span></label><input class="form-input" type="number" id="fDiscount" placeholder="0" min="0" max="100" oninput="calcAmount()"></div>
         <div class="form-group"><label class="form-label">Amount Paid (₦)</label><input class="form-input" type="number" id="fPaid" placeholder="0" oninput="calcBalance()"></div>
         <div class="amount-box"><div class="amount-label">Gross Total</div><div class="amount-value" id="dispTotal">₦0</div><div class="amount-sub" id="dispNights">0 nights</div></div>
         <div class="amount-box blue"><div class="amount-label">After Discount</div><div class="amount-value" id="dispAfterDisc">₦0</div><div class="amount-sub" id="dispDisc">No discount</div></div>
@@ -423,7 +454,7 @@ input[type="date"].filter-sel { min-width: 0; }
     <div class="modal-footer">
       <button class="btn-outline" id="modalDeleteBtn" style="display:none;border-color:rgba(240,68,56,0.3);color:var(--red);" onclick="openDeleteFromEdit()"><i class="fa-solid fa-trash"></i> Delete Booking</button>
       <button class="btn-outline" onclick="closeModal('bookingModal')">Cancel</button>
-      <button class="btn-primary" onclick="saveBooking()"><i class="fa-solid fa-check"></i> Save Booking</button>
+      <button class="btn-primary" id="saveBookingBtn" onclick="saveBooking()"><i class="fa-solid fa-check"></i> Save Booking</button>
     </div>
   </div>
 </div>
@@ -441,9 +472,11 @@ input[type="date"].filter-sel { min-width: 0; }
 </div>
 
 <script src="../component/booking-shell.js"></script>
-<script>
+<script type="module">
 /* ═══════════════════════════════════════════════
-   Shell
+   Shell — manages its own session/avatar/API badge now
+   (see booking-shell.js CONFIG.USE_DEMO). Don't hardcode a
+   user here; the shell fetches and displays its own.
 ═══════════════════════════════════════════════ */
 const shell = BookingShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -451,80 +484,24 @@ const shell = BookingShell.attach({
   activeFile:    'booking-list.html',
   pageTitle:     'All Bookings',
   pageSubtitle:  'Every reservation, current & past',
-  apiMode:       'Demo',
-  user:          { name: 'Booking Manager', initials: 'MG' },
 });
 
 /* ═══════════════════════════════════════════════
-   Storage shim — same 4-method contract used across every module.
-   Reads/writes the exact same 'booking-rooms' / 'booking-bookings'
-   shared keys as booking-dashboard.html and booking-rooms.html.
+   DATA + PERMISSIONS — the only two imports this page needs.
+   getBookingData()/saveBookingData() know whether to hit the real
+   API or demo storage (services/booking-data.js CONFIG.USE_DEMO).
+   hasPermission/canEdit/canDelete/canGiveDiscount decide what the
+   signed-in session is allowed to do, driven by the `session`
+   object getBookingData() hands back — so once the real API returns
+   a real session, permissions fall into place with zero page changes.
 ═══════════════════════════════════════════════ */
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
-
-const KEY_ROOMS    = 'booking-rooms';
-const KEY_BOOKINGS = 'booking-bookings';
-
-/* Seed data — identical shape/values to booking-dashboard.html /
-   booking-rooms.html, so this page never diverges on first run. */
-const DEMO_ROOMS = [
-  {num:'101',type:'Standard',   rate:35000},{num:'102',type:'Standard',   rate:35000},
-  {num:'103',type:'Standard',   rate:35000},{num:'104',type:'Standard',   rate:35000},
-  {num:'105',type:'Standard',   rate:35000},{num:'106',type:'Standard',   rate:35000},
-  {num:'201',type:'Deluxe',     rate:60000},{num:'202',type:'Deluxe',     rate:60000},
-  {num:'203',type:'Deluxe',     rate:60000},{num:'204',type:'Deluxe',     rate:60000},
-  {num:'301',type:'Suite',      rate:120000},{num:'302',type:'Suite',     rate:120000},
-  {num:'303',type:'Suite',      rate:120000},
-  {num:'401',type:'Conference', rate:200000},{num:'402',type:'Conference',rate:200000},
-];
-
-const DEMO_BOOKINGS = [
-  {room:'101',type:'Standard',  guest:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',   idType:'NIN',             idNum:'12345678901', checkin:'2026-03-10',checkout:'2026-03-14',rate:35000, discount:0,  paid:140000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:''},
-  {room:'102',type:'Standard',  guest:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',      idType:'Passport',         idNum:'A12345678',   checkin:'2026-03-12',checkout:'2026-03-13',rate:35000, discount:0,  paid:35000, payMethod:'Cash',                   payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkout',   notes:''},
-  {room:'103',type:'Standard',  guest:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                       idType:'NIN',             idNum:'98765432109', checkin:'2026-03-13',checkout:'2026-03-16',rate:35000, discount:10, paid:50000, payMethod:'POS',                    payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:1,status:'reserved',   notes:'Extra pillow'},
-  {room:'104',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'105',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'Plumbing repair'},
-  {room:'106',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'201',type:'Deluxe',    guest:'Dr. Eze, Chukwuemeka',  phone:'+234 802 444 8899',email:'ceze@hospital.ng',       idType:'Passport',         idNum:'B87654321',   checkin:'2026-03-11',checkout:'2026-03-15',rate:60000, discount:0,  paid:240000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'202',type:'Deluxe',    guest:'Ms. Abubakar, Fatima',  phone:'+234 805 555 0011',email:'fatima.a@gmail.com',     idType:"Driver's Licence", idNum:'ABJ001234',   checkin:'2026-03-13',checkout:'2026-03-17',rate:60000, discount:5,  paid:100000,payMethod:'Split – Cash + Transfer',payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'reserved',   notes:'Honeymoon setup'},
-  {room:'203',type:'Deluxe',    guest:'Mr. Johnson, Segun',    phone:'+234 708 666 2233',email:'',                       idType:'NIN',             idNum:'55566677788', checkin:'2026-03-09',checkout:'2026-03-13',rate:60000, discount:0,  paid:240000,payMethod:'POS',                    payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:2,status:'checkout',   notes:''},
-  {room:'204',type:'Deluxe',    guest:'Prof. Williams, Ada',   phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng',idType:'NIN',             idNum:'11122233344', checkin:'2026-03-12',checkout:'2026-03-18',rate:60000, discount:15, paid:200000,payMethod:'Transfer',              payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:'Vegetarian meals'},
-  {room:'301',type:'Suite',     guest:'Chief Dangote, Emeka',  phone:'+234 801 888 6677',email:'emeka.d@corp.ng',        idType:'Passport',         idNum:'C11223344',   checkin:'2026-03-10',checkout:'2026-03-15',rate:120000,discount:0,  paid:600000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'302',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'303',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'AC repair in progress'},
-  {room:'401',type:'Conference',guest:'Zenith Bank Ltd.',       phone:'+234 700 999 8877',email:'events@zenithbank.com',  idType:"Voter's Card",     idNum:'ZB00001',     checkin:'2026-03-13',checkout:'2026-03-13',rate:200000,discount:0,  paid:200000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:40,children:0,status:'checkedin',  notes:'Projector & PA system'},
-  {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-];
-
-let guestDB = [
-  {name:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',    idType:'NIN',              idNum:'12345678901'},
-  {name:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',       idType:'Passport',         idNum:'A12345678'},
-  {name:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                        idType:'NIN',              idNum:'98765432109'},
-  {name:'Dr. Eze, Chukwuemeka', phone:'+234 802 444 8899',email:'ceze@hospital.ng',        idType:'Passport',         idNum:'B87654321'},
-  {name:'Ms. Abubakar, Fatima', phone:'+234 805 555 0011',email:'fatima.a@gmail.com',      idType:"Driver's Licence", idNum:'ABJ001234'},
-  {name:'Prof. Williams, Ada',  phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng', idType:'NIN',              idNum:'11122233344'},
-  {name:'Chief Dangote, Emeka', phone:'+234 801 888 6677',email:'emeka.d@corp.ng',         idType:'Passport',         idNum:'C11223344'},
-  {name:'Zenith Bank Ltd.',     phone:'+234 700 999 8877',email:'events@zenithbank.com',   idType:"Voter's Card",     idNum:'ZB00001'},
-];
-
-async function loadShared(key, fallback) {
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
-  } catch (e) {}
-  return fallback;
-}
-async function saveShared(key, value) {
-  try { await storage.set(key, JSON.stringify(value), true); } catch (e) { console.warn('[sync]', key, e); }
-}
+import { getBookingData, saveBookingData } from '../services/booking-data.js';
+import { hasPermission, canEdit, canDelete, canGiveDiscount } from '../services/permissions.js';
 
 let allRooms = [];
 let bookings = [];
+let guestDB  = [];
+let currentSession = null;
 
 /* ═══════════════════════════════════════════════
    STATE
@@ -556,6 +533,68 @@ const CHIP_LBL  = { checkedin:'Checked In', checkout:'Check-out', reserved:'Rese
 const PAY_CLS   = { 'Fully Paid':'pay-full', 'Deposit Paid':'pay-deposit', 'Pending':'pay-pending' };
 
 /* ═══════════════════════════════════════════════
+   PERMISSIONS — applied once after data loads, and per-row
+   whenever the table renders
+═══════════════════════════════════════════════ */
+function applyPermissionsUI() {
+  const newBtn = document.getElementById('newBookingBtn');
+  if (newBtn) newBtn.style.display = hasPermission(currentSession, 'canCreate', 'booking') ? '' : 'none';
+}
+
+function applyModalPermissions(entry) {
+  const editAllowed     = entry ? canEdit(currentSession, 'booking', entry) : hasPermission(currentSession, 'canCreate', 'booking');
+  const deleteAllowed   = entry ? canDelete(currentSession, 'booking', entry) : false;
+  const discountAllowed = canGiveDiscount(currentSession, 'booking');
+
+  document.querySelectorAll('#bookingModal .form-input, #bookingModal .form-select, #bookingModal .num-pair button').forEach(el => {
+    el.disabled = !editAllowed;
+  });
+  const discInput = document.getElementById('fDiscount');
+  discInput.disabled = !editAllowed || !discountAllowed;
+  document.getElementById('discLockTag').style.display = discountAllowed ? 'none' : '';
+
+  document.getElementById('saveBookingBtn').style.display = editAllowed ? '' : 'none';
+  document.getElementById('modalDeleteBtn').style.display = (entry && deleteAllowed) ? 'inline-flex' : 'none';
+  document.getElementById('modalPermNotice').style.display = editAllowed ? 'none' : 'flex';
+}
+
+/* ═══════════════════════════════════════════════
+   KPI CARDS
+═══════════════════════════════════════════════ */
+function renderKPIs() {
+  const checkedIn   = bookings.filter(b => b.status === 'checkedin').length;
+  const reserved    = bookings.filter(b => b.status === 'reserved').length;
+  const available   = bookings.filter(b => b.status === 'vacant').length;
+  const maintenance = bookings.filter(b => b.status === 'maintenance').length;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card acc-green" onclick="setStatusFromKpi('checkedin')">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-door-open"></i></div><div class="kpi-label">Checked In</div></div>
+      <div class="kpi-value" style="color:var(--green);">${checkedIn}</div>
+      <div class="kpi-trend up">Currently occupied</div>
+    </div>
+    <div class="kpi-card acc-blue" onclick="setStatusFromKpi('reserved')">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-calendar-check"></i></div><div class="kpi-label">Reserved</div></div>
+      <div class="kpi-value" style="color:var(--blue);">${reserved}</div>
+      <div class="kpi-trend ${reserved>0?'warn':'up'}">${reserved>0?'Upcoming arrivals':'None on record'}</div>
+    </div>
+    <div class="kpi-card acc-purple" onclick="setStatusFromKpi('')">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-bed"></i></div><div class="kpi-label">Available Rooms</div></div>
+      <div class="kpi-value" style="color:var(--purple);">${available}</div>
+      <div class="kpi-trend neutral">Across ${allRooms.length} rooms</div>
+    </div>
+    <div class="kpi-card acc-amber" onclick="setStatusFromKpi('maintenance')">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-screwdriver-wrench"></i></div><div class="kpi-label">Maintenance</div></div>
+      <div class="kpi-value" style="color:var(--amber);">${maintenance}</div>
+      <div class="kpi-trend ${maintenance>0?'warn':'up'}">${maintenance>0?'Out of service':'None on record'}</div>
+    </div>`;
+}
+function setStatusFromKpi(status) {
+  const btn = document.querySelector(`.sc-btn[data-s="${status}"]`) || document.querySelector('.sc-btn[data-s=""]');
+  setStatusChip(status, btn);
+}
+
+/* ═══════════════════════════════════════════════
    PAGINATION
 ═══════════════════════════════════════════════ */
 function renderPagination(btnId, labelId, page, total, size, cb) {
@@ -566,7 +605,7 @@ function renderPagination(btnId, labelId, page, total, size, cb) {
   const wrap = document.getElementById(btnId);
   wrap.innerHTML = '';
   const prev = document.createElement('button');
-  prev.className = 'page-btn'; prev.textContent = '‹'; prev.disabled = (page === 1);
+  prev.className = 'page-btn'; prev.innerHTML = '<i class="fa-solid fa-chevron-left"></i>'; prev.disabled = (page === 1);
   prev.onclick = () => cb(page - 1); wrap.appendChild(prev);
   let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
   start = Math.max(1, end - 4);
@@ -577,7 +616,7 @@ function renderPagination(btnId, labelId, page, total, size, cb) {
     wrap.appendChild(btn);
   }
   const next = document.createElement('button');
-  next.className = 'page-btn'; next.textContent = '›'; next.disabled = (page >= totalPages);
+  next.className = 'page-btn'; next.innerHTML = '<i class="fa-solid fa-chevron-right"></i>'; next.disabled = (page >= totalPages);
   next.onclick = () => cb(page + 1); wrap.appendChild(next);
 }
 
@@ -596,6 +635,7 @@ function setStatusChip(s, btn) {
    BOOKINGS TABLE / CARDS
 ═══════════════════════════════════════════════ */
 function filterBookings() {
+  bkPage = 1;
   const q  = document.getElementById('bkSearch').value.toLowerCase();
   const t  = document.getElementById('bkType').value;
   const df = document.getElementById('bkFrom').value;
@@ -628,8 +668,10 @@ function renderBkPage() {
     : page.map(b => {
         const oi  = bookings.indexOf(b);
         const bal = calcBal(b);
+        const rowCanEdit   = canEdit(currentSession, 'booking', b);
+        const rowCanDelete = canDelete(currentSession, 'booking', b);
         return `<tr onclick="openEdit(${oi})">
-          <td class="mcard-head" data-label="Room"><span class="room-badge"><span class="rt-dot ${DOT_CLASS[b.type]}"></span>${b.room} · ${b.type}</span><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||'—'}</span></td>
+          <td class="mcard-head" data-label="Room"><span class="room-badge"><span class="rt-dot ${DOT_CLASS[b.type]}"></span>${b.room} · ${b.type}</span><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}"><i class="fa-solid fa-circle"></i>${CHIP_LBL[b.status]||'—'}</span></td>
           <td data-label="Guest"><div style="text-align:right;"><div style="font-weight:600;font-size:12.5px;">${b.guest}</div><div style="font-size:10.5px;color:var(--text3);">${b.phone}</div></div></td>
           <td data-label="Check-in">${fmtDate(b.checkin)}</td>
           <td data-label="Check-out">${fmtDate(b.checkout)}</td>
@@ -637,12 +679,13 @@ function renderBkPage() {
           <td data-label="Total"><strong>${fmtN(calcTotal(b))}</strong></td>
           <td data-label="Paid"><span style="color:var(--green);">${fmtN(b.paid||0)}</span></td>
           <td data-label="Balance"><span style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:700;">${fmtN(bal)}</span></td>
-          <td data-label="Payment"><div style="text-align:right;"><div style="font-size:11.5px;">${b.payMethod}</div><span class="pay-chip ${PAY_CLS[b.payStatus]||'pay-pending'}">${b.payStatus}</span></div></td>
-          <td data-label="Status"><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}">${CHIP_LBL[b.status]||'—'}</span></td>
+          <td data-label="Payment"><div style="text-align:right;"><div style="font-size:11.5px;">${b.payMethod}</div><span class="pay-chip ${PAY_CLS[b.payStatus]||'pay-pending'}"><i class="fa-solid fa-circle"></i>${b.payStatus}</span></div></td>
+          <td data-label="Status"><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}"><i class="fa-solid fa-circle"></i>${CHIP_LBL[b.status]||'—'}</span></td>
           <td class="no-print mcard-actions" onclick="event.stopPropagation()">
             <div class="act-btns">
-              <button class="act-btn edit" onclick="openEdit(${oi})"><i class="fa-solid fa-pen"></i> Edit</button>
-              <button class="act-btn del"  onclick="openDelete(${oi})"><i class="fa-solid fa-trash"></i> Delete</button>
+              ${rowCanEdit   ? `<button class="act-btn edit" onclick="openEdit(${oi})"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
+              ${rowCanDelete ? `<button class="act-btn del"  onclick="openDelete(${oi})"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
+              ${(!rowCanEdit && !rowCanDelete) ? `<span class="act-view-only">View only</span>` : ''}
             </div>
           </td>
         </tr>`;
@@ -658,20 +701,23 @@ function renderBkPage() {
     document.getElementById('bkSummary').style.display = 'none';
   }
   renderPagination('bkPageBtns', 'bkPaginLabel', bkPage, total, PAGE_BK, p => { bkPage = p; renderBkPage(); });
+  renderKPIs();
 
   // Keep sidebar's "All Bookings" badge in sync with reserved arrivals.
   shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
 }
 
 /* ═══════════════════════════════════════════════
-   GUEST AUTOFILL
+   GUEST AUTOFILL — sourced from getBookingData()'s guests list.
+   New guests typed here stay in-memory only (see note at top of
+   file) rather than being written back through saveBookingData().
 ═══════════════════════════════════════════════ */
 function searchGuests(val) {
   const drop = document.getElementById('guestDrop');
   if (!val || val.length < 1) { drop.classList.remove('show'); return; }
   const hits = guestDB.filter(g =>
     g.name.toLowerCase().includes(val.toLowerCase()) ||
-    g.phone.replace(/\s/g,'').includes(val.replace(/\s/g,''))
+    (g.phone || '').replace(/\s/g,'').includes(val.replace(/\s/g,''))
   );
   if (!hits.length) { drop.classList.remove('show'); return; }
   drop._hits = hits;
@@ -751,6 +797,7 @@ function calcBalance() {
 
 function adj(id, d) {
   const el = document.getElementById(id);
+  if (el.disabled) return;
   el.value = Math.min(parseInt(el.max) || 99, Math.max(parseInt(el.min) || 0, (parseInt(el.value) || 0) + d));
 }
 
@@ -772,11 +819,16 @@ function clearBookingForm() {
 }
 
 function openBookingModal() {
+  if (!hasPermission(currentSession, 'canCreate', 'booking')) {
+    showToast("You don't have permission to create bookings.", 'error');
+    return;
+  }
   editIdx = null;
   document.getElementById('modalTitle').textContent = 'New Booking';
   clearBookingForm();
   populateRoomSelect(null);
   document.getElementById('fCheckin').value = new Date().toISOString().split('T')[0];
+  applyModalPermissions(null);
   document.getElementById('bookingModal').classList.add('show');
 }
 
@@ -805,7 +857,7 @@ function openEdit(i) {
   const sel = document.getElementById('fRoom');
   for (let o of sel.options) { if (o.value.startsWith(b.room + '|')) { sel.value = o.value; break; } }
   calcAmount();
-  document.getElementById('modalDeleteBtn').style.display = 'inline-flex';
+  applyModalPermissions(b);
   document.getElementById('bookingModal').classList.add('show');
 }
 
@@ -835,26 +887,36 @@ async function saveBooking() {
     status: editIdx !== null ? bookings[editIdx].status : 'reserved',
   };
 
-  if (editIdx !== null) {
-    bookings[editIdx] = entry;
-    showToast('Booking updated.', 'success');
-  } else {
-    const existIdx = bookings.findIndex(b => b.room === roomNum);
-    if (existIdx >= 0) bookings[existIdx] = entry; else bookings.push(entry);
-    if (!guestDB.find(g => g.name === name)) guestDB.push({ name, phone: entry.phone, email: entry.email, idType: entry.idType, idNum: entry.idNum });
-    showToast('Booking saved. Room marked as Reserved.', 'success');
-  }
+  try {
+    if (editIdx !== null) {
+      bookings[editIdx] = entry;
+    } else {
+      const existIdx = bookings.findIndex(b => b.room === roomNum);
+      if (existIdx >= 0) bookings[existIdx] = entry; else bookings.push(entry);
+      if (!guestDB.find(g => g.name === name)) guestDB.push({ name, phone: entry.phone, email: entry.email, idType: entry.idType, idNum: entry.idNum });
+    }
 
-  await saveShared(KEY_BOOKINGS, bookings);
-  closeModal('bookingModal');
-  editIdx = null;
-  filterBookings();
+    // Guests are intentionally NOT passed here — see note at top of file.
+    await saveBookingData(allRooms, bookings);
+
+    showToast(editIdx !== null ? 'Booking updated.' : 'Booking saved. Room marked as Reserved.', 'success');
+    closeModal('bookingModal');
+    editIdx = null;
+    filterBookings();
+  } catch (err) {
+    console.error('[Bookings] Save failed:', err);
+    showToast(err.message || 'Failed to save booking.', 'error');
+  }
 }
 
 /* ═══════════════════════════════════════════════
    DELETE
 ═══════════════════════════════════════════════ */
 function openDelete(i) {
+  if (!canDelete(currentSession, 'booking', bookings[i])) {
+    showToast("You don't have permission to delete this booking.", 'error');
+    return;
+  }
   deleteIdx = i;
   document.getElementById('delGuest').textContent = bookings[i].guest;
   document.getElementById('delRoom').textContent  = bookings[i].room;
@@ -862,6 +924,7 @@ function openDelete(i) {
 }
 function openDeleteFromEdit() {
   if (editIdx === null) return;
+  if (!canDelete(currentSession, 'booking', bookings[editIdx])) return;
   deleteIdx = editIdx;
   document.getElementById('delGuest').textContent = bookings[deleteIdx].guest;
   document.getElementById('delRoom').textContent  = bookings[deleteIdx].room;
@@ -871,13 +934,18 @@ function openDeleteFromEdit() {
 
 async function confirmDelete() {
   if (deleteIdx === null) return;
-  const b = bookings[deleteIdx];
-  bookings[deleteIdx] = { room:b.room, type:b.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:b.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:'', idType:'NIN', idNum:'' };
-  await saveShared(KEY_BOOKINGS, bookings);
-  closeModal('deleteModal');
-  deleteIdx = null;
-  showToast('Booking deleted. Room marked as Available.', 'info');
-  filterBookings();
+  try {
+    const b = bookings[deleteIdx];
+    bookings[deleteIdx] = { room:b.room, type:b.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:b.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:'', idType:'NIN', idNum:'' };
+    await saveBookingData(allRooms, bookings);
+    closeModal('deleteModal');
+    deleteIdx = null;
+    showToast('Booking deleted. Room marked as Available.', 'info');
+    filterBookings();
+  } catch (err) {
+    console.error('[Bookings] Delete failed:', err);
+    showToast(err.message || 'Failed to delete booking.', 'error');
+  }
 }
 
 /* ═══════════════════════════════════════════════
@@ -896,23 +964,50 @@ function showToast(msg, type = 'success') {
 }
 
 /* ═══════════════════════════════════════════════
-   INIT
+   INIT — loading / error states around the single data service call.
+   In production (CONFIG.USE_DEMO = false in booking-data.js),
+   getBookingData() throws on failure rather than silently falling
+   back, so this page must — and does — handle that explicitly.
 ═══════════════════════════════════════════════ */
 async function init() {
-  allRooms = await loadShared(KEY_ROOMS, DEMO_ROOMS);
-  bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
-  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
+  document.getElementById('bkBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);"><i class="fa-solid fa-spinner fa-spin"></i> Loading bookings…</td></tr>`;
+  try {
+    const { rooms, bookings: bk, session, guests } = await getBookingData();
+    allRooms = rooms;
+    bookings = bk;
+    currentSession = session;
+    guestDB = (guests || []).map(g => ({ name: g.name, phone: g.phone, email: g.email, idType: g.idType, idNum: g.idNum }));
 
-  // Respect ?status= query param (e.g. linked from dashboard KPI cards)
-  const qs = new URLSearchParams(location.search);
-  const st = qs.get('status');
-  if (st) {
-    const btn = document.querySelector(`.sc-btn[data-s="${st}"]`);
-    if (btn) setStatusChip(st, btn); else filterBookings();
-  } else {
-    filterBookings();
+    applyPermissionsUI();
+
+    // Respect ?status= query param (e.g. linked from dashboard KPI cards)
+    const qs = new URLSearchParams(location.search);
+    const st = qs.get('status');
+    if (st) {
+      const btn = document.querySelector(`.sc-btn[data-s="${st}"]`);
+      if (btn) setStatusChip(st, btn); else filterBookings();
+    } else {
+      filterBookings();
+    }
+  } catch (err) {
+    console.error('[Bookings] Failed to load booking data:', err);
+    document.getElementById('bkBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--red);">
+      <i class="fa-solid fa-triangle-exclamation"></i> ${err.message || "Couldn't load bookings. Please refresh."}
+    </td></tr>`;
+    showToast('Failed to load bookings.', 'error');
   }
 }
+
+// Expose everything referenced by inline onclick/oninput/onchange
+// attributes — module scripts don't share the page's global scope
+// the way classic scripts do, so this bridges the two explicitly.
+Object.assign(window, {
+  setStatusChip, setStatusFromKpi, filterBookings,
+  openBookingModal, handleModalBackdrop, closeModal,
+  searchGuests, autofillGuest, onRoomChange, calcAmount, calcBalance, adj,
+  openDeleteFromEdit, saveBooking, confirmDelete, openEdit, openDelete,
+});
+
 init();
 </script>
 </body>

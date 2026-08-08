@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Aurum Hotel — Rooms</title>
+<title>Grace Hotel — Rooms</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 /* This page owns layout + its own Rooms content only. Sidebar +
@@ -137,7 +137,7 @@ body {
 .room-rate { font-size: 11px; color: var(--text2); font-weight: 700; margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--border); }
 .room-rate span { color: var(--text3); font-weight: 500; }
 
-.room-acts { display: flex; gap: 6px; margin-top: 9px; }
+.room-acts { display: flex; gap: 6px; margin-top: 9px; min-height: 30px; }
 .room-act-btn { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 6px 0; font-size: 10.5px; font-weight: 700; color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: inherit; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
 .room-act-btn:hover { border-color: var(--gold-border); color: var(--gold); background: var(--gold-dim); }
 .room-act-btn.primary { background: var(--gold); border-color: var(--gold); color: #fff; box-shadow: 0 3px 8px rgba(47,111,237,0.25); }
@@ -228,6 +228,7 @@ body {
 .guest-opt-name { font-size: 13px; font-weight: 700; color: var(--text); }
 .guest-opt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
 .returning-tag { display: inline-block; font-size: 9px; background: var(--gold-dim); color: var(--gold); padding: 1px 6px; border-radius: 8px; margin-left: 5px; font-weight: 700; }
+.vip-tag { display: inline-block; font-size: 9px; background: var(--amber-bg); color: var(--amber); padding: 1px 6px; border-radius: 8px; margin-left: 5px; font-weight: 700; }
 
 /* ═══════════ TOAST ═══════════ */
 .toast {
@@ -299,8 +300,8 @@ body {
         </div>
         <div class="toolbar-right">
           <button class="btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-          <button class="btn-outline" onclick="openRoomModal('add')"><i class="fa-solid fa-plus"></i> Add Room</button>
-          <button class="btn-primary" onclick="openBookingModal()"><i class="fa-solid fa-plus"></i> New Booking</button>
+          <button class="btn-outline" id="addRoomBtn" onclick="openRoomModal('add')"><i class="fa-solid fa-plus"></i> Add Room</button>
+          <button class="btn-primary" id="newBookingBtn" onclick="openBookingModal()"><i class="fa-solid fa-plus"></i> New Booking</button>
         </div>
       </div>
 
@@ -458,8 +459,22 @@ body {
   </div>
 </div>
 
+<!-- booking-shell.js is a classic (non-module) script that exposes the
+     global `BookingShell` — it must run before the module script below
+     so BookingShell.attach/CONFIG exist when the module executes. -->
 <script src="../component/booking-shell.js"></script>
-<script>
+<script type="module">
+/* ═══════════════════════════════════════════════
+   This page no longer owns its own demo data, storage shim, or guest
+   directory. All of that now lives in services/booking-data.js
+   (shared with booking-dashboard.html / booking-list.html / guests.html
+   / booking-reports.html, so every module reads and writes the same
+   rooms/bookings/guests records) and services/permissions.js (shared
+   role/privilege rules — same file the other modules use).
+═══════════════════════════════════════════════ */
+import { getBookingData, saveBookingData } from '../services/booking-data.js';
+import { hasPermission } from '../services/permissions.js';
+
 /* ═══════════════════════════════════════════════
    Shell
 ═══════════════════════════════════════════════ */
@@ -469,90 +484,40 @@ const shell = BookingShell.attach({
   activeFile:    'booking-rooms.html',
   pageTitle:     'Rooms',
   pageSubtitle:  'Room inventory & live status',
-  apiMode:       'Demo',
-  user:          { name: 'Booking Manager', initials: 'MG' },
+  // Same shape BookingShell's own CONFIG.DEMO_USER uses ({name, initials,
+  // role, privilege}) — this is what fetchSession() resolves to in demo
+  // mode, so the avatar never flickers between two different identities.
+  user: BookingShell.CONFIG.DEMO_USER,
 });
 
-/* ═══════════════════════════════════════════════
-   Storage shim — same 4-method contract used across every module.
-   Reads/writes the exact same 'booking-rooms' / 'booking-bookings'
-   shared keys as booking-dashboard.html, booking-list.html and
-   booking-reports.html, so all Booking pages stay in sync.
-═══════════════════════════════════════════════ */
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
-
-const KEY_ROOMS    = 'booking-rooms';
-const KEY_BOOKINGS = 'booking-bookings';
-
-/* Seed data — identical shape/values to booking-dashboard.html /
-   booking-list.html, plus a room-level `notes` field (e.g. "sea view")
-   which is distinct from a booking's guest notes. */
-const DEMO_ROOMS = [
-  {num:'101',type:'Standard',   rate:35000, notes:''},{num:'102',type:'Standard',   rate:35000, notes:''},
-  {num:'103',type:'Standard',   rate:35000, notes:''},{num:'104',type:'Standard',   rate:35000, notes:''},
-  {num:'105',type:'Standard',   rate:35000, notes:''},{num:'106',type:'Standard',   rate:35000, notes:''},
-  {num:'201',type:'Deluxe',     rate:60000, notes:''},{num:'202',type:'Deluxe',     rate:60000, notes:''},
-  {num:'203',type:'Deluxe',     rate:60000, notes:''},{num:'204',type:'Deluxe',     rate:60000, notes:''},
-  {num:'301',type:'Suite',      rate:120000, notes:''},{num:'302',type:'Suite',     rate:120000, notes:''},
-  {num:'303',type:'Suite',      rate:120000, notes:''},
-  {num:'401',type:'Conference', rate:200000, notes:''},{num:'402',type:'Conference',rate:200000, notes:''},
-];
-
-const DEMO_BOOKINGS = [
-  {room:'101',type:'Standard',  guest:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',   idType:'NIN',             idNum:'12345678901', checkin:'2026-03-10',checkout:'2026-03-14',rate:35000, discount:0,  paid:140000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:''},
-  {room:'102',type:'Standard',  guest:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',      idType:'Passport',         idNum:'A12345678',   checkin:'2026-03-12',checkout:'2026-03-13',rate:35000, discount:0,  paid:35000, payMethod:'Cash',                   payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkout',   notes:''},
-  {room:'103',type:'Standard',  guest:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                       idType:'NIN',             idNum:'98765432109', checkin:'2026-03-13',checkout:'2026-03-16',rate:35000, discount:10, paid:50000, payMethod:'POS',                    payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:1,status:'reserved',   notes:'Extra pillow'},
-  {room:'104',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'105',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'Plumbing repair'},
-  {room:'106',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'201',type:'Deluxe',    guest:'Dr. Eze, Chukwuemeka',  phone:'+234 802 444 8899',email:'ceze@hospital.ng',       idType:'Passport',         idNum:'B87654321',   checkin:'2026-03-11',checkout:'2026-03-15',rate:60000, discount:0,  paid:240000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'202',type:'Deluxe',    guest:'Ms. Abubakar, Fatima',  phone:'+234 805 555 0011',email:'fatima.a@gmail.com',     idType:"Driver's Licence", idNum:'ABJ001234',   checkin:'2026-03-13',checkout:'2026-03-17',rate:60000, discount:5,  paid:100000,payMethod:'Split – Cash + Transfer',payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'reserved',   notes:'Honeymoon setup'},
-  {room:'203',type:'Deluxe',    guest:'Mr. Johnson, Segun',    phone:'+234 708 666 2233',email:'',                       idType:'NIN',             idNum:'55566677788', checkin:'2026-03-09',checkout:'2026-03-13',rate:60000, discount:0,  paid:240000,payMethod:'POS',                    payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:2,status:'checkout',   notes:''},
-  {room:'204',type:'Deluxe',    guest:'Prof. Williams, Ada',   phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng',idType:'NIN',             idNum:'11122233344', checkin:'2026-03-12',checkout:'2026-03-18',rate:60000, discount:15, paid:200000,payMethod:'Transfer',              payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:'Vegetarian meals'},
-  {room:'301',type:'Suite',     guest:'Chief Dangote, Emeka',  phone:'+234 801 888 6677',email:'emeka.d@corp.ng',        idType:'Passport',         idNum:'C11223344',   checkin:'2026-03-10',checkout:'2026-03-15',rate:120000,discount:0,  paid:600000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'302',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'303',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'AC repair in progress'},
-  {room:'401',type:'Conference',guest:'Zenith Bank Ltd.',       phone:'+234 700 999 8877',email:'events@zenithbank.com',  idType:"Voter's Card",     idNum:'ZB00001',     checkin:'2026-03-13',checkout:'2026-03-13',rate:200000,discount:0,  paid:200000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:40,children:0,status:'checkedin',  notes:'Projector & PA system'},
-  {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-];
-
-/* Local returning-guest directory for autofill only — used only by the
-   New Booking modal. Not shown or editable anywhere on the Room modal. */
-let guestDB = [
-  {name:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',    idType:'NIN',              idNum:'12345678901'},
-  {name:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',       idType:'Passport',         idNum:'A12345678'},
-  {name:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                        idType:'NIN',              idNum:'98765432109'},
-  {name:'Dr. Eze, Chukwuemeka', phone:'+234 802 444 8899',email:'ceze@hospital.ng',        idType:'Passport',         idNum:'B87654321'},
-  {name:'Ms. Abubakar, Fatima', phone:'+234 805 555 0011',email:'fatima.a@gmail.com',      idType:"Driver's Licence", idNum:'ABJ001234'},
-  {name:'Prof. Williams, Ada',  phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng', idType:'NIN',              idNum:'11122233344'},
-  {name:'Chief Dangote, Emeka', phone:'+234 801 888 6677',email:'emeka.d@corp.ng',         idType:'Passport',         idNum:'C11223344'},
-  {name:'Zenith Bank Ltd.',     phone:'+234 700 999 8877',email:'events@zenithbank.com',   idType:"Voter's Card",     idNum:'ZB00001'},
-];
-
-async function loadShared(key, fallback) {
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
-  } catch (e) {}
-  return fallback;
-}
-async function saveShared(key, value) {
-  try { await storage.set(key, JSON.stringify(value), true); } catch (e) { console.warn('[sync]', key, e); }
+/* Single source of truth for "who's logged in" for permission checks —
+   the exact same object the sidebar avatar reflects, so a front-desk
+   staff account sees the same restrictions in the UI and in the data
+   layer. permissions.js reads .role / .privilege off this. */
+function getSession() {
+  return shell.getUser() || BookingShell.CONFIG.DEMO_USER;
 }
 
 let allRooms = [];
 let bookings = [];
+let guests   = [];
+
+/* Persist through booking-data.js so Rooms stays in sync with
+   Dashboard, All Bookings, Guests and Reports — no page-local
+   localStorage keys or demo arrays anymore. */
+async function persist() {
+  try {
+    await saveBookingData(allRooms, bookings, guests);
+  } catch (err) {
+    showToast(err.message || 'Failed to save.', 'error');
+  }
+}
 
 /* ═══════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════ */
-let roomFilter   = 'all';
-let roomsPage    = 1;
+let roomFilter    = 'all';
+let roomsPage     = 1;
 let roomModalMode = 'add';   // 'add' | 'edit'
 let roomEditNum   = null;
 let statusRoom    = null;
@@ -583,6 +548,28 @@ const STATUS_OPTS = {
 };
 
 /* ═══════════════════════════════════════════════
+   PERMISSIONS — gates every mutating action on this page. Booking
+   module rules (admin/manager/front_desk) live in permissions.js;
+   this page only ever asks, never redefines them.
+═══════════════════════════════════════════════ */
+function perms() {
+  const session = getSession();
+  return {
+    canCreate:   hasPermission(session, 'canCreate', 'booking'),
+    canEditRoom: hasPermission(session, 'canEdit', 'booking'),
+    canCheckin:  hasPermission(session, 'canCheckin', 'booking'),
+    canCheckout: hasPermission(session, 'canCheckout', 'booking'),
+  };
+}
+
+function applyPermissionUI() {
+  const p = perms();
+  document.getElementById('addRoomBtn').style.display   = p.canEditRoom ? '' : 'none';
+  document.getElementById('newBookingBtn').style.display = p.canCreate ? '' : 'none';
+  return p;
+}
+
+/* ═══════════════════════════════════════════════
    PAGINATION
 ═══════════════════════════════════════════════ */
 function renderPagination(btnId, labelId, page, total, size, cb) {
@@ -609,7 +596,8 @@ function renderPagination(btnId, labelId, page, total, size, cb) {
 }
 
 /* ═══════════════════════════════════════════════
-   STAT PILLS — Occupancy Rate & Revenue (same figures as the dashboard)
+   STAT PILLS — Occupancy Rate & Revenue (same figures as the dashboard,
+   because both read the same rooms/bookings from booking-data.js)
 ═══════════════════════════════════════════════ */
 function updateStatPills() {
   const totalRooms = allRooms.length || 1;
@@ -623,15 +611,16 @@ function updateStatPills() {
 /* ═══════════════════════════════════════════════
    ROOM GRID
 ═══════════════════════════════════════════════ */
-function filterRooms(st, btn) {
+window.filterRooms = function(st, btn) {
   document.querySelectorAll('#roomFilters .sc-btn[data-f]').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   roomFilter = st || 'all';
   roomsPage  = 1;
   renderRoomGrid(roomFilter);
-}
+};
 
 function renderRoomGrid(filter) {
+  const p = applyPermissionUI();
   const typeF = (document.getElementById('roomTypeFilter') || {}).value || '';
   const q     = (document.getElementById('roomSearch').value || '').trim().toLowerCase();
   const filtered = allRooms.filter(r => {
@@ -664,17 +653,19 @@ function renderRoomGrid(filter) {
         let acts = '';
         if (st === 'available') {
           acts = `<div class="room-acts">
-            <button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom('${r.num}')"><i class="fa-solid fa-clipboard-check"></i> Book</button>
-            <button class="room-act-btn" onclick="event.stopPropagation();openRoomModal('edit','${r.num}')"><i class="fa-solid fa-pen"></i> Edit</button>
+            ${p.canCreate   ? `<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom('${r.num}')"><i class="fa-solid fa-clipboard-check"></i> Book</button>` : ''}
+            ${p.canEditRoom ? `<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal('edit','${r.num}')"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
           </div>`;
         } else {
+          const canStatus = p.canCheckin || p.canCheckout || p.canEditRoom;
           acts = `<div class="room-acts">
-            <button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal('${r.num}')"><i class="fa-solid fa-gear"></i> Status</button>
-            <button class="room-act-btn" onclick="event.stopPropagation();openRoomModal('edit','${r.num}')"><i class="fa-solid fa-pen"></i> Edit</button>
+            ${canStatus     ? `<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal('${r.num}')"><i class="fa-solid fa-gear"></i> Status</button>` : ''}
+            ${p.canEditRoom ? `<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal('edit','${r.num}')"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
           </div>`;
         }
 
-        return `<div class="room-card ${st}" onclick="openRoomModal('edit','${r.num}')">
+        const clickable = p.canEditRoom;
+        return `<div class="room-card ${st}" ${clickable ? `onclick="openRoomModal('edit','${r.num}')"` : 'style="cursor:default;"'}>
           <div class="room-card-head">
             <div class="room-num">${r.num}</div>
             <span class="room-chip ${RC_CLS[st]}">${RC_LBL[st]}</span>
@@ -692,8 +683,9 @@ function renderRoomGrid(filter) {
   // Keep sidebar's "All Bookings" badge in sync with reserved arrivals.
   shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
 }
+window.renderRoomGrid = renderRoomGrid;
 
-function openBookingForRoom(num) {
+window.openBookingForRoom = function(num) {
   openBookingModal();
   setTimeout(() => {
     const r = allRooms.find(x => x.num === num);
@@ -702,36 +694,40 @@ function openBookingForRoom(num) {
     for (let o of sel.options) { if (o.value.startsWith(num + '|')) { sel.value = o.value; break; } }
     onRoomChange();
   }, 60);
-}
+};
 
 /* ═══════════════════════════════════════════════
-   GUEST AUTOFILL — only used inside the New Booking modal
+   GUEST AUTOFILL — searches the same `guests` records booking-data.js
+   returns (and that guests.html reads), so a returning guest picked up
+   here shows the same stay/charge history there. Only used inside the
+   New Booking modal.
 ═══════════════════════════════════════════════ */
-function searchGuests(val) {
+window.searchGuests = function(val) {
   const drop = document.getElementById('guestDrop');
   if (!val || val.length < 1) { drop.classList.remove('show'); return; }
-  const hits = guestDB.filter(g =>
-    g.name.toLowerCase().includes(val.toLowerCase()) ||
-    g.phone.replace(/\s/g,'').includes(val.replace(/\s/g,''))
+  const needle = val.toLowerCase();
+  const hits = guests.filter(g =>
+    (g.name || '').toLowerCase().includes(needle) ||
+    (g.phone || '').replace(/\s/g,'').includes(val.replace(/\s/g,''))
   );
   if (!hits.length) { drop.classList.remove('show'); return; }
   drop._hits = hits;
   drop.innerHTML = hits.map((g, i) => `
     <div class="guest-opt" onclick="autofillGuest(${i})">
-      <div class="guest-opt-name">${g.name}<span class="returning-tag">Returning</span></div>
+      <div class="guest-opt-name">${g.name}<span class="returning-tag">Returning</span>${g.vip ? '<span class="vip-tag">VIP</span>' : ''}</div>
       <div class="guest-opt-sub">${g.phone}${g.email ? ' · ' + g.email : ''}</div>
     </div>`).join('');
   drop.classList.add('show');
-}
-function autofillGuest(i) {
+};
+window.autofillGuest = function(i) {
   const g = document.getElementById('guestDrop')._hits[i];
   document.getElementById('fName').value   = g.name;
-  document.getElementById('fPhone').value  = g.phone;
+  document.getElementById('fPhone').value  = g.phone || '';
   document.getElementById('fEmail').value  = g.email || '';
-  document.getElementById('fIdType').value = g.idType;
-  document.getElementById('fIdNum').value  = g.idNum;
+  document.getElementById('fIdType').value = g.idType || 'NIN';
+  document.getElementById('fIdNum').value  = g.idNum || '';
   document.getElementById('guestDrop').classList.remove('show');
-}
+};
 document.addEventListener('click', e => {
   if (!e.target.closest('.guest-search-wrap')) document.getElementById('guestDrop').classList.remove('show');
 });
@@ -752,16 +748,16 @@ function populateRoomSelect() {
   });
 }
 
-function onRoomChange() {
+window.onRoomChange = function() {
   const v = document.getElementById('fRoom').value;
   if (!v) { document.getElementById('fType').value = ''; document.getElementById('fRate').value = ''; return; }
   const p = v.split('|');
   document.getElementById('fType').value = p[1] || '';
   document.getElementById('fRate').value = p[2] || '';
   calcAmount();
-}
+};
 
-function calcAmount() {
+window.calcAmount = function() {
   const ci   = document.getElementById('fCheckin').value;
   const co   = document.getElementById('fCheckout').value;
   const rate = parseFloat(document.getElementById('fRate').value) || 0;
@@ -775,9 +771,9 @@ function calcAmount() {
   document.getElementById('dispAfterDisc').textContent = fmtN(after);
   document.getElementById('dispDisc').textContent      = disc > 0 ? `${disc}% off (−${fmtN(discAmt)})` : 'No discount';
   calcBalance();
-}
+};
 
-function calcBalance() {
+window.calcBalance = function() {
   const ci   = document.getElementById('fCheckin').value;
   const co   = document.getElementById('fCheckout').value;
   const rate = parseFloat(document.getElementById('fRate').value) || 0;
@@ -787,12 +783,12 @@ function calcBalance() {
   const bal  = Math.max(0, rate * n * (1 - disc / 100) - paid);
   document.getElementById('dispBalance').textContent = fmtN(bal);
   document.getElementById('dispPaidSub').textContent = fmtN(paid) + ' paid';
-}
+};
 
-function adj(id, d) {
+window.adj = function(id, d) {
   const el = document.getElementById(id);
   el.value = Math.min(parseInt(el.max) || 99, Math.max(parseInt(el.min) || 0, (parseInt(el.value) || 0) + d));
-}
+};
 
 function clearBookingForm() {
   ['fName','fPhone','fEmail','fIdNum','fCheckin','fCheckout','fRate','fDiscount','fPaid','fRecordedBy','fNotes'].forEach(id => {
@@ -810,14 +806,17 @@ function clearBookingForm() {
   document.getElementById('dispPaidSub').textContent = '₦0 paid';
 }
 
-function openBookingModal() {
+window.openBookingModal = function() {
+  if (!perms().canCreate) { showToast("You don't have permission to create bookings.", 'error'); return; }
   clearBookingForm();
   populateRoomSelect();
   document.getElementById('fCheckin').value = new Date().toISOString().split('T')[0];
   document.getElementById('bookingModal').classList.add('show');
-}
+};
 
-async function saveBooking() {
+window.saveBooking = async function() {
+  if (!perms().canCreate) { showToast("You don't have permission to create bookings.", 'error'); return; }
+
   const name = document.getElementById('fName').value.trim();
   const ci   = document.getElementById('fCheckin').value;
   const co   = document.getElementById('fCheckout').value;
@@ -845,18 +844,34 @@ async function saveBooking() {
 
   const existIdx = bookings.findIndex(b => b.room === roomNum);
   if (existIdx >= 0) bookings[existIdx] = entry; else bookings.push(entry);
-  if (!guestDB.find(g => g.name === name)) guestDB.push({ name, phone: entry.phone, email: entry.email, idType: entry.idType, idNum: entry.idNum });
-  showToast('Booking saved. Room marked as Reserved.', 'success');
 
-  await saveShared(KEY_BOOKINGS, bookings);
+  // Upsert the guest record — same collection guests.html reads, so
+  // this stay shows up in that guest's history immediately.
+  const stay = { room: roomNum, type: entry.type, checkin: ci, checkout: co, total: calcTotal(entry), paid: entry.paid, status: 'reserved' };
+  let guest = guests.find(g => (g.name || '').toLowerCase() === name.toLowerCase());
+  if (guest) {
+    const sIdx = guest.stays.findIndex(s => s.room === roomNum && s.status !== 'checkout');
+    if (sIdx >= 0) guest.stays[sIdx] = stay; else guest.stays.push(stay);
+    guest.phone  = entry.phone  || guest.phone;
+    guest.email  = entry.email  || guest.email;
+    guest.idType = entry.idType || guest.idType;
+    guest.idNum  = entry.idNum  || guest.idNum;
+  } else {
+    guest = { id: 'g' + Date.now(), name, phone: entry.phone, email: entry.email, idType: entry.idType, idNum: entry.idNum, vip: false, notes: '', stays: [stay], charges: [] };
+    guests.push(guest);
+  }
+
+  showToast('Booking saved. Room marked as Reserved.', 'success');
+  await persist();
   closeModal('bookingModal');
   renderRoomGrid(roomFilter);
-}
+};
 
 /* ═══════════════════════════════════════════════
    ROOM MODAL — Add / Edit (room details only, ever)
 ═══════════════════════════════════════════════ */
-function openRoomModal(mode, num) {
+window.openRoomModal = function(mode, num) {
+  if (!perms().canEditRoom) { showToast("You don't have permission to manage rooms.", 'error'); return; }
   roomModalMode = mode;
   roomEditNum = num || null;
   const isEdit = mode === 'edit';
@@ -883,9 +898,11 @@ function openRoomModal(mode, num) {
     document.getElementById('rmStatus').value = 'vacant';
   }
   document.getElementById('roomModal').classList.add('show');
-}
+};
 
-async function saveRoomModal() {
+window.saveRoomModal = async function() {
+  if (!perms().canEditRoom) { showToast("You don't have permission to manage rooms.", 'error'); return; }
+
   const num   = document.getElementById('rmNum').value.trim();
   const type  = document.getElementById('rmType').value;
   const rate  = parseFloat(document.getElementById('rmRate').value) || 0;
@@ -907,15 +924,18 @@ async function saveRoomModal() {
     showToast(`Room ${roomEditNum} updated.`, 'success');
   }
 
-  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
+  await persist();
   closeModal('roomModal');
   renderRoomGrid(roomFilter);
-}
+};
 
 /* ═══════════════════════════════════════════════
    ROOM STATUS MODAL
 ═══════════════════════════════════════════════ */
-function openRoomStatusModal(num) {
+window.openRoomStatusModal = function(num) {
+  const p = perms();
+  if (!p.canCheckin && !p.canCheckout && !p.canEditRoom) { showToast("You don't have permission to change room status.", 'error'); return; }
+
   statusRoom = num;
   const r   = allRooms.find(x => x.num === num);
   const bk  = bookings.find(b => b.room === num);
@@ -930,9 +950,9 @@ function openRoomStatusModal(num) {
     ? '<option value="">No changes available</option>'
     : opts.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
   document.getElementById('roomStatusModal').classList.add('show');
-}
+};
 
-async function saveRoomStatus() {
+window.saveRoomStatus = async function() {
   if (!statusRoom) return;
   const newSt = document.getElementById('rsNewStatus').value;
   if (!newSt) return;
@@ -940,24 +960,36 @@ async function saveRoomStatus() {
   const i = bookings.findIndex(b => b.room === statusRoom);
   if (i >= 0) {
     if (newSt === 'vacant') {
-      const p = bookings[i];
-      bookings[i] = { room:p.room, type:p.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:p.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:note||'', idType:'NIN', idNum:'' };
+      const prev = bookings[i];
+      // If a guest was checking out, close their stay record too so
+      // Guests.html shows a completed stay instead of a dangling one.
+      const g = guests.find(x => (x.name || '').toLowerCase() === (prev.guest || '').toLowerCase());
+      if (g) {
+        const s = g.stays.find(s => s.room === prev.room && s.status !== 'checkout');
+        if (s) s.status = 'checkout';
+      }
+      bookings[i] = { room:prev.room, type:prev.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:prev.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:note||'', idType:'NIN', idNum:'' };
     } else {
       bookings[i].status = newSt;
       if (note) bookings[i].notes = note;
+      const g = guests.find(x => (x.name || '').toLowerCase() === (bookings[i].guest || '').toLowerCase());
+      if (g) {
+        const s = g.stays.find(s => s.room === bookings[i].room && s.status !== 'checkout');
+        if (s) s.status = newSt;
+      }
     }
   }
-  await saveShared(KEY_BOOKINGS, bookings);
+  await persist();
   closeModal('roomStatusModal');
   showToast(`Room ${statusRoom} → ${RC_LBL[newSt] || newSt}.`, 'success');
   renderRoomGrid(roomFilter);
-}
+};
 
 /* ═══════════════════════════════════════════════
    UTILITIES
 ═══════════════════════════════════════════════ */
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function handleModalBackdrop(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
+window.handleModalBackdrop = function(e, id) { if (e.target === document.getElementById(id)) closeModal(id); };
 
 function showToast(msg, type = 'success') {
   const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
@@ -969,13 +1001,23 @@ function showToast(msg, type = 'success') {
 }
 
 /* ═══════════════════════════════════════════════
-   INIT
+   INIT — everything comes from booking-data.js now. In production
+   mode (CONFIG.USE_DEMO = false in booking-data.js) getBookingData()
+   throws on failure instead of silently falling back to demo data,
+   so a real API error surfaces to the user instead of masking itself
+   as an empty room grid.
 ═══════════════════════════════════════════════ */
 async function init() {
-  allRooms = await loadShared(KEY_ROOMS, DEMO_ROOMS);
-  bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
-  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
-  renderRoomGrid('all');
+  try {
+    const data = await getBookingData();
+    allRooms = data.rooms;
+    bookings = data.bookings;
+    guests   = data.guests || [];
+    renderRoomGrid('all');
+  } catch (err) {
+    showToast(err.message || 'Failed to load room data.', 'error');
+    document.getElementById('roomGrid').innerHTML = `<div class="room-empty">Couldn't load room data. Please refresh.</div>`;
+  }
 }
 init();
 </script>

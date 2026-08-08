@@ -5,6 +5,7 @@
 <title>Sales | Aurum Restaurant</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
@@ -38,21 +39,27 @@
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
     display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:118px; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-card.revenue::before{ background:linear-gradient(90deg,var(--green),transparent); }
-  .kpi-card.revenue .kpi-label{ color:var(--green); }
-  .kpi-card.units::before{ background:linear-gradient(90deg,var(--blue),transparent); }
-  .kpi-card.units .kpi-label{ color:var(--blue); }
-  .kpi-card.voided::before{ background:linear-gradient(90deg,var(--red),transparent); }
-  .kpi-card.voided .kpi-label{ color:var(--red); }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
-  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:700; color:var(--text); line-height:1; margin:4px 0 2px; }
+  @media (max-width:420px){ .kpi-value{ font-size:19px; } }
   .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
@@ -100,7 +107,8 @@
     .search-box, .daterange-box{ max-width:100%; }
     .filter-select{ width:100%; }
     .status-pills{ flex-wrap:wrap; }
-    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .toolbar-top-actions{ width:100%; flex-wrap:wrap; }
+    .toolbar-top-actions .btn{ width:100%; justify-content:center; }
     .btn-ghost{ align-self:flex-start; }
   }
 
@@ -131,6 +139,9 @@
   .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-order{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
+  .btn-order:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
+  .toolbar-top-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
   .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
   .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
@@ -251,7 +262,10 @@
             </div>
             <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="printSales()">🖨 Print</button>
+          <div class="toolbar-top-actions">
+            <button class="btn btn-order btn-sm" onclick="location.href='restaurant-orders.html'"><i class="fa-solid fa-utensils"></i> Order</button>
+            <button class="btn btn-outline btn-sm" onclick="printSales()">🖨 Print</button>
+          </div>
         </div>
         <div class="toolbar-row" id="chipsRow" style="display:none;">
           <div class="active-chips" id="activeChips"></div>
@@ -437,6 +451,7 @@ let _filteredCache = [];
 
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
+function todayDDMMYY(){ const d=new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; }
 
 function parseSaleDate(str){
   if (!str) return null;
@@ -527,32 +542,40 @@ function initDateRangePicker(){
 }
 
 /* ═══════════════════════════════════════════
-   KPIs
+   KPIs — Today's Sales / Today's Revenue always reflect the current
+   day (same convention as the Orders page's "Today's Sales" card and
+   the Reports page), independent of whatever filters are applied.
+   Units Sold and Voided Sales stay scoped to the filtered rows, as before.
 ═══════════════════════════════════════════ */
 function renderKPIs(rows){
+  const today = todayDDMMYY();
+  const todaySales = sales.filter(s => (s.date||'').startsWith(today));
+  const todayCompleted = todaySales.filter(s => s.status === 'completed');
+  const todayVoided = todaySales.filter(s => s.status === 'voided');
+  const todayRevenue = todayCompleted.reduce((sum,s)=>sum+s.total,0);
+
   const completed = rows.filter(s => s.status === 'completed');
   const voided    = rows.filter(s => s.status === 'voided');
-  const revenue   = completed.reduce((sum,s)=>sum+s.total,0);
   const units     = completed.reduce((sum,s)=>sum+itemsQty(s),0);
 
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-label">Total Sales</div>
-      <div class="kpi-value" style="color:var(--gold);">${rows.length}</div>
-      <div class="kpi-trend neutral">${completed.length} completed · ${voided.length} voided</div>
+    <div class="kpi-card acc-blue">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-receipt"></i></div><div class="kpi-label">Today's Sales</div></div>
+      <div class="kpi-value" style="color:var(--gold);">${todaySales.length}</div>
+      <div class="kpi-trend neutral">${todayCompleted.length} completed · ${todayVoided.length} voided</div>
     </div>
-    <div class="kpi-card revenue">
-      <div class="kpi-label">Total Revenue</div>
-      <div class="kpi-value" style="color:var(--green);">${fmtN(revenue)}</div>
-      <div class="kpi-trend up">From completed sales</div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Today's Revenue</div></div>
+      <div class="kpi-value" style="color:var(--green);">${fmtN(todayRevenue)}</div>
+      <div class="kpi-trend up">From completed sales today</div>
     </div>
-    <div class="kpi-card units">
-      <div class="kpi-label">Units Sold</div>
-      <div class="kpi-value" style="color:var(--blue);">${units}</div>
+    <div class="kpi-card acc-purple">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Units Sold</div></div>
+      <div class="kpi-value" style="color:var(--purple);">${units}</div>
       <div class="kpi-trend info">Across ${completed.length} sale${completed.length!==1?'s':''}</div>
     </div>
-    <div class="kpi-card voided">
-      <div class="kpi-label">Voided Sales</div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Voided Sales</div></div>
       <div class="kpi-value" style="color:var(--red);">${voided.length}</div>
       <div class="kpi-trend ${voided.length>0?'warn':'up'}">${voided.length>0?'Stock restored':'None on record'}</div>
     </div>`;

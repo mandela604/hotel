@@ -4,148 +4,198 @@
 <meta charset="UTF-8">
 <title>All Requisitions | Grace Hotel HMS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-  :root{
-    --gold:#c9a84c;
-    --gold-light:#e8c96a;
-    --gold-dim: rgba(201,168,76,0.12);
-    --gold-border: rgba(201,168,76,0.25);
-    --green:#4ade80;
-    --green-bg: rgba(74,222,128,0.12);
-    --amber:#fbbf24;
-    --amber-bg: rgba(251,191,36,0.12);
-    --blue:#60a5fa;
-    --blue-bg: rgba(96,165,250,0.12);
-    --red:#f87171;
-    --red-bg: rgba(248,113,113,0.12);
-    --purple:#a78bfa;
-    --purple-bg: rgba(167,139,250,0.12);
-    --text-dark:#e8f0f8;
-    --text-mid:#a8bece;
-    --text-light:#6a8a9e;
-    --border:#1e3045;
-    --bg:#080f18;
-    --white:#111e2b;
-    --surface2:#162435;
-    --input-bg:#0d1a27;
-  }
-  /* This page only owns layout + its own table/KPI content now.
-     Sidebar + topbar look/markup live entirely in store-shell.js. */
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html, body{ height:100%; overflow:hidden; }
-  body{
-    font-family: 'Outfit', 'Segoe UI', Arial, Helvetica, sans-serif;
-    background:var(--bg);
-    color:var(--text-dark);
-    font-size:14px;
-  }
-  .app{ display:flex; height:100vh; overflow:hidden; }
-  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; }
-  @media (max-width: 860px){ .main{ width:100%; } }
+/* This page owns layout + its own table/KPI content only. Sidebar +
+   topbar look/markup live entirely in store-shell.js, which already
+   shares the same blue palette (--gs-gold:#2f6fed) as this page — the
+   .content/.modal-overlay scope below just re-declares the SAME
+   values under the un-prefixed names this page's markup uses. Same
+   Segoe UI font stack + Font Awesome icon system + kpi-top/kpi-ic
+   KPI cards as booking-list.html / booking-reports.html.
+   NOTE: Print + New Requisition now live in this page's own toolbar
+   (inside .content) rather than the topbar slot, because the --gold
+   etc. variables below are only declared inside .content/.modal-overlay
+   — buttons rendered into the topbar slot (outside .content) can't
+   see them and render invisible. Same fix applied to stock.html. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --radius: 14px; --radius-sm: 10px; --transition: .3s cubic-bezier(.4,0,.2,1); }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+  font-size: 13px;
+}
+.app { display: flex; height: 100vh; overflow: hidden; }
+.main {
+  flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100%; overflow: hidden;
+  margin-left: 256px; transition: margin-left .3s cubic-bezier(.4,0,.2,1);
+}
+body.gs-collapsed .main { margin-left: 68px; }
+@media (max-width: 860px) { .main { margin-left: 0 !important; width: 100%; } }
 
-  .content{ flex:1; padding:16px 24px 24px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:14px; min-height:0; }
-  @media (max-width: 640px){ .content{ padding:14px 14px 20px; } }
+/* ── Light-theme variables, scoped to content + modals only ── */
+.content, .modal-overlay {
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
+  --border: #eef0f6; --border2: #dfe3ec;
+  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
+  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
+  --input-bg: #f4f6fb; --modal-bg: #ffffff;
+  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
+  --green: #12b76a; --green-bg: #e9f9f0;
+  --red: #f04438; --red-bg: #feecec;
+  --amber: #f79009; --amber-bg: #fff4e5;
+  --blue: #2f6fed; --blue-bg: #eaf1ff;
+  --purple: #8b5cf6; --purple-bg: #f4efff;
+}
+.content {
+  flex: 1; padding: 20px 24px 28px; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 16px; min-height: 0;
+  background: var(--bg); color: var(--text);
+}
+@media (max-width: 640px) { .content { padding: 16px 14px 22px; } }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-  .kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; flex-shrink:0; }
-  @media (max-width: 1000px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
-  @media (max-width: 620px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
-  @media (max-width: 380px){ .kpi-row{ grid-template-columns:1fr; } }
-  .kpi-card{ background:var(--white); border:1px solid var(--border); border-radius:12px; padding:14px 16px; position:relative; overflow:hidden; }
-  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--gold), transparent); }
-  .kpi-label{ font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-light); margin-bottom:6px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond', serif; font-size:24px; font-weight:700; color:var(--text-dark); line-height:1; }
-  .kpi-value.amber{ color:var(--amber); } .kpi-value.green{ color:var(--green); } .kpi-value.blue{ color:var(--blue); } .kpi-value.red{ color:var(--red); }
+/* ═══ KPI CARDS — same kpi-top/kpi-ic/acc-* system as every other module ═══ */
+.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; flex-shrink: 0; }
+@media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 620px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 380px) { .kpi-row { grid-template-columns: 1fr; } }
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 14px 12px; position: relative; overflow: hidden;
+  box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s, border-color .2s; display: flex; flex-direction: column; animation: fadeUp .4s ease both; }
+.kpi-card:nth-child(1){animation-delay:.03s} .kpi-card:nth-child(2){animation-delay:.06s}
+.kpi-card:nth-child(3){animation-delay:.09s} .kpi-card:nth-child(4){animation-delay:.12s} .kpi-card:nth-child(5){animation-delay:.15s}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--gold-border); }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+.kpi-card.acc-green::before { background: linear-gradient(90deg, var(--green), transparent); }
+.kpi-card.acc-amber::before { background: linear-gradient(90deg, var(--amber), transparent); }
+.kpi-card.acc-red::before { background: linear-gradient(90deg, var(--red), transparent); }
+.kpi-card.acc-blue::before { background: linear-gradient(90deg, var(--blue), transparent); }
+.kpi-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+.kpi-ic { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.ic-blue { background: var(--blue-bg); color: var(--blue); }
+.ic-green { background: var(--green-bg); color: var(--green); }
+.ic-amber { background: var(--amber-bg); color: var(--amber); }
+.ic-red { background: var(--red-bg); color: var(--red); }
+.kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; line-height: 1.3; }
+.kpi-value { font-size: 22px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
+@media (max-width: 420px) { .kpi-value { font-size: 18px; } }
+.kpi-trend { font-size: 10.5px; font-weight: 600; color: var(--text3); margin-top: auto; }
+.kpi-trend.up { color: var(--green); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.down { color: var(--red); } .kpi-trend.neutral { color: var(--text3); }
 
-  .card{ background:var(--white); border:1px solid var(--border); border-radius:12px; }
-  .toolbar{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; padding:16px 18px; flex-shrink:0; }
-  .field{ display:flex; flex-direction:column; gap:5px; }
-  .field-label{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-light); font-weight:500; }
-  .search-wrap{ display:flex; align-items:center; gap:7px; background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:8px 12px; min-width:200px; flex:1; max-width:280px; }
-  .search-wrap:focus-within{ border-color:var(--gold-border); }
-  .search-wrap input{ background:none; border:none; outline:none; color:var(--text-dark); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
-  .search-wrap input::placeholder{ color:var(--text-light); }
-  .sel, .inp{ background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; color:var(--text-dark); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
-  .sel:focus, .inp:focus{ border-color:var(--gold-border); }
-  .inp[type="date"]{ cursor:default; }
-  .btn-ghost{ background:none; border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; color:var(--text-mid); cursor:pointer; transition:all .2s; }
-  .btn-ghost:hover{ border-color:var(--red); color:var(--red); }
-  @media (max-width: 700px){ .toolbar{ flex-direction:column; align-items:stretch; } .search-wrap{ max-width:100%; } }
+/* ═══ PANEL / TOOLBAR ═══ */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 16px 18px; flex-shrink: 0; }
+.toolbar-left { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.toolbar-right { display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.flt-group { display: flex; flex-direction: column; gap: 5px; }
+.flt-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; }
+.search-wrap { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; min-width: 200px; flex: 1; max-width: 280px; }
+.search-wrap:focus-within { border-color: var(--gold-border); }
+.search-wrap i { color: var(--text3); font-size: 12.5px; }
+.search-wrap input { background: none; border: none; outline: none; color: var(--text); font-family: inherit; font-size: 13px; width: 100%; }
+.search-wrap input::placeholder { color: var(--text3); }
+.filter-sel { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text); font-family: inherit; font-size: 12.5px; cursor: pointer; outline: none; transition: border-color .2s; }
+.filter-sel:focus { border-color: var(--gold-border); }
+input[type="date"].filter-sel { cursor: default; min-width: 0; }
+.btn-ghost { background: none; border: none; color: var(--text3); font-family: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 8px 6px; display: inline-flex; align-items: center; gap: 5px; }
+.btn-ghost:hover { color: var(--gold); }
+@media (max-width: 700px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left { flex-direction: column; align-items: stretch; }
+  .toolbar-right { width: 100%; }
+  .toolbar-right .btn-outline, .toolbar-right .btn-primary { flex: 1; justify-content: center; }
+  .search-wrap { max-width: 100%; }
+  .filter-sel { width: 100%; }
+}
 
-  .status-tabs{ display:flex; gap:6px; padding:0 18px 14px; flex-wrap:wrap; }
-  .stab{ background:none; border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:12px; font-weight:500; color:var(--text-mid); cursor:pointer; transition:all .2s; font-family:'Outfit',sans-serif; display:inline-flex; align-items:center; gap:6px; }
-  .stab .dot{ width:7px; height:7px; border-radius:50%; }
-  .stab:hover, .stab.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); }
+/* ═══ STATUS CHIPS (quick filter) ═══ */
+.status-chips { display: flex; gap: 7px; padding: 0 18px 14px; flex-wrap: wrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.status-chips::-webkit-scrollbar { height: 0; }
+.sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all .2s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.sc-btn i { font-size: 6px; }
+.sc-btn:hover, .sc-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
 
-  .table-card{ display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
-  .table-head-row{ display:flex; align-items:center; justify-content:space-between; padding:0 18px 12px; flex-wrap:wrap; gap:8px; }
-  .table-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; }
-  .table-count{ font-size:11.5px; color:var(--text-light); }
-  .table-scroll{ overflow-x:auto; }
-  table{ width:100%; min-width:960px; border-collapse:collapse; }
-  thead th{ text-align:left; font-size:10.5px; color:var(--text-light); font-weight:700; letter-spacing:0.3px; text-transform:uppercase; padding:10px 14px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--surface2); white-space:nowrap; }
-  thead th.center{ text-align:center; }
-  tbody td{ padding:11px 14px; font-size:12.5px; border-bottom:1px solid var(--border); color:var(--text-dark); vertical-align:middle; white-space:nowrap; }
-  tbody tr{ cursor:pointer; transition:background .15s; }
-  tbody tr:hover{ background:var(--surface2); }
-  tbody td.center{ text-align:center; }
-  .req-link{ color:var(--gold-light); font-weight:600; }
-  .dept-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-mid); }
-  .dept-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-  .dot-kitchen{ background:var(--amber); } .dot-housekeeping{ background:var(--blue); } .dot-bar{ background:var(--purple); } .dot-frontdesk{ background:var(--green); } .dot-maintenance{ background:var(--red); } .dot-store{ background:var(--gold); }
-  .type-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
-  .type-chip::before{ content:''; width:6px; height:6px; border-radius:50%; }
-  .type-store{ background:var(--blue-bg); color:var(--blue); } .type-store::before{ background:var(--blue); }
-  .type-purchase{ background:var(--purple-bg); color:var(--purple); } .type-purchase::before{ background:var(--purple); }
-  .status-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
-  .status-chip::before{ content:''; width:6px; height:6px; border-radius:50%; }
-  .chip-pending{ background:var(--amber-bg); color:var(--amber); } .chip-pending::before{ background:var(--amber); }
-  .chip-partial{ background:var(--amber-bg); color:var(--amber); } .chip-partial::before{ background:var(--amber); }
-  .chip-full{ background:var(--green-bg); color:var(--green); } .chip-full::before{ background:var(--green); }
-  .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
-  .items-count{ font-size:12px; color:var(--text-mid); }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:6px; padding:5px 11px; font-size:11px; font-weight:600; color:var(--text-mid); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; }
-  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+/* ═══ BUTTONS — same as booking-list.html ═══ */
+.btn-primary { background: var(--gold); color: #fff; border: 1px solid var(--gold); border-radius: var(--radius-sm); padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; box-shadow: 0 4px 10px rgba(47,111,237,0.28); }
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-primary i { font-size: 11px; }
+.btn-outline { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--text); cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
+.btn-outline i { color: var(--text3); font-size: 12px; }
 
-  .empty-row td{ text-align:center; padding:36px; color:var(--text-light); }
+/* ═══ TABLE ═══ */
+.table-card { display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+.table-head-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); }
+.table-title { font-size: 14px; font-weight: 800; color: var(--text); }
+.table-count { font-size: 11.5px; color: var(--text3); font-weight: 600; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; min-width: 960px; border-collapse: collapse; }
+thead th { text-align: left; font-size: 9.5px; color: var(--text3); font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
+thead th.center { text-align: center; }
+tbody td { padding: 11px 14px; font-size: 12.5px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; white-space: nowrap; }
+tbody tr { cursor: pointer; transition: background .15s; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+tbody td.center { text-align: center; }
+.req-link { color: var(--gold); font-weight: 700; }
+.dept-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.dept-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-kitchen { background: var(--amber); } .dot-housekeeping { background: var(--blue); } .dot-bar { background: var(--purple); }
+.dot-frontdesk { background: var(--green); } .dot-maintenance { background: var(--red); } .dot-store { background: var(--gold); }
+.type-chip, .status-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.type-chip i, .status-chip i { font-size: 6px; }
+.type-store { background: var(--blue-bg); color: var(--blue); }
+.type-purchase { background: var(--purple-bg); color: var(--purple); }
+.chip-pending, .chip-partial { background: var(--amber-bg); color: var(--amber); }
+.chip-full { background: var(--green-bg); color: var(--green); }
+.chip-rejected { background: var(--red-bg); color: var(--red); }
+.items-count { font-size: 12px; color: var(--text2); }
+.act-btn { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 11px; font-size: 11px; font-weight: 700; color: var(--text2); cursor: pointer; transition: all .15s; font-family: inherit; }
+.act-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+.empty-row td, .state-row td { text-align: center; padding: 32px; color: var(--text3); font-weight: 600; cursor: default; }
 
-  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:12px; color:var(--text-light); flex-wrap:wrap; gap:8px; }
-  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text-light); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
-  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
-  .page-btn:disabled{ opacity:0.3; cursor:default; pointer-events:none; }
-  .page-size{ display:flex; align-items:center; gap:6px; }
+/* ═══ PAGINATION ═══ */
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
+.page-btns { display: flex; gap: 3px; flex-wrap: wrap; }
+.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all .15s; font-family: inherit; padding: 0 7px; font-weight: 600; }
+.page-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 700; }
+.page-btn:disabled { opacity: .3; cursor: default; pointer-events: none; }
 
-  /* Topbar action buttons rendered inside store-shell.js's slot — styled here since they're page-specific */
-  .print-btn{ display:flex; align-items:center; gap:8px; padding:8px 14px; border:1px solid var(--border); border-radius:8px; background:var(--white); font-size:12.5px; font-weight:600; color:var(--text-dark); cursor:pointer; font-family:'Outfit',sans-serif; }
-  .print-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .btn-primary{
-    background:var(--gold); color:#0a1520; border:none; border-radius:8px;
-    padding:9px 16px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
-    cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; transition:all .2s;
-  }
-  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+/* ═══ OFFLINE / ERROR BANNER ═══ */
+.offline-banner {
+  display: none; align-items: center; gap: 8px; background: var(--amber-bg); border: 1px solid rgba(247,144,9,0.3);
+  color: var(--amber); border-radius: var(--radius-sm); padding: 9px 14px; font-size: 12px; font-weight: 700;
+}
+.offline-banner.show { display: flex; }
 
-  ::-webkit-scrollbar{ width:6px; height:6px; }
-  ::-webkit-scrollbar-track{ background:transparent; }
-  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:6px; }
+/* ═══ MODAL — same blue/backdrop styling as booking-list.html ═══ */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,20,40,0.55); backdrop-filter: blur(5px); z-index: 300; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; }
+.modal-overlay.show { display: flex; }
+.modal-box { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: min(620px, 96vw); position: relative; margin: auto; box-shadow: 0 30px 80px rgba(15,20,40,0.25); animation: modalIn .22s cubic-bezier(.4,0,.2,1); }
+.modal-box-lg { width: min(1180px, 96vw); }
+.modal-box-form { width: min(920px, 96vw); }
+@keyframes modalIn { from{opacity:0;transform:translateY(14px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+.modal-close { position: absolute; top: 14px; right: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; color: var(--text2); cursor: pointer; font-size: 14px; z-index: 2; display: flex; align-items: center; justify-content: center; }
+.modal-close:hover { border-color: var(--red); color: var(--red); }
 
-  /* ── Popup modals — this is where the two components render, instead of
-     navigating to their own separate pages. ── */
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:24px 16px; overflow-y:auto; }
-  .modal-overlay.show{ display:flex; }
-  .modal-box{ background:var(--white); border:1px solid var(--border); border-radius:16px; padding:22px; width:min(620px, 96vw); position:relative; margin:auto; box-shadow:0 32px 80px rgba(0,0,0,0.6); animation:modalIn .2s ease; }
-  /* Store Approval needs room for its two-column details + wide items
-     table, so it gets the larger size. The Request Form has its own
-     3-column field grid (Requested By / Department / Date Raised, etc.)
-     that needs breathing room too, or those fields collapse into a
-     single narrow column and the whole form reads as "smaller" than the
-     dedicated new-request.html page — modal-box-form gives it that room. */
-  .modal-box-lg{ width:min(1180px, 96vw); }
-  .modal-box-form{ width:min(920px, 96vw); }
-  @keyframes modalIn{ from{opacity:0; transform:translateY(14px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
-  .modal-close{ position:absolute; top:14px; right:14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:30px; height:30px; color:var(--text-mid); cursor:pointer; font-size:14px; z-index:2; }
-  .modal-close:hover{ border-color:var(--red); color:var(--red); }
+/* ═══ TOAST ═══ */
+.toast { position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999; display: flex; align-items: center; gap: 8px; animation: toastIn .3s ease; max-width: calc(100vw - 40px); font-weight: 600; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; }
+.toast.success { border-left: 3px solid #12b76a; } .toast.success i { color: #12b76a; }
+.toast.error { border-left: 3px solid #f04438; } .toast.error i { color: #f04438; }
+.toast.info { border-left: 3px solid #2f6fed; } .toast.info i { color: #2f6fed; }
+@keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2, #dfe3ec); border-radius: 6px; }
+
+@media print {
+  #sidebarSlot, #topbarSlot, .toolbar, .status-chips, .pagination, .no-print { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ccc !important; }
+}
 </style>
 </head>
 <body>
@@ -160,53 +210,63 @@
 
     <div class="content">
 
-      <div class="kpi-row" id="kpiRow"></div>
-
-      <div class="card">
-        <div class="toolbar">
-          <div class="field" style="flex:1;min-width:200px;max-width:280px;">
-            <div class="field-label">Search</div>
-            <div class="search-wrap">
-              <span style="color:var(--text-light);font-size:13px;">🔍</span>
-              <input type="text" id="fSearch" placeholder="Req no., requester, department…" oninput="page=1;render()">
-            </div>
-          </div>
-          <div class="field">
-            <div class="field-label">Department</div>
-            <select class="sel" id="fDept" onchange="page=1;render()">
-              <option value="">All Departments</option>
-              <option>Kitchen</option>
-              <option>Housekeeping</option>
-              <option>Bar</option>
-              <option>Front Desk</option>
-              <option>Maintenance</option>
-              <option>Store</option>
-            </select>
-          </div>
-          <div class="field">
-            <div class="field-label">From</div>
-            <input type="date" class="inp" id="fFrom" onchange="page=1;render()">
-          </div>
-          <div class="field">
-            <div class="field-label">To</div>
-            <input type="date" class="inp" id="fTo" onchange="page=1;render()">
-          </div>
-          <div class="field">
-            <div class="field-label">Sort</div>
-            <select class="sel" id="fSort" onchange="page=1;render()">
-              <option value="date_desc">Newest First</option>
-              <option value="date_asc">Oldest First</option>
-              <option value="items_desc">Most Items</option>
-            </select>
-          </div>
-          <button class="btn-ghost" onclick="clearFilters()">Clear Filters</button>
-        </div>
-
-        <div class="status-tabs" id="statusTabs"></div>
+      <div class="offline-banner no-print" id="offlineBanner">
+        <i class="fa-solid fa-triangle-exclamation"></i> Couldn't reach the server — showing demo data.
       </div>
 
-      <div class="card table-card">
-        <div class="table-head-row" style="padding-top:18px;">
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="flt-group" style="flex:1;min-width:200px;max-width:280px;">
+              <span class="flt-label">Search</span>
+              <div class="search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="fSearch" placeholder="Req no., requester, department…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Department</span>
+              <select class="filter-sel" id="fDept" onchange="page=1;render()">
+                <option value="">All Departments</option>
+                <option>Kitchen</option>
+                <option>Housekeeping</option>
+                <option>Bar</option>
+                <option>Front Desk</option>
+                <option>Maintenance</option>
+                <option>Store</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">From</span>
+              <input type="date" class="filter-sel" id="fFrom" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">To</span>
+              <input type="date" class="filter-sel" id="fTo" onchange="page=1;render()">
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort</span>
+              <select class="filter-sel" id="fSort" onchange="page=1;render()">
+                <option value="date_desc">Newest First</option>
+                <option value="date_asc">Oldest First</option>
+                <option value="items_desc">Most Items</option>
+              </select>
+            </div>
+            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+            <button class="btn-primary" onclick="openNewRequestModal()"><i class="fa-solid fa-plus"></i> New Requisition</button>
+          </div>
+        </div>
+
+        <div class="status-chips" id="statusTabs"></div>
+      </div>
+
+      <div class="panel table-card">
+        <div class="table-head-row">
           <div class="table-title">Requisition List</div>
           <div class="table-count" id="tableCount">—</div>
         </div>
@@ -225,7 +285,7 @@
                 <th class="center">Actions</th>
               </tr>
             </thead>
-            <tbody id="tbody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
+            <tbody id="tbody"><tr class="state-row"><td colspan="9"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="pagination">
@@ -241,7 +301,7 @@
 <!-- ═══ New Requisition popup — GraceHotelRequestForm renders inside here ═══ -->
 <div class="modal-overlay" id="reqFormModal">
   <div class="modal-box modal-box-form">
-    <button class="modal-close" onclick="closeNewRequestModal()">✕</button>
+    <button class="modal-close" onclick="closeNewRequestModal()"><i class="fa-solid fa-xmark"></i></button>
     <div id="requestFormPlaceholder"></div>
   </div>
 </div>
@@ -249,7 +309,7 @@
 <!-- ═══ Store Approval popup — GraceHotelStoreApproval renders inside here ═══ -->
 <div class="modal-overlay" id="approvalModal">
   <div class="modal-box modal-box-lg">
-    <button class="modal-close" onclick="closeApprovalModal()">✕</button>
+    <button class="modal-close" onclick="closeApprovalModal()"><i class="fa-solid fa-xmark"></i></button>
     <div id="approvalPlaceholder"></div>
   </div>
 </div>
@@ -257,11 +317,19 @@
 <script src="../component/store-shell.js"></script>
 <script src="../component/grace-request-form.js"></script>
 <script src="../component/grace-store-approval.js"></script>
-<script>
+<script type="module">
 /* ═══════════════════════════════════════════
-   Shell — sidebar + topbar for this page. The topbar's page-specific
-   buttons (Print, New Requisition) go through topbarActionsHtml since
-   the shell only owns the generic chrome (title, date, API badge).
+   DATA SERVICE — the ONLY module this page imports data from.
+   Flip CONFIG.USE_DEMO / CONFIG.API_BASE inside services/store-data.js
+   when the backend is ready; nothing here needs to change.
+═══════════════════════════════════════════ */
+import { getStoreData, saveRequisition, loadRequisitions, deleteRequisition } from '../services/store-data.js';
+
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar. Print and New Requisition now live in this
+   page's own toolbar (see .toolbar-right above), not the topbar slot —
+   the topbar sits outside .content, where --gold/--gold-light etc.
+   aren't declared, so buttons rendered there had no visible background.
 ═══════════════════════════════════════════ */
 const shell = GraceStoreShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -270,34 +338,8 @@ const shell = GraceStoreShell.attach({
   pageTitle:     'All Requisitions',
   pageSubtitle:  'Every requisition raised across departments and stores',
   apiMode:       'Demo',
-  topbarActionsHtml: `
-    <button class="print-btn" onclick="window.print()">🖶 <span class="print-label">Print</span></button>
-    <button class="btn-primary" onclick="openNewRequestModal()">＋ New Requisition</button>
-  `,
 });
-
-/* ═══════════════════════════════════════════
-   Storage shim — same contract used across every page (dashboard.html,
-   stock.html, new-request.html, store-approval.html). Requisitions raised
-   through GraceHotelRequestForm on new-request.html show up here directly,
-   read from the exact same req-index / req:<no> keys.
-═══════════════════════════════════════════ */
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
-
-async function loadRequisitions(){
-  let idx = [];
-  try { const r = await storage.get('req-index', true); idx = r ? JSON.parse(r.value) : []; } catch(e){}
-  const reqs = [];
-  for (const no of idx) {
-    try { const r = await storage.get(`req:${no}`, true); if (r) reqs.push(JSON.parse(r.value)); } catch(e){}
-  }
-  return reqs;
-}
+window.shell = shell;
 
 const DEPT_DOT = { Kitchen:'dot-kitchen', Housekeeping:'dot-housekeeping', Bar:'dot-bar', 'Front Desk':'dot-frontdesk', Maintenance:'dot-maintenance', Store:'dot-store' };
 const STATUS_CHIP = { Pending:'chip-pending', Partial:'chip-partial', Full:'chip-full', Rejected:'chip-rejected' };
@@ -305,9 +347,19 @@ const STATUS_TABS = ['All','Pending','Partial','Full','Rejected'];
 const PAGE_SIZE = 8;
 let page = 1;
 let activeStatus = 'All';
-let REQUISITIONS = []; // populated from shared storage in init()
+let REQUISITIONS = [];
 
 function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}); }
+function setOffline(isOffline){ document.getElementById('offlineBanner').classList.toggle('show', !!isOffline); }
+function showToast(msg, type='success'){
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+window.showToast = showToast;
 
 function renderKPIs(){
   const total = REQUISITIONS.length;
@@ -316,27 +368,44 @@ function renderKPIs(){
   const full = REQUISITIONS.filter(r=>r.status==='Full').length;
   const rejected = REQUISITIONS.filter(r=>r.status==='Rejected').length;
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total Requisitions</div><div class="kpi-value">${total}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Pending Approval</div><div class="kpi-value amber">${pending}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Partially Issued</div><div class="kpi-value amber">${partial}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Fully Issued</div><div class="kpi-value green">${full}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Rejected</div><div class="kpi-value red">${rejected}</div></div>
-  `;
-  // The shell owns the Requisition nav badge — just tell it the count.
+    <div class="kpi-card acc-blue">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-file-lines"></i></div><div class="kpi-label">Total Requisitions</div></div>
+      <div class="kpi-value">${total}</div>
+      <div class="kpi-trend neutral">All departments</div>
+    </div>
+    <div class="kpi-card acc-amber">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending Approval</div></div>
+      <div class="kpi-value" style="color:var(--amber);">${pending}</div>
+      <div class="kpi-trend ${pending>0?'warn':'up'}">${pending>0?'Needs review':'None on record'}</div>
+    </div>
+    <div class="kpi-card acc-amber">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-truck-ramp-box"></i></div><div class="kpi-label">Partially Issued</div></div>
+      <div class="kpi-value" style="color:var(--amber);">${partial}</div>
+      <div class="kpi-trend ${partial>0?'warn':'up'}">${partial>0?'Awaiting balance':'None on record'}</div>
+    </div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Fully Issued</div></div>
+      <div class="kpi-value" style="color:var(--green);">${full}</div>
+      <div class="kpi-trend up">Completed</div>
+    </div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected</div></div>
+      <div class="kpi-value" style="color:var(--red);">${rejected}</div>
+      <div class="kpi-trend ${rejected>0?'warn':'up'}">${rejected>0?'Review needed':'None on record'}</div>
+    </div>`;
   if (shell && typeof shell.setPendingBadge === 'function') shell.setPendingBadge(pending + partial);
 }
 
 function renderStatusTabs(){
   const dotColor = { Pending:'var(--amber)', Partial:'var(--amber)', Full:'var(--green)', Rejected:'var(--red)' };
-  document.getElementById('statusTabs').innerHTML = STATUS_TABS.map(s => {
-    return `<button class="stab ${s===activeStatus?'active':''}" onclick="setStatus('${s}')">
-      ${s!=='All' ? `<span class="dot" style="background:${dotColor[s]}"></span>` : ''}${s}
-    </button>`;
-  }).join('');
+  document.getElementById('statusTabs').innerHTML = STATUS_TABS.map(s => `
+    <button class="sc-btn ${s===activeStatus?'active':''}" onclick="setStatus('${s}')">
+      ${s!=='All' ? `<i class="fa-solid fa-circle" style="color:${dotColor[s]}"></i>` : ''}${s}
+    </button>`).join('');
 }
-function setStatus(s){ activeStatus = s; page = 1; render(); }
+window.setStatus = function(s){ activeStatus = s; page = 1; render(); };
 
-function clearFilters(){
+window.clearFilters = function(){
   document.getElementById('fSearch').value = '';
   document.getElementById('fDept').value = '';
   document.getElementById('fFrom').value = '';
@@ -345,7 +414,7 @@ function clearFilters(){
   activeStatus = 'All';
   page = 1;
   render();
-}
+};
 
 function getFiltered(){
   const q = document.getElementById('fSearch').value.toLowerCase();
@@ -378,7 +447,7 @@ function renderPagination(total){
   const wrap = document.getElementById('pageBtns');
   wrap.innerHTML = '';
   const prev = document.createElement('button');
-  prev.className='page-btn'; prev.textContent='‹'; prev.disabled = (page===1);
+  prev.className='page-btn'; prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>'; prev.disabled = (page===1);
   prev.onclick = () => { page--; render(); };
   wrap.appendChild(prev);
   let start = Math.max(1, page-2), end = Math.min(totalPages, start+4);
@@ -391,7 +460,7 @@ function renderPagination(total){
     wrap.appendChild(b);
   }
   const next = document.createElement('button');
-  next.className='page-btn'; next.textContent='›'; next.disabled = (page>=totalPages);
+  next.className='page-btn'; next.innerHTML='<i class="fa-solid fa-chevron-right"></i>'; next.disabled = (page>=totalPages);
   next.onclick = () => { page++; render(); };
   wrap.appendChild(next);
 }
@@ -409,45 +478,42 @@ function render(){
     : pageRows.map(r => `
       <tr onclick="viewReq('${r.no}')">
         <td class="req-link">${r.no}</td>
-        <td><span class="type-chip ${r.mode==='purchase'?'type-purchase':'type-store'}">${r.mode==='purchase'?'Procurement':'Store'}</span></td>
+        <td><span class="type-chip ${r.mode==='purchase'?'type-purchase':'type-store'}"><i class="fa-solid fa-circle"></i>${r.mode==='purchase'?'Procurement':'Store'}</span></td>
         <td>${fmtDate(r.dateRaised)}</td>
         <td>${r.by}</td>
         <td><span class="dept-chip"><span class="dept-dot ${DEPT_DOT[r.dept]||''}"></span>${r.dept}</span></td>
         <td>${fmtDate(r.needed)}</td>
         <td class="center"><span class="items-count">${r.items.length}</span></td>
-        <td><span class="status-chip ${STATUS_CHIP[r.status]||''}">${r.status}</span></td>
-        <td class="center" onclick="event.stopPropagation()"><button class="act-btn" onclick="viewReq('${r.no}')">View</button></td>
+        <td><span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span></td>
+        <td class="center" onclick="event.stopPropagation()"><button class="act-btn" onclick="viewReq('${r.no}')"><i class="fa-solid fa-eye"></i> View</button></td>
       </tr>
     `).join('');
 
   renderPagination(rows.length);
 }
+window.render = render;
 
 /* Clicking a row or the View button opens this exact requisition in the
-   Store Approval popup — GraceHotelStoreApproval attaches into the modal
-   and reads the requisition straight from shared storage via reqNo. No
-   page navigation, no ?req= URL param needed. */
-function viewReq(no){
-  openApprovalModal(no);
-}
+   Store Approval popup — no page navigation, no ?req= URL param needed. */
+window.viewReq = function(no){ openApprovalModal(no); };
 
 /* ═══════════════════════════════════════════
    POPUP #1 — New Requisition (GraceHotelRequestForm)
 ═══════════════════════════════════════════ */
 let requestFormInstance = null;
 
-function openNewRequestModal(){
+window.openNewRequestModal = function(){
   document.getElementById('reqFormModal').classList.add('show');
   if (!requestFormInstance) {
     requestFormInstance = GraceHotelRequestForm.attach('#requestFormPlaceholder', {
       defaultMode: 'store_issue',
-      showRecent: false, // the table on this page already shows everything
-      storage: storage,
+      showRecent: false,
       onSubmit: async () => {
         closeNewRequestModal();
         REQUISITIONS = await loadRequisitions();
         renderKPIs();
         render();
+        showToast('Requisition submitted.', 'success');
       },
       onOpenRequest: (reqNo) => {
         closeNewRequestModal();
@@ -457,77 +523,41 @@ function openNewRequestModal(){
   } else {
     requestFormInstance.reset();
   }
-}
-function closeNewRequestModal(){
-  document.getElementById('reqFormModal').classList.remove('show');
-}
+};
+window.closeNewRequestModal = function(){ document.getElementById('reqFormModal').classList.remove('show'); };
 
 /* ═══════════════════════════════════════════
    POPUP #2 — Store Approval (GraceHotelStoreApproval)
 ═══════════════════════════════════════════ */
 let approvalInstance = null;
 
-async function getStockMap(){
-  try {
-    const r = await storage.get('stock-items', true);
-    if (r && r.value) {
-      const arr = JSON.parse(r.value);
-      if (Array.isArray(arr) && arr.length) {
-        const map = {};
-        arr.forEach(i => { map[i.name] = i.qty; });
-        return map;
-      }
-    }
-  } catch (e) {}
-  return null; // component falls back to its own built-in demo stock
-}
-
-async function deductStockAfterIssue(req){
-  try {
-    const r = await storage.get('stock-items', true);
-    if (!r || !r.value) return;
-    const arr = JSON.parse(r.value);
-    let changed = false;
-    req.items.forEach(it => {
-      const s = arr.find(x => x.name.toLowerCase() === it.name.trim().toLowerCase());
-      if (s && it.issuedQty > 0) { s.qty = Math.max(0, s.qty - it.issuedQty); changed = true; }
-    });
-    if (changed) await storage.set('stock-items', JSON.stringify(arr), true);
-  } catch (e) { console.warn('[stock sync]', e); }
-}
-
-async function openApprovalModal(no){
+window.openApprovalModal = async function(no){
   document.getElementById('approvalModal').classList.add('show');
-  const stockMap = await getStockMap();
 
   if (!approvalInstance) {
     approvalInstance = GraceHotelStoreApproval.attach('#approvalPlaceholder', {
       reqNo: no,
-      stock: stockMap || undefined,
       preparedBy: 'Store Keeper',
-      showBackButton: false, // popup has its own ✕ close button instead
-      storage: storage,
-      onApprove: async (req) => {
-        await deductStockAfterIssue(req);
+      showBackButton: false,
+      onApprove: async () => {
         REQUISITIONS = await loadRequisitions();
         renderKPIs();
         render();
+        showToast('Requisition approved and issued.', 'success');
       },
       onReject: async () => {
         REQUISITIONS = await loadRequisitions();
         renderKPIs();
         render();
+        showToast('Requisition rejected.', 'info');
       },
     });
   } else {
     approvalInstance.load(no);
   }
-}
-function closeApprovalModal(){
-  document.getElementById('approvalModal').classList.remove('show');
-}
+};
+window.closeApprovalModal = function(){ document.getElementById('approvalModal').classList.remove('show'); };
 
-/* Click on the dark backdrop (outside the modal box) to close */
 ['reqFormModal','approvalModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e){
     if (e.target === this) {
@@ -536,8 +566,21 @@ function closeApprovalModal(){
   });
 });
 
+/* ═══════════════════════════════════════════
+   INIT — single call into the data service. Loading state shown
+   while it resolves; a caught error shows the offline banner + a
+   toast and still renders whatever demo/cached data comes back.
+═══════════════════════════════════════════ */
 async function init(){
-  REQUISITIONS = await loadRequisitions();
+  try {
+    const { requisitions } = await getStoreData();
+    REQUISITIONS = requisitions;
+  } catch (err) {
+    console.error('[AllRequisitions] Failed to load store data:', err);
+    setOffline(true);
+    showToast(err.message || 'Could not load requisitions.', 'error');
+    REQUISITIONS = [];
+  }
   renderKPIs();
   render();
 }

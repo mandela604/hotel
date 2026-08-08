@@ -126,9 +126,9 @@ const GymShell = (function () {
     sidebarEl.innerHTML = `
       <aside id="gym-sidebar">
         <div class="gym-sb-head">
-          <a class="gym-logo-mark" href="../index.html" title="Back to Aurum Hotel">A</a>
+          <a class="gym-logo-mark" href="../index.html" title="Back to Grace Hotel">G</a>
           <div class="gym-logo-text">
-            <div class="name">Aurum Hotel</div>
+            <div class="name">Grace Hotel</div>
             <div class="sub">Gym & Fitness</div>
           </div>
         </div>
@@ -149,7 +149,7 @@ const GymShell = (function () {
             <div class="gym-toggle-track" id="gymToggleTrack"><div class="gym-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="gym-copyright">© 2026 Aurum Hotel</div>
+        <div class="gym-copyright">© 2026 Grace Hotel</div>
       </aside>
     `;
 

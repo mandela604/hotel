@@ -2,92 +2,106 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard | Aurum Pool Bar</title>
+<title>Dashboard | Grace Pool Bar</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{
-    --green:#4ade80; --green-bg:rgba(74,222,128,0.12);
-    --red:#f87171; --red-bg:rgba(248,113,113,0.12);
-    --amber:#fbbf24; --amber-bg:rgba(251,191,36,0.12);
-    --blue:#60a5fa; --blue-bg:rgba(96,165,250,0.12);
-  }
-  /* This page only owns layout + its own KPI/panel content.
-     Sidebar + topbar look/markup live entirely in poolbar-shell.js. */
+  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
   html, body{ height:100%; overflow:hidden; }
-  body{ font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); font-size:14px; transition:background .3s,color .3s; }
+  body{
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+    font-size:13px; transition:background .3s,color .3s;
+  }
   .app{ display:flex; height:100vh; overflow:hidden; }
   .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  .content{ flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0;
+    background:var(--bg); color:var(--text);
+  }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; margin-bottom:2px; }
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:2px; }
 
-  /* KPI */
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; position:relative; overflow:hidden;
-    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; text-decoration:none; display:block; animation:fadeUp .4s ease both; }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; text-decoration:none; display:flex; flex-direction:column; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
-  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-accent{ position:absolute; bottom:-10px; right:-10px; font-size:50px; opacity:.07; line-height:1; pointer-events:none; }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
-  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
-  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; }
-  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); }
 
-  /* Row / Panel */
   .row{ display:grid; grid-template-columns:1.3fr .7fr; gap:14px; }
   @media (max-width:900px){ .row{ grid-template-columns:1fr; } }
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); min-width:0; }
   @media (max-width:420px){ .panel{ padding:14px; } }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
-  .panel-title{ font-size:12px; font-weight:700; color:var(--gold); letter-spacing:.8px; text-transform:uppercase; }
-  .panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:500; white-space:nowrap; background:none; border:none; font-family:'Outfit',sans-serif; cursor:pointer; }
+  .panel-title{ font-size:12.5px; font-weight:800; color:var(--text); }
+  .panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:700; white-space:nowrap; background:none; border:none; font-family:inherit; cursor:pointer; }
   .panel-action:hover{ color:var(--gold-light); }
-  .empty-note{ font-size:12.5px; color:var(--text3); padding:14px 0; text-align:center; }
+  .empty-note{ font-size:12.5px; color:var(--text3); padding:14px 0; text-align:center; font-weight:600; }
 
-  /* Revenue bars */
-  .rev-total{ font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:700; color:var(--gold); line-height:1; }
-  .rev-sub-label{ font-size:11px; color:var(--text3); margin:4px 0 16px; }
+  .rev-total{ font-size:28px; font-weight:800; color:var(--gold); line-height:1; }
+  .rev-sub-label{ font-size:11px; color:var(--text3); margin:4px 0 16px; font-weight:600; }
   .bar-row{ margin-bottom:12px; } .bar-row:last-child{ margin-bottom:0; }
   .bar-meta{ display:flex; justify-content:space-between; margin-bottom:5px; }
-  .bar-name{ font-size:12.5px; color:var(--text2); } .bar-count{ font-size:11.5px; color:var(--text3); }
+  .bar-name{ font-size:12.5px; color:var(--text2); font-weight:600; } .bar-count{ font-size:11.5px; color:var(--text3); font-weight:600; }
   .bar-track{ height:6px; background:var(--surface3); border-radius:20px; overflow:hidden; }
   .bar-fill{ height:100%; border-radius:20px; background:linear-gradient(90deg,var(--gold),var(--gold-light)); transition:width 1.2s cubic-bezier(.4,0,.2,1); }
   .bar-fill.blue{ background:linear-gradient(90deg,#60a5fa,#93c5fd); }
   .bar-fill.purple{ background:linear-gradient(90deg,#a78bfa,#c4b5fd); }
 
-  /* List rows */
   .list-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; cursor:pointer; }
   .list-row:last-child{ border-bottom:none; padding-bottom:0; }
-  .list-row:hover .list-name{ color:var(--gold-light); }
+  .list-row:hover .list-name{ color:var(--gold); }
   .list-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   .list-body{ flex:1; min-width:0; }
-  .list-name{ font-size:12.5px; color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .15s; }
-  .list-meta{ font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .list-name{ font-size:12.6px; color:var(--text); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .15s; }
+  .list-meta{ font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
 
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; flex-shrink:0; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-  .chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
-  .chip-low{ background:var(--amber-bg); color:var(--amber); } .chip-low::before{ background:var(--amber); }
-  .chip-out{ background:var(--red-bg); color:var(--red); } .chip-out::before{ background:var(--red); }
-  .chip-ok{ background:var(--green-bg); color:var(--green); } .chip-ok::before{ background:var(--green); }
+  .chip{ display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; flex-shrink:0; }
+  .chip i{ font-size:7px; }
+  .chip-sent{ background:var(--blue-bg); color:var(--blue); }
+  .chip-low{ background:var(--amber-bg); color:var(--amber); }
+  .chip-out{ background:var(--red-bg); color:var(--red); }
+  .chip-ok{ background:var(--green-bg); color:var(--green); }
 
-  /* Quick actions */
   .quick-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   @media (max-width:560px){ .quick-grid{ grid-template-columns:1fr 1fr; } }
-  .quick-btn{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 12px; cursor:pointer; display:flex;
-    align-items:center; gap:10px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; color:var(--text2); text-decoration:none; transition:all .2s; min-width:0; }
-  .quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold-light); }
-  .quick-icon{ font-size:17px; flex-shrink:0; }
+  .quick-btn{
+    background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+    padding:12px 10px; cursor:pointer; display:flex; align-items:center; gap:8px;
+    font-family:inherit; font-size:12.3px; font-weight:700; color:var(--text2);
+    text-decoration:none; transition:all .2s; min-width:0; overflow:hidden;
+  }
+  .quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .quick-icon{ width:28px; height:28px; border-radius:8px; background:var(--blue-bg); color:var(--blue); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+  .quick-btn:hover .quick-icon{ background:var(--gold); color:#fff; }
+  .quick-label{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   ::-webkit-scrollbar{ width:6px; height:6px; }
@@ -104,14 +118,9 @@
 </head>
 <body>
 <div class="app">
-
-  <!-- Sidebar is rendered here by poolbar-shell.js — Pool Bar nav only -->
   <div id="sidebarSlot"></div>
-
   <div class="main">
-    <!-- Topbar is rendered here by poolbar-shell.js -->
     <div id="topbarSlot"></div>
-
     <div class="content">
 
       <div>
@@ -166,12 +175,30 @@
         <div class="panel">
           <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
           <div class="quick-grid">
-            <a class="quick-btn" href="poolbar-pending-requisitions.html"><span class="quick-icon">🚚</span>Pending Requisitions</a>
-            <a class="quick-btn" href="poolbar-orders.html"><span class="quick-icon">🧾</span>Open POS</a>
-            <a class="quick-btn" href="poolbar-stock.html"><span class="quick-icon">📦</span>Pool Bar Stock</a>
-            <a class="quick-btn" href="poolbar-requisition-history.html"><span class="quick-icon">📜</span>Requisition History</a>
-            <a class="quick-btn" href="poolbar-reports.html"><span class="quick-icon">📊</span>Daily Report</a>
-            <a class="quick-btn" href="javascript:window.print()"><span class="quick-icon">🖨</span>Print Report</a>
+            <a class="quick-btn" href="poolbar-pending-requisitions.html" title="Pending Requisitions">
+              <span class="quick-icon"><i class="fa-solid fa-truck"></i></span>
+              <span class="quick-label">Pending Requisitions</span>
+            </a>
+            <a class="quick-btn" href="poolbar-orders.html" title="Open POS">
+              <span class="quick-icon"><i class="fa-solid fa-receipt"></i></span>
+              <span class="quick-label">Open POS</span>
+            </a>
+            <a class="quick-btn" href="poolbar-stock.html" title="Pool Bar Stock">
+              <span class="quick-icon"><i class="fa-solid fa-box"></i></span>
+              <span class="quick-label">Pool Bar Stock</span>
+            </a>
+            <a class="quick-btn" href="poolbar-requisition-history.html" title="Requisition History">
+              <span class="quick-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+              <span class="quick-label">Requisition History</span>
+            </a>
+            <a class="quick-btn" href="poolbar-reports.html" title="Daily Report">
+              <span class="quick-icon"><i class="fa-solid fa-chart-column"></i></span>
+              <span class="quick-label">Daily Report</span>
+            </a>
+            <a class="quick-btn" href="javascript:window.print()" title="Print Report">
+              <span class="quick-icon"><i class="fa-solid fa-print"></i></span>
+              <span class="quick-label">Print Report</span>
+            </a>
           </div>
         </div>
       </div>
@@ -182,9 +209,6 @@
 
 <script src="../component/poolbar-shell.js"></script>
 <script>
-/* ═══════════════════════════════════════════
-   Shell — sidebar + topbar for this page, Pool Bar nav only.
-═══════════════════════════════════════════ */
 const shell = PoolBarShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
@@ -195,13 +219,6 @@ const shell = PoolBarShell.attach({
   user:          { name: 'Pool Bar Manager', initials: 'PB' },
 });
 
-/* ═══════════════════════════════════════════
-   CONFIG & DATA LAYER
-   Pool Bar stock / requisitions are shared across this module the
-   same way Restaurant Inventory / Transfers are — via window.storage
-   (shared:true), with a localStorage fallback so this page always
-   renders something on its own.
-═══════════════════════════════════════════ */
 const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
 
 const storage = window.storage || {
@@ -224,7 +241,6 @@ const KEY_STOCK    = 'poolbar-stock';
 const KEY_PENDING  = 'poolbar-pending-requisitions';
 const KEY_SALES    = 'poolbar-sales';
 
-/* Demo fallbacks — used only until real requisitions/stock/sales are synced */
 const DEMO_STOCK = [
   { name:'Heineken',       category:'Beers',      unit:'Bottles', qty:48, min:12, batch:'REQ-00031', received:'17/07/26', price:1500 },
   { name:'Guinness',       category:'Beers',      unit:'Bottles', qty:36, min:12, batch:'REQ-00031', received:'17/07/26', price:1600 },
@@ -262,24 +278,24 @@ function renderKPIs(stock, pending, sales){
 
   document.getElementById('kpiRow').innerHTML = `
     <a class="kpi-card" href="poolbar-pending-requisitions.html">
-      <div class="kpi-accent">🚚</div><div class="kpi-label">Pending Requisitions</div>
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Pending Requisitions</div></div>
       <div class="kpi-value" style="color:var(--blue);">${pendingN}</div>
-      <div class="kpi-trend ${pendingN>0?'warn':'up'}">${pendingN>0?'⚠ Awaiting review':'✓ All clear'}</div>
+      <div class="kpi-trend ${pendingN>0?'warn':'up'}">${pendingN>0?'Awaiting review':'All clear'}</div>
     </a>
     <a class="kpi-card" href="poolbar-stock.html">
-      <div class="kpi-accent">⚠️</div><div class="kpi-label">Low Stock Alerts</div>
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock Alerts</div></div>
       <div class="kpi-value" style="color:var(--amber);">${lowStock}</div>
-      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs restocking':'✓ All above threshold'}</div>
+      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs restocking':'All above threshold'}</div>
     </a>
     <a class="kpi-card" href="poolbar-sales.html">
-      <div class="kpi-accent">💰</div><div class="kpi-label">Today's Sales</div>
-      <div class="kpi-value" style="font-size:22px;">${fmtN(today)}</div>
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-naira-sign"></i></div><div class="kpi-label">Today's Sales</div></div>
+      <div class="kpi-value">${fmtN(today)}</div>
       <div class="kpi-trend up">${sales.length} sale${sales.length!==1?'s':''} recorded</div>
     </a>
     <a class="kpi-card" href="poolbar-stock.html">
-      <div class="kpi-accent">📦</div><div class="kpi-label">Units On Hand</div>
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Units On Hand</div></div>
       <div class="kpi-value">${units}</div>
-      <div class="kpi-trend neutral">Across ${stock.length} items</div>
+      <div class="kpi-trend">Across ${stock.length} items</div>
     </a>`;
 
   shell.setPendingBadge(pendingN);
@@ -310,7 +326,7 @@ function renderStockSnapshot(stock){
       <a class="list-row" href="poolbar-stock.html">
         <span class="list-dot" style="background:${lvl==='ok'?'var(--green)':lvl==='low'?'var(--amber)':'var(--red)'}"></span>
         <div class="list-body"><div class="list-name">${i.name}</div><div class="list-meta">${i.qty} ${i.unit} on hand · batch ${i.batch}</div></div>
-        <span class="chip ${LEVEL_CHIP[lvl]}">${LEVEL_LABEL[lvl]}</span>
+        <span class="chip ${LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${LEVEL_LABEL[lvl]}</span>
       </a>`; }).join('');
 }
 
@@ -322,7 +338,7 @@ function renderPendingRequisitions(pending){
       <a class="list-row" href="poolbar-pending-requisitions.html">
         <span class="list-dot" style="background:var(--blue)"></span>
         <div class="list-body"><div class="list-name">${p.no} — ${p.item}</div><div class="list-meta">${p.qty} ${p.unit} · from ${p.from} · ${p.date}</div></div>
-        <span class="chip chip-sent">Sent</span>
+        <span class="chip chip-sent"><i class="fa-solid fa-circle"></i>Sent</span>
       </a>`).join('');
 }
 
@@ -335,7 +351,7 @@ function renderLowStock(stock){
       <a class="list-row" href="poolbar-stock.html">
         <span class="list-dot" style="background:${lvl==='out'?'var(--red)':'var(--amber)'}"></span>
         <div class="list-body"><div class="list-name">${i.name}</div><div class="list-meta">${i.qty} ${i.unit} on hand · reorder at ${i.min}</div></div>
-        <span class="chip ${lvl==='out'?'chip-out':'chip-low'}">${lvl==='out'?'OUT':'LOW'}</span>
+        <span class="chip ${lvl==='out'?'chip-out':'chip-low'}"><i class="fa-solid fa-circle"></i>${lvl==='out'?'OUT':'LOW'}</span>
       </a>`; }).join('');
 }
 
@@ -347,7 +363,7 @@ function renderRecentSales(sales){
       <a class="list-row" href="poolbar-sales.html">
         <span class="list-dot" style="background:var(--gold)"></span>
         <div class="list-body"><div class="list-name">${s.id} — ${s.item} ×${s.qty}</div><div class="list-meta">${s.method} · ${s.time}</div></div>
-        <span style="font-size:12px;font-weight:600;color:var(--gold);flex-shrink:0;">${fmtN(s.total)}</span>
+        <span style="font-size:12.5px;font-weight:700;color:var(--gold);flex-shrink:0;">${fmtN(s.total)}</span>
       </a>`).join('');
 }
 

@@ -7,12 +7,15 @@
 <title>Inventory | Aurum Kitchen</title>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   /* This page owns layout + its own content only. Sidebar + topbar look/markup
      live entirely in kitchen-shell.js and stay on the shared dark/blue theme.
      The .content (and .modal-overlay, since modals render outside .content)
      scopes below re-declare the SAME variable names with light values, so only
-     the main content area + its modals turn white — the sidebar never sees this. */
+     the main content area + its modals turn white — the sidebar never sees this.
+     KPI icon-box pattern + Font Awesome icon language mirror poolbar-dashboard.html /
+     poolbar-requisition-history.html so every module reads as one product. */
   *{ box-sizing:border-box; margin:0; padding:0; }
   :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
   html, body{ height:100%; overflow-x:hidden; }
@@ -39,19 +42,32 @@
   @media (max-width:768px){ .content{ padding:16px; } }
   @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
+  /* ═══ KPI CARDS — icon-box pattern from poolbar-dashboard.html / poolbar-requisition-history.html ═══ */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; min-height:106px; animation:fadeUp .4s ease both; }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin-bottom:6px; }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin:4px 0 6px; }
   @media (max-width:420px){ .kpi-value{ font-size:21px; } }
-  .kpi-trend{ display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; margin-top:auto; }
+  .kpi-trend{ font-size:11px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
@@ -73,7 +89,7 @@
   .status-pill.on.ok{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
   .status-pill.on.low{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
   .status-pill.on.out{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
   .btn-ghost:hover{ color:var(--gold); }
   @media (max-width:900px){ .toolbar-row.top{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .flt-group{ width:100%; } .search-box{ max-width:100%; } .filter-select{ width:100%; } .toolbar-row.top > .btns-right{ width:100%; } .toolbar-row.top > .btns-right .btn{ flex:1; justify-content:center; } }
   .btns-right{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -125,7 +141,7 @@
   .chip-other{ background:var(--surface3); color:var(--text2); } .chip-other::before{ background:var(--text3); }
 
   .act-btns{ display:flex; gap:4px; flex-wrap:nowrap; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
   .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
 
@@ -145,12 +161,6 @@
   .btn-danger:hover{ background:#fddcd8; }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
 
-  /* Adjust toggle */
-  .adj-toggle{ display:flex; gap:8px; margin-bottom:12px; }
-  .adj-opt{ flex:1; text-align:center; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s; }
-  .adj-opt.on.add{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
-  .adj-opt.on.remove{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
-
   .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
   .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(600px,96vw); box-shadow:0 30px 80px rgba(15,34,55,0.25); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
@@ -159,7 +169,7 @@
   @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
   .modal-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:16px; cursor:pointer; padding:4px; line-height:1; display:flex; align-items:center; justify-content:center; }
   .modal-close:hover{ color:var(--text); }
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
   .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
@@ -172,8 +182,10 @@
   .form-group.span2{ grid-column:span 2; }
   @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
   .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
+  .form-hint{ font-size:10.5px; color:var(--text3); margin-top:1px; }
   .form-input,.form-select,.form-textarea{ background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
   .form-input:focus,.form-select:focus,.form-textarea:focus{ border-color:var(--gold); }
+  .form-input[readonly]{ background:var(--surface3); color:var(--text2); cursor:not-allowed; }
   .form-textarea{ resize:vertical; min-height:60px; }
 
   .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
@@ -221,7 +233,7 @@
             </div>
             <div class="flt-group" style="flex:1;min-width:180px;max-width:250px;">
               <span class="flt-label">Search</span>
-              <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" id="fSearch" placeholder="Ingredient, batch…" oninput="page=1;render()"></div>
+              <div class="search-box"><i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i><input type="text" id="fSearch" placeholder="Ingredient, batch…" oninput="page=1;render()"></div>
             </div>
             <div class="flt-group"><span class="flt-label">Category</span>
               <select class="filter-select" id="fCat" onchange="page=1;render()"><option value="">All Categories</option></select>
@@ -235,11 +247,11 @@
                 <option value="received_desc">Recently Received</option>
               </select>
             </div>
-            <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
+            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
           <div class="btns-right">
-            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
-            <button class="btn btn-primary btn-sm" onclick="openItemModal()">＋ Add Ingredient</button>
+            <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+            <button class="btn btn-primary btn-sm" onclick="openItemModal()"><i class="fa-solid fa-plus"></i> Add Ingredient</button>
           </div>
         </div>
       </div>
@@ -294,7 +306,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="itemModalTitle">Add Ingredient</div>
-      <button class="modal-close" onclick="closeModal('itemModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('itemModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="form-section-title">Ingredient Details</div>
     <div class="form-row">
@@ -310,7 +322,11 @@
           <option>kg</option><option>Ltr</option><option>pcs</option><option>Bags</option><option>Packs</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">Quantity On Hand</label><input class="form-input" type="number" id="fQty" placeholder="0" min="0"></div>
+      <div class="form-group">
+        <label class="form-label">Quantity On Hand</label>
+        <input class="form-input" type="number" id="fQty" placeholder="0" min="0" readonly>
+        <span class="form-hint">View only — updates from deliveries &amp; production usage</span>
+      </div>
       <div class="form-group"><label class="form-label">Reorder Level</label><input class="form-input" type="number" id="fMin" placeholder="0" min="0"></div>
       <div class="form-group"><label class="form-label">Unit Cost (₦)</label><input class="form-input" type="number" id="fCost" placeholder="0" min="0"></div>
       <div class="form-group"><label class="form-label">Batch / Source Ref.</label><input class="form-input" type="text" id="fBatch" placeholder="e.g. STK-00512"></div>
@@ -318,44 +334,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('itemModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveItem()">✓ Save Ingredient</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ ADJUST STOCK MODAL ═══ -->
-<div class="modal-overlay" id="adjustModal">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <div class="modal-title">Adjust Stock</div>
-      <button class="modal-close" onclick="closeModal('adjustModal')">✕</button>
-    </div>
-    <div class="val-note">Adjusting <strong id="adjName"></strong> — currently <strong id="adjCurrent"></strong> on hand.</div>
-    <div class="adj-toggle">
-      <div class="adj-opt add on add" id="adjAddBtn" onclick="setAdjMode('add')">＋ Add Stock</div>
-      <div class="adj-opt remove" id="adjRemoveBtn" onclick="setAdjMode('remove')">− Remove Stock</div>
-    </div>
-    <div class="form-group" style="margin-bottom:12px;">
-      <label class="form-label">Quantity</label>
-      <input class="form-input" type="number" id="adjQty" placeholder="0" min="0.01" step="0.01">
-    </div>
-    <div class="form-group" style="margin-bottom:12px;">
-      <label class="form-label">Reason</label>
-      <select class="form-select" id="adjReason">
-        <option>Kitchen Delivery</option>
-        <option>Production Usage</option>
-        <option>Wastage / Spoilage</option>
-        <option>Stock Correction</option>
-        <option>Other</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Notes (optional)</label>
-      <textarea class="form-textarea" id="adjNotes" placeholder="Any extra detail…"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('adjustModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="confirmAdjust()">✓ Confirm Adjustment</button>
+      <button class="btn btn-primary btn-sm" onclick="saveItem()"><i class="fa-solid fa-check"></i> Save Ingredient</button>
     </div>
   </div>
 </div>
@@ -365,12 +344,12 @@
   <div class="modal modal-sm">
     <div class="modal-header">
       <div class="modal-title" style="color:var(--red);">Delete Ingredient</div>
-      <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;" id="deleteMsg"></p>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmDelete()">🗑 Delete</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
 </div>
@@ -434,7 +413,6 @@ function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.min ? 'low' : 'ok');
 function itemValue(s){ return (s.qty||0) * (s.cost||0); }
 function todayISO(){ return new Date().toISOString().split('T')[0]; }
 function todayDDMMYY(){ const d=new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; }
-function nowTime(){ return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
 function ddmmyyToISO(s){ if(!s) return ''; const [d,m,y]=s.split('/'); return `20${y}-${m}-${d}`; }
 function isoToDDMMYY(s){ if(!s) return todayDDMMYY(); const [y,m,d]=s.split('-'); return `${d}/${m}/${y.slice(2)}`; }
 
@@ -446,7 +424,8 @@ const REASON_CHIP = {
 };
 
 /* ═══════════════════════════════════════
-   KPIs
+   KPIs — icon-box cards matching poolbar-dashboard.html /
+   poolbar-requisition-history.html
 ═══════════════════════════════════════ */
 function renderKPIs(){
   const total = stock.length;
@@ -455,18 +434,26 @@ function renderKPIs(){
   const value = stock.reduce((s,i)=>s+itemValue(i),0);
 
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card" onclick="setLevel('')">
-      <div class="kpi-label">Ingredients Tracked</div><div class="kpi-value">${total}</div>
-      <div class="kpi-trend neutral">Across ${new Set(stock.map(s=>s.cat)).size} categories</div></div>
-    <div class="kpi-card" onclick="setLevel('low')">
-      <div class="kpi-label">Low Stock</div><div class="kpi-value" style="color:var(--amber);">${low}</div>
-      <div class="kpi-trend ${low>0?'warn':'up'}">${low>0?'Needs restocking':'✓ All above threshold'}</div></div>
-    <div class="kpi-card" onclick="setLevel('out')">
-      <div class="kpi-label">Out of Stock</div><div class="kpi-value" style="color:var(--red);">${out}</div>
-      <div class="kpi-trend ${out>0?'warn':'up'}">${out>0?'Blocks affected recipes':'✓ None'}</div></div>
-    <div class="kpi-card">
-      <div class="kpi-label">Total Stock Value</div><div class="kpi-value" style="font-size:22px;">${fmtN(value)}</div>
-      <div class="kpi-trend info">At current unit cost</div></div>`;
+    <div class="kpi-card acc-blue" onclick="setLevel('')">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Ingredients Tracked</div></div>
+      <div class="kpi-value">${total}</div>
+      <div class="kpi-trend neutral">Across ${new Set(stock.map(s=>s.cat)).size} categories</div>
+    </div>
+    <div class="kpi-card acc-amber" onclick="setLevel('low')">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock</div></div>
+      <div class="kpi-value" style="color:var(--amber);">${low}</div>
+      <div class="kpi-trend ${low>0?'warn':'up'}">${low>0?'Needs restocking':'All above threshold'}</div>
+    </div>
+    <div class="kpi-card acc-red" onclick="setLevel('out')">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-circle-xmark"></i></div><div class="kpi-label">Out of Stock</div></div>
+      <div class="kpi-value" style="color:var(--red);">${out}</div>
+      <div class="kpi-trend ${out>0?'warn':'up'}">${out>0?'Blocks affected recipes':'None'}</div>
+    </div>
+    <div class="kpi-card acc-purple">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Stock Value</div></div>
+      <div class="kpi-value" style="font-size:22px;">${fmtN(value)}</div>
+      <div class="kpi-trend info">At current unit cost</div>
+    </div>`;
 
   shell.setInventoryBadge && shell.setInventoryBadge(low+out);
 }
@@ -525,11 +512,11 @@ function renderPagination(total){
   const from = total===0?0:(page-1)*CFG.PAGE_SIZE+1, to = Math.min(page*CFG.PAGE_SIZE,total);
   document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
   const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
-  const mk=(l,p,d,a)=>{ const b=document.createElement('button'); b.className='page-btn'+(a?' active':''); b.textContent=l; b.disabled=!!d; b.onclick=()=>{page=p;render();}; return b; };
-  wrap.appendChild(mk('‹',page-1,page===1,false));
+  const mk=(l,p,d,a)=>{ const b=document.createElement('button'); b.className='page-btn'+(a?' active':''); b.innerHTML=l; b.disabled=!!d; b.onclick=()=>{page=p;render();}; return b; };
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>',page-1,page===1,false));
   let start=Math.max(1,page-2), end=Math.min(totalPg,start+4); start=Math.max(1,end-4);
   for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
-  wrap.appendChild(mk('›',page+1,page>=totalPg,false));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>',page+1,page>=totalPg,false));
 }
 function render(){
   renderKPIs();
@@ -555,9 +542,8 @@ function render(){
           <td data-label="Status" class="center"><span class="chip ${LEVEL_CHIP[lvl]}">${LEVEL_LABEL[lvl]}</span></td>
           <td data-label="" class="no-print center">
             <div class="act-btns">
-              <button class="act-btn" onclick="openAdjustModal('${s.name.replace(/'/g,"\\'")}')">± Adjust</button>
-              <button class="act-btn" onclick="openItemModal('${s.name.replace(/'/g,"\\'")}')">✏</button>
-              <button class="act-btn danger" onclick="openDeleteModal('${s.name.replace(/'/g,"\\'")}')">🗑</button>
+              <button class="act-btn" onclick="openItemModal('${s.name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button>
+              <button class="act-btn danger" onclick="openDeleteModal('${s.name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
             </div>
           </td>
         </tr>`;
@@ -571,8 +557,7 @@ function render(){
 /* ═══════════════════════════════════════
    MOVEMENT LOG — reads the same 'kitchen-movements' array that
    kitchen-production.html pushes deduction entries into, so a
-   production run shows up here automatically alongside anything
-   adjusted manually from this page.
+   production run shows up here automatically.
 ═══════════════════════════════════════ */
 function renderMovements(){
   const rows = movements.slice(0, 20);
@@ -593,7 +578,11 @@ function renderMovements(){
 }
 
 /* ═══════════════════════════════════════
-   ADD / EDIT INGREDIENT
+   ADD / EDIT INGREDIENT — Quantity On Hand is read-only here.
+   New ingredients start at 0 and accrue only through deliveries /
+   production usage recorded elsewhere; editing an existing
+   ingredient shows its current quantity for reference but it
+   cannot be typed over from this form.
 ═══════════════════════════════════════ */
 let editName = null;
 function openItemModal(name=null){
@@ -614,7 +603,7 @@ function openItemModal(name=null){
     document.getElementById('fName').value = '';
     document.getElementById('fCat2').value = 'Grains';
     document.getElementById('fUnit').value = 'kg';
-    document.getElementById('fQty').value = '';
+    document.getElementById('fQty').value = '0';
     document.getElementById('fMin').value = '';
     document.getElementById('fCost').value = '';
     document.getElementById('fBatch').value = '';
@@ -649,51 +638,6 @@ async function saveItem(){
 }
 
 /* ═══════════════════════════════════════
-   ADJUST STOCK
-═══════════════════════════════════════ */
-let adjustName = null;
-let adjustMode = 'add';
-function openAdjustModal(name){
-  adjustName = name;
-  adjustMode = 'add';
-  const s = stock.find(x=>x.name===name);
-  document.getElementById('adjName').textContent = s.name;
-  document.getElementById('adjCurrent').textContent = `${fmtQty(s.qty)} ${s.unit}`;
-  document.getElementById('adjQty').value = '';
-  document.getElementById('adjReason').value = 'Kitchen Delivery';
-  document.getElementById('adjNotes').value = '';
-  setAdjMode('add');
-  document.getElementById('adjustModal').classList.add('show');
-}
-function setAdjMode(mode){
-  adjustMode = mode;
-  document.getElementById('adjAddBtn').classList.toggle('on', mode==='add');
-  document.getElementById('adjRemoveBtn').classList.toggle('on', mode==='remove');
-}
-async function confirmAdjust(){
-  const s = stock.find(x=>x.name===adjustName); if (!s) return;
-  const qty = parseFloat(document.getElementById('adjQty').value) || 0;
-  if (qty <= 0) { showToast('Enter a valid quantity.', 'error'); return; }
-  const reason = document.getElementById('adjReason').value;
-  const notes = document.getElementById('adjNotes').value.trim();
-
-  if (adjustMode==='remove' && qty > s.qty) { showToast(`Cannot remove more than the ${fmtQty(s.qty)} ${s.unit} on hand.`, 'error'); return; }
-
-  s.qty = adjustMode==='add' ? s.qty + qty : s.qty - qty;
-  if (adjustMode==='add') s.received = todayDDMMYY();
-
-  movements.unshift({
-    type: reason, ref: s.name, time: nowTime(), date: todayDDMMYY(),
-    text: `${adjustMode==='add'?'+':'−'}${fmtQty(qty)} ${s.unit}${notes ? ' — '+notes : ''}`
-  });
-
-  closeModal('adjustModal');
-  showToast(`${s.name}: ${adjustMode==='add'?'added':'removed'} ${fmtQty(qty)} ${s.unit}.`, adjustMode==='add' ? 'success' : 'info');
-  render();
-  await Promise.all([ saveShared(KEY_STOCK, stock), saveShared(KEY_MOVEMENTS, movements) ]);
-}
-
-/* ═══════════════════════════════════════
    DELETE
 ═══════════════════════════════════════ */
 let deleteName = null;
@@ -715,13 +659,14 @@ async function confirmDelete(){
    MODAL / TOAST UTILITIES
 ═══════════════════════════════════════ */
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-['itemModal','adjustModal','deleteModal'].forEach(id=>{
+['itemModal','deleteModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click', function(e){ if (e.target===this) closeModal(id); });
 });
+const TOAST_ICON = { success:'fa-circle-check', error:'fa-circle-xmark', info:'fa-circle-info' };
 function showToast(msg, type='success'){
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ') + msg;
+  t.innerHTML = `<i class="fa-solid ${TOAST_ICON[type]||'fa-circle-info'}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }

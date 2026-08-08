@@ -11,7 +11,9 @@
    NOTE: sidebar/topbar are deliberately left on the shared dark/blue
    theme vars from kitchen-shell.js. The .content scope below re-declares
    the SAME variable names with light values, so only the main content
-   area turns white — the sidebar never sees these overrides. */
+   area turns white — the sidebar never sees these overrides.
+   Palette / typography / KPI-icon-box / quick-action pattern mirrors
+   poolbar-dashboard.html so both dashboards read as one product. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
@@ -29,7 +31,7 @@ body {
 
 .content {
   flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
-  /* ── Light-theme override, scoped to content only ── */
+  /* ── Light-theme override, scoped to content only — same vars/values as poolbar-dashboard.html ── */
   --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
   --border: #eef0f6; --border2: #dfe3ec;
   --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
@@ -50,20 +52,26 @@ body {
 
 .section-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-weight: 700; margin-bottom: 2px; }
 
-/* ═══════════ KPI ═══════════ */
+/* ═══════════ KPI — icon-box pattern from poolbar-dashboard.html ═══════════ */
 .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
 @media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 700px) { .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; } }
-.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; position: relative; overflow: hidden;
-  box-shadow: var(--shadow); cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; text-decoration: none; display: block; animation: fadeUp .4s ease both; }
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 14px 12px; position: relative; overflow: hidden;
+  box-shadow: var(--shadow); cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; text-decoration: none; display: flex; flex-direction: column; animation: fadeUp .4s ease both; }
 .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
 .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s} .kpi-card:nth-child(5){animation-delay:.2s}
 .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--gold-border); }
-.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
-.kpi-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; font-weight: 700; }
-.kpi-value { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 6px; }
-@media (max-width: 420px) { .kpi-value { font-size: 21px; } }
-.kpi-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; }
+.kpi-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+.kpi-ic { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.ic-blue { background: var(--blue-bg); color: var(--blue); }
+.ic-green { background: var(--green-bg); color: var(--green); }
+.ic-amber { background: var(--amber-bg); color: var(--amber); }
+.ic-purple { background: var(--purple-bg); color: var(--purple); }
+.ic-red { background: var(--red-bg); color: var(--red); }
+.kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; line-height: 1.3; }
+.kpi-value { font-size: 22px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
+@media (max-width: 420px) { .kpi-value { font-size: 18px; } }
+.kpi-trend { font-size: 10.5px; font-weight: 600; color: var(--text3); margin-top: auto; }
 .kpi-trend.up { color: var(--green); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.down { color: var(--red); } .kpi-trend.neutral { color: var(--text3); }
 
 /* ═══════════ ROW / PANEL ═══════════ */
@@ -96,13 +104,19 @@ body {
 .chip-low { background: var(--amber-bg); color: var(--amber); } .chip-low::before { background: var(--amber); }
 .chip-out { background: var(--red-bg); color: var(--red); } .chip-out::before { background: var(--red); }
 
-/* ═══════════ QUICK ACTIONS ═══════════ */
+/* ═══════════ QUICK ACTIONS — truncated icon-box + label pattern from poolbar-dashboard.html ═══════════ */
 .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 560px) { .quick-grid { grid-template-columns: 1fr 1fr; } }
-.quick-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 12px; cursor: pointer; display: flex;
-  align-items: center; gap: 10px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text2); text-decoration: none; transition: all .2s; min-width: 0; }
-.quick-btn:hover { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold-light); }
-.quick-icon { font-size: 15px; flex-shrink: 0; color: var(--gold); }
+.quick-btn {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  font-family: inherit; font-size: 12.3px; font-weight: 700; color: var(--text2);
+  text-decoration: none; transition: all .2s; min-width: 0; overflow: hidden;
+}
+.quick-btn:hover { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+.quick-icon { width: 28px; height: 28px; border-radius: 8px; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.quick-btn:hover .quick-icon { background: var(--gold); color: #fff; }
+.quick-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -163,13 +177,7 @@ body {
         </div>
         <div class="panel">
           <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
-          <div class="quick-grid">
-            <a class="quick-btn" href="kitchen-production.html"><span class="quick-icon"><i class="fa-solid fa-plus"></i></span>New Production</a>
-            <a class="quick-btn" href="kitchen-production-history.html"><span class="quick-icon"><i class="fa-solid fa-clipboard-list"></i></span>Production History</a>
-            <a class="quick-btn" href="kitchen-transfers.html"><span class="quick-icon"><i class="fa-solid fa-truck-fast"></i></span>Transfers</a>
-            <a class="quick-btn" href="kitchen-inventory.html"><span class="quick-icon"><i class="fa-solid fa-boxes-stacked"></i></span>Kitchen Inventory</a>
-            <a class="quick-btn" href="javascript:window.print()"><span class="quick-icon"><i class="fa-solid fa-print"></i></span>Print Report</a>
-          </div>
+          <div class="quick-grid" id="quickGrid"></div>
         </div>
       </div>
 
@@ -178,7 +186,7 @@ body {
 </div>
 
 <script src="../component/kitchen-shell.js"></script>
-<script>
+<script type="module">
 /* ═══════════════════════════════════════════
    Shell — sidebar + topbar for this page, Kitchen nav only.
 ═══════════════════════════════════════════ */
@@ -193,72 +201,36 @@ const shell = KitchenShell.attach({
 });
 
 /* ═══════════════════════════════════════════
-   CONFIG & DATA LAYER — mirrors the Restaurant/Pool Bar pattern:
-   shared storage first, localStorage fallback, demo seed last.
-   Keys are shared with the other Kitchen pages once built, so a
-   production made on kitchen-production.html shows up here too.
+   DATA + PERMISSIONS — sourced entirely from the shared
+   services. No demo data or storage shim lives on this page;
+   kitchen-data.js owns fetching/seeding, permissions.js owns
+   what the current user is allowed to do/see.
 ═══════════════════════════════════════════ */
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
-
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
-
-async function apiFetch(method, path){
-  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
-  const opts = { method, headers:{ 'Content-Type':'application/json' } };
-  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
-  const res = await fetch(CFG.API_BASE + path, opts);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
-const KEY_PRODUCTIONS = 'kitchen-productions';
-const KEY_TRANSFERS   = 'kitchen-transfers';
-const KEY_STOCK       = 'kitchen-stock';
-const KEY_MOVEMENTS   = 'kitchen-movements';
-
-/* Demo seed — same data the original single-page kitchen.html shipped
-   with, split out so this dashboard renders correctly on its own. */
-const DEMO_PRODUCTIONS = [
-  { no:'PROD-00096', meal:'Fried Rice',   qty:30, unit:'Plates',  type:'rts', status:'sent',      time:'10:30 AM', by:'Head Chef' },
-  { no:'PROD-00095', meal:'Jollof Rice',  qty:20, unit:'Plates',  type:'rts', status:'accepted',  time:'10:15 AM', by:'Head Chef' },
-  { no:'PROD-00094', meal:'Egusi Soup',   qty:15, unit:'Portions',type:'rts', status:'accepted',  time:'10:00 AM', by:'Sous Chef' },
-  { no:'PROD-00093', meal:'Pepper Soup',  qty:2,  unit:'Portions',type:'coo', status:'completed', time:'09:45 AM', by:'Head Chef' },
-  { no:'PROD-00092', meal:'Moi Moi',      qty:25, unit:'Pieces',  type:'rts', status:'rejected',  time:'09:30 AM', by:'Sous Chef' },
-];
-const DEMO_TRANSFERS = [
-  { transferNo:'KTN-00045', meal:'Fried Rice',  quantity:30, unit:'Plates',   dateSent:'17/07/26 10:30 AM', status:'sent' },
-  { transferNo:'KTN-00044', meal:'Jollof Rice', quantity:20, unit:'Plates',   dateSent:'17/07/26 09:15 AM', status:'accepted' },
-  { transferNo:'KTN-00043', meal:'Egusi Soup',  quantity:15, unit:'Portions', dateSent:'16/07/26 08:40 PM', status:'accepted' },
-];
-const DEMO_STOCK = [
-  { name:'Rice',        qty:112, unit:'kg', min:30 },
-  { name:'Oil',         qty:18,  unit:'Ltr',min:10 },
-  { name:'Curry',       qty:4,   unit:'kg', min:3 },
-  { name:'Green Peas',  qty:9,   unit:'kg', min:5 },
-  { name:'Chicken',     qty:38,  unit:'kg', min:15 },
-  { name:'Palm Oil',    qty:3,   unit:'Ltr',min:5 },
-];
-
-function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.min ? 'low' : 'ok'); }
-function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
-
-async function loadShared(key, fallback){
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
-  } catch(e){}
-  return fallback;
-}
+import { getKitchenData, KITCHEN_CONFIG } from '../services/kitchen-data.js';
+import { hasPermission } from '../services/permissions.js';
 
 const STATUS_LBL = { draft:'Draft', sent:'Sent', accepted:'Accepted', rejected:'Rejected', completed:'Completed' };
 const TYPE_LBL = { rts:'Ready-to-Serve', coo:'Cook-on-Order' };
 const STATUS_DOT = { draft:'var(--text3)', sent:'var(--blue)', accepted:'var(--green)', rejected:'var(--red)', completed:'var(--purple)' };
 
+function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.min ? 'low' : 'ok'); }
+function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
+
+function mealLabel(p){
+  const meals = p.meals || [];
+  if (meals.length === 0) return '—';
+  const first = `${meals[0].qty} ${meals[0].unit} ${meals[0].name}`;
+  return meals.length > 1 ? `${first} +${meals.length - 1} more` : first;
+}
+function mealName(p){
+  const meals = p.meals || [];
+  return meals.length ? meals[0].name + (meals.length > 1 ? ` +${meals.length - 1}` : '') : '—';
+}
+
+/* ═══════════════════════════════════════════
+   KPI CARDS — icon-box markup (kpi-top / kpi-ic / kpi-label,
+   kpi-value, kpi-trend) matching poolbar-dashboard.html.
+═══════════════════════════════════════════ */
 function renderKPIs(productions, transfers, stock){
   const today = productions.filter(p => p.status !== 'draft').length;
   const lowStock = stock.filter(s => stockLevel(s) !== 'ok').length;
@@ -268,25 +240,27 @@ function renderKPIs(productions, transfers, stock){
 
   document.getElementById('kpiRow').innerHTML = `
     <a class="kpi-card" href="kitchen-production-history.html">
-      <div class="kpi-label">Today's Production</div>
-      <div class="kpi-value">${today}</div><div class="kpi-trend neutral">runs recorded</div>
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-kitchen-set"></i></div><div class="kpi-label">Today's Production</div></div>
+      <div class="kpi-value">${today}</div>
+      <div class="kpi-trend neutral">runs recorded</div>
     </a>
     <a class="kpi-card" href="kitchen-inventory.html">
-      <div class="kpi-label">Low Stock Alerts</div>
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock Alerts</div></div>
       <div class="kpi-value" style="color:var(--amber);">${lowStock}</div>
-      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'⚠ Needs restocking':'✓ All clear'}</div>
+      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs restocking':'All clear'}</div>
     </a>
     <a class="kpi-card" href="kitchen-transfers.html">
-      <div class="kpi-label">Pending Transfers</div>
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck-fast"></i></div><div class="kpi-label">Pending Transfers</div></div>
       <div class="kpi-value" style="color:var(--blue);">${pendingXfer}</div>
-      <div class="kpi-trend ${pendingXfer>0?'warn':'up'}">${pendingXfer>0?'Awaiting Restaurant':'✓ All accepted'}</div>
+      <div class="kpi-trend ${pendingXfer>0?'warn':'up'}">${pendingXfer>0?'Awaiting Restaurant':'All accepted'}</div>
     </a>
     <a class="kpi-card" href="kitchen-production-history.html">
-      <div class="kpi-label">Cook-on-Order Completed</div>
-      <div class="kpi-value" style="color:var(--purple);">${completedCoo}</div><div class="kpi-trend neutral">Served direct to guest</div>
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-fire-burner"></i></div><div class="kpi-label">Cook-on-Order Completed</div></div>
+      <div class="kpi-value" style="color:var(--purple);">${completedCoo}</div>
+      <div class="kpi-trend neutral">Served direct to guest</div>
     </a>
     <a class="kpi-card" href="kitchen-production-history.html">
-      <div class="kpi-label">Rejected Runs</div>
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected Runs</div></div>
       <div class="kpi-value" style="color:${rejected>0?'var(--red)':'var(--text)'};">${rejected}</div>
       <div class="kpi-trend ${rejected>0?'warn':'up'}">${rejected>0?'Review needed':'None on record'}</div>
     </a>`;
@@ -303,8 +277,8 @@ function renderRecentProd(productions){
     : recent.map(p => `
       <a class="list-row" href="kitchen-production-history.html">
         <span class="list-dot" style="background:${STATUS_DOT[p.status]}"></span>
-        <div class="list-body"><div class="list-name">${p.no} — ${p.meal}</div><div class="list-meta">${p.qty} ${p.unit} · ${TYPE_LBL[p.type]} · ${p.time}</div></div>
-        <span class="chip chip-${p.status}">${STATUS_LBL[p.status]}</span>
+        <div class="list-body"><div class="list-name">${p.no} — ${mealName(p)}</div><div class="list-meta">${mealLabel(p)} · ${TYPE_LBL[p.type] || p.type} · ${p.time}</div></div>
+        <span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span>
       </a>`).join('');
 }
 
@@ -334,23 +308,52 @@ function renderPendingXfer(transfers){
       </a>`).join('');
 }
 
+/* ═══════════════════════════════════════════
+   QUICK ACTIONS — visibility gated by permissions.js. A user
+   without kitchen create rights (e.g. a view-only privilege)
+   only sees the read-only shortcuts; print is always available.
+═══════════════════════════════════════════ */
+function renderQuickActions(session){
+  const canCreate = hasPermission(session, 'canCreate', 'kitchen');
+  const canView   = hasPermission(session, 'canView', 'kitchen');
+
+  const actions = [
+    { show: canCreate, href: 'kitchen-production.html', icon: 'fa-solid fa-plus', label: 'New Production' },
+    { show: canView,   href: 'kitchen-production-history.html', icon: 'fa-solid fa-clipboard-list', label: 'Production History' },
+    { show: canCreate, href: 'kitchen-transfers.html', icon: 'fa-solid fa-truck-fast', label: 'Transfers' },
+    { show: canView,   href: 'kitchen-inventory.html', icon: 'fa-solid fa-boxes-stacked', label: 'Kitchen Inventory' },
+    { show: true,      href: 'javascript:window.print()', icon: 'fa-solid fa-print', label: 'Print Report' },
+  ];
+
+  document.getElementById('quickGrid').innerHTML = actions
+    .filter(a => a.show)
+    .map(a => `
+      <a class="quick-btn" href="${a.href}" title="${a.label}">
+        <span class="quick-icon"><i class="${a.icon}"></i></span>
+        <span class="quick-label">${a.label}</span>
+      </a>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   INIT — pull everything from kitchen-data.js. The service
+   already handles Demo↔Live switching and storage fallback
+   internally (see KITCHEN_CONFIG.USE_DEMO), so this page just
+   consumes whatever it returns.
+═══════════════════════════════════════════ */
 async function init(){
-  let productions, transfers, stock;
-  if (!CFG.USE_DEMO) {
-    try {
-      const data = await apiFetch('GET', '/api/kitchen/dashboard-summary');
-      productions = data.productions; transfers = data.transfers; stock = data.stock;
-      shell.setApiMode('Live');
-    } catch(e) { console.warn('[API] Falling back to local demo data:', e.message); }
-  }
-  if (!productions) productions = await loadShared(KEY_PRODUCTIONS, DEMO_PRODUCTIONS);
-  if (!transfers)   transfers   = await loadShared(KEY_TRANSFERS, DEMO_TRANSFERS);
-  if (!stock)       stock       = await loadShared(KEY_STOCK, DEMO_STOCK);
+  const { productions, transfers, stock } = await getKitchenData();
+
+  // Use the shell's session (kept in sync with permissions.js roles/
+  // privileges) for what Quick Actions the current user can see.
+  const session = shell.getUser();
+
+  shell.setApiMode(KITCHEN_CONFIG.USE_DEMO ? 'Demo' : 'Live');
 
   renderKPIs(productions, transfers, stock);
   renderRecentProd(productions);
   renderLowStock(stock);
   renderPendingXfer(transfers);
+  renderQuickActions(session);
 }
 init();
 </script>
