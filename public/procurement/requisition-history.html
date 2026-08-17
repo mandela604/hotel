@@ -324,8 +324,10 @@
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="data/procurement-seed.js"></script>
+<script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
-<script src="procurement-api.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
 const shell = ProcurementShell.attach({
@@ -334,9 +336,15 @@ const shell = ProcurementShell.attach({
   activeFile:    'requisition-history.html',
   pageTitle:     'Requisition History',
   pageSubtitle:  'All purchase requests',
-  apiMode:       ProcurementAPI.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
   user:          { name: 'Procurement Officer', initials: 'PO' },
 });
+
+// Single source of truth for this page — populated once by init() via
+// ProcurementService.getPRs(). Every filter/sort/render function below
+// reads from this local cache; nothing on this page touches
+// ProcurementService.DEMO_PR or localStorage directly.
+let allPRs = [];
 
 let pPage = 1;
 const P_PAGE_SIZE = 10;
@@ -359,7 +367,7 @@ function ymd(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
 
 /* ═══ KPI CARDS — same markup pattern as the Restaurant pages ═══ */
 function renderKpis(){
-  const prs = ProcurementAPI.DEMO_PR;
+  const prs = allPRs;
   const total = prs.length;
   const approved = prs.filter(p=>p.approvalStage==='approved'||p.approvalStage==='fulfilled').length;
   const rejected = prs.filter(p=>p.approvalStage==='rejected').length;
@@ -392,7 +400,7 @@ function renderKpis(){
 function populateDeptFilter(){
   const sel = document.getElementById('pDept');
   const current = sel.value;
-  const depts = [...new Set(ProcurementAPI.DEMO_PR.map(p=>p.dept))].sort();
+  const depts = [...new Set(allPRs.map(p=>p.dept))].sort();
   sel.innerHTML = `<option value="">All Departments</option>` + depts.map(d=>`<option value="${d}">${d}</option>`).join('');
   sel.value = current;
 }
@@ -578,7 +586,7 @@ function renderPRs(){
   const priority = document.getElementById('pPriority').value;
   const sort = document.getElementById('pSort').value;
 
-  filteredPR = ProcurementAPI.DEMO_PR.filter(p=>{
+  filteredPR = allPRs.filter(p=>{
     const mq = !q || p.prNo.toLowerCase().includes(q) || p.item.toLowerCase().includes(q) || p.by.toLowerCase().includes(q);
     const mg = !statusGroup || STAGE_TO_GROUP[p.approvalStage] === statusGroup;
     const md = !dept || p.dept === dept;
@@ -598,10 +606,15 @@ function renderPRs(){
   renderKpis();
 }
 
+function openPRDetail(id){
+  const pr = allPRs.find(p => p.id === id);
+  if (pr) ProcurementModals.showPRDetail(pr);
+}
+
 function rowHtml(p){
   const stage = p.approvalStage;
   return `
-      <tr onclick="ProcurementModals.showPRDetail(ProcurementAPI.DEMO_PR.find(pr=>pr.id==='${p.id}'))">
+      <tr onclick="openPRDetail('${p.id}')">
         <td class="pr-no">${p.prNo}</td>
         <td>${p.item}</td>
         <td><span class="dept-chip"><span class="dept-dot"></span>${p.dept}</span></td>
@@ -644,11 +657,21 @@ window.addEventListener('afterprint', () => {
   renderPRPage();
 });
 
-// Init
-populateDeptFilter();
-bindStatusPills();
-renderKpis();
-renderPRs();
+// Init — single round trip to the service; everything above reads
+// from the `allPRs` cache populated here.
+async function init(){
+  try {
+    allPRs = await ProcurementService.getPRs();
+    populateDeptFilter();
+    bindStatusPills();
+    renderKpis();
+    renderPRs();
+  } catch (err) {
+    document.getElementById('prBody').innerHTML =
+      `<tr class="empty-row"><td colspan="8" style="color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message || 'Failed to load requisitions.'}</td></tr>`;
+  }
+}
+init();
 </script>
 </body>
 </html>

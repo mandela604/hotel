@@ -6,36 +6,25 @@
 <title>Aurum Hotel — All Bookings</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-/* This page owns layout + its own All Bookings content only. Sidebar +
-   topbar look/markup live entirely in booking-shell.js — same split
-   used by booking-dashboard.html and booking-rooms.html.
-   Data (rooms/bookings/guests/session) comes from services/booking-data.js.
-   Permission checks (who can create/edit/delete/discount) come from
-   services/permissions.js. This page owns NO demo data and NO storage
-   logic of its own anymore — flipping CONFIG.USE_DEMO in booking-data.js
-   is the only change needed to go live. */
+/* ── Base styles ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
-
 html, body { height: 100%; overflow-x: hidden; }
 body {
+  overflow-y: auto; /* no forced scrollbar */
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
   background: var(--bg); color: var(--text);
   transition: background var(--transition), color var(--transition);
 }
-
 .app { display: flex; min-height: 100vh; }
 .main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
 @media (max-width: 768px) { .main { margin-left: 0 !important; } }
 
-/* ── Light-theme variables, scoped to content + modals only ── */
-.content, .modal-overlay {
+.content {
   --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
   --border: #eef0f6; --border2: #dfe3ec;
   --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
   --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
-  --input-bg: #f4f6fb; --modal-bg: #ffffff;
   --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
   --green: #12b76a; --green-bg: #e9f9f0;
   --red: #f04438; --red-bg: #feecec;
@@ -43,27 +32,20 @@ body {
   --blue: #2f6fed; --blue-bg: #eaf1ff;
   --purple: #8b5cf6; --purple-bg: #f4efff;
 }
-.content {
-  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
-  background: var(--bg);
-  color: var(--text);
-}
+.content { flex: 1; padding: 24px; min-width: 0; overflow-x: hidden; background: var(--bg); color: var(--text); }
 @media (max-width: 480px) { .content { padding: 14px; } }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-/* ═══════════ KPI CARDS ═══════════ */
+/* ── KPIs ── */
 .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
 @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 420px) { .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; } }
 .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 14px 12px; position: relative; overflow: hidden;
   box-shadow: var(--shadow); cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; display: flex; flex-direction: column; animation: fadeUp .4s ease both; }
-.kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
-.kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
 .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--gold-border); }
 .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
 .kpi-card.acc-green::before { background: linear-gradient(90deg, var(--green), transparent); }
 .kpi-card.acc-blue::before { background: linear-gradient(90deg, var(--blue), transparent); }
-.kpi-card.acc-red::before { background: linear-gradient(90deg, var(--red), transparent); }
 .kpi-card.acc-amber::before { background: linear-gradient(90deg, var(--amber), transparent); }
 .kpi-card.acc-purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
 .kpi-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
@@ -72,25 +54,20 @@ body {
 .ic-green { background: var(--green-bg); color: var(--green); }
 .ic-amber { background: var(--amber-bg); color: var(--amber); }
 .ic-purple { background: var(--purple-bg); color: var(--purple); }
-.ic-red { background: var(--red-bg); color: var(--red); }
 .kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; line-height: 1.3; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
-@media (max-width: 420px) { .kpi-value { font-size: 18px; } }
 .kpi-trend { font-size: 10.5px; font-weight: 600; color: var(--text3); margin-top: auto; }
-.kpi-trend.up { color: var(--green); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.down { color: var(--red); } .kpi-trend.neutral { color: var(--text3); } .kpi-trend.info { color: var(--blue); }
+.kpi-trend.up { color: var(--green); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.neutral { color: var(--text3); }
 
-/* ═══════════ TOOLBAR ═══════════ */
+/* ── Toolbar & chips ── */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
 .toolbar-right { display: flex; gap: 7px; flex-shrink: 0; }
-.search-wrap { display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; transition: border-color 0.2s; flex: 1; min-width: 160px; max-width: 260px; }
+.search-wrap { display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; flex: 1; min-width: 160px; max-width: 260px; }
 .search-wrap:focus-within { border-color: var(--gold-border); }
 .search-wrap i { color: var(--text3); font-size: 12.5px; }
 .search-wrap input { background: none; border: none; outline: none; color: var(--text); font-family: inherit; font-size: 13px; width: 100%; }
-.search-wrap input::placeholder { color: var(--text3); }
-.filter-sel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text); font-family: inherit; font-size: 12.5px; cursor: pointer; outline: none; transition: border-color 0.2s; }
-.filter-sel:focus { border-color: var(--gold-border); }
-input[type="date"].filter-sel { min-width: 0; }
+.filter-sel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text); font-family: inherit; font-size: 12.5px; cursor: pointer; outline: none; }
 @media (max-width: 700px) {
   .toolbar { flex-direction: column; align-items: stretch; }
   .toolbar-left { flex-direction: column; align-items: stretch; }
@@ -100,216 +77,75 @@ input[type="date"].filter-sel { min-width: 0; }
   .filter-sel { width: 100%; }
 }
 
-/* ═══════════ BUTTONS ═══════════ */
-.btn-primary { background: var(--gold); color: #fff; border: 1px solid var(--gold); border-radius: var(--radius-sm); padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; box-shadow: 0 4px 10px rgba(47,111,237,0.28); }
-.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
-.btn-primary i { font-size: 11px; }
-.btn-outline { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--text); cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.btn-primary { background: var(--gold); color: #fff; border: 1px solid var(--gold); border-radius: var(--radius-sm); padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; box-shadow: 0 4px 10px rgba(47,111,237,0.28); }
+.btn-primary:hover { background: var(--gold-light); }
+.btn-outline { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
-.btn-outline i { color: var(--text3); font-size: 12px; }
 
-/* ═══════════ ACTIVE FILTER CHIPS ═══════════ */
-.status-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
-.status-chips::-webkit-scrollbar { height: 0; }
-.sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.status-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 10px; }
+.sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; font-family: inherit; }
 .sc-btn:hover, .sc-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
 
-/* ═══════════ PANEL ═══════════ */
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; animation: fadeUp 0.4s ease both; overflow: hidden; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 14px; flex-wrap: wrap; gap: 8px; }
-.panel-title { font-size: 14px; font-weight: 800; color: var(--text); }
-.panel-sub { font-size: 11.5px; color: var(--text3); font-weight: 600; }
-
-/* ═══════════ TABLE (desktop / tablet) ═══════════ */
-.table-wrap { overflow-x: auto; width: 100%; }
-.bk-table { width: 100%; border-collapse: collapse; min-width: 720px; }
-.bk-table thead th { text-align: left; padding: 9px 12px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
-.bk-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
-.bk-table tbody tr:last-child { border-bottom: none; }
-.bk-table tbody tr:hover { background: var(--surface2); }
-.bk-table tbody td { padding: 9px 12px; color: var(--text); vertical-align: middle; font-size: 12.5px; }
-
-.room-badge { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
-.rt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.dot-standard { background: var(--blue); } .dot-deluxe { background: var(--purple); } .dot-suite { background: var(--gold); } .dot-conf { background: #34d399; }
-.status-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-.status-chip i { font-size: 6px; }
-.chip-checkedin { background: var(--green-bg); color: var(--green); }
-.chip-checkout  { background: var(--red-bg); color: var(--red); }
-.chip-reserved  { background: var(--blue-bg); color: var(--blue); }
-.chip-vacant    { background: rgba(156,163,175,0.14); color: #6b7280; }
-.chip-maintenance { background: var(--amber-bg); color: var(--amber); }
-.pay-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
-.pay-chip i { font-size: 6px; }
-.pay-full { background: var(--green-bg); color: var(--green); }
-.pay-deposit { background: var(--amber-bg); color: var(--amber); }
-.pay-pending { background: var(--red-bg); color: var(--red); }
-
-.act-btns { display: flex; gap: 4px; align-items: center; }
-.act-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; font-size: 11px; font-weight: 700; color: var(--text3); cursor: pointer; transition: all 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; }
-.act-btn.edit:hover { border-color: var(--gold-border); color: var(--gold); }
-.act-btn.del:hover  { border-color: rgba(240,68,56,0.4); color: var(--red); }
-.act-view-only { font-size: 10.5px; color: var(--text3); font-style: italic; }
-
-/* ═══════════ MOBILE CARD LIST ═══════════ */
-@media (max-width: 720px) {
-  .table-wrap { overflow-x: visible; }
-  .bk-table { min-width: 0; }
-  .bk-table thead { display: none; }
-  .bk-table, .bk-table tbody, .bk-table tr, .bk-table td { display: block; width: 100%; }
-  .bk-table tbody tr {
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    margin: 10px; padding: 4px 4px 2px;
-  }
-  .bk-table tbody tr:hover { background: var(--surface); }
-  .bk-table tbody td {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 7px 10px; border-bottom: 1px dashed var(--border); text-align: right;
-  }
-  .bk-table tbody td:last-child { border-bottom: none; }
-  .bk-table tbody td::before {
-    content: attr(data-label); font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--text3); font-weight: 600; text-align: left; flex-shrink: 0;
-  }
-  .bk-table tbody td.mcard-head { padding: 10px 10px 8px; border-bottom: 1px solid var(--border); }
-  .bk-table tbody td.mcard-head::before { display: none; }
-  .bk-table tbody td.mcard-head { justify-content: space-between; }
-  .bk-table tbody td.mcard-actions { padding: 9px 10px 10px; }
-  .bk-table tbody td.mcard-actions::before { display: none; }
-  .bk-table tbody td.mcard-actions .act-btns { width: 100%; }
-  .bk-table tbody td.mcard-actions .act-btn { flex: 1; text-align: center; justify-content: center; padding: 7px 0; }
+/* ── Guest name truncation ── */
+.ft-guest-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+  display: inline-block;
 }
 
-/* ═══════════ SUMMARY ROW ═══════════ */
-.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface2); border-top: 1px solid var(--border); }
-.sr-item { text-align: center; padding: 10px 12px; border-right: 1px solid var(--border); }
-.sr-item:last-child { border-right: none; }
-.sr-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 3px; font-weight: 700; }
-.sr-val { font-size: 17px; font-weight: 800; color: var(--text); }
-@media (max-width: 560px) {
-  .summary-row { grid-template-columns: repeat(2, 1fr); }
-  .sr-item:nth-child(1), .sr-item:nth-child(2) { border-bottom: 1px solid var(--border); }
-  .sr-item:nth-child(2) { border-right: none; }
-}
-
-/* ═══════════ PAGINATION ═══════════ */
-.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
-.page-btns { display: flex; gap: 3px; flex-wrap: wrap; }
-.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; font-family: inherit; padding: 0 7px; font-weight: 600; }
-.page-btn:hover { border-color: var(--gold-border); color: var(--gold); }
-.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 700; }
-.page-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
-
-/* ═══════════ MODAL (shared booking form) ═══════════ */
-.modal-overlay {
+/* ── Delete modal ── */
+.confirm-modal-overlay {
   display: none; position: fixed; inset: 0; background: rgba(15,20,40,0.55); backdrop-filter: blur(5px); z-index: 300;
   align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
 }
-.modal-overlay.show { display: flex; }
-.modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; width: min(680px, 96vw); box-shadow: 0 30px 80px rgba(15,20,40,0.25); animation: modalIn 0.25s cubic-bezier(.4,0,.2,1); margin: auto; }
-@media (max-width: 480px) { .modal { padding: 18px; border-radius: 14px; } }
-.confirm-modal { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px; width: min(380px, 90vw); box-shadow: 0 20px 60px rgba(15,20,40,0.25); animation: modalIn 0.2s ease; margin: 80px auto auto; }
-@keyframes modalIn { from{opacity:0;transform:translateY(14px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.modal-title { font-size: 19px; font-weight: 800; color: var(--text); }
-.modal-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; color: var(--text2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-.modal-close:hover { color: var(--text); border-color: var(--gold-border); }
+.confirm-modal-overlay.show { display: flex; }
+.confirm-modal { background: #ffffff; border: 1px solid #eef0f6; border-radius: 14px; padding: 22px; width: min(380px, 90vw); margin: 80px auto auto; }
 
-.modal-perm-notice { display: none; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--amber); background: var(--amber-bg); border: 1px solid rgba(247,144,9,.25); border-radius: 9px; padding: 8px 13px; margin-bottom: 14px; }
-
-.form-section { margin-bottom: 16px; }
-.form-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); font-weight: 800; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--gold-border); display: flex; align-items: center; gap: 7px; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-@media (max-width: 500px) { .form-grid, .form-grid-3 { grid-template-columns: 1fr; } }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group.span2 { grid-column: span 2; }
-@media (max-width: 500px) { .form-group.span2 { grid-column: span 1; } }
-.form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; display: flex; align-items: center; gap: 5px; }
-.form-label .lock-tag { font-size: 8.5px; background: var(--surface3); color: var(--text3); padding: 1px 5px; border-radius: 6px; letter-spacing: .5px; }
-.form-input, .form-select { background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-family: inherit; font-size: 13px; outline: none; transition: border-color 0.2s; width: 100%; }
-.form-input:focus, .form-select:focus { border-color: var(--gold-border); }
-.form-input[readonly] { opacity: 0.6; cursor: default; }
-.form-input:disabled, .form-select:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface3); }
-
-.amount-box { background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: var(--radius-sm); padding: 10px 12px; }
-.amount-box.blue { background: var(--blue-bg); border-color: rgba(47,111,237,0.2); }
-.amount-box.red  { background: var(--red-bg); border-color: rgba(240,68,56,0.2); }
-.amount-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--gold); margin-bottom: 3px; font-weight: 700; }
-.amount-box.blue .amount-label { color: var(--blue); }
-.amount-box.red  .amount-label { color: var(--red); }
-.amount-value { font-size: 20px; font-weight: 800; color: var(--gold); }
-.amount-box.blue .amount-value { color: var(--blue); }
-.amount-box.red  .amount-value { color: var(--red); }
-.amount-sub { font-size: 10px; color: rgba(47,111,237,0.75); margin-top: 1px; font-weight: 600; }
-.amount-box.blue .amount-sub { color: rgba(47,111,237,0.7); }
-.amount-box.red  .amount-sub { color: rgba(240,68,56,0.7); }
-
-.num-pair { display: flex; align-items: center; }
-.num-pair button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 32px; height: 38px; font-size: 14px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.num-pair button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); border-right: none; }
-.num-pair button:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
-.num-pair button:hover { background: var(--gold-dim); color: var(--gold); }
-.num-pair button:disabled { opacity: 0.5; cursor: not-allowed; }
-.num-pair input { flex: 1; border-radius: 0; border-left: none; border-right: none; text-align: center; }
-
-.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
-@media (max-width: 480px) { .modal-footer { flex-direction: column-reverse; } .modal-footer button { width: 100%; justify-content: center; } }
-
-.guest-search-wrap { position: relative; }
-.guest-dropdown { position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 400; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 12px 40px rgba(15,20,40,0.18); overflow: hidden; display: none; max-height: 220px; overflow-y: auto; }
-.guest-dropdown.show { display: block; }
-.guest-opt { padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
-.guest-opt:last-child { border-bottom: none; }
-.guest-opt:hover { background: var(--surface2); }
-.guest-opt-name { font-size: 13px; font-weight: 700; color: var(--text); }
-.guest-opt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
-.returning-tag { display: inline-block; font-size: 9px; background: var(--gold-dim); color: var(--gold); padding: 1px 6px; border-radius: 8px; margin-left: 5px; font-weight: 700; }
-
-/* ═══════════ TOAST ═══════════ */
 .toast {
   position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm);
   padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999;
-  display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; max-width: calc(100vw - 40px);
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; font-weight: 600;
+  display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 40px); font-weight: 600;
 }
-.toast.success { border-left: 3px solid #12b76a; } .toast.success i { color: #12b76a; }
-.toast.error   { border-left: 3px solid #f04438; } .toast.error i { color: #f04438; }
-.toast.info    { border-left: 3px solid #2f6fed; } .toast.info i { color: #2f6fed; }
-@keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-@media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
+.toast.success { border-left: 3px solid #12b76a; }
+.toast.error   { border-left: 3px solid #f04438; }
+.toast.info    { border-left: 3px solid #2f6fed; }
 
-/* Print */
 @media print {
-  #sidebarSlot, #topbarSlot, .toolbar, .status-chips, .act-btns, .pagination, .no-print, .kpi-row { display: none !important; }
+  #sidebarSlot, #topbarSlot, .toolbar, .status-chips, .act-btns, .no-print, .kpi-row { display: none !important; }
   .main { margin-left: 0 !important; }
-  .content { padding: 0 !important; overflow: visible !important; }
-  body { background: #fff !important; color: #000 !important; }
-  .panel { box-shadow: none !important; border: 1px solid #ccc !important; }
-  @page { margin: 16mm; }
+  .content { padding: 0 !important; }
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none; 
+}
+
+body {
+  -ms-overflow-style: none;
+}
+
 </style>
 </head>
 <body>
 
 <div class="app">
-  <!-- Sidebar rendered here by booking-shell.js — untouched, stays on its own dark/blue theme -->
   <div id="sidebarSlot"></div>
-
   <div class="main">
-    <!-- Topbar rendered here by booking-shell.js — untouched -->
     <div id="topbarSlot"></div>
-
     <div class="content">
-
+      <!-- KPIs -->
       <div class="kpi-row" id="kpiRow"></div>
 
-      <div class="status-chips no-print" id="statusChips" style="margin-bottom:10px;">
+      <!-- Status chips -->
+      <div class="status-chips no-print" id="statusChips">
         <button class="sc-btn active" data-s="" onclick="setStatusChip('',this)">All</button>
         <button class="sc-btn" data-s="checkedin" onclick="setStatusChip('checkedin',this)">Checked In</button>
         <button class="sc-btn" data-s="reserved" onclick="setStatusChip('reserved',this)">Reserved</button>
@@ -317,6 +153,7 @@ input[type="date"].filter-sel { min-width: 0; }
         <button class="sc-btn" data-s="maintenance" onclick="setStatusChip('maintenance',this)">Maintenance</button>
       </div>
 
+      <!-- Toolbar -->
       <div class="toolbar no-print">
         <div class="toolbar-left">
           <div class="search-wrap">
@@ -331,154 +168,45 @@ input[type="date"].filter-sel { min-width: 0; }
             <option value="Conference">Conference</option>
           </select>
           <input type="date" class="filter-sel" id="bkFrom" onchange="filterBookings()" title="Check-in from">
-          <input type="date" class="filter-sel" id="bkTo"   onchange="filterBookings()" title="Check-in to">
+          <input type="date" class="filter-sel" id="bkTo" onchange="filterBookings()" title="Check-in to">
         </div>
         <div class="toolbar-right">
           <button class="btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-          <button class="btn-primary" id="newBookingBtn" onclick="openBookingModal()"><i class="fa-solid fa-plus"></i> New Booking</button>
+          <button class="btn-primary" id="newBookingBtn" onclick="openNewBooking()"><i class="fa-solid fa-plus"></i> New Booking</button>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">All Bookings</div>
-          <div class="panel-sub" id="bkCount">—</div>
-        </div>
-        <div class="table-wrap">
-          <table class="bk-table">
-            <thead>
-              <tr>
-                <th>Room</th>
-                <th>Guest</th>
-                <th>Check-in</th>
-                <th>Check-out</th>
-                <th>Nts</th>
-                <th>Total (₦)</th>
-                <th>Paid (₦)</th>
-                <th>Balance (₦)</th>
-                <th>Payment</th>
-                <th>Status</th>
-                <th class="no-print">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="bkBody"></tbody>
-          </table>
-        </div>
-        <div class="summary-row" id="bkSummary" style="display:none;">
-          <div class="sr-item"><div class="sr-label">Bookings</div><div class="sr-val" id="bk-cnt">0</div></div>
-          <div class="sr-item"><div class="sr-label">Total Revenue</div><div class="sr-val" id="bk-total">₦0</div></div>
-          <div class="sr-item"><div class="sr-label">Collected</div><div class="sr-val" id="bk-paid">₦0</div></div>
-          <div class="sr-item"><div class="sr-label">Balance</div><div class="sr-val" id="bk-bal">₦0</div></div>
-        </div>
-        <div class="pagination">
-          <span id="bkPaginLabel">—</span>
-          <div class="page-btns" id="bkPageBtns"></div>
-        </div>
-      </div>
-
+      <!-- FrontDeskTable mounts here -->
+      <div id="tableSlot"></div>
     </div>
   </div>
 </div>
 
-<!-- ══ BOOKING MODAL ══ -->
-<div class="modal-overlay" id="bookingModal" onclick="handleModalBackdrop(event,'bookingModal')">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modalTitle">New Booking</div>
-      <button class="modal-close" onclick="closeModal('bookingModal')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-
-    <div class="modal-perm-notice" id="modalPermNotice"><i class="fa-solid fa-lock"></i> View only — you don't have permission to edit this booking.</div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-solid fa-user"></i> Guest Information</div>
-      <div class="form-grid">
-        <div class="form-group span2">
-          <label class="form-label">Guest Full Name</label>
-          <div class="guest-search-wrap">
-            <input class="form-input" type="text" id="fName" placeholder="Type to search returning guests…" autocomplete="off" oninput="searchGuests(this.value)">
-            <div class="guest-dropdown" id="guestDrop"></div>
-          </div>
-        </div>
-        <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" type="tel" id="fPhone" placeholder="+234 800 000 0000"></div>
-        <div class="form-group"><label class="form-label">Email (optional)</label><input class="form-input" type="email" id="fEmail" placeholder="guest@email.com"></div>
-        <div class="form-group"><label class="form-label">ID Type</label>
-          <select class="form-select" id="fIdType"><option>NIN</option><option>Passport</option><option>Driver's Licence</option><option>Voter's Card</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">ID Number</label><input class="form-input" type="text" id="fIdNum" placeholder="e.g. 12345678901"></div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-solid fa-bed"></i> Room &amp; Stay</div>
-      <div class="form-grid">
-        <div class="form-group"><label class="form-label">Room Number</label>
-          <select class="form-select" id="fRoom" onchange="onRoomChange()"><option value="">Select room…</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Room Type</label><input class="form-input" type="text" id="fType" readonly placeholder="Auto-filled"></div>
-        <div class="form-group"><label class="form-label">Check-in Date</label><input class="form-input" type="date" id="fCheckin" onchange="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Check-out Date</label><input class="form-input" type="date" id="fCheckout" onchange="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Adults</label>
-          <div class="num-pair"><button type="button" onclick="adj('fAdults',-1)">−</button><input class="form-input" type="number" id="fAdults" value="1" min="1" max="50"><button type="button" onclick="adj('fAdults',1)">+</button></div>
-        </div>
-        <div class="form-group"><label class="form-label">Children</label>
-          <div class="num-pair"><button type="button" onclick="adj('fChildren',-1)">−</button><input class="form-input" type="number" id="fChildren" value="0" min="0" max="50"><button type="button" onclick="adj('fChildren',1)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-solid fa-sack-dollar"></i> Billing &amp; Payment</div>
-      <div class="form-grid-3">
-        <div class="form-group"><label class="form-label">Rate / Night (₦)</label><input class="form-input" type="number" id="fRate" placeholder="0" oninput="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Discount (%) <span class="lock-tag" id="discLockTag" style="display:none;">Admin only</span></label><input class="form-input" type="number" id="fDiscount" placeholder="0" min="0" max="100" oninput="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Amount Paid (₦)</label><input class="form-input" type="number" id="fPaid" placeholder="0" oninput="calcBalance()"></div>
-        <div class="amount-box"><div class="amount-label">Gross Total</div><div class="amount-value" id="dispTotal">₦0</div><div class="amount-sub" id="dispNights">0 nights</div></div>
-        <div class="amount-box blue"><div class="amount-label">After Discount</div><div class="amount-value" id="dispAfterDisc">₦0</div><div class="amount-sub" id="dispDisc">No discount</div></div>
-        <div class="amount-box red"><div class="amount-label">Balance Due</div><div class="amount-value" id="dispBalance">₦0</div><div class="amount-sub" id="dispPaidSub">₦0 paid</div></div>
-        <div class="form-group"><label class="form-label">Payment Method</label>
-          <select class="form-select" id="fPayMethod"><option>Cash</option><option>POS</option><option>Transfer</option><option>Split – Cash + POS</option><option>Split – Cash + Transfer</option><option>Complimentary</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Payment Status</label>
-          <select class="form-select" id="fPayStatus"><option>Pending</option><option>Deposit Paid</option><option>Fully Paid</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="fRecordedBy" placeholder="Staff name"></div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-regular fa-note-sticky"></i> Notes</div>
-      <div class="form-group"><textarea class="form-input" style="min-height:60px;resize:vertical;" id="fNotes" placeholder="Late check-in, dietary needs, extra bedding, special requests…"></textarea></div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn-outline" id="modalDeleteBtn" style="display:none;border-color:rgba(240,68,56,0.3);color:var(--red);" onclick="openDeleteFromEdit()"><i class="fa-solid fa-trash"></i> Delete Booking</button>
-      <button class="btn-outline" onclick="closeModal('bookingModal')">Cancel</button>
-      <button class="btn-primary" id="saveBookingBtn" onclick="saveBooking()"><i class="fa-solid fa-check"></i> Save Booking</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ DELETE CONFIRM ══ -->
-<div class="modal-overlay" id="deleteModal" onclick="handleModalBackdrop(event,'deleteModal')">
+<!-- Delete confirm modal -->
+<div class="confirm-modal-overlay" id="deleteModal" onclick="handleModalBackdrop(event,'deleteModal')">
   <div class="confirm-modal">
     <h3 style="font-size:18px;font-weight:800;color:var(--red);margin-bottom:8px;">Delete Booking</h3>
     <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Delete booking for <strong id="delGuest"></strong> in Room <strong id="delRoom"></strong>? This cannot be undone.</p>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button class="btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
-      <button style="background:var(--red-bg);border:1px solid rgba(240,68,56,0.3);border-radius:var(--radius-sm);padding:9px 16px;color:var(--red);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
+      <button style="background:var(--red-bg);border:1px solid rgba(240,68,56,0.3);border-radius:var(--radius-sm);padding:9px 16px;color:var(--red);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
 </div>
 
+<!-- ─── SCRIPTS ─── -->
+<script src="../services/permissions.js"></script>
+<script src="data/booking-demo-seed.js"></script>
+<script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
-<script type="module">
-/* ═══════════════════════════════════════════════
-   Shell — manages its own session/avatar/API badge now
-   (see booking-shell.js CONFIG.USE_DEMO). Don't hardcode a
-   user here; the shell fetches and displays its own.
-═══════════════════════════════════════════════ */
-const shell = BookingShell.attach({
+<script src="../component/booking-modal.js"></script>
+<script src="../component/front-desk-table.js"></script>
+
+<script>
+'use strict';
+
+/* ═══ Shell ═══ */
+var shell = BookingShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'booking-list.html',
@@ -486,528 +214,277 @@ const shell = BookingShell.attach({
   pageSubtitle:  'Every reservation, current & past',
 });
 
-/* ═══════════════════════════════════════════════
-   DATA + PERMISSIONS — the only two imports this page needs.
-   getBookingData()/saveBookingData() know whether to hit the real
-   API or demo storage (services/booking-data.js CONFIG.USE_DEMO).
-   hasPermission/canEdit/canDelete/canGiveDiscount decide what the
-   signed-in session is allowed to do, driven by the `session`
-   object getBookingData() hands back — so once the real API returns
-   a real session, permissions fall into place with zero page changes.
-═══════════════════════════════════════════════ */
-import { getBookingData, saveBookingData } from '../services/booking-data.js';
-import { hasPermission, canEdit, canDelete, canGiveDiscount } from '../services/permissions.js';
+/* ═══ Globals ═══ */
+var allRooms = [];
+var bookings = [];
+var currentSession = null;
+var filteredBk = [];
+var deleteIdx = null;
 
-let allRooms = [];
-let bookings = [];
-let guestDB  = [];
-let currentSession = null;
+/* ═══ BookingModal instance ═══ */
+var bookingModal = BookingModal.create({
+  service: window.BookingData,
+  onSaved: function () { refreshAndRender(); },
+  onDeleted: function () { refreshAndRender(); },
+});
 
-/* ═══════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════ */
-let bkPage       = 1;
-let statusChip   = '';
-let filteredBk   = [];
-let editIdx      = null;
-let deleteIdx    = null;
-const PAGE_BK    = 10;
-
-/* ═══════════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════════ */
-function nights(ci, co) { if (!ci || !co) return 0; const n = (new Date(co) - new Date(ci)) / 86400000; return n > 0 ? n : 0; }
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
-function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
-function calcTotal(b) { const n = nights(b.checkin, b.checkout) || 1; return b.rate * n * (1 - (b.discount || 0) / 100); }
-function calcBal(b) { return Math.max(0, calcTotal(b) - (b.paid || 0)); }
-function getRoomStatus(num) {
-  const b = bookings.find(r => r.room === num);
-  if (!b || !b.status) return 'available';
-  return b.status === 'vacant' ? 'available' : b.status;
+/* ═══ Permissions helpers ═══ */
+function getSession() {
+  return shell.getUser();
 }
 
-const DOT_CLASS = { Standard:'dot-standard', Deluxe:'dot-deluxe', Suite:'dot-suite', Conference:'dot-conf' };
-const CHIP_CLS  = { checkedin:'chip-checkedin', checkout:'chip-checkout', reserved:'chip-reserved', vacant:'chip-vacant', maintenance:'chip-maintenance' };
-const CHIP_LBL  = { checkedin:'Checked In', checkout:'Check-out', reserved:'Reserved', vacant:'Vacant', maintenance:'Maintenance' };
-const PAY_CLS   = { 'Fully Paid':'pay-full', 'Deposit Paid':'pay-deposit', 'Pending':'pay-pending' };
-
-/* ═══════════════════════════════════════════════
-   PERMISSIONS — applied once after data loads, and per-row
-   whenever the table renders
-═══════════════════════════════════════════════ */
-function applyPermissionsUI() {
-  const newBtn = document.getElementById('newBookingBtn');
-  if (newBtn) newBtn.style.display = hasPermission(currentSession, 'canCreate', 'booking') ? '' : 'none';
+function P() { return window.Permissions || null; }
+function hasPermission(session, permission, module) {
+  var x = P();
+  if (x && x.hasPermission) return x.hasPermission(session, permission, module);
+  return !!(session && String(session.role).toLowerCase() === 'admin');
+}
+function canEdit(session, module, entity) {
+  var x = P();
+  if (x && x.canEdit) return x.canEdit(session, module, entity);
+  return hasPermission(session, 'canEdit', module);
+}
+function canDelete(session, module, entity) {
+  var x = P();
+  if (x && x.canDelete) return x.canDelete(session, module, entity);
+  return !!(session && String(session.role).toLowerCase() === 'admin');
 }
 
-function applyModalPermissions(entry) {
-  const editAllowed     = entry ? canEdit(currentSession, 'booking', entry) : hasPermission(currentSession, 'canCreate', 'booking');
-  const deleteAllowed   = entry ? canDelete(currentSession, 'booking', entry) : false;
-  const discountAllowed = canGiveDiscount(currentSession, 'booking');
+/* ═══ Custom column definitions ═══ */
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
-  document.querySelectorAll('#bookingModal .form-input, #bookingModal .form-select, #bookingModal .num-pair button').forEach(el => {
-    el.disabled = !editAllowed;
+var DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', Suite: 'ft-dot-suite', Conference: 'ft-dot-conf' };
+
+// Room column: no status chip, just room · type with dot
+var roomColumn = {
+  id: 'room',
+  label: 'Room',
+  cell: function (b) {
+    var dot = DOT_CLASS[b.type] || 'ft-dot-default';
+    return '<span class="ft-room"><span class="ft-dot ' + dot + '"></span>' + esc(b.room) + ' · ' + esc(b.type || '') + '</span>';
+  }
+};
+
+// Guest column: only name, truncated to one line
+var guestColumn = {
+  id: 'guest',
+  label: 'Guest',
+  cell: function (b) {
+    return '<div class="ft-guest-name">' + esc(b.guest || '—') + '</div>';
+  }
+};
+
+/* ═══ Table instance ═══ */
+var table = null;
+
+function mountTable() {
+  if (table) { table.destroy(); table = null; }
+
+  table = FrontDeskTable.create({
+    target: '#tableSlot',
+    title: 'All Bookings',
+    pageSize: 10,
+    // Use custom room and guest, others built-in
+    columns: [roomColumn, guestColumn, 'checkin', 'checkout', 'nights', 'total', 'paid', 'balance', 'payment', 'status', 'actions'],
+    summaryLabels: {
+      count: 'Bookings',
+      total: 'Total Revenue',
+      paid: 'Collected',
+      balance: 'Balance'
+    },
+    emptyText: 'No bookings found.',
+    sortable: true,
+    // Sort by createdAt (newest first) — if not present, fallback to checkin desc
+    sortKey: 'createdAt',
+    sortDir: 'desc',
+    getRowPerm: function (b, session) {
+      var s = session || getSession();
+      return {
+        canEdit: canEdit(s, 'booking', b),
+        canDelete: canDelete(s, 'booking', b)
+      };
+    },
+    onView: function (b) { bookingModal.openView(b); },
+    onEdit: function (b) {
+      if (canEdit(getSession(), 'booking', b)) {
+        bookingModal.openEdit(b);
+      } else {
+        showToast("You don't have permission to edit this booking.", 'error');
+      }
+    },
+    onDelete: function (b) {
+      if (canDelete(getSession(), 'booking', b)) {
+        openDelete(b);
+      } else {
+        showToast("You don't have permission to delete this booking.", 'error');
+      }
+    },
+    onRowClick: function (b) { bookingModal.openView(b); },
   });
-  const discInput = document.getElementById('fDiscount');
-  discInput.disabled = !editAllowed || !discountAllowed;
-  document.getElementById('discLockTag').style.display = discountAllowed ? 'none' : '';
 
-  document.getElementById('saveBookingBtn').style.display = editAllowed ? '' : 'none';
-  document.getElementById('modalDeleteBtn').style.display = (entry && deleteAllowed) ? 'inline-flex' : 'none';
-  document.getElementById('modalPermNotice').style.display = editAllowed ? 'none' : 'flex';
+  applyPermissionsUI();
 }
 
-/* ═══════════════════════════════════════════════
-   KPI CARDS
-═══════════════════════════════════════════════ */
+/* ═══ KPIs ═══ */
 function renderKPIs() {
-  const checkedIn   = bookings.filter(b => b.status === 'checkedin').length;
-  const reserved    = bookings.filter(b => b.status === 'reserved').length;
-  const available   = bookings.filter(b => b.status === 'vacant').length;
-  const maintenance = bookings.filter(b => b.status === 'maintenance').length;
+  var checkedIn = bookings.filter(function (b) { return b.status === 'checkedin'; }).length;
+  var reserved = bookings.filter(function (b) { return b.status === 'reserved'; }).length;
+  var available = bookings.filter(function (b) { return b.status === 'vacant'; }).length;
+  var maintenance = bookings.filter(function (b) { return b.status === 'maintenance'; }).length;
 
-  document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card acc-green" onclick="setStatusFromKpi('checkedin')">
-      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-door-open"></i></div><div class="kpi-label">Checked In</div></div>
-      <div class="kpi-value" style="color:var(--green);">${checkedIn}</div>
-      <div class="kpi-trend up">Currently occupied</div>
-    </div>
-    <div class="kpi-card acc-blue" onclick="setStatusFromKpi('reserved')">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-calendar-check"></i></div><div class="kpi-label">Reserved</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${reserved}</div>
-      <div class="kpi-trend ${reserved>0?'warn':'up'}">${reserved>0?'Upcoming arrivals':'None on record'}</div>
-    </div>
-    <div class="kpi-card acc-purple" onclick="setStatusFromKpi('')">
-      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-bed"></i></div><div class="kpi-label">Available Rooms</div></div>
-      <div class="kpi-value" style="color:var(--purple);">${available}</div>
-      <div class="kpi-trend neutral">Across ${allRooms.length} rooms</div>
-    </div>
-    <div class="kpi-card acc-amber" onclick="setStatusFromKpi('maintenance')">
-      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-screwdriver-wrench"></i></div><div class="kpi-label">Maintenance</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${maintenance}</div>
-      <div class="kpi-trend ${maintenance>0?'warn':'up'}">${maintenance>0?'Out of service':'None on record'}</div>
-    </div>`;
+  document.getElementById('kpiRow').innerHTML =
+    '<div class="kpi-card acc-green" onclick="setStatusFromKpi(\'checkedin\')"><div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-door-open"></i></div><div class="kpi-label">Checked In</div></div><div class="kpi-value" style="color:var(--green)">' + checkedIn + '</div><div class="kpi-trend up">Currently occupied</div></div>' +
+    '<div class="kpi-card acc-blue" onclick="setStatusFromKpi(\'reserved\')"><div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-calendar-check"></i></div><div class="kpi-label">Reserved</div></div><div class="kpi-value" style="color:var(--blue)">' + reserved + '</div><div class="kpi-trend ' + (reserved > 0 ? 'warn' : 'up') + '">' + (reserved > 0 ? 'Upcoming arrivals' : 'None on record') + '</div></div>' +
+    '<div class="kpi-card acc-purple" onclick="setStatusFromKpi(\'\')"><div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-bed"></i></div><div class="kpi-label">Available Rooms</div></div><div class="kpi-value" style="color:var(--purple)">' + available + '</div><div class="kpi-trend neutral">Across ' + allRooms.length + ' rooms</div></div>' +
+    '<div class="kpi-card acc-amber" onclick="setStatusFromKpi(\'maintenance\')"><div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-screwdriver-wrench"></i></div><div class="kpi-label">Maintenance</div></div><div class="kpi-value" style="color:var(--amber)">' + maintenance + '</div><div class="kpi-trend ' + (maintenance > 0 ? 'warn' : 'up') + '">' + (maintenance > 0 ? 'Out of service' : 'None on record') + '</div></div>';
 }
+
 function setStatusFromKpi(status) {
-  const btn = document.querySelector(`.sc-btn[data-s="${status}"]`) || document.querySelector('.sc-btn[data-s=""]');
+  var btn = document.querySelector('.sc-btn[data-s="' + status + '"]') || document.querySelector('.sc-btn[data-s=""]');
   setStatusChip(status, btn);
 }
 
-/* ═══════════════════════════════════════════════
-   PAGINATION
-═══════════════════════════════════════════════ */
-function renderPagination(btnId, labelId, page, total, size, cb) {
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const from = total === 0 ? 0 : (page - 1) * size + 1;
-  const to   = Math.min(page * size, total);
-  document.getElementById(labelId).textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
-  const wrap = document.getElementById(btnId);
-  wrap.innerHTML = '';
-  const prev = document.createElement('button');
-  prev.className = 'page-btn'; prev.innerHTML = '<i class="fa-solid fa-chevron-left"></i>'; prev.disabled = (page === 1);
-  prev.onclick = () => cb(page - 1); wrap.appendChild(prev);
-  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
-  start = Math.max(1, end - 4);
-  for (let i = start; i <= end; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'page-btn' + (i === page ? ' active' : '');
-    btn.textContent = i; btn.onclick = (function(p){return () => cb(p);})(i);
-    wrap.appendChild(btn);
-  }
-  const next = document.createElement('button');
-  next.className = 'page-btn'; next.innerHTML = '<i class="fa-solid fa-chevron-right"></i>'; next.disabled = (page >= totalPages);
-  next.onclick = () => cb(page + 1); wrap.appendChild(next);
-}
-
-/* ═══════════════════════════════════════════════
-   STATUS CHIPS
-═══════════════════════════════════════════════ */
 function setStatusChip(s, btn) {
-  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sc-btn').forEach(function (b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
-  statusChip = s;
-  bkPage = 1;
   filterBookings();
 }
 
-/* ═══════════════════════════════════════════════
-   BOOKINGS TABLE / CARDS
-═══════════════════════════════════════════════ */
+/* ═══ Filtering ═══ */
 function filterBookings() {
-  bkPage = 1;
-  const q  = document.getElementById('bkSearch').value.toLowerCase();
-  const t  = document.getElementById('bkType').value;
-  const df = document.getElementById('bkFrom').value;
-  const dt = document.getElementById('bkTo').value;
-  filteredBk = bookings.filter(b => {
+  var q = (document.getElementById('bkSearch').value || '').toLowerCase();
+  var t = document.getElementById('bkType').value;
+  var df = document.getElementById('bkFrom').value;
+  var dt = document.getElementById('bkTo').value;
+  var statusChip = document.querySelector('.sc-btn.active') ? document.querySelector('.sc-btn.active').dataset.s : '';
+
+  filteredBk = bookings.filter(function (b) {
     if (!b.guest) return false;
-    const mq = !q || b.room.includes(q) || b.guest.toLowerCase().includes(q) || b.phone.includes(q);
-    const ms = !statusChip || b.status === statusChip;
-    const mt = !t || b.type === t;
-    const mf = !df || (b.checkin && b.checkin >= df);
-    const md = !dt || (b.checkin && b.checkin <= dt);
+    var mq = !q || String(b.room).indexOf(q) !== -1 || (b.guest || '').toLowerCase().indexOf(q) !== -1 || (b.phone || '').indexOf(q) !== -1;
+    var ms = !statusChip || b.status === statusChip;
+    var mt = !t || b.type === t;
+    var mf = !df || (b.checkin && b.checkin >= df);
+    var md = !dt || (b.checkin && b.checkin <= dt);
     return mq && ms && mt && mf && md;
   });
-  renderBkPage();
-}
 
-function renderBkPage() {
-  const total   = filteredBk.length;
-  const start   = (bkPage - 1) * PAGE_BK;
-  const page    = filteredBk.slice(start, start + PAGE_BK);
-  const totRev  = filteredBk.reduce((s, b) => s + calcTotal(b), 0);
-  const totPaid = filteredBk.reduce((s, b) => s + (b.paid || 0), 0);
-  const totBal  = filteredBk.reduce((s, b) => s + calcBal(b), 0);
-
-  document.getElementById('bkCount').textContent = total + ' record' + (total !== 1 ? 's' : '');
-
-  const tb = document.getElementById('bkBody');
-  tb.innerHTML = page.length === 0
-    ? `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);">No bookings found</td></tr>`
-    : page.map(b => {
-        const oi  = bookings.indexOf(b);
-        const bal = calcBal(b);
-        const rowCanEdit   = canEdit(currentSession, 'booking', b);
-        const rowCanDelete = canDelete(currentSession, 'booking', b);
-        return `<tr onclick="openEdit(${oi})">
-          <td class="mcard-head" data-label="Room"><span class="room-badge"><span class="rt-dot ${DOT_CLASS[b.type]}"></span>${b.room} · ${b.type}</span><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}"><i class="fa-solid fa-circle"></i>${CHIP_LBL[b.status]||'—'}</span></td>
-          <td data-label="Guest"><div style="text-align:right;"><div style="font-weight:600;font-size:12.5px;">${b.guest}</div><div style="font-size:10.5px;color:var(--text3);">${b.phone}</div></div></td>
-          <td data-label="Check-in">${fmtDate(b.checkin)}</td>
-          <td data-label="Check-out">${fmtDate(b.checkout)}</td>
-          <td data-label="Nights">${nights(b.checkin,b.checkout)||'—'}</td>
-          <td data-label="Total"><strong>${fmtN(calcTotal(b))}</strong></td>
-          <td data-label="Paid"><span style="color:var(--green);">${fmtN(b.paid||0)}</span></td>
-          <td data-label="Balance"><span style="color:${bal>0?'var(--red)':'var(--green)'};font-weight:700;">${fmtN(bal)}</span></td>
-          <td data-label="Payment"><div style="text-align:right;"><div style="font-size:11.5px;">${b.payMethod}</div><span class="pay-chip ${PAY_CLS[b.payStatus]||'pay-pending'}"><i class="fa-solid fa-circle"></i>${b.payStatus}</span></div></td>
-          <td data-label="Status"><span class="status-chip ${CHIP_CLS[b.status]||'chip-vacant'}"><i class="fa-solid fa-circle"></i>${CHIP_LBL[b.status]||'—'}</span></td>
-          <td class="no-print mcard-actions" onclick="event.stopPropagation()">
-            <div class="act-btns">
-              ${rowCanEdit   ? `<button class="act-btn edit" onclick="openEdit(${oi})"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
-              ${rowCanDelete ? `<button class="act-btn del"  onclick="openDelete(${oi})"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
-              ${(!rowCanEdit && !rowCanDelete) ? `<span class="act-view-only">View only</span>` : ''}
-            </div>
-          </td>
-        </tr>`;
-      }).join('');
-
-  if (total > 0) {
-    document.getElementById('bkSummary').style.display = 'grid';
-    document.getElementById('bk-cnt').textContent   = total;
-    document.getElementById('bk-total').textContent = fmtN(totRev);
-    document.getElementById('bk-paid').textContent  = fmtN(totPaid);
-    document.getElementById('bk-bal').textContent   = fmtN(totBal);
-  } else {
-    document.getElementById('bkSummary').style.display = 'none';
-  }
-  renderPagination('bkPageBtns', 'bkPaginLabel', bkPage, total, PAGE_BK, p => { bkPage = p; renderBkPage(); });
+  if (table) table.setRows(filteredBk);
   renderKPIs();
-
-  // Keep sidebar's "All Bookings" badge in sync with reserved arrivals.
-  shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
+  applyPermissionsUI();
+  if (shell.setPendingBadge) {
+    shell.setPendingBadge(bookings.filter(function (b) { return b.status === 'reserved'; }).length);
+  }
 }
 
-/* ═══════════════════════════════════════════════
-   GUEST AUTOFILL — sourced from getBookingData()'s guests list.
-   New guests typed here stay in-memory only (see note at top of
-   file) rather than being written back through saveBookingData().
-═══════════════════════════════════════════════ */
-function searchGuests(val) {
-  const drop = document.getElementById('guestDrop');
-  if (!val || val.length < 1) { drop.classList.remove('show'); return; }
-  const hits = guestDB.filter(g =>
-    g.name.toLowerCase().includes(val.toLowerCase()) ||
-    (g.phone || '').replace(/\s/g,'').includes(val.replace(/\s/g,''))
-  );
-  if (!hits.length) { drop.classList.remove('show'); return; }
-  drop._hits = hits;
-  drop.innerHTML = hits.map((g, i) => `
-    <div class="guest-opt" onclick="autofillGuest(${i})">
-      <div class="guest-opt-name">${g.name}<span class="returning-tag">Returning</span></div>
-      <div class="guest-opt-sub">${g.phone}${g.email ? ' · ' + g.email : ''}</div>
-    </div>`).join('');
-  drop.classList.add('show');
-}
-function autofillGuest(i) {
-  const g = document.getElementById('guestDrop')._hits[i];
-  document.getElementById('fName').value   = g.name;
-  document.getElementById('fPhone').value  = g.phone;
-  document.getElementById('fEmail').value  = g.email || '';
-  document.getElementById('fIdType').value = g.idType;
-  document.getElementById('fIdNum').value  = g.idNum;
-  document.getElementById('guestDrop').classList.remove('show');
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('.guest-search-wrap')) document.getElementById('guestDrop').classList.remove('show');
-});
-
-/* ═══════════════════════════════════════════════
-   BOOKING MODAL
-═══════════════════════════════════════════════ */
-function populateRoomSelect(editRoomNum) {
-  const sel = document.getElementById('fRoom');
-  sel.innerHTML = '<option value="">Select room…</option>';
-  allRooms.forEach(r => {
-    const st = getRoomStatus(r.num);
-    if (st === 'available' || r.num === editRoomNum) {
-      const opt = document.createElement('option');
-      opt.value = `${r.num}|${r.type}|${r.rate}`;
-      opt.textContent = `${r.num} – ${r.type} (${fmtN(r.rate)}/night)${r.num === editRoomNum ? ' ✓ current' : ''}`;
-      sel.appendChild(opt);
-    }
-  });
+function applyPermissionsUI() {
+  var session = getSession();
+  var newBtn = document.getElementById('newBookingBtn');
+  if (newBtn) newBtn.style.display = hasPermission(session, 'canCreate', 'booking') ? '' : 'none';
+  if (table) table.setSession(session);
 }
 
-function onRoomChange() {
-  const v = document.getElementById('fRoom').value;
-  if (!v) { document.getElementById('fType').value = ''; document.getElementById('fRate').value = ''; return; }
-  const p = v.split('|');
-  document.getElementById('fType').value = p[1] || '';
-  document.getElementById('fRate').value = p[2] || '';
-  calcAmount();
-}
-
-function calcAmount() {
-  const ci   = document.getElementById('fCheckin').value;
-  const co   = document.getElementById('fCheckout').value;
-  const rate = parseFloat(document.getElementById('fRate').value) || 0;
-  const disc = parseFloat(document.getElementById('fDiscount').value) || 0;
-  const n    = nights(ci, co);
-  const raw  = rate * n;
-  const discAmt = raw * disc / 100;
-  const after   = raw - discAmt;
-  document.getElementById('dispTotal').textContent     = fmtN(raw);
-  document.getElementById('dispNights').textContent    = n === 1 ? '1 night' : `${n} nights`;
-  document.getElementById('dispAfterDisc').textContent = fmtN(after);
-  document.getElementById('dispDisc').textContent      = disc > 0 ? `${disc}% off (−${fmtN(discAmt)})` : 'No discount';
-  calcBalance();
-}
-
-function calcBalance() {
-  const ci   = document.getElementById('fCheckin').value;
-  const co   = document.getElementById('fCheckout').value;
-  const rate = parseFloat(document.getElementById('fRate').value) || 0;
-  const disc = parseFloat(document.getElementById('fDiscount').value) || 0;
-  const paid = parseFloat(document.getElementById('fPaid').value) || 0;
-  const n    = nights(ci, co);
-  const bal  = Math.max(0, rate * n * (1 - disc / 100) - paid);
-  document.getElementById('dispBalance').textContent = fmtN(bal);
-  document.getElementById('dispPaidSub').textContent = fmtN(paid) + ' paid';
-}
-
-function adj(id, d) {
-  const el = document.getElementById(id);
-  if (el.disabled) return;
-  el.value = Math.min(parseInt(el.max) || 99, Math.max(parseInt(el.min) || 0, (parseInt(el.value) || 0) + d));
-}
-
-function clearBookingForm() {
-  ['fName','fPhone','fEmail','fIdNum','fCheckin','fCheckout','fRate','fDiscount','fPaid','fRecordedBy','fNotes'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('fType').value      = '';
-  document.getElementById('fAdults').value    = '1';
-  document.getElementById('fChildren').value  = '0';
-  document.getElementById('fIdType').value    = 'NIN';
-  document.getElementById('fPayMethod').value = 'Cash';
-  document.getElementById('fPayStatus').value = 'Pending';
-  ['dispTotal','dispAfterDisc','dispBalance'].forEach(id => document.getElementById(id).textContent = '₦0');
-  document.getElementById('dispNights').textContent  = '0 nights';
-  document.getElementById('dispDisc').textContent    = 'No discount';
-  document.getElementById('dispPaidSub').textContent = '₦0 paid';
-  document.getElementById('modalDeleteBtn').style.display = 'none';
-}
-
-function openBookingModal() {
-  if (!hasPermission(currentSession, 'canCreate', 'booking')) {
+/* ═══ New Booking ═══ */
+function openNewBooking() {
+  if (!hasPermission(getSession(), 'canCreate', 'booking')) {
     showToast("You don't have permission to create bookings.", 'error');
     return;
   }
-  editIdx = null;
-  document.getElementById('modalTitle').textContent = 'New Booking';
-  clearBookingForm();
-  populateRoomSelect(null);
-  document.getElementById('fCheckin').value = new Date().toISOString().split('T')[0];
-  applyModalPermissions(null);
-  document.getElementById('bookingModal').classList.add('show');
+  bookingModal.openNew();
 }
 
-function openEdit(i) {
-  editIdx = i; const b = bookings[i];
-  document.getElementById('modalTitle').textContent = `Edit Booking — Room ${b.room}`;
-  clearBookingForm();
-  populateRoomSelect(b.room);
-  document.getElementById('fName').value       = b.guest;
-  document.getElementById('fPhone').value      = b.phone;
-  document.getElementById('fEmail').value      = b.email || '';
-  document.getElementById('fIdType').value     = b.idType || 'NIN';
-  document.getElementById('fIdNum').value      = b.idNum || '';
-  document.getElementById('fType').value       = b.type;
-  document.getElementById('fCheckin').value    = b.checkin;
-  document.getElementById('fCheckout').value   = b.checkout;
-  document.getElementById('fRate').value       = b.rate;
-  document.getElementById('fDiscount').value   = b.discount || 0;
-  document.getElementById('fPaid').value       = b.paid || 0;
-  document.getElementById('fPayMethod').value  = b.payMethod;
-  document.getElementById('fPayStatus').value  = b.payStatus;
-  document.getElementById('fRecordedBy').value = b.recordedBy || '';
-  document.getElementById('fAdults').value     = b.adults || 1;
-  document.getElementById('fChildren').value   = b.children || 0;
-  document.getElementById('fNotes').value      = b.notes || '';
-  const sel = document.getElementById('fRoom');
-  for (let o of sel.options) { if (o.value.startsWith(b.room + '|')) { sel.value = o.value; break; } }
-  calcAmount();
-  applyModalPermissions(b);
-  document.getElementById('bookingModal').classList.add('show');
-}
-
-async function saveBooking() {
-  const name = document.getElementById('fName').value.trim();
-  const ci   = document.getElementById('fCheckin').value;
-  const co   = document.getElementById('fCheckout').value;
-  if (!name || !ci || !co) { showToast('Please fill in guest name and dates.', 'error'); return; }
-  const roomVal = document.getElementById('fRoom').value;
-  const roomNum = editIdx !== null ? bookings[editIdx].room : (roomVal ? roomVal.split('|')[0] : '');
-  if (!roomNum) { showToast('Please select a room.', 'error'); return; }
-
-  const entry = {
-    room: roomNum, type: document.getElementById('fType').value,
-    guest: name, phone: document.getElementById('fPhone').value, email: document.getElementById('fEmail').value,
-    idType: document.getElementById('fIdType').value, idNum: document.getElementById('fIdNum').value,
-    checkin: ci, checkout: co,
-    rate: parseFloat(document.getElementById('fRate').value) || 0,
-    discount: parseFloat(document.getElementById('fDiscount').value) || 0,
-    paid: parseFloat(document.getElementById('fPaid').value) || 0,
-    payMethod: document.getElementById('fPayMethod').value,
-    payStatus: document.getElementById('fPayStatus').value,
-    recordedBy: document.getElementById('fRecordedBy').value,
-    adults: parseInt(document.getElementById('fAdults').value) || 1,
-    children: parseInt(document.getElementById('fChildren').value) || 0,
-    notes: document.getElementById('fNotes').value,
-    status: editIdx !== null ? bookings[editIdx].status : 'reserved',
-  };
-
-  try {
-    if (editIdx !== null) {
-      bookings[editIdx] = entry;
-    } else {
-      const existIdx = bookings.findIndex(b => b.room === roomNum);
-      if (existIdx >= 0) bookings[existIdx] = entry; else bookings.push(entry);
-      if (!guestDB.find(g => g.name === name)) guestDB.push({ name, phone: entry.phone, email: entry.email, idType: entry.idType, idNum: entry.idNum });
-    }
-
-    // Guests are intentionally NOT passed here — see note at top of file.
-    await saveBookingData(allRooms, bookings);
-
-    showToast(editIdx !== null ? 'Booking updated.' : 'Booking saved. Room marked as Reserved.', 'success');
-    closeModal('bookingModal');
-    editIdx = null;
-    filterBookings();
-  } catch (err) {
-    console.error('[Bookings] Save failed:', err);
-    showToast(err.message || 'Failed to save booking.', 'error');
-  }
-}
-
-/* ═══════════════════════════════════════════════
-   DELETE
-═══════════════════════════════════════════════ */
-function openDelete(i) {
-  if (!canDelete(currentSession, 'booking', bookings[i])) {
-    showToast("You don't have permission to delete this booking.", 'error');
-    return;
-  }
-  deleteIdx = i;
-  document.getElementById('delGuest').textContent = bookings[i].guest;
-  document.getElementById('delRoom').textContent  = bookings[i].room;
-  document.getElementById('deleteModal').classList.add('show');
-}
-function openDeleteFromEdit() {
-  if (editIdx === null) return;
-  if (!canDelete(currentSession, 'booking', bookings[editIdx])) return;
-  deleteIdx = editIdx;
-  document.getElementById('delGuest').textContent = bookings[deleteIdx].guest;
-  document.getElementById('delRoom').textContent  = bookings[deleteIdx].room;
-  closeModal('bookingModal');
+/* ═══ Delete ═══ */
+function openDelete(b) {
+  deleteIdx = b;
+  document.getElementById('delGuest').textContent = b.guest;
+  document.getElementById('delRoom').textContent = b.room;
   document.getElementById('deleteModal').classList.add('show');
 }
 
 async function confirmDelete() {
-  if (deleteIdx === null) return;
+  if (!deleteIdx) return;
   try {
-    const b = bookings[deleteIdx];
-    bookings[deleteIdx] = { room:b.room, type:b.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:b.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:'', idType:'NIN', idNum:'' };
-    await saveBookingData(allRooms, bookings);
+    var roomNum = deleteIdx.room;
+    await BookingData.deleteBooking(roomNum);
     closeModal('deleteModal');
     deleteIdx = null;
     showToast('Booking deleted. Room marked as Available.', 'info');
-    filterBookings();
+    await refreshAndRender();
   } catch (err) {
-    console.error('[Bookings] Delete failed:', err);
-    showToast(err.message || 'Failed to delete booking.', 'error');
+    showToast((err && err.message) || 'Failed to delete booking.', 'error');
   }
 }
 
-/* ═══════════════════════════════════════════════
-   UTILITIES
-═══════════════════════════════════════════════ */
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function handleModalBackdrop(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
-
-function showToast(msg, type = 'success') {
-  const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3400);
+/* ═══ Refresh data ═══ */
+async function refreshAndRender() {
+  try {
+    var data = await BookingData.getBookingData();
+    allRooms = data.rooms || [];
+    bookings = data.bookings || [];
+    bookingModal.setSession(getSession());
+    applyPermissionsUI();
+    filterBookings();
+  } catch (err) {
+    showToast((err && err.message) || 'Failed to refresh bookings.', 'error');
+  }
 }
 
-/* ═══════════════════════════════════════════════
-   INIT — loading / error states around the single data service call.
-   In production (CONFIG.USE_DEMO = false in booking-data.js),
-   getBookingData() throws on failure rather than silently falling
-   back, so this page must — and does — handle that explicitly.
-═══════════════════════════════════════════════ */
-async function init() {
-  document.getElementById('bkBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);"><i class="fa-solid fa-spinner fa-spin"></i> Loading bookings…</td></tr>`;
-  try {
-    const { rooms, bookings: bk, session, guests } = await getBookingData();
-    allRooms = rooms;
-    bookings = bk;
-    currentSession = session;
-    guestDB = (guests || []).map(g => ({ name: g.name, phone: g.phone, email: g.email, idType: g.idType, idNum: g.idNum }));
+/* ═══ Utilities ═══ */
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function handleModalBackdrop(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
 
+function showToast(msg, type) {
+  type = type || 'success';
+  var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 3400);
+}
+
+/* ═══ Init ═══ */
+async function init() {
+  if (!window.BookingData) {
+    document.getElementById('tableSlot').innerHTML =
+      '<div style="padding:24px;text-align:center;color:var(--text3);">BookingData not loaded. Check script order.</div>';
+    return;
+  }
+
+  try {
+    var data = await BookingData.getBookingData();
+    allRooms = data.rooms || [];
+    bookings = data.bookings || [];    bookingModal.setSession(getSession());
+
+    mountTable();
+    filterBookings();
     applyPermissionsUI();
 
-    // Respect ?status= query param (e.g. linked from dashboard KPI cards)
-    const qs = new URLSearchParams(location.search);
-    const st = qs.get('status');
-    if (st) {
-      const btn = document.querySelector(`.sc-btn[data-s="${st}"]`);
-      if (btn) setStatusChip(st, btn); else filterBookings();
-    } else {
-      filterBookings();
+    if (shell.setPendingBadge) {
+      shell.setPendingBadge(bookings.filter(function (b) { return b.status === 'reserved'; }).length);
     }
+
+    var st = new URLSearchParams(location.search).get('status');
+    if (st) {
+      var btn = document.querySelector('.sc-btn[data-s="' + st + '"]');
+      if (btn) setStatusChip(st, btn);
+    }
+
+    setTimeout(function () {
+      applyPermissionsUI();
+      bookingModal.setSession(getSession());
+    }, 400);
+
   } catch (err) {
-    console.error('[Bookings] Failed to load booking data:', err);
-    document.getElementById('bkBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--red);">
-      <i class="fa-solid fa-triangle-exclamation"></i> ${err.message || "Couldn't load bookings. Please refresh."}
-    </td></tr>`;
+    document.getElementById('tableSlot').innerHTML =
+      '<div style="padding:24px;text-align:center;color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> ' + ((err && err.message) || "Couldn't load bookings.") + '</div>';
     showToast('Failed to load bookings.', 'error');
   }
 }
-
-// Expose everything referenced by inline onclick/oninput/onchange
-// attributes — module scripts don't share the page's global scope
-// the way classic scripts do, so this bridges the two explicitly.
-Object.assign(window, {
-  setStatusChip, setStatusFromKpi, filterBookings,
-  openBookingModal, handleModalBackdrop, closeModal,
-  searchGuests, autofillGuest, onRoomChange, calcAmount, calcBalance, adj,
-  openDeleteFromEdit, saveBooking, confirmDelete, openEdit, openDelete,
-});
-
 init();
 </script>
 </body>

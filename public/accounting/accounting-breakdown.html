@@ -320,6 +320,8 @@
   </div>
 </div>
 
+<script src="accounting-seed.js"></script>
+<script src="services/accounting-service.js"></script>
 <script src="../component/accounting-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════════
@@ -335,108 +337,20 @@ const shell = AccountingShell.attach({
   user:          { name: 'Finance Manager', initials: 'FM' },
 });
 
-/* ═══════════════════════════════════════════
-   SHIFT-DAY LOGIC — duplicated from every other Accounting page
-   by design (each page owns it standalone): a shift runs 9:00 AM
-   → 9:00 AM the next day, with a Shift Day / Calendar Day toggle
-   identical to accounting-transactions.html.
-═══════════════════════════════════════════ */
-let SHIFT_START_HOUR = 9;
-let dateMode = 'shift'; // 'shift' | 'calendar'
-
-function pad2(n){ return String(n).padStart(2,'0'); }
-function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-function shiftKeyFor(dt){
-  const d = new Date(dt);
-  if (d.getHours() < SHIFT_START_HOUR) d.setDate(d.getDate() - 1);
-  return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-}
-function calendarKeyFor(dt){ return ymd(new Date(dt)); }
-function keyFor(dt){ return dateMode === 'shift' ? shiftKeyFor(dt) : calendarKeyFor(dt); }
-function fmtHourLabel(h){ const suffix = h>=12?'PM':'AM'; const hh = h%12===0?12:h%12; return `${hh}:00 ${suffix}`; }
-function dayLabel(key){
-  const [y,m,d] = key.split('-').map(Number);
-  if (dateMode === 'shift') {
-    const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
-    const end = new Date(start); end.setDate(end.getDate()+1);
-    const opt = {day:'numeric', month:'short'};
-    return `${start.toLocaleDateString('en-GB',opt)} → ${end.toLocaleDateString('en-GB',opt)}`;
-  }
-  return new Date(y, m-1, d).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
-}
-function parseTxDate(str){
-  if (!str) return null;
-  const [datePart, timePart, ampm] = str.split(' ');
-  const [d,m,y] = datePart.split('/').map(n=>parseInt(n,10));
-  let hh=0, mm=0;
-  if (timePart) { const [h,mi]=timePart.split(':').map(n=>parseInt(n,10)); hh=h; mm=mi||0; }
-  if (ampm) { const u=ampm.toUpperCase(); if (u==='PM'&&hh<12) hh+=12; if (u==='AM'&&hh===12) hh=0; }
-  const fullYear = y<100 ? 2000+y : y;
-  return new Date(fullYear, m-1, d, hh, mm);
-}
-
-/* ═══════════════════════════════════════════
-   STORAGE + CONFIG
-═══════════════════════════════════════════ */
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
-  return fallback;
-}
-async function saveShared(key, value){ try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); } }
-
-/* Demo data — identical seed/shape to every other Accounting page,
-   so this report always agrees with Dashboard/Reconciliation/Transactions. */
-const DEMO_ROOM_TX = [
-  { id:'RM-2044', desc:'Room 312 — Checkout (Dr. Balogun)', amount:145000, method:'Room Charge', staff:'Adewale O.', date:'17/07/26 08:40 AM' },
-  { id:'RM-2043', desc:'Room 204 — Check-in (Mr. Adeyemi)', amount:98000,  method:'POS',         staff:'Adewale O.', date:'17/07/26 09:14 AM' },
-  { id:'RM-2042', desc:'Room 109 — Checkout (Ms. Okafor)',  amount:76000,  method:'Cash',         staff:'Ngozi Eze',  date:'17/07/26 08:05 AM' },
-  { id:'RM-2041', desc:'Room 402 — Check-in (Barr. Musa)',  amount:132000, method:'Transfer',     staff:'Adewale O.', date:'16/07/26 11:20 PM' },
-  { id:'RM-2040', desc:'Room 108 — Checkout (Mrs. Bello)',  amount:64000,  method:'Cash',         staff:'Kabiru Aliyu',date:'16/07/26 08:52 AM' },
-  { id:'RM-2039', desc:'Room 217 — Check-in (Mr. Chukwu)',  amount:120000, method:'POS',          staff:'Ngozi Eze',  date:'16/07/26 03:10 PM' },
-  { id:'RM-2038', desc:'Room 305 — Checkout (Chief Eze)',   amount:210000, method:'Room Charge',  staff:'Adewale O.', date:'15/07/26 08:15 AM' },
-  { id:'RM-2037', desc:'Room 210 — Checkout (Mr. Yusuf)',   amount:52000,  method:'Cash',         staff:'Amaka Okonkwo',date:'15/07/26 09:40 AM' },
-];
-const DEMO_RESTAURANT_SALES = [
-  { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', date:'17/07/26 11:05 AM', status:'completed' },
-  { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000}], total:18000, method:'POS', staff:'Tunde A.', table:'Table 2', date:'17/07/26 10:40 AM', status:'completed' },
-  { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', date:'17/07/26 09:52 AM', status:'completed' },
-  { id:'SALE-1040', items:[{meal:'Jollof Rice',qty:4,price:5500}], total:24300, method:'Room Charge', staff:'Tunde A.', table:'Room 204', date:'16/07/26 07:30 PM', status:'completed' },
-  { id:'SALE-1039', items:[{meal:'Egusi Soup',qty:1,price:6000}], total:6000, method:'Cash', staff:'Amaka O.', table:'Table 1', date:'16/07/26 01:15 PM', status:'voided' },
-  { id:'SALE-1038', items:[{meal:'Suya Platter',qty:2,price:5500}], total:11000, method:'Cash', staff:'Tunde A.', table:'Table 6', date:'17/07/26 12:20 AM', status:'completed' },
-  { id:'SALE-1030', items:[{meal:'Jollof Rice',qty:4,price:5500}], total:22000, method:'Cash', staff:'Amaka O.', table:'Table 1', date:'15/07/26 07:10 PM', status:'completed' },
-];
-const DEMO_POOLBAR_SALES = [
-  { id:'PBS-1021', item:'Heineken',  qty:3, total:4500,  method:'Cash',     staff:'Bola Nwosu', time:'17/07/26 11:15 AM' },
-  { id:'PBS-1020', item:'Mojito',    qty:2, total:11000, method:'POS',      staff:'Bola Nwosu', time:'17/07/26 10:50 AM' },
-  { id:'PBS-1019', item:'Chapman',   qty:1, total:2500,  method:'Transfer', staff:'Emeka U.',   time:'17/07/26 09:40 AM' },
-  { id:'PBS-1018', item:'Heineken',  qty:6, total:9000,  method:'Cash',     staff:'Emeka U.',   time:'17/07/26 01:05 AM' },
-  { id:'PBS-1017', item:'Star Lager',qty:4, total:4800,  method:'Cash',     staff:'Bola Nwosu', time:'16/07/26 06:20 PM' },
-  { id:'PBS-1012', item:'Guinness',  qty:4, total:6400,  method:'Cash',     staff:'Bola Nwosu', time:'15/07/26 06:30 PM' },
-];
-
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-
-function buildTransactions(){
-  const out = [];
-  DEMO_ROOM_TX_LOADED.forEach(r => out.push({ id:r.id, dept:'Rooms', amount:r.amount, method:r.method, date:parseTxDate(r.date) }));
-  DEMO_REST_LOADED.filter(s=>s.status!=='voided').forEach(s => out.push({ id:s.id, dept:'Restaurant', amount:s.total, method:s.method, date:parseTxDate(s.date) }));
-  DEMO_POOL_LOADED.forEach(s => out.push({ id:s.id, dept:'Pool Bar', amount:s.total, method:s.method, date:parseTxDate(s.time) }));
-  return out.filter(t => t.date);
-}
-
-const PAY_METHODS = ['Cash','POS','Transfer','Room Charge','Complimentary'];
+/* ═══════════════════════════════════════════════════════════════
+   CALL-AND-RENDER ONLY — every number on this page comes from
+   AccountingData (services/accounting-service.js). This file owns
+   no storage shim, no seed data, no date-key math, and no
+   aggregation logic; it just asks the service for numbers and
+   renders them, then re-renders when a filter/toggle changes.
+═══════════════════════════════════════════════════════════════ */
+const fmtN = AccountingData.fmtN;
+const PAY_METHODS = AccountingSeed.PAYMENT_METHODS;
 const PAY_BAR_CLASS = { Cash:'', POS:'pos', Transfer:'transfer', 'Room Charge':'roomcharge', Complimentary:'comp' };
+const PAGE_SIZE = 8;
 
-/* ═══════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════ */
-let DEMO_ROOM_TX_LOADED = [], DEMO_REST_LOADED = [], DEMO_POOL_LOADED = [];
-let transactions = [];
+let dateMode = 'shift'; // 'shift' | 'calendar' — passed straight to AccountingData as the aggregation mode
+let transactions = [];  // AccountingData.buildTransactions() output, loaded once in init()
 let page = 1;
 let sortKey = 'date', sortDir = 'desc';
 let _dailyCache = [];
@@ -461,7 +375,7 @@ function updateModeLabels(){
   const textEl = document.getElementById('bannerText');
   if (dateMode === 'shift') {
     iconEl.textContent = '🕘';
-    textEl.innerHTML = `<b>Shift Day accounting</b> is on. A shift runs <b>${fmtHourLabel(SHIFT_START_HOUR)} → ${fmtHourLabel(SHIFT_START_HOUR)} the next day</b> — an overnight sale after midnight still counts toward the shift that started the evening before.`;
+    textEl.innerHTML = `<b>Shift Day accounting</b> is on. A shift runs <b>${AccountingData.fmtHourLabel(9)} → ${AccountingData.fmtHourLabel(9)} the next day</b> — an overnight sale after midnight still counts toward the shift that started the evening before.`;
     document.getElementById('fromLabel').textContent = 'From — Shift Date';
     document.getElementById('toLabel').textContent = 'To — Shift Date';
     document.getElementById('dayHeadLabel').textContent = 'Shift Day';
@@ -477,37 +391,10 @@ function updateModeLabels(){
 }
 
 /* ═══════════════════════════════════════════
-   AGGREGATION — group filtered transactions into one row per day
-═══════════════════════════════════════════ */
-function getRangeFiltered(){
-  const from = document.getElementById('fFrom').value;
-  const to = document.getElementById('fTo').value;
-  return transactions.filter(t => {
-    const k = keyFor(t.date);
-    return (!from || k >= from) && (!to || k <= to);
-  });
-}
-function buildDaily(rows){
-  const map = {};
-  rows.forEach(t => {
-    const k = keyFor(t.date);
-    if (!map[k]) map[k] = { key:k, Rooms:0, Restaurant:0, 'Pool Bar':0, total:0, count:0, methods:{} };
-    map[k][t.dept] += t.amount;
-    map[k].total += t.amount;
-    map[k].count += 1;
-    map[k].methods[t.method] = (map[k].methods[t.method] || 0) + t.amount;
-  });
-  return Object.values(map);
-}
-
-/* ═══════════════════════════════════════════
    KPIs — across the selected range
 ═══════════════════════════════════════════ */
 function renderKPIs(rows){
-  const total = rows.reduce((s,t)=>s+t.amount,0);
-  const rooms = rows.filter(t=>t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
-  const rest  = rows.filter(t=>t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
-  const pool  = rows.filter(t=>t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
+  const { rooms, restaurant: rest, poolbar: pool, total } = AccountingData.deptTotals(rows);
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card">
@@ -540,10 +427,7 @@ function renderKPIs(rows){
    REVENUE BARS — department + payment method
 ═══════════════════════════════════════════ */
 function renderDeptBars(rows){
-  const total = rows.reduce((s,t)=>s+t.amount,0);
-  const rooms = rows.filter(t=>t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
-  const rest  = rows.filter(t=>t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
-  const pool  = rows.filter(t=>t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
+  const { rooms, restaurant: rest, poolbar: pool, total } = AccountingData.deptTotals(rows);
   const max = Math.max(total, 1);
 
   document.getElementById('deptTotal').textContent = fmtN(total);
@@ -565,10 +449,8 @@ function renderDeptBars(rows){
     </div>`;
 }
 function renderPayBars(rows){
-  const total = rows.reduce((s,t)=>s+t.amount,0);
-  const byMethod = {};
-  PAY_METHODS.forEach(m => byMethod[m] = 0);
-  rows.forEach(t => { byMethod[t.method] = (byMethod[t.method]||0) + t.amount; });
+  const byMethod = AccountingData.methodTotals(rows, PAY_METHODS);
+  const total = Object.values(byMethod).reduce((s,v)=>s+v,0);
   const max = Math.max(total, 1);
 
   document.getElementById('payTotal').textContent = fmtN(total);
@@ -594,9 +476,9 @@ function sortDaily(rows){
   return sorted;
 }
 function renderPagination(total){
-  const totalPg = Math.max(1, Math.ceil(total/CFG.PAGE_SIZE));
+  const totalPg = Math.max(1, Math.ceil(total/PAGE_SIZE));
   if (page>totalPg) page=totalPg;
-  const from = total===0?0:(page-1)*CFG.PAGE_SIZE+1, to = Math.min(page*CFG.PAGE_SIZE,total);
+  const from = total===0?0:(page-1)*PAGE_SIZE+1, to = Math.min(page*PAGE_SIZE,total);
   document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
   const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
   const mk=(l,p,d,a)=>{ const b=document.createElement('button'); b.className='page-btn'+(a?' active':''); b.textContent=l; b.disabled=!!d; b.onclick=()=>{page=p;renderTable();}; return b; };
@@ -619,14 +501,14 @@ function renderTable(){
   [sortKey, sortDir] = sel.split('_');
   const rows = sortDaily(_dailyCache);
   document.getElementById('tblCount').textContent = rows.length + ' day' + (rows.length!==1?'s':'');
-  const start = (page-1)*CFG.PAGE_SIZE;
-  const pageRows = rows.slice(start, start+CFG.PAGE_SIZE);
+  const start = (page-1)*PAGE_SIZE;
+  const pageRows = rows.slice(start, start+PAGE_SIZE);
 
   document.getElementById('tblBody').innerHTML = pageRows.length === 0
     ? `<tr class="empty-row"><td colspan="7">No revenue recorded for this range.</td></tr>`
     : pageRows.map(d => `
       <tr onclick="openDayDetail('${d.key}')">
-        <td style="font-weight:600;">${dayLabel(d.key)}</td>
+        <td style="font-weight:600;">${AccountingData.dayLabel(d.key, dateMode)}</td>
         <td class="center">${fmtN(d.Rooms)}</td>
         <td class="center">${fmtN(d.Restaurant)}</td>
         <td class="center">${fmtN(d['Pool Bar'])}</td>
@@ -647,7 +529,7 @@ function renderTable(){
 function openDayDetail(key){
   const d = _dailyCache.find(x => x.key === key);
   if (!d) return;
-  document.getElementById('dmTitle').textContent = dayLabel(key);
+  document.getElementById('dmTitle').textContent = AccountingData.dayLabel(key, dateMode);
   document.getElementById('dmMeta').textContent = `${d.count} transaction${d.count!==1?'s':''} · Total ${fmtN(d.total)}`;
   document.getElementById('dmDeptGrid').innerHTML = `
     <div class="bd-item"><div class="bd-label">🛏 Rooms</div><div class="bd-val">${fmtN(d.Rooms)}</div></div>
@@ -674,16 +556,18 @@ function clearFilters(){
 function setDefaultRange(){
   const now = new Date();
   const from7 = new Date(now); from7.setDate(from7.getDate()-6);
-  document.getElementById('fFrom').value = ymd(from7);
-  document.getElementById('fTo').value = ymd(now);
+  document.getElementById('fFrom').value = AccountingData.calendarKeyFor(from7);
+  document.getElementById('fTo').value = AccountingData.calendarKeyFor(now);
 }
 
 function render(){
-  const rangeRows = getRangeFiltered();
+  const from = document.getElementById('fFrom').value;
+  const to = document.getElementById('fTo').value;
+  const rangeRows = AccountingData.filterTransactionsByRange(transactions, from, to, dateMode);
   renderKPIs(rangeRows);
   renderDeptBars(rangeRows);
   renderPayBars(rangeRows);
-  _dailyCache = buildDaily(rangeRows);
+  _dailyCache = AccountingData.buildDailyBreakdown(rangeRows, dateMode);
   page = 1;
   renderTable();
 }
@@ -697,21 +581,24 @@ function printReport(){
 }
 
 /* ═══════════════════════════════════════════
-   INIT
+   INIT — one call to AccountingData for everything. No local storage
+   shim, no seed data, no shift/calendar-key math on this page anymore.
 ═══════════════════════════════════════════ */
 async function init(){
   bindModeToggle();
   updateModeLabels();
-
-  DEMO_ROOM_TX_LOADED = await loadShared('accounting-room-tx', DEMO_ROOM_TX);
-  DEMO_REST_LOADED    = await loadShared('restaurant-sales', DEMO_RESTAURANT_SALES);
-  DEMO_POOL_LOADED    = await loadShared('poolbar-sales', DEMO_POOLBAR_SALES);
-  await saveShared('accounting-room-tx', DEMO_ROOM_TX_LOADED);
-
-  transactions = buildTransactions();
-
   setDefaultRange();
-  render();
+
+  try {
+    await AccountingData.loadAll();
+    transactions = AccountingData.buildTransactions(
+      AccountingData.state.roomTx, AccountingData.state.restSales, AccountingData.state.poolSales
+    );
+    render();
+  } catch (err) {
+    console.error('[Revenue Breakdown] Failed to load:', err);
+    document.getElementById('tblBody').innerHTML = `<tr class="empty-row"><td colspan="7">Couldn't load revenue data. Please refresh.</td></tr>`;
+  }
 }
 init();
 </script>

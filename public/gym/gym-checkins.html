@@ -5,6 +5,7 @@
 <title>Check-in Log | Gym & Fitness — Aurum Hotel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   html{ height:auto; visibility:hidden; }
@@ -16,8 +17,6 @@
 
   .content{
     padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px;
-    /* ── Light-theme override, scoped to content only — matches gym-dashboard.html:
-       sidebar/topbar stay on gym-shell.js's own theme, only this area turns white/blue. ── */
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
     --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
@@ -31,16 +30,85 @@
   }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; }
-  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:260px; flex:1; }
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
+
+  /* ═══ KPI ROW ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:14px 14px 12px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s;
+    text-decoration:none; display:flex; flex-direction:column; animation:fadeUp .4s ease both; color:inherit;
+  }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-gold{ background:var(--gold-dim); color:var(--gold); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+  .kpi-trend.neutral{ color:var(--text3); }
+
+  /* ═══ Toolbar — row 1 (Period/Status) spans the full width with
+     minimal padding; row 2 (Plan/Search/Date/actions) stays centered
+     beneath it. ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:10px 12px; display:flex; flex-direction:column; gap:12px; align-items:stretch; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; width:100%; }
+  .toolbar-row.full{ justify-content:space-between; }
+  .toolbar-row.centered{ justify-content:center; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; align-items:flex-start; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .btn-ghost{ background:none; border:1px solid var(--border); border-radius:10px; color:var(--text2); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:11.5px; font-weight:600; cursor:pointer; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
+  .btn-ghost:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:240px; }
   .search-box:focus-within{ border-color:var(--gold-border); }
   .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:12.5px; cursor:pointer; outline:none; max-width:170px; }
+  .filter-select:focus{ border-color:var(--gold-border); }
+
+  /* Single date-range box — same pattern as the report / transfer-history pages */
+  .daterange-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:190px; cursor:pointer; }
+  .daterange-box:focus-within, .daterange-box.open{ border-color:var(--gold-border); }
+  .daterange-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:12.5px; width:100%; cursor:pointer; }
+  .daterange-box input::placeholder{ color:var(--text3); }
+  .daterange-clear{ background:none; border:none; color:var(--text3); cursor:pointer; font-size:12px; padding:0; display:none; line-height:1; }
+  .daterange-box.has-value .daterange-clear{ display:flex; }
+  .daterange-clear:hover{ color:var(--red); }
+
+  .pill-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .pill:hover{ border-color:var(--gold-border); }
+  .pill.on{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .pill.on.active{ background:var(--green-bg); border-color:rgba(18,183,106,.4); color:var(--green); }
+  .pill.on.expiring{ background:var(--amber-bg); border-color:rgba(247,144,9,.4); color:var(--amber); }
+  .pill.on.expired{ background:var(--red-bg); border-color:rgba(240,68,56,.4); color:var(--red); }
+  .pill.on.frozen{ background:var(--blue-bg); border-color:rgba(47,111,237,.4); color:var(--blue); }
+
+  @media (max-width:700px){
+    .toolbar-row{ flex-direction:column; align-items:stretch; }
+    .toolbar-row.full{ justify-content:flex-start; }
+    .flt-group{ width:100%; align-items:stretch; }
+    .search-box, .filter-select, .daterange-box{ max-width:100%; width:100%; }
+    .pill-row{ justify-content:flex-start; }
+  }
 
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .tbl-wrap{ overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:680px; }
   thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
   thead th.center{ text-align:center; }
   tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
@@ -70,6 +138,26 @@
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .flatpickr-calendar{ background:#ffffff !important; border:1px solid #eef0f6 !important; box-shadow:0 18px 46px rgba(15,34,55,0.16) !important; font-family:'Segoe UI',sans-serif !important; }
+  .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after{ border-bottom-color:#ffffff !important; }
+  .flatpickr-months, .flatpickr-weekdays{ background:#ffffff !important; }
+  .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year{ color:#1c2440 !important; }
+  span.flatpickr-weekday{ color:#9aa1b3 !important; }
+  .flatpickr-day{ color:#6b7280 !important; }
+  .flatpickr-day.today{ border-color:#2f6fed !important; }
+  .flatpickr-day:hover{ background:#f4f6fb !important; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange{ background:#2f6fed !important; border-color:#2f6fed !important; color:#ffffff !important; }
+  .flatpickr-day.inRange{ background:rgba(47,111,237,0.10) !important; border-color:rgba(47,111,237,0.10) !important; box-shadow:-5px 0 0 rgba(47,111,237,0.10), 5px 0 0 rgba(47,111,237,0.10) !important; }
+  .flatpickr-day.flatpickr-disabled{ color:#9aa1b3 !important; opacity:.4 !important; }
+
+  @media print{
+    #sidebarSlot, #topbarSlot, .toolbar, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
 </style>
 </head>
 <body>
@@ -78,14 +166,68 @@
   <div class="main">
     <div id="topbarSlot"></div>
     <div class="content">
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
-            <input type="text" id="fSearch" placeholder="Search by member name…" oninput="cPage=1;renderCheckins()">
+
+      <!-- ═══ KPI row ═══ -->
+      <div>
+        <div class="section-title">Check-in Activity</div>
+        <div class="kpi-row" id="kpiRow"></div>
+      </div>
+
+      <!-- ═══ Filters — row 1 full width, row 2 centered beneath ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row full">
+          <div class="flt-group">
+            <span class="flt-label">Period</span>
+            <div class="pill-row" id="periodPills">
+              <div class="pill on" data-period="all">All Time</div>
+              <div class="pill" data-period="today">Today</div>
+              <div class="pill" data-period="7d">Last 7 Days</div>
+              <div class="pill" data-period="30d">Last 30 Days</div>
+            </div>
+          </div>
+          <div class="flt-group">
+            <span class="flt-label">Status</span>
+            <div class="pill-row" id="statusPills">
+              <div class="pill on" data-status="">All</div>
+              <div class="pill" data-status="active"><span class="pdot" style="background:var(--green)"></span>Active</div>
+              <div class="pill" data-status="expiring"><span class="pdot" style="background:var(--amber)"></span>Expiring</div>
+              <div class="pill" data-status="expired"><span class="pdot" style="background:var(--red)"></span>Expired</div>
+              <div class="pill" data-status="frozen"><span class="pdot" style="background:var(--blue)"></span>Inactive</div>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar-row centered">
+          <div class="flt-group">
+            <span class="flt-label">Plan</span>
+            <select class="filter-select" id="fPlan">
+              <option value="">All Plans</option>
+            </select>
+          </div>
+          <div class="flt-group">
+            <span class="flt-label">Search</span>
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
+              <input type="text" id="fSearch" placeholder="Search by member name…">
+            </div>
+          </div>
+          <div class="flt-group">
+            <span class="flt-label">Date</span>
+            <div class="daterange-box" id="dateRangeBox">
+              <i class="fa-solid fa-calendar-days" style="color:var(--text3);font-size:12px;"></i>
+              <input type="text" id="fDateRange" placeholder="Date range" readonly>
+              <button type="button" class="daterange-clear" id="dateRangeClear" title="Clear dates"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          </div>
+          <div class="flt-group">
+            <span class="flt-label">&nbsp;</span>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn-ghost" id="btnClear"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+              <button type="button" class="btn-ghost" id="btnPrint"><i class="fa-solid fa-print"></i> Print</button>
+            </div>
           </div>
         </div>
       </div>
+
       <div class="panel">
         <div class="tbl-wrap">
           <table>
@@ -110,75 +252,282 @@
     </div>
   </div>
 </div>
+
+<!-- Data comes entirely from GymService (same seed/storage every other
+     Gym page reads from) — this page no longer keeps its own storage
+     shim, seed fallback, or duplicated status/plan helpers. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<script src="data/gym-seed.js"></script>
+<script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
 <script>
+'use strict';
+
 const shell = GymShell.attach({
   sidebarTarget: '#sidebarSlot', topbarTarget: '#topbarSlot',
   activeFile: 'gym-checkins.html', pageTitle: 'Check-in Log', pageSubtitle: 'View all gym access history',
-  apiMode: 'Demo', user: { name: 'Gym Attendant', initials: 'GA' },
 });
 document.documentElement.classList.add('gym-ready');
 
-const storage = window.storage || { async get(k,s){const v=localStorage.getItem(k);return v==null?null:{key:k,value:v,shared:s};}, async set(k,v,s){localStorage.setItem(k,v);return{key:k,value:v,shared:s};} };
-const KEY_MEMBERS='gym-members', KEY_PLANS='gym-plans', KEY_CHECKINS='gym-checkins';
-async function load(k,f){ try{const r=await storage.get(k,true);if(r&&r.value){const p=JSON.parse(r.value);if(Array.isArray(p))return p;}}catch(e){} return f;}
+let members = [], plans = [], checkins = [];
+let cPage = 1;
+let cPeriod = 'all';
+let cStatus = '';
+let rangeStart = null, rangeEnd = null;
+let fp = null;
+const PAGE = 15;
 
-let members=[], plans=[], checkins=[], cPage=1;
-const PAGE=20;
-const COLOR_TOKENS={gold:{bg:'var(--gold-dim)',fg:'var(--gold-light)',dot:'var(--gold)'},blue:{bg:'var(--blue-bg)',fg:'var(--blue)',dot:'var(--blue)'},purple:{bg:'var(--purple-bg)',fg:'var(--purple)',dot:'var(--purple)'},green:{bg:'var(--green-bg)',fg:'var(--green)',dot:'var(--green)'},amber:{bg:'var(--amber-bg)',fg:'var(--amber)',dot:'var(--amber)'}};
-function _esc(s){return(s==null?'':String(s)).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');}
-function initials(n){return(n||'').split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
-function fmtDateTime(iso){if(!iso)return'—';const d=new Date(iso);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
-function fmtDate(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
+const computeStatus = GymService.computeStatus;
+const initials = GymService.initials;
+const fmtDate = GymService.fmtDate;
+
+const COLOR_TOKENS = {
+  gold:{bg:'var(--gold-dim)',fg:'var(--gold-light)',dot:'var(--gold)'},
+  blue:{bg:'var(--blue-bg)',fg:'var(--blue)',dot:'var(--blue)'},
+  purple:{bg:'var(--purple-bg)',fg:'var(--purple)',dot:'var(--purple)'},
+  green:{bg:'var(--green-bg)',fg:'var(--green)',dot:'var(--green)'},
+  amber:{bg:'var(--amber-bg)',fg:'var(--amber)',dot:'var(--amber)'},
+};
+const STATUS_LABEL = { active:'Active', expiring:'Expiring Soon', expired:'Expired', frozen:'Frozen', no_plan:'No Plan' };
+const STATUS_CHIP  = { active:'chip-active', expiring:'chip-expiring', expired:'chip-expired', frozen:'chip-frozen', no_plan:'chip-no_plan' };
+
+function _esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function planById(id){ return GymService.findPlan(id) || { id:null, name:'No Plan', price:0, durationDays:0, notes:'', color:'blue' }; }
+function planChipHtml(plan){ const c=COLOR_TOKENS[plan.color]||COLOR_TOKENS.blue; return '<span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(plan.name)+'</span>'; }
+function statusForMember(m){ return m ? computeStatus(m) : 'no_plan'; }
+
+function fmtDateTime(iso){ if(!iso) return '—'; const d=new Date(iso); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
 function timeAgo(iso){
-  if(!iso)return'—';const mins=Math.floor((Date.now()-new Date(iso).getTime())/60000);
-  if(mins<1)return'Just now';if(mins<60)return mins+'m ago';const hrs=Math.floor(mins/60);
-  if(hrs<24)return hrs+'h ago';const days=Math.floor(hrs/24);if(days<7)return days+'d ago';
+  if(!iso) return '—';
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins+'m ago';
+  const hrs = Math.floor(mins/60);
+  if (hrs < 24) return hrs+'h ago';
+  const days = Math.floor(hrs/24);
+  if (days < 7) return days+'d ago';
   return fmtDateTime(iso);
 }
-function daysUntil(s){if(!s)return null;const d=new Date(s+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
-function computeStatus(m){if(!m)return'no_plan';if(!m.planId)return'no_plan';if(m.status==='frozen')return'frozen';const days=daysUntil(m.expiry);if(days===null)return'active';if(days<0)return'expired';if(days<=7)return'expiring';return'active';}
-const STATUS_LABEL={active:'Active',expiring:'Expiring Soon',expired:'Expired',frozen:'Frozen',no_plan:'No Plan'};
-const STATUS_CHIP={active:'chip-active',expiring:'chip-expiring',expired:'chip-expired',frozen:'chip-frozen',no_plan:'chip-no_plan'};
-function planById(id){return plans.find(p=>p.id===id)||{id:null,name:'No Plan',price:0,durationDays:0,notes:'',color:'blue'};}
-function planChipHtml(plan){const c=COLOR_TOKENS[plan.color]||COLOR_TOKENS.blue;return'<span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(plan.name)+'</span>';}
+function isoDate(d){ return d.toISOString().split('T')[0]; }
+function ciDateOnly(ci){ return ci.time ? ci.time.split('T')[0] : ''; }
+function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
 
-function renderCheckins(){
-  const q=document.getElementById('fSearch').value.toLowerCase();
-  let rows=checkins.filter(ci=>!q||ci.memberName.toLowerCase().includes(q));
-  const tp=Math.max(1,Math.ceil(rows.length/PAGE));if(cPage>tp)cPage=tp;
-  const start=(cPage-1)*PAGE,pageRows=rows.slice(start,start+PAGE);
-  document.getElementById('tblBody').innerHTML=pageRows.length===0
-    ?'<tr class="empty-row"><td colspan="6">No check-ins found.</td></tr>'
-    :pageRows.map(ci=>{
-      const m=members.find(x=>x.id===ci.memberId);
-      const plan=m?planById(m.planId):null;
-      const s=m?computeStatus(m):'no_plan';
-      return '<tr><td><div class="mem-cell"><span class="mem-avatar">'+initials(ci.memberName)+'</span>'+_esc(ci.memberName)+'</div></td>'+
-        '<td>'+(plan?planChipHtml(plan):'<span style="color:var(--text3);font-size:11px;">—</span>')+'</td>'+
-        '<td><span class="chip '+STATUS_CHIP[s]+'">'+STATUS_LABEL[s]+'</span></td>'+
-        '<td>'+timeAgo(ci.time)+'</td>'+
-        '<td>'+fmtDateTime(ci.time)+'</td>'+
-        '<td class="center">'+(m?(m.checkins||0):'—')+'</td></tr>';
-    }).join('');
-  const from=rows.length===0?0:(cPage-1)*PAGE+1,to=Math.min(cPage*PAGE,rows.length);
-  document.getElementById('paginLabel').textContent=rows.length===0?'No records':from+'–'+to+' of '+rows.length;
-  const w=document.getElementById('pageBtns');w.innerHTML='';
-  const mk=(l,p,d,ac)=>{const b=document.createElement('button');b.className='page-btn'+(ac?' active':'');b.textContent=l;b.disabled=!!d;b.onclick=()=>{cPage=p;renderCheckins();};return b;};
-  w.appendChild(mk('‹',cPage-1,cPage===1));let s2=Math.max(1,cPage-2),e2=Math.min(tp,s2+4);s2=Math.max(1,e2-4);
-  for(let i=s2;i<=e2;i++)w.appendChild(mk(String(i),i,false,i===cPage));
-  w.appendChild(mk('›',cPage+1,cPage>=tp));
+/* ═══════════════════════════════════════════
+   KPI row — NOW COMPUTED FROM THE CURRENTLY FILTERED ROWS, not the raw
+   checkins/members arrays. Previously renderCheckins() built a filtered
+   `rows` list for the table but then called renderKPIs() with no
+   arguments, so the 4 cards always showed unfiltered totals no matter
+   what Period/Status/Plan/Search/Date was selected — the table and the
+   KPIs visibly disagreed. renderKPIs(rows) below always receives
+   exactly what's currently filtered (pre-pagination), so both move
+   together.
+═══════════════════════════════════════════ */
+function renderKPIs(rows){
+  rows = rows || checkins;
+  const today = isoDate(new Date());
+  const weekAgo = isoDate(new Date(Date.now() - 6*86400000));
+  const todayRows = rows.filter(ci => ciDateOnly(ci) === today);
+  const weekRows = rows.filter(ci => { const d = ciDateOnly(ci); return d && d >= weekAgo && d <= today; });
+  const uniqueToday = new Set(todayRows.map(ci => ci.memberId)).size;
+
+  document.getElementById('kpiRow').innerHTML =
+    '<a class="kpi-card acc-green" href="#" onclick="event.preventDefault();setPeriod(\'today\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-door-open"></i></div><div class="kpi-label">Today\'s Check-ins</div></div>' +
+      '<div class="kpi-value" style="color:var(--green);">' + todayRows.length + '</div>' +
+      '<div class="kpi-trend neutral">' + uniqueToday + ' unique member' + (uniqueToday!==1?'s':'') + '</div>' +
+    '</a>' +
+    '<a class="kpi-card acc-blue" href="#" onclick="event.preventDefault();setPeriod(\'7d\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-calendar-week"></i></div><div class="kpi-label">This Week (7 Days)</div></div>' +
+      '<div class="kpi-value" style="color:var(--blue);">' + weekRows.length + '</div>' +
+      '<div class="kpi-trend neutral">' + (weekRows.length/7).toFixed(1) + ' / day avg</div>' +
+    '</a>' +
+    '<div class="kpi-card acc-purple" style="cursor:default;">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-user-group"></i></div><div class="kpi-label">Unique Visitors Today</div></div>' +
+      '<div class="kpi-value" style="color:var(--purple);">' + uniqueToday + '</div>' +
+      '<div class="kpi-trend neutral">of ' + members.length + ' total members</div>' +
+    '</div>' +
+    '<div class="kpi-card" style="cursor:default;">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-gold"><i class="fa-solid fa-clock-rotate-left"></i></div><div class="kpi-label">Filtered Total</div></div>' +
+      '<div class="kpi-value">' + rows.length + '</div>' +
+      '<div class="kpi-trend neutral">Matching current filters</div>' +
+    '</div>';
 }
 
-async function init(){
-  plans=await load(KEY_PLANS,[
-    {id:'pl01',name:'Basic',price:15000,durationDays:30,notes:'Full gym floor access during opening hours. Locker included.',color:'blue'},
-    {id:'pl02',name:'Premium',price:35000,durationDays:30,notes:'Everything in Basic, plus group classes, sauna access, and one personal-training consult per month.',color:'gold'},
-    {id:'pl03',name:'Day Pass',price:5000,durationDays:1,notes:'Single-day access for hotel guests and walk-ins. No locker.',color:'purple'},
-  ]);
-  members=await load(KEY_MEMBERS,[]);
-  checkins=await load(KEY_CHECKINS,[]);
+/* ═══════════════════════════════════════════
+   Date range — single flatpickr box (same pattern as the report /
+   transfer-history pages), replacing the old separate From/To inputs.
+═══════════════════════════════════════════ */
+function initDateRangePicker(){
+  const input = document.getElementById('fDateRange');
+  const box = document.getElementById('dateRangeBox');
+  const clearBtn = document.getElementById('dateRangeClear');
+  fp = flatpickr(input, {
+    mode: 'range',
+    dateFormat: 'd/m/Y',
+    onOpen: () => box.classList.add('open'),
+    onClose: () => box.classList.remove('open'),
+    onChange: (selectedDates) => {
+      if (selectedDates.length === 2) {
+        rangeStart = isoDate(selectedDates[0]);
+        rangeEnd = isoDate(selectedDates[1]);
+        box.classList.add('has-value');
+      } else if (selectedDates.length === 0) {
+        rangeStart = null;
+        rangeEnd = null;
+        box.classList.remove('has-value');
+      }
+      document.querySelectorAll('#periodPills .pill').forEach(x => x.classList.remove('on'));
+      cPage = 1;
+      renderCheckins();
+    },
+  });
+  box.addEventListener('click', (e) => { if (!e.target.closest('#dateRangeClear')) fp.open(); });
+  clearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fp.clear();
+    rangeStart = null; rangeEnd = null;
+    box.classList.remove('has-value');
+    cPage = 1;
+    renderCheckins();
+  });
+}
+function setDateRange(fromIso, toIso){
+  rangeStart = fromIso; rangeEnd = toIso;
+  const box = document.getElementById('dateRangeBox');
+  if (fp) {
+    if (fromIso && toIso) {
+      fp.setDate([fromIso, toIso], false);
+      box.classList.add('has-value');
+    } else {
+      fp.clear();
+      box.classList.remove('has-value');
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Filters
+═══════════════════════════════════════════ */
+function setPeriod(p){
+  cPeriod = p;
+  document.querySelectorAll('#periodPills .pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('#periodPills .pill[data-period="'+p+'"]').classList.add('on');
+  const today = new Date();
+  if (p === 'today') setDateRange(isoDate(today), isoDate(today));
+  else if (p === '7d') setDateRange(isoDate(new Date(Date.now()-6*86400000)), isoDate(today));
+  else if (p === '30d') setDateRange(isoDate(new Date(Date.now()-29*86400000)), isoDate(today));
+  else setDateRange(null, null);
+  cPage = 1;
   renderCheckins();
+}
+function setStatus(s){
+  cStatus = s;
+  document.querySelectorAll('#statusPills .pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('#statusPills .pill[data-status="'+s+'"]').classList.add('on');
+  cPage = 1;
+  renderCheckins();
+}
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fPlan').value = '';
+  setStatus('');
+  setPeriod('all');
+}
+function populatePlanFilter(){
+  const sel = document.getElementById('fPlan');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Plans</option>' + plans.map(p => '<option value="'+p.id+'">'+_esc(p.name)+'</option>').join('');
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+/* ═══════════════════════════════════════════
+   Table rendering — always newest-first, no sort control. Builds the
+   filtered `rows` once, then feeds the SAME rows to both the table
+   (paginated) and the KPI cards (unpaginated) so they can never disagree.
+═══════════════════════════════════════════ */
+function renderCheckins(){
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const planFilter = document.getElementById('fPlan').value;
+
+  let rows = checkins.filter(ci => {
+    const m = members.find(x => x.id === ci.memberId);
+    const mq = !q || (ci.memberName||'').toLowerCase().includes(q);
+    const mp = !planFilter || (m && m.planId === planFilter);
+    const ms = !cStatus || statusForMember(m) === cStatus;
+    let md = true;
+    const d = ciDateOnly(ci);
+    if (rangeStart && (!d || d < rangeStart)) md = false;
+    if (rangeEnd && (!d || d > rangeEnd)) md = false;
+    return mq && mp && ms && md;
+  });
+
+  rows = rows.slice().sort((a,b) => (b.time||'').localeCompare(a.time||''));
+
+  const tp = Math.max(1, Math.ceil(rows.length/PAGE)); if (cPage>tp) cPage = tp;
+  const start = (cPage-1)*PAGE, pageRows = rows.slice(start, start+PAGE);
+
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? '<tr class="empty-row"><td colspan="6">No check-ins match these filters.</td></tr>'
+    : pageRows.map(ci => {
+        const m = members.find(x => x.id === ci.memberId);
+        const plan = m ? planById(m.planId) : null;
+        const s = statusForMember(m);
+        return '<tr><td><div class="mem-cell"><span class="mem-avatar">'+initials(ci.memberName)+'</span>'+_esc(ci.memberName)+'</div></td>'+
+          '<td>'+(plan ? planChipHtml(plan) : '<span style="color:var(--text3);font-size:11px;">—</span>')+'</td>'+
+          '<td><span class="chip '+STATUS_CHIP[s]+'">'+STATUS_LABEL[s]+'</span></td>'+
+          '<td>'+timeAgo(ci.time)+'</td>'+
+          '<td>'+fmtDateTime(ci.time)+'</td>'+
+          '<td class="center">'+(m ? (m.checkins||0) : '—')+'</td></tr>';
+      }).join('');
+
+  const from2 = rows.length===0?0:(cPage-1)*PAGE+1, to2 = Math.min(cPage*PAGE, rows.length);
+  document.getElementById('paginLabel').textContent = rows.length===0?'No records':from2+'–'+to2+' of '+rows.length;
+  const w = document.getElementById('pageBtns'); w.innerHTML='';
+  const mk = (l,p,d,ac) => { const b=document.createElement('button'); b.className='page-btn'+(ac?' active':''); b.textContent=l; b.disabled=!!d; b.onclick=()=>{cPage=p;renderCheckins();}; return b; };
+  w.appendChild(mk('‹', cPage-1, cPage===1)); let s2=Math.max(1,cPage-2), e2=Math.min(tp,s2+4); s2=Math.max(1,e2-4);
+  for (let i=s2;i<=e2;i++) w.appendChild(mk(String(i), i, false, i===cPage));
+  w.appendChild(mk('›', cPage+1, cPage>=tp));
+
+  renderKPIs(rows);
+}
+
+async function refresh(){
+  const s = GymService.state;
+  members = s.members || [];
+  plans = s.plans || [];
+  checkins = s.checkins || [];
+  populatePlanFilter();
+  renderCheckins();
+}
+
+/* ═══════════════════════════════════════════
+   Wire up events
+═══════════════════════════════════════════ */
+document.querySelectorAll('#periodPills .pill').forEach(p => p.addEventListener('click', () => setPeriod(p.dataset.period)));
+document.querySelectorAll('#statusPills .pill').forEach(p => p.addEventListener('click', () => setStatus(p.dataset.status)));
+document.getElementById('fPlan').addEventListener('change', () => { cPage = 1; renderCheckins(); });
+document.getElementById('fSearch').addEventListener('input', () => { cPage = 1; renderCheckins(); });
+document.getElementById('btnClear').addEventListener('click', clearFilters);
+document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+/* ═══════════════════════════════════════════
+   Init — single call into GymService, same seed/storage every other
+   Gym page reads from.
+═══════════════════════════════════════════ */
+async function init(){
+  if (!window.GymService) {
+    document.getElementById('tblBody').innerHTML = '<tr class="empty-row"><td colspan="6">GymService not loaded. Check script order.</td></tr>';
+    return;
+  }
+  initDateRangePicker();
+  try {
+    await GymService.loadAll(GymSeed);
+    await refresh();
+    GymService.onChange(refresh);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('tblBody').innerHTML = '<tr class="empty-row"><td colspan="6">Could not load check-in data.</td></tr>';
+  }
 }
 init();
 </script>

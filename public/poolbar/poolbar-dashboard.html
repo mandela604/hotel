@@ -174,32 +174,7 @@
         </div>
         <div class="panel">
           <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
-          <div class="quick-grid">
-            <a class="quick-btn" href="poolbar-pending-requisitions.html" title="Pending Requisitions">
-              <span class="quick-icon"><i class="fa-solid fa-truck"></i></span>
-              <span class="quick-label">Pending Requisitions</span>
-            </a>
-            <a class="quick-btn" href="poolbar-orders.html" title="Open POS">
-              <span class="quick-icon"><i class="fa-solid fa-receipt"></i></span>
-              <span class="quick-label">Open POS</span>
-            </a>
-            <a class="quick-btn" href="poolbar-stock.html" title="Pool Bar Stock">
-              <span class="quick-icon"><i class="fa-solid fa-box"></i></span>
-              <span class="quick-label">Pool Bar Stock</span>
-            </a>
-            <a class="quick-btn" href="poolbar-requisition-history.html" title="Requisition History">
-              <span class="quick-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-              <span class="quick-label">Requisition History</span>
-            </a>
-            <a class="quick-btn" href="poolbar-reports.html" title="Daily Report">
-              <span class="quick-icon"><i class="fa-solid fa-chart-column"></i></span>
-              <span class="quick-label">Daily Report</span>
-            </a>
-            <a class="quick-btn" href="javascript:window.print()" title="Print Report">
-              <span class="quick-icon"><i class="fa-solid fa-print"></i></span>
-              <span class="quick-label">Print Report</span>
-            </a>
-          </div>
+          <div class="quick-grid" id="quickGrid"></div>
         </div>
       </div>
 
@@ -207,130 +182,118 @@
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="data/poolbar-seed.js"></script>
+<script src="services/poolbar-service.js"></script>
 <script src="../component/poolbar-shell.js"></script>
 <script>
+'use strict';
+
 const shell = PoolBarShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'poolbar-dashboard.html',
   pageTitle:     'Dashboard',
   pageSubtitle:  'Pool Bar operations overview',
-  apiMode:       'Demo',
-  user:          { name: 'Pool Bar Manager', initials: 'PB' },
 });
 
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
+/**
+ * Call-and-render only. Every value/label/color/threshold below comes
+ * straight from PoolBarService — no locally recomputed revenue grouping,
+ * no hand-typed payment-method colors ('Cash'/'POS'/'Transfer'), no
+ * inline stock-level filtering, no hardcoded 'voided' string, no
+ * hand-typed OUT/LOW short labels. If PoolBarService fails to load or a
+ * session can't be resolved, init() surfaces that clearly instead of the
+ * page quietly computing its own version of the rules.
+ */
+const svc = PoolBarService;
+const { fmtN, stockLevel, LEVEL_CHIP, LEVEL_LABEL } = svc;
 
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
+let session = null;
+let canViewReports = false;
+let canVoid = false;
 
-async function apiFetch(method, path){
-  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
-  const opts = { method, headers:{ 'Content-Type':'application/json' } };
-  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
-  const res = await fetch(CFG.API_BASE + path, opts);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+function getSession() {
+  const u = shell.getUser && shell.getUser();
+  if (!u) throw new Error('No session – redirecting to login');
+  return u;
 }
 
-const KEY_STOCK    = 'poolbar-stock';
-const KEY_PENDING  = 'poolbar-pending-requisitions';
-const KEY_SALES    = 'poolbar-sales';
-
-const DEMO_STOCK = [
-  { name:'Heineken',       category:'Beers',      unit:'Bottles', qty:48, min:12, batch:'REQ-00031', received:'17/07/26', price:1500 },
-  { name:'Guinness',       category:'Beers',      unit:'Bottles', qty:36, min:12, batch:'REQ-00031', received:'17/07/26', price:1600 },
-  { name:'Star Lager',     category:'Beers',      unit:'Bottles', qty:8,  min:12, batch:'REQ-00029', received:'15/07/26', price:1200 },
-  { name:'Hennessy VS',    category:'Spirits',    unit:'Bottles', qty:5,  min:3,  batch:'REQ-00027', received:'14/07/26', price:4000 },
-];
-const DEMO_PENDING = [
-  { no:'REQ-00034', item:'Moët & Chandon', qty:6,  unit:'Bottles', from:'Main Store', sentBy:'Store Keeper', date:'17/07/26 09:40 AM', prodNo:'STK-00512' },
-  { no:'REQ-00035', item:'Bottled Water',  qty:48, unit:'Bottles', from:'Main Store', sentBy:'Store Keeper', date:'17/07/26 10:10 AM', prodNo:'STK-00518' },
-];
-const DEMO_SALES = [
-  { id:'PBS-1021', item:'Heineken',  qty:3, total:4500,  method:'Cash',     time:'11:15 AM' },
-  { id:'PBS-1020', item:'Mojito',    qty:2, total:11000, method:'POS',      time:'10:50 AM' },
-  { id:'PBS-1019', item:'Chapman',   qty:1, total:2500,  method:'Transfer', time:'09:40 AM' },
-];
-
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-function stockLevel(i){ return i.qty<=0 ? 'out' : (i.qty<=i.min ? 'low' : 'ok'); }
-const LEVEL_CHIP  = { ok:'chip-ok', low:'chip-low', out:'chip-out' };
-const LEVEL_LABEL = { ok:'In Stock', low:'Low', out:'Out of Stock' };
-
-async function loadShared(key, fallback){
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
-  } catch(e){}
-  return fallback;
-}
-
-function renderKPIs(stock, pending, sales){
-  const pendingN = pending.length;
-  const lowStock = stock.filter(i => stockLevel(i) !== 'ok').length;
-  const today    = sales.reduce((s,x)=>s+x.total,0);
-  const units    = stock.reduce((s,i)=>s+i.qty,0);
+function renderKPIs() {
+  const k = svc.dashboardKPIs();
 
   document.getElementById('kpiRow').innerHTML = `
     <a class="kpi-card" href="poolbar-pending-requisitions.html">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Pending Requisitions</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${pendingN}</div>
-      <div class="kpi-trend ${pendingN>0?'warn':'up'}">${pendingN>0?'Awaiting review':'All clear'}</div>
+      <div class="kpi-value" style="color:var(--blue);">${k.pendingN}</div>
+      <div class="kpi-trend ${k.pendingN > 0 ? 'warn' : 'up'}">${k.pendingN > 0 ? 'Awaiting review' : 'All clear'}</div>
     </a>
     <a class="kpi-card" href="poolbar-stock.html">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock Alerts</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${lowStock}</div>
-      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs restocking':'All above threshold'}</div>
+      <div class="kpi-value" style="color:var(--amber);">${k.lowStock}</div>
+      <div class="kpi-trend ${k.lowStock > 0 ? 'warn' : 'up'}">${k.lowStock > 0 ? 'Needs restocking' : 'All above threshold'}</div>
     </a>
     <a class="kpi-card" href="poolbar-sales.html">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-naira-sign"></i></div><div class="kpi-label">Today's Sales</div></div>
-      <div class="kpi-value">${fmtN(today)}</div>
-      <div class="kpi-trend up">${sales.length} sale${sales.length!==1?'s':''} recorded</div>
+      <div class="kpi-value">${fmtN(k.todayRevenue)}</div>
+      <div class="kpi-trend up">${k.todaySalesCount} sale${k.todaySalesCount !== 1 ? 's' : ''} recorded</div>
     </a>
     <a class="kpi-card" href="poolbar-stock.html">
       <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Units On Hand</div></div>
-      <div class="kpi-value">${units}</div>
-      <div class="kpi-trend">Across ${stock.length} items</div>
+      <div class="kpi-value">${k.units}</div>
+      <div class="kpi-trend">Across ${k.itemCount} items</div>
     </a>`;
 
-  shell.setPendingBadge(pendingN);
+  if (shell.setPendingBadge) shell.setPendingBadge(k.pendingN);
 }
 
-function renderRevenue(sales){
-  const total = sales.reduce((s,x)=>s+x.total,0);
-  const byMethod = {};
-  sales.forEach(s => { byMethod[s.method] = (byMethod[s.method]||0) + s.total; });
-  const max = Math.max(...Object.values(byMethod), 1);
-  const colorCls = { Cash:'', POS:'blue', Transfer:'purple' };
+/**
+ * svc.getRevenueBreakdown(sales) already groups + orders + colors the
+ * bars (config-driven via REVENUE_METHOD_ORDER/REVENUE_METHOD_COLORS in
+ * the seed) — this page just renders the [{method, amount, colorClass}]
+ * array it returns. No method-name matching lives here.
+ */
+function renderRevenue() {
+  if (!canViewReports) {
+    document.getElementById('revTotal').textContent = '—';
+    document.getElementById('revBars').innerHTML =
+      `<div class="empty-note"><i class="fa-solid fa-lock" style="margin-right:6px;"></i>You don't have permission to view revenue reports.</div>`;
+    return;
+  }
+
+  const todaysSales = svc.getTodaysCompletedSales();
+  const total = todaysSales.reduce((s, x) => s + (x.total || 0), 0);
+  const entries = svc.getRevenueBreakdown(todaysSales);
+  const max = entries.length ? Math.max(...entries.map(e => e.amount)) : 1;
 
   document.getElementById('revTotal').textContent = fmtN(total);
-  document.getElementById('revBars').innerHTML = Object.entries(byMethod).length === 0
+  document.getElementById('revBars').innerHTML = entries.length === 0
     ? `<div class="empty-note">No sales recorded today.</div>`
-    : Object.entries(byMethod).map(([m,v]) => `
+    : entries.map(e => `
       <div class="bar-row">
-        <div class="bar-meta"><span class="bar-name">${m}</span><span class="bar-count">${fmtN(v)}</span></div>
-        <div class="bar-track"><div class="bar-fill ${colorCls[m]||''}" style="width:${Math.round(v/max*100)}%"></div></div>
+        <div class="bar-meta"><span class="bar-name">${e.method}</span><span class="bar-count">${fmtN(e.amount)}</span></div>
+        <div class="bar-track"><div class="bar-fill ${e.colorClass || ''}" style="width:${Math.round(e.amount / max * 100)}%"></div></div>
       </div>`).join('');
 }
 
-function renderStockSnapshot(stock){
+function renderStockSnapshot() {
+  const stock = svc.state.stock;
   const el = document.getElementById('stockSnap');
   el.innerHTML = stock.length === 0
     ? `<div class="empty-note">No items in Pool Bar Stock yet.</div>`
-    : stock.map(i => { const lvl = stockLevel(i); return `
+    : stock.map(i => {
+        const lvl = stockLevel(i);
+        return `
       <a class="list-row" href="poolbar-stock.html">
-        <span class="list-dot" style="background:${lvl==='ok'?'var(--green)':lvl==='low'?'var(--amber)':'var(--red)'}"></span>
+        <span class="list-dot" style="background:${lvl === 'ok' ? 'var(--green)' : lvl === 'low' ? 'var(--amber)' : 'var(--red)'}"></span>
         <div class="list-body"><div class="list-name">${i.name}</div><div class="list-meta">${i.qty} ${i.unit} on hand · batch ${i.batch}</div></div>
         <span class="chip ${LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${LEVEL_LABEL[lvl]}</span>
-      </a>`; }).join('');
+      </a>`;
+      }).join('');
 }
 
-function renderPendingRequisitions(pending){
+function renderPendingRequisitions() {
+  const pending = svc.state.pending;
   const el = document.getElementById('pendingReq');
   el.innerHTML = pending.length === 0
     ? `<div class="empty-note">No requisitions awaiting review.</div>`
@@ -342,51 +305,100 @@ function renderPendingRequisitions(pending){
       </a>`).join('');
 }
 
-function renderLowStock(stock){
+/**
+ * svc.getLowStockItems() owns "what counts as low/out"; svc.
+ * getLevelLabelsShort() owns the OUT/LOW short-form chip text — neither
+ * is re-derived or hand-typed on this page.
+ */
+function renderLowStock() {
+  const alerts = svc.getLowStockItems();
+  const shortLabels = svc.getLevelLabelsShort();
   const el = document.getElementById('lowStock');
-  const alerts = stock.filter(i => stockLevel(i) !== 'ok');
   el.innerHTML = alerts.length === 0
     ? `<div class="empty-note">All items above their reorder threshold.</div>`
-    : alerts.map(i => { const lvl = stockLevel(i); return `
+    : alerts.map(i => {
+        const lvl = stockLevel(i);
+        return `
       <a class="list-row" href="poolbar-stock.html">
-        <span class="list-dot" style="background:${lvl==='out'?'var(--red)':'var(--amber)'}"></span>
+        <span class="list-dot" style="background:${lvl === 'out' ? 'var(--red)' : 'var(--amber)'}"></span>
         <div class="list-body"><div class="list-name">${i.name}</div><div class="list-meta">${i.qty} ${i.unit} on hand · reorder at ${i.min}</div></div>
-        <span class="chip ${lvl==='out'?'chip-out':'chip-low'}"><i class="fa-solid fa-circle"></i>${lvl==='out'?'OUT':'LOW'}</span>
-      </a>`; }).join('');
+        <span class="chip ${lvl === 'out' ? 'chip-out' : 'chip-low'}"><i class="fa-solid fa-circle"></i>${shortLabels[lvl]}</span>
+      </a>`;
+      }).join('');
 }
 
-function renderRecentSales(sales){
+/**
+ * svc.getStatusConstants().SALE_VOIDED and svc.getEmptyValuePlaceholder()
+ * are always present on the service — called directly, no
+ * `svc.foo ? svc.foo() : 'literal'` fallback duplicating the service's
+ * own default in a second place.
+ */
+function renderRecentSales() {
+  const voidedStatus = svc.getStatusConstants().SALE_VOIDED;
+  const emptyValue = svc.getEmptyValuePlaceholder();
+  const sales = svc.state.sales.slice(0, 6);
   const el = document.getElementById('recentSales');
   el.innerHTML = sales.length === 0
     ? `<div class="empty-note">No sales recorded yet today.</div>`
     : sales.map(s => `
-      <a class="list-row" href="poolbar-sales.html">
-        <span class="list-dot" style="background:var(--gold)"></span>
-        <div class="list-body"><div class="list-name">${s.id} — ${s.item} ×${s.qty}</div><div class="list-meta">${s.method} · ${s.time}</div></div>
+      <a class="list-row" href="poolbar-sales.html${canVoid ? '?focus=' + s.id : ''}">
+        <span class="list-dot" style="background:${s.status === voidedStatus ? 'var(--red)' : 'var(--gold)'}"></span>
+        <div class="list-body"><div class="list-name">${s.id} — ${s.items.map(i => i.name + ' ×' + i.qty).join(', ')}</div><div class="list-meta">${s.method || emptyValue} · ${s.date}${s.status === voidedStatus ? ' · Voided' : ''}</div></div>
         <span style="font-size:12.5px;font-weight:700;color:var(--gold);flex-shrink:0;">${fmtN(s.total)}</span>
       </a>`).join('');
 }
 
-async function init(){
-  let stock, pending, sales;
-  if (!CFG.USE_DEMO) {
-    try {
-      const data = await apiFetch('GET', '/api/poolbar/dashboard-summary');
-      stock = data.stock; pending = data.pending; sales = data.sales;
-      shell.setApiMode('Live');
-    } catch(e) { console.warn('[API] Falling back to local demo data:', e.message); }
-  }
-  if (!stock)   stock   = await loadShared(KEY_STOCK, DEMO_STOCK);
-  if (!pending) pending = await loadShared(KEY_PENDING, DEMO_PENDING);
-  if (!sales)   sales   = await loadShared(KEY_SALES, DEMO_SALES);
+const QUICK_ACTIONS = [
+  { href: 'poolbar-pending-requisitions.html', icon: 'fa-solid fa-truck',             label: 'Pending Requisitions' },
+  { href: 'poolbar-orders.html',               icon: 'fa-solid fa-receipt',           label: 'Open POS' },
+  { href: 'poolbar-stock.html',                icon: 'fa-solid fa-box',               label: 'Pool Bar Stock' },
+  { href: 'poolbar-requisition-history.html',  icon: 'fa-solid fa-clock-rotate-left', label: 'Requisition History' },
+  { href: 'poolbar-reports.html',              icon: 'fa-solid fa-chart-column',      label: 'Daily Report',  requiresReports: true },
+  { href: 'javascript:window.print()',         icon: 'fa-solid fa-print',             label: 'Print Report',  requiresReports: true },
+];
 
-  renderKPIs(stock, pending, sales);
-  renderRevenue(sales);
-  renderStockSnapshot(stock);
-  renderPendingRequisitions(pending);
-  renderLowStock(stock);
-  renderRecentSales(sales);
+function renderQuickActions() {
+  const el = document.getElementById('quickGrid');
+  el.innerHTML = QUICK_ACTIONS
+    .filter(a => !a.requiresReports || canViewReports)
+    .map(a => `
+      <a class="quick-btn" href="${a.href}" title="${a.label}">
+        <span class="quick-icon"><i class="${a.icon}"></i></span>
+        <span class="quick-label">${a.label}</span>
+      </a>`).join('');
 }
+
+function renderAll() {
+  renderKPIs();
+  renderRevenue();
+  renderStockSnapshot();
+  renderPendingRequisitions();
+  renderLowStock();
+  renderRecentSales();
+  renderQuickActions();
+}
+
+async function init() {
+  if (!window.PoolBarService) {
+    document.getElementById('kpiRow').innerHTML =
+      '<div class="empty-note">PoolBarService not loaded. Script order: seed → poolbar-service → shell.</div>';
+    return;
+  }
+  try {
+    session = getSession();
+    canViewReports = svc.can(session, 'canViewReports');
+    canVoid = svc.canVoidSale(session);
+
+    await svc.loadAll();
+    renderAll();
+    svc.onChange(renderAll);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('kpiRow').innerHTML =
+      '<div class="empty-note">Could not load dashboard data.</div>';
+  }
+}
+
 init();
 </script>
 </body>

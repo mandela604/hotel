@@ -196,29 +196,35 @@ body{
   </div>
 </div>
 
+<!-- Load order: data seed → service → shell → page script (plain scripts, no ES modules — matches every other module shell in this suite) -->
+<script src="data/store-seed.js"></script>
+<script src="services/store-service.js"></script>
 <script src="../component/store-shell.js"></script>
-<script type="module">
-import { getStoreData } from '../services/store-data.js';
-
+<script>
 /* ═══════════════════════════════════════════════
    Shell — same call signature/theme tokens as every other Store page.
+   NOTE: global export is StoreShell (not GraceStoreShell) — see
+   component/store-shell.js: `global.StoreShell = { attach, CONFIG }`.
 ═══════════════════════════════════════════════ */
-const shell = GraceStoreShell.attach({
+const shell = StoreShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
-  activeFile:    'dashboard.html',
+  activeFile:    'store-dashboard.html',
   pageTitle:     'Store Dashboard',
   pageSubtitle:  'Central Store operations overview',
-  apiMode:       'Demo',
-  user:          { name: 'Store Manager', initials: 'SM' },
 });
+
+const svc = window.StoreService;
 
 /* ═══════════════════════════════════════════════
    Helpers
 ═══════════════════════════════════════════════ */
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtN(n){ if (svc && svc.fmtN) return svc.fmtN(n); return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
-function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.reorder ? 'low' : 'ok'); }
+// Low/out-of-stock threshold + its chip class/label come from StoreService
+// (single source of truth). This page no longer keeps its own copy of the
+// rule — that local copy is what let a stray `s.reorder` (stock items only
+// ever have `.min`) go unnoticed in the Stock Alerts panel below.
 
 function showToast(msg, type='success'){
   const icon = type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info';
@@ -233,10 +239,12 @@ function showToast(msg, type='success'){
    Renderers
 ═══════════════════════════════════════════════ */
 function renderKPIs(stock, reqs){
-  const lowCount    = stock.filter(s=>stockLevel(s)==='low').length;
-  const outCount    = stock.filter(s=>stockLevel(s)==='out').length;
+  const lowCount    = stock.filter(s=>svc.stockLevel(s)==='low').length;
+  const outCount    = stock.filter(s=>svc.stockLevel(s)==='out').length;
   const stockValue  = stock.reduce((s,i)=>s+(i.qty*i.cost),0);
-  const pending     = reqs.filter(r => r.status==='Pending' || r.status==='Partial');
+  // "Pending" (Pending or Partial) is defined once, in StoreService —
+  // this call replaces a hand-rolled filter that used to live here.
+  const pending     = svc.getPendingRequisitions();
   const storeReqs   = reqs.filter(r => r.mode === 'store_issue');
 
   document.getElementById('kpiRow').innerHTML = `
@@ -269,8 +277,10 @@ function renderKPIs(stock, reqs){
   shell.setPendingBadge(pending.length);
 }
 
-function renderPendingList(reqs){
-  const pending = reqs.filter(r => r.mode==='store_issue' && (r.status==='Pending' || r.status==='Partial')).slice(0, 6);
+function renderPendingList(){
+  // svc.getPendingRequisitions is the single definition of "pending"
+  // (Pending or Partial status) — same helper used in renderKPIs above.
+  const pending = svc.getPendingRequisitions({ mode: 'store_issue' }).slice(0, 6);
   const el = document.getElementById('pendingList');
   if (pending.length === 0) { el.innerHTML = '<div class="empty-note">No requisitions waiting on Store right now.</div>'; return; }
   el.innerHTML = pending.map(r => `
@@ -285,20 +295,25 @@ function renderPendingList(reqs){
 }
 
 function renderStockAlerts(stock){
-  const alerts = stock.filter(s => stockLevel(s) !== 'ok')
-    .sort((a,b) => (a.qty/Math.max(a.reorder,1)) - (b.qty/Math.max(b.reorder,1)))
+  // FIX: stock items only ever have `.min` (the reorder threshold) — there
+  // is no `.reorder` field anywhere in this module. The old version here
+  // sorted by `qty / reorder` (always NaN, since reorder was undefined)
+  // and displayed "reorder at undefined" on every row. Both now use
+  // svc.stockLevel()/`.min`, the same rule stock.html uses.
+  const alerts = stock.filter(s => svc.stockLevel(s) !== 'ok')
+    .sort((a,b) => (a.qty / Math.max(a.min, 1)) - (b.qty / Math.max(b.min, 1)))
     .slice(0, 6);
   const el = document.getElementById('stockAlerts');
   if (alerts.length === 0) { el.innerHTML = '<div class="empty-note">All items are above their reorder level.</div>'; return; }
   el.innerHTML = alerts.map(s => {
-    const lvl = stockLevel(s);
+    const lvl = svc.stockLevel(s);
     return `<a class="list-row" href="stock.html">
       <div class="list-ic ${lvl==='out'?'ic-red':'ic-amber'}"><i class="fa-solid fa-box"></i></div>
       <div class="list-body">
         <div class="list-name">${s.name}</div>
-        <div class="list-meta">${s.qty} on hand · reorder at ${s.reorder}</div>
+        <div class="list-meta">${s.qty} on hand · reorder at ${s.min}</div>
       </div>
-      <span class="chip chip-${lvl}"><i class="fa-solid fa-circle"></i>${lvl==='out'?'Out of Stock':'Low Stock'}</span>
+      <span class="chip chip-${lvl}"><i class="fa-solid fa-circle"></i>${svc.LEVEL_LABEL[lvl]}</span>
     </a>`;
   }).join('');
 }
@@ -324,13 +339,28 @@ function renderActivity(reqs){
 /* ═══════════════════════════════════════════════
    Init — pulls stock + requisitions from the shared store-data service
 ═══════════════════════════════════════════════ */
+function paint(){
+  const stock = svc.state.stock || [];
+  const reqs = svc.state.requests || [];
+  renderKPIs(stock, reqs);
+  renderPendingList();
+  renderStockAlerts(stock);
+  renderActivity(reqs);
+}
+
 async function init(){
+  if (!svc) {
+    console.error('[Dashboard] StoreService not loaded — check script order: data/store-seed.js → services/store-service.js → this page.');
+    showToast('StoreService not loaded.', 'error');
+    ['pendingList','stockAlerts','activityFeed'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="empty-note">Could not load data. Please refresh.</div>';
+    });
+    return;
+  }
   try {
-    const { stock, requisitions } = await getStoreData();
-    renderKPIs(stock, requisitions);
-    renderPendingList(requisitions);
-    renderStockAlerts(stock);
-    renderActivity(requisitions);
+    await svc.loadAll();
+    paint();
+    if (svc.onChange) svc.onChange(paint);
   } catch (err) {
     console.error('[Dashboard] Failed to load store data:', err);
     showToast(err.message || 'Failed to load store data.', 'error');

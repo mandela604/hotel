@@ -2,9 +2,17 @@
    RestaurantShell — sidebar + topbar for the standalone Restaurant
    module. Drop this in as component/restaurant-shell.js.
 
-   Rebuilt to match booking-shell.js pattern exactly: fetches session
-   from API when USE_DEMO = false, falls back to demo user otherwise.
-   All pages get session via shell.getUser() for permission checks.
+   Session rules (same as PoolBarShell):
+     USE_DEMO true  → always DEMO_USER
+     USE_DEMO false → GET /api/auth/session
+                      success → real user
+                      failure → redirect to LOGIN_URL (no demo fallback)
+   Pages read session only via shell.getUser().
+
+   Nav visibility:
+     Items flagged managerOnly stay hidden (display:none) until the
+     real session resolves and confirms role === 'admin' || 'manager'.
+     This is UX only — pages must still gate access themselves.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -13,7 +21,7 @@
     { key: 'xferhist',   label: 'Transfer History',     href: 'restaurant-transfer-history.html',icon: 'fa-solid fa-clock-rotate-left' },
     { key: 'inventory',  label: 'Restaurant Inventory', href: 'restaurant-inventory.html',       icon: 'fa-solid fa-box' },
     { key: 'sales',      label: 'Sales',                href: 'restaurant-sales.html',           icon: 'fa-solid fa-file-invoice-dollar' },
-    { key: 'reports',    label: 'Reports',              href: 'restaurant-reports.html',         icon: 'fa-solid fa-chart-column' },
+    { key: 'reports',    label: 'Reports',              href: 'restaurant-reports.html',         icon: 'fa-solid fa-chart-column', managerOnly: true },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";
@@ -160,23 +168,60 @@
   const CONFIG = {
     API_BASE: '',
     USE_DEMO: true,
-    DEMO_USER: { name: 'Restaurant Manager', initials: 'RM', role: 'staff', privilege: 'restaurant_staff' },
+    LOGIN_URL: '../login.html',
+    DEMO_USER: { name: 'Restaurant Manager', initials: 'RM', role: 'manager', privilege: 'restaurant_staff' },
   };
 
+  function goLogin(reason) {
+    console.warn('[RestaurantShell] Auth failed — redirecting to login:', reason || '');
+    const next = encodeURIComponent(location.pathname + location.search);
+    const base = CONFIG.LOGIN_URL || '../login.html';
+    location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
+  }
+
+  /**
+   * Demo  → DEMO_USER
+   * Live  → real user from API
+   * Live fail → redirect (never returns demo)
+   */
   async function fetchSession() {
-    if (!CONFIG.USE_DEMO) {
-      try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-          headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-        });
-        if (!res.ok) throw new Error(`Session API returned ${res.status}`);
-        const data = await res.json();
-        return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege };
-      } catch (err) {
-        console.warn('[RestaurantShell] Session fetch failed, using demo user:', err.message);
-      }
+    if (CONFIG.USE_DEMO) {
+      return CONFIG.DEMO_USER;
     }
-    return CONFIG.DEMO_USER;
+
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
+        credentials: 'include',
+        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+      });
+      if (res.status === 401 || res.status === 403) {
+        goLogin('HTTP ' + res.status);
+        return null;
+      }
+      if (!res.ok) throw new Error('Session API returned ' + res.status);
+      const data = await res.json();
+      if (!data || !data.role) {
+        goLogin('missing role');
+        return null;
+      }
+      return {
+        name: data.name,
+        initials: data.initials,
+        role: data.role,
+        privilege: data.privilege || null,
+      };
+    } catch (err) {
+      goLogin(err && err.message);
+      return null;
+    }
+  }
+
+  function applyNavVisibility(sessionUser) {
+    const role = ((sessionUser && sessionUser.role) || '').toLowerCase();
+    const isManagerLike = role === 'admin' || role === 'manager';
+    document.querySelectorAll('[data-manager-only]').forEach(function (el) {
+      el.style.display = isManagerLike ? '' : 'none';
+    });
   }
 
   function attach(opts) {
@@ -187,11 +232,12 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Start with passed user or demo default
-    let user = opts.user || CONFIG.DEMO_USER;
-    let initials = user.initials || (user.name || 'RM').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
+    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    let initials = user
+      ? (user.initials || (user.name || 'RM').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
+      : '…';
 
-    // ── Render sidebar ──
     sidebarTarget.innerHTML = `
       <div id="rst-overlay"></div>
       <aside id="rst-sidebar">
@@ -207,7 +253,7 @@
         <div class="rst-navlabel">Restaurant</div>
         <nav class="rst-nav" id="rst-nav">
           ${NAV.map(n => `
-            <a class="rst-navitem${n.href === activeFile ? ' active' : ''}" href="${n.href}" data-nav-key="${n.key}">
+            <a class="rst-navitem${n.href === activeFile ? ' active' : ''}" href="${n.href}" data-nav-key="${n.key}"${n.managerOnly ? ' data-manager-only style="display:none;"' : ''}>
               <span class="rst-navicon"><i class="${n.icon}"></i></span>
               <span class="rst-navtext">${n.label}</span>
               ${n.badgeKey ? `<span class="rst-navbadge" id="rst-badge-${n.badgeKey}"></span>` : ''}
@@ -223,7 +269,6 @@
         <div class="rst-copyright">© 2026 Grace Hotel</div>
       </aside>`;
 
-    // ── Render topbar ──
     topbarTarget.innerHTML = `
       <div id="rst-topbar">
         <button class="rst-hamburger" id="rst-hamburger"><i class="fa-solid fa-bars"></i></button>
@@ -243,7 +288,6 @@
 
     document.getElementById('rst-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    // ── Sidebar toggle logic ──
     const sidebar   = document.getElementById('rst-sidebar');
     const overlay   = document.getElementById('rst-overlay');
     const collapseBtn = document.getElementById('rst-collapseBtn');
@@ -269,7 +313,6 @@
       document.body.style.overflow = '';
     });
 
-    // ── Theme toggle ──
     let isDark = false;
     const themeBtn   = document.getElementById('rst-themeBtn');
     const themeIcon  = document.getElementById('rst-themeIcon');
@@ -291,7 +334,6 @@
     } catch (e) {}
     applyTheme();
 
-    // ── Fetch real session and update avatar ──
     const handle = {
       setApiMode(mode) {
         const badge = document.getElementById('rst-apiBadge');
@@ -320,28 +362,29 @@
         return user;
       },
       getConfig() {
-        return { ...CONFIG };
+        return Object.assign({}, CONFIG);
       },
     };
 
-    // Fetch session and update avatar + user
-    fetchSession().then(sessionUser => {
-      if (sessionUser) {
-        user = sessionUser;
-        initials = user.initials || (user.name || 'RM').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-        const avatar = document.getElementById('rst-avatar');
-        if (avatar) {
-          avatar.textContent = initials;
-          avatar.title = user.name || '';
-        }
-        handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+    // Demo mode already has a user synchronously — apply nav visibility now too.
+    applyNavVisibility(user);
+
+    fetchSession().then(function (sessionUser) {
+      if (!sessionUser) return; // live fail → already redirected
+      user = sessionUser;
+      initials = user.initials || (user.name || 'RM').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
+      const avatar = document.getElementById('rst-avatar');
+      if (avatar) {
+        avatar.textContent = initials;
+        avatar.title = user.name || '';
       }
+      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+      applyNavVisibility(user);
     });
 
     return handle;
   }
 
-  // Expose CONFIG so pages can use it
-  global.RestaurantShell = { attach, CONFIG };
+  global.RestaurantShell = { attach: attach, CONFIG: CONFIG };
 
 })(window);

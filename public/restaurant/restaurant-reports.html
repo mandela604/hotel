@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   html{ height:auto; }
@@ -14,31 +15,22 @@
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  /* This page owns layout + its own content only. Sidebar + topbar look/markup
-     live entirely in restaurant-shell.js and stay on the shared dark/blue
-     theme. The .content (and .modal-overlay, since modals render outside
-     .content) scopes below re-declare the SAME variable names with light
-     values, so only the main content area + its modals turn white — the
-     sidebar never sees this. */
-  .content, .modal-overlay{
+  .content{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec;
     --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
     --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
-    --input-bg:#f4f6fb; --modal-bg:#ffffff;
     --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
     --green:#12b76a; --green-bg:#e9f9f0;
     --red:#f04438; --red-bg:#feecec;
     --amber:#f79009; --amber-bg:#fff4e5;
     --blue:#2f6fed; --blue-bg:#eaf1ff;
     --purple:#8b5cf6; --purple-bg:#f4efff;
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text);
   }
-  .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  /* ═══ KPI cards — same icon-box system as the Dashboard / Inventory pages:
-     kpi-top (colored icon box + label), kpi-value, kpi-trend, top accent border. ═══ */
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; flex-shrink:0; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
@@ -50,14 +42,12 @@
   .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
   .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
-  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
   .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
   .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
   .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
   .ic-blue{ background:var(--blue-bg); color:var(--blue); }
   .ic-green{ background:var(--green-bg); color:var(--green); }
   .ic-amber{ background:var(--amber-bg); color:var(--amber); }
-  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
   .ic-red{ background:var(--red-bg); color:var(--red); }
   .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
   .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
@@ -65,67 +55,8 @@
   .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
-  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
-  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
-  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
-  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
-  .filter-select, .filter-date{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; color-scheme:light; }
-  .filter-select:focus, .filter-date:focus{ border-color:var(--gold-border); }
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid transparent; }
-  .btn-primary{ background:var(--gold); color:#fff; font-weight:600; }
-  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
-  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
-  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-sm{ padding:6px 12px; font-size:11.5px; }
-
-  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
-  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
-  .tbl-wrap{ overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:820px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
-  thead th.center{ text-align:center; }
-  tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
-  tbody tr:last-child{ border-bottom:none; }
-  tbody tr:hover{ background:var(--surface2); }
-  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
-  tbody td.center{ text-align:center; }
-  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; }
-  .chip-completed{ background:var(--green-bg); color:var(--green); } .chip-completed::before{ background:var(--green); }
-  .chip-voided{ background:var(--red-bg); color:var(--red); } .chip-voided::before{ background:var(--red); }
-  .chip-pay{ background:var(--gold-dim); color:var(--gold-light); } .chip-pay::before{ background:var(--gold); }
-  .chip-source{ background:var(--surface3); color:var(--text3); }
-
-  .summary-bar{ display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface2); border-top:1px solid var(--border); }
-  @media (max-width:560px){ .summary-bar{ grid-template-columns:1fr 1fr; } }
-  .sb-item{ text-align:center; padding:12px 12px; border-right:1px solid var(--border); }
-  .sb-item:last-child{ border-right:none; }
-  .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; }
-  .sb-val{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--text); }
-
-  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
-  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; padding:0 7px; }
-  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
-  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
-
-  /* ═══ Sale detail modal ═══ */
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
-  .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(0,0,0,0.5); margin:auto; position:relative; overflow:hidden; animation:modalIn .22s cubic-bezier(.4,0,.2,1); }
-  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
-  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--text); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:16px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
-  .modal-close:hover{ color:var(--text); }
-  .modal-meta{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.8; display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; }
-  .modal-meta strong{ color:var(--text); }
-  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  #filterSlot{ flex-shrink:0; }
+  #tableSlot{ flex-shrink:0; min-width:0; }
 
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   ::-webkit-scrollbar{ width:6px; height:6px; }
@@ -133,13 +64,10 @@
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
 
   @media print{
-    #rst-sidebar, #rst-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
+    #rst-sidebar, #rst-topbar, .no-print, .sfb-root, .st-pagin{ display:none !important; }
     .main{ margin-left:0 !important; }
     body{ background:#fff !important; color:#000 !important; }
-    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
-    .tbl-wrap{ overflow:visible !important; }
     .print-header{ display:block !important; margin-bottom:14px; }
-    tbody tr{ cursor:default; }
   }
   .print-header{ display:none; }
   .print-header h2{ font-family:'Cormorant Garamond',serif; font-size:18px; }
@@ -155,290 +83,232 @@
 
       <div class="kpi-row" id="kpiRow"></div>
 
-      <div class="toolbar no-print">
-        <div class="toolbar-row">
-          <div class="toolbar-left">
-            <div class="flt-group"><span class="flt-label">From</span><input type="date" class="filter-date" id="repFrom" onchange="page=1;generateReport()"></div>
-            <div class="flt-group"><span class="flt-label">To</span><input type="date" class="filter-date" id="repTo" onchange="page=1;generateReport()"></div>
-            <div class="flt-group">
-              <span class="flt-label">Payment</span>
-              <select class="filter-select" id="repPay" onchange="page=1;generateReport()">
-                <option value="">All Payments</option>
-                <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
-              </select>
-            </div>
-            <div class="flt-group">
-              <span class="flt-label">Source</span>
-              <select class="filter-select" id="repSource" onchange="page=1;generateReport()">
-                <option value="">All Sources</option>
-                <option value="quick">Quick Sale</option>
-                <option value="tab">Open Tab</option>
-              </select>
-            </div>
-            <div class="flt-group">
-              <span class="flt-label">Status</span>
-              <select class="filter-select" id="repStatus" onchange="page=1;generateReport()">
-                <option value="">All Statuses</option>
-                <option value="completed">Completed</option>
-                <option value="voided">Voided</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="printReport()"><i class="fa-solid fa-print"></i> Print</button>
-        </div>
+      <div id="filterSlot" class="no-print"></div>
+
+      <div class="print-header">
+        <h2>Aurum Hotel — Restaurant Sales Report</h2>
+        <p id="printSub"></p>
       </div>
 
-      <div class="panel">
-        <div class="print-header"><h2>Aurum Hotel — Restaurant Sales Report</h2><p id="printSub"></p></div>
-        <div class="panel-head">
-          <div class="panel-title" id="panelTitle">Full Report</div>
-          <span style="font-size:11px;color:var(--text3);" id="repCount">—</span>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Sale No.</th><th>Date</th><th>Items</th><th>Subtotal (₦)</th><th>Disc%</th><th>Total (₦)</th><th>Payment</th><th>Source</th><th>Staff</th><th>Table</th><th>Status</th></tr></thead>
-            <tbody id="repTableBody"></tbody>
-          </table>
-        </div>
-        <div class="summary-bar">
-          <div class="sb-item"><div class="sb-lbl">Sales</div><div class="sb-val" id="sbCount">0</div></div>
-          <div class="sb-item"><div class="sb-lbl">Gross</div><div class="sb-val" id="sbGross">₦0</div></div>
-          <div class="sb-item"><div class="sb-lbl">Discounts</div><div class="sb-val" id="sbDisc">₦0</div></div>
-          <div class="sb-item"><div class="sb-lbl">Net Revenue</div><div class="sb-val" id="sbNet">₦0</div></div>
-        </div>
-        <div class="pagination">
-          <span id="paginLabel">—</span>
-          <div class="page-btns" id="pageBtns"></div>
-        </div>
-      </div>
+      <!-- SalesTable mounts here -->
+      <div id="tableSlot"></div>
 
     </div>
   </div>
 </div>
 
-<!-- SALE / ITEMS DETAIL MODAL -->
-<div class="modal-overlay" id="saleModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="saleModalTitle">Sale Details</div>
-      <button class="modal-close" onclick="closeModal('saleModal')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-meta" id="saleModalMeta"></div>
-    <div class="tbl-wrap">
-      <table style="min-width:0;">
-        <thead><tr><th>Item</th><th class="center">Qty</th><th class="center">Price (₦)</th><th class="center">Line Total (₦)</th></tr></thead>
-        <tbody id="saleModalItems"></tbody>
-      </table>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('saleModal')">Close</button>
-    </div>
-  </div>
-</div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<script src="../services/permissions.js"></script>
+<script src="data/restaurant-seed.js"></script>
+<script src="services/restaurant-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
+<script src="../component/sales-filter-bar.js"></script>
+<script src="../component/sales-detail.js"></script>
+<script src="../component/sales-table.js"></script>
 <script>
+'use strict';
+
 const shell = RestaurantShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'restaurant-reports.html',
   pageTitle:     'Reports',
   pageSubtitle:  'Filterable view over completed and voided sales',
-  apiMode:       'Demo',
-  user:          { name: 'Restaurant Manager', initials: 'RM' },
 });
 
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:12 };
+const svc = window.RestaurantService;
+let filterBar = null;
+let salesTable = null;
+let salesDetail = null;
+let filterState = null;
 
-async function apiFetch(method, path){
-  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
-  const opts = { method, headers:{ 'Content-Type':'application/json' } };
-  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
-  const res = await fetch(CFG.API_BASE + path, opts);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+function fmtN(n) {
+  if (svc && svc.fmtN) return svc.fmtN(n);
+  return '₦' + Math.round(n || 0).toLocaleString('en-NG');
 }
 
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
+function currentShellTheme() {
+  return document.documentElement.getAttribute('data-theme') || 'dark';
+}
 
-const KEY_SALES = 'restaurant-sales';
-async function loadShared(key, fallback){
+function buildDetailSale(s) {
+  return {
+    id: s.id,
+    dept: 'Restaurant',
+    table: s.table,
+    staff: s.staff,
+    date: s.date,
+    method: s.method,
+    items: (s.items || []).map(function (i) {
+      return { name: i.name || i.meal || '—', qty: i.qty, price: i.price };
+    }),
+    discount: (s.subtotal || 0) * (s.discount || 0) / 100,
+    total: s.total,
+    status: s.status,
+    voidReason: s.voidReason,
+    notes: s.notes,
+  };
+}
+
+/* ── Pure render KPIs ── */
+function renderKPIs(kpis, label) {
+  const isAll = label === 'All time';
+  const salesTitle = isAll ? 'Total Sales' : (label === 'Today' ? "Today's Sales" : 'Sales');
+  const revTitle   = isAll ? 'Total Revenue' : (label === 'Today' ? "Today's Revenue" : 'Revenue');
+  const salesSub   = isAll ? 'All completed + voided' : (kpis.count + ' completed');
+  const revSub     = isAll ? 'All-time net revenue' : ('In ' + label.toLowerCase());
+
+  document.getElementById('kpiRow').innerHTML =
+    '<div class="kpi-card acc-blue">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-receipt"></i></div>' +
+      '<div class="kpi-label">' + salesTitle + '</div></div>' +
+      '<div class="kpi-value" style="color:var(--blue);">' + kpis.total + '</div>' +
+      '<div class="kpi-trend neutral">' + salesSub + '</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-green">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div>' +
+      '<div class="kpi-label">' + revTitle + '</div></div>' +
+      '<div class="kpi-value" style="color:var(--green);">' + fmtN(kpis.revenue) + '</div>' +
+      '<div class="kpi-trend up">' + revSub + '</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-amber">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-bolt"></i></div>' +
+      '<div class="kpi-label">Quick Sales</div></div>' +
+      '<div class="kpi-value" style="color:var(--amber);">' + kpis.quickCount + '</div>' +
+      '<div class="kpi-trend info">In current filter</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-red">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div>' +
+      '<div class="kpi-label">Voided Sales</div></div>' +
+      '<div class="kpi-value" style="color:var(--red);">' + kpis.voided + '</div>' +
+      '<div class="kpi-trend ' + (kpis.voided > 0 ? 'warn' : 'up') + '">' +
+        (kpis.voided > 0 ? 'Stock restored' : 'None in filter') +
+      '</div>' +
+    '</div>';
+}
+
+/* ── Pure call to service ── */
+function applyFilters(state) {
+  if (!salesTable || !svc) return;
+  filterState = state || filterState || {};
+
+  const filters = {
+    status: filterState.status || '',
+    source: filterState.source || '',
+    payment: filterState.payment || '',
+    search: filterState.search || '',
+    bounds: filterState.bounds || { start: null, end: null, label: 'All time' }
+  };
+
+  const filtered = svc.getFilteredSales(filters);
+  const kpis = svc.salesKPIs(filtered);
+
+  const label = filters.bounds.label || 'All time';
+  const title = label && label !== 'All time' ? 'Report: ' + label : 'Full Report';
+
+  document.getElementById('printSub').textContent =
+    'Generated: ' + new Date().toLocaleDateString('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    }) +
+    ' · Net: ' + fmtN(kpis.revenue) +
+    (label !== 'All time' ? ' · ' + label : '');
+
+  renderKPIs(kpis, label);
+  salesTable.setTitle(title);
+  salesTable.setSort('date', 'desc');
+  salesTable.setRows(filtered);
+}
+
+async function init() {
+  if (!window.RestaurantService) {
+    document.getElementById('kpiRow').innerHTML =
+      '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text3);">RestaurantService not loaded.</div>';
+    return;
+  }
+  if (!window.SalesFilterBar || !window.SalesTable) {
+    document.getElementById('filterSlot').innerHTML =
+      '<div style="padding:16px;color:var(--text3);">SalesFilterBar / SalesTable not loaded.</div>';
+    return;
+  }
+
   try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
-  } catch(e){}
-  return fallback;
-}
+    await RestaurantService.loadAll();
 
-const DEMO_SALES = [
-  { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], subtotal:12000, discount:0, total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', date:'17/07/26 11:05 AM', status:'completed', source:'quick' },
-  { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000},{meal:'Chapman',qty:2,price:2500}], subtotal:23000, discount:0, total:23000, method:'POS', staff:'Tunde A.', table:'Table 2', date:'17/07/26 10:40 AM', status:'completed', source:'quick' },
-  { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], subtotal:2500, discount:0, total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', date:'17/07/26 09:52 AM', status:'completed', source:'quick' },
-];
-
-let sales = [];
-let page = 1;
-let filtered = [];
-
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-function dateOnlyStr(s){ return (s || '').split(' ')[0] || '—'; }
-function itemsSummary(s){
-  if (!s.items || s.items.length === 0) return '—';
-  const first = s.items[0];
-  if (s.items.length > 1) return `${first.meal} +${s.items.length-1}x items`;
-  return first.qty > 1 ? `${first.meal} ×${first.qty}` : first.meal;
-}
-
-function parseSaleDate(str){
-  if (!str) return null;
-  const [datePart, timePart, ampm] = str.split(' ');
-  const [d,m,y] = datePart.split('/').map(n=>parseInt(n,10));
-  let hh=0, mm=0;
-  if (timePart) { const [h,mi]=timePart.split(':').map(n=>parseInt(n,10)); hh=h; mm=mi||0; }
-  if (ampm) { const u=ampm.toUpperCase(); if (u==='PM'&&hh<12) hh+=12; if (u==='AM'&&hh===12) hh=0; }
-  return new Date(2000+y, m-1, d, hh, mm);
-}
-function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null; }
-function todayDDMMYY(){ const d=new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; }
-
-/* ═══ KPI CARDS — same icon-box pattern as the Dashboard / Inventory pages.
-   Today's Sales / Today's Revenue always reflect the current day (same
-   convention as the Orders page's "Today's Sales" card), independent of
-   whatever date range is currently filtered. Quick Sales stays scoped to
-   the filtered report rows, as before. Voided Sales replaces Tab Sales,
-   matching the KPI already used on the Sales page. ═══ */
-function renderKPIs(rows){
-  const today = todayDDMMYY();
-  const todaySales = sales.filter(s => (s.date||'').startsWith(today));
-  const todayCompleted = todaySales.filter(s=>s.status==='completed');
-  const todayRevenue = todayCompleted.reduce((s,x)=>s+x.total,0);
-
-  const completed = rows.filter(s=>s.status==='completed');
-  const quick = completed.filter(s=>s.source!=='tab').length;
-  const voided = rows.filter(s=>s.status==='voided').length;
-
-  document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card acc-blue">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-receipt"></i></div><div class="kpi-label">Today's Sales</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${todaySales.length}</div>
-      <div class="kpi-trend neutral">${todayCompleted.length} completed</div>
-    </div>
-    <div class="kpi-card acc-green">
-      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Today's Revenue</div></div>
-      <div class="kpi-value" style="color:var(--green);">${fmtN(todayRevenue)}</div>
-      <div class="kpi-trend up">From completed sales today</div>
-    </div>
-    <div class="kpi-card acc-amber">
-      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-bolt"></i></div><div class="kpi-label">Quick Sales</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${quick}</div>
-      <div class="kpi-trend info">Instant, from Inventory</div>
-    </div>
-    <div class="kpi-card acc-red">
-      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Voided Sales</div></div>
-      <div class="kpi-value" style="color:var(--red);">${voided}</div>
-      <div class="kpi-trend ${voided>0?'warn':'up'}">${voided>0?'Stock restored':'None on record'}</div>
-    </div>`;
-}
-
-function generateReport(){
-  const from = document.getElementById('repFrom').value;
-  const to = document.getElementById('repTo').value;
-  const pay = document.getElementById('repPay').value;
-  const src = document.getElementById('repSource').value;
-  const status = document.getElementById('repStatus').value;
-
-  filtered = sales.filter(s => {
-    if (pay && s.method !== pay) return false;
-    if (status && s.status !== status) return false;
-    if (src && (s.source||'quick') !== src) return false;
-    if (from || to) {
-      const sd = dateOnly(parseSaleDate(s.date));
-      if (from) { const f = new Date(from+'T00:00:00'); if (!sd || sd < f) return false; }
-      if (to) { const t = new Date(to+'T00:00:00'); if (!sd || sd > t) return false; }
+    if (window.SalesDetail) {
+      salesDetail = SalesDetail.create({ theme: currentShellTheme() });
     }
-    return true;
-  }).sort((a,b) => parseSaleDate(b.date) - parseSaleDate(a.date));
 
-  const gross = filtered.reduce((s,x)=>s+x.subtotal,0);
-  const disc  = filtered.reduce((s,x)=>s+x.subtotal*(x.discount||0)/100,0);
-  const net   = filtered.filter(s=>s.status==='completed').reduce((s,x)=>s+x.total,0);
+    salesTable = SalesTable.create({
+      target: '#tableSlot',
+      pageSize: 8,
+      showSummary: true,
+      showActions: false,
+      showSource: true,
+      canVoid: false,
+      title: 'Full Report',
+      formatMoney: fmtN,
+      onRowClick: function (s) {
+        if (salesDetail) {
+          salesDetail.open(buildDetailSale(s));
+        }
+      },
+    });
 
-  document.getElementById('panelTitle').textContent = (from||to) ? `Report: ${from||'…'} → ${to||'…'}` : 'Full Report';
-  document.getElementById('repCount').textContent = filtered.length + ' record' + (filtered.length!==1?'s':'');
-  document.getElementById('sbCount').textContent = filtered.length;
-  document.getElementById('sbGross').textContent = fmtN(gross);
-  document.getElementById('sbDisc').textContent = fmtN(disc);
-  document.getElementById('sbNet').textContent = fmtN(net);
-  document.getElementById('printSub').textContent = `Generated: ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · Net: ${fmtN(net)}`;
+    filterBar = SalesFilterBar.create({
+      target: '#filterSlot',
+      show: {
+        period: true,
+        status: true,
+        source: true,
+        payment: true,
+        dateRange: true,
+        search: true,
+        clear: true,
+        chips: true,
+      },
+      periodOptions: [
+        { value: 'all',  label: 'All Time' },
+        { value: 'today', label: 'Today' },
+        { value: '7d',   label: 'Last 7 Days' },
+        { value: '30d',  label: 'Last 30 Days' },
+      ],
+      statusOptions: [
+        { value: '',          label: 'All',       tone: 'all' },
+        { value: 'completed', label: 'Completed', tone: 'completed', color: '#12b76a' },
+        { value: 'voided',    label: 'Voided',    tone: 'voided',    color: '#f04438' },
+      ],
+      sourceOptions: [
+        { value: '',      label: 'All Sources' },
+        { value: 'quick', label: 'Quick Sale' },
+        { value: 'tab',   label: 'Open Tab' },
+      ],
+      // ✅ Now pulls methods dynamically from the service
+      paymentOptions: svc.PAYMENT_METHODS,
+      searchPlaceholder: 'Sale #, item, staff, table…',
+      defaultPeriod: 'all',
+      actions: [
+        { id: 'print', label: 'Print Report', icon: 'fa-print', variant: 'outline' },
+      ],
+      onChange: function (state) {
+        applyFilters(state);
+      },
+      onAction: function (actionId) {
+        if (actionId === 'print') window.print();
+      },
+    });
 
-  renderKPIs(filtered);
-  renderTable();
-}
+    applyFilters(filterBar.getState());
 
-function renderPagination(total){
-  const totalPages = Math.max(1, Math.ceil(total/CFG.PAGE_SIZE));
-  if (page > totalPages) page = totalPages;
-  const from = total===0?0:(page-1)*CFG.PAGE_SIZE+1;
-  const to = Math.min(page*CFG.PAGE_SIZE, total);
-  document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
-  const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
-  const mk = (label,p,disabled,active) => { const b=document.createElement('button'); b.className='page-btn'+(active?' active':''); b.textContent=label; b.disabled=!!disabled; b.onclick=()=>{page=p;renderTable();}; return b; };
-  wrap.appendChild(mk('‹',page-1,page===1,false));
-  let start=Math.max(1,page-2), end=Math.min(totalPages,start+4); start=Math.max(1,end-4);
-  for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
-  wrap.appendChild(mk('›',page+1,page>=totalPages,false));
-}
-
-function renderTable(){
-  const start = (page-1)*CFG.PAGE_SIZE;
-  const rows = filtered.slice(start, start+CFG.PAGE_SIZE);
-  document.getElementById('repTableBody').innerHTML = rows.length===0
-    ? `<tr class="empty-row"><td colspan="11">No sales match your filters.</td></tr>`
-    : rows.map(s => `<tr onclick="openSaleDetail('${s.id}')">
-        <td style="font-weight:600;">${s.id}</td>
-        <td>${dateOnlyStr(s.date)}</td>
-        <td>${itemsSummary(s)}</td>
-        <td>${fmtN(s.subtotal)}</td>
-        <td>${s.discount||0}%</td>
-        <td style="font-weight:600;color:var(--gold);">${fmtN(s.total)}</td>
-        <td><span class="chip chip-pay">${s.method}</span></td>
-        <td><span class="chip chip-source">${s.source==='tab'?'Tab':'Quick'}</span></td>
-        <td>${s.staff||'—'}</td>
-        <td>${s.table||'—'}</td>
-        <td><span class="chip chip-${s.status}">${s.status==='completed'?'Completed':'Voided'}</span></td>
-      </tr>`).join('');
-  renderPagination(filtered.length);
-}
-
-/* ═══ Sale / items detail modal — opened by clicking any report row ═══ */
-function openSaleDetail(id){
-  const s = sales.find(x=>x.id===id);
-  if (!s) return;
-  document.getElementById('saleModalTitle').textContent = `Sale Details — ${s.id}`;
-  document.getElementById('saleModalMeta').innerHTML = `
-    <span><strong>${dateOnlyStr(s.date)}</strong></span>
-    <span class="chip chip-pay">${s.method}</span>
-    <span class="chip chip-source">${s.source==='tab'?'Tab':'Quick Sale'}</span>
-    <span>Staff: <strong>${s.staff||'—'}</strong></span>
-    <span>Table: <strong>${s.table||'—'}</strong></span>
-    <span class="chip chip-${s.status}">${s.status==='completed'?'Completed':'Voided'}</span>`;
-  document.getElementById('saleModalItems').innerHTML = s.items.map(i => `
-    <tr><td>${i.meal}</td><td class="center">${i.qty}</td><td class="center">${fmtN(i.price)}</td><td class="center" style="font-weight:600;color:var(--gold-light);">${fmtN(i.price*i.qty)}</td></tr>`).join('');
-  document.getElementById('saleModal').classList.add('show');
-}
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-document.getElementById('saleModal').addEventListener('click', function(e){ if (e.target === this) closeModal('saleModal'); });
-
-function printReport(){ window.print(); }
-
-async function init(){
-  sales = await loadShared(KEY_SALES, DEMO_SALES);
-  document.getElementById('repFrom').value = '';
-  document.getElementById('repTo').value = '';
-  generateReport();
+    if (RestaurantService.onChange) {
+      RestaurantService.onChange(function () {
+        applyFilters(filterBar.getState());
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('kpiRow').innerHTML =
+      '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text3);">Could not load report data.</div>';
+  }
 }
 init();
 </script>

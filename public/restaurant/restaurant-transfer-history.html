@@ -4,16 +4,13 @@
 <meta charset="UTF-8">
 <title>Transfer History | Aurum Restaurant</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  /* restaurant-shell.js defines --gold/--text/--border/--surface etc
-     for the sidebar + topbar, following whatever dark/light theme is
-     toggled. This page instead pins its OWN content to a permanent
-     white/light palette — same tokens as Pool Bar's Sales/Reports/
-     Requisition History pages — so .content, the modals, and the
-     toast all stay white regardless of the shell's theme toggle. */
+  /* Content stays light regardless of shell theme (same pattern as Sales). */
   .content, .modal-overlay, .toast{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec;
@@ -27,16 +24,11 @@
     --blue:#2f6fed; --blue-bg:#eaf1ff;
     --purple:#8b5cf6; --purple-bg:#f4efff;
   }
-  /* This page only owns layout + its own content. Sidebar + topbar
-     look/markup live entirely in restaurant-shell.js. Layout follows
-     the same "whole page scrolls" pattern as restaurant-inventory —
-     no fixed-height/overflow:hidden shell — so the table's own
-     horizontal scroll (.tbl-wrap) is the only scroll surface inside
-     the content. */
   html{ height:auto; }
   body{
-    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
-    background:var(--bg); color:var(--text); font-size:13px; min-height:100vh; overflow-x:hidden; transition:background .3s,color .3s;
+    font-family:'Outfit',sans-serif;
+    background:var(--bg); color:var(--text); font-size:13px; min-height:100vh; overflow-x:hidden;
+    transition:background .3s,color .3s;
   }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
@@ -45,15 +37,12 @@
   .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  /* ═══ KPI CARDS — same icon-box system as poolbar-sales.html /
-     poolbar-reports.html / poolbar-requisition-history.html.
-     Pending Transfers now uses the amber accent, matching the
-     "Awaiting review" warning language used across the suite. ═══ */
+  /* KPI cards */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; }
+    display:flex; flex-direction:column; cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; min-height:110px; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
@@ -61,7 +50,6 @@
   .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
   .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
-  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
   .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
   .kpi-card.clickable{ cursor:pointer; }
   .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
@@ -69,10 +57,9 @@
   .ic-blue{ background:var(--blue-bg); color:var(--blue); }
   .ic-green{ background:var(--green-bg); color:var(--green); }
   .ic-amber{ background:var(--amber-bg); color:var(--amber); }
-  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
   .ic-red{ background:var(--red-bg); color:var(--red); }
   .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
-  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:700; color:var(--text); margin:4px 0 2px; line-height:1; }
   @media (max-width:420px){ .kpi-value{ font-size:18px; } }
   .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
@@ -85,71 +72,63 @@
   .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  /* ═══ Toolbar / filter bar — centered horizontally and vertically,
-     wraps as a group instead of pinning actions to the right. ═══ */
-  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; align-items:center; }
-  .toolbar-row{ display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; width:100%; }
-  .toolbar-row.top{ justify-content:center; }
-  .toolbar-left{ display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; }
-  .toolbar-top-actions{ display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; }
-  .toolbar-more{ max-height:0; opacity:0; overflow:hidden; transition:max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s ease, margin-top .28s ease; width:100%; display:flex; justify-content:center; }
+  /* Toolbar */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; width:100%; }
+  .toolbar-row.top{ justify-content:space-between; align-items:flex-end; }
+  .toolbar-left{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-top-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto; }
+  .toolbar-more{ max-height:0; opacity:0; overflow:hidden; transition:max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s ease, margin-top .28s ease; width:100%; }
   .toolbar-more.expanded{ max-height:140px; opacity:1; margin-top:2px; }
   .icon-btn{ display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:9px; border:1px solid var(--border); background:var(--surface2); color:var(--text3); cursor:pointer; transition:all .15s; font-size:11px; flex-shrink:0; }
   .icon-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
   .icon-btn.open{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
   #moreFiltersChevron{ transition:transform .2s ease; display:inline-block; line-height:1; }
   .icon-btn.open #moreFiltersChevron{ transform:rotate(180deg); }
-  .flt-group{ display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; text-align:center; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:13px; width:100%; text-align:left; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:inherit; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; text-align:center; text-align-last:center; color-scheme:light; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:inherit; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; color-scheme:light; }
   .filter-select:focus{ border-color:var(--gold-border); }
 
-  /* Single date-range field — one input opens one flatpickr popup covering both From + To */
-  .daterange-box{ display:flex; align-items:center; justify-content:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:200px; cursor:pointer; }
+  .daterange-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:190px; cursor:pointer; }
   .daterange-box:focus-within, .daterange-box.open{ border-color:var(--gold-border); }
-  .daterange-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:12.5px; width:100%; cursor:pointer; text-align:center; }
+  .daterange-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:12.5px; width:100%; cursor:pointer; }
   .daterange-box input::placeholder{ color:var(--text3); }
   .daterange-clear{ background:none; border:none; color:var(--text3); cursor:pointer; font-size:12px; padding:0; display:none; line-height:1; }
   .daterange-box.has-value .daterange-clear{ display:flex; }
   .daterange-clear:hover{ color:var(--red); }
 
-  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  /* Pending pill recolored to amber — same semantic as the "Awaiting
-     review" warning language used on the Dashboard KPI cards. */
   .status-pill.on.pending{ background:var(--amber-bg); border-color:rgba(247,144,9,.4); color:var(--amber); }
   .status-pill.on.accepted{ background:var(--green-bg); border-color:rgba(18,183,106,.4); color:var(--green); }
   .status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.4); color:var(--red); }
-  .active-chips{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .active-chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .active-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold); font-size:11px; font-weight:600; padding:4px 8px 4px 10px; border-radius:20px; white-space:nowrap; }
   .active-chip button{ background:none; border:none; color:var(--gold); cursor:pointer; font-size:11px; line-height:1; padding:0; display:flex; }
-  .active-chip button:hover{ color:var(--gold-light); }
+  .active-chip button:hover{ color:var(--red); }
   .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; font-weight:600; }
 
   @media (max-width:700px){
-    .toolbar-row.top{ flex-direction:column; align-items:center; flex-wrap:wrap; }
-    .toolbar-left{ flex-direction:column; align-items:center; flex-wrap:wrap; width:100%; }
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
     .flt-group{ width:100%; }
     .search-box, .daterange-box{ max-width:100%; }
     .filter-select{ width:100%; }
     .toolbar-more.expanded{ max-height:220px; }
     .status-pills{ flex-wrap:wrap; }
-    .toolbar-top-actions{ width:100%; justify-content:center; flex-wrap:wrap; }
-    .toolbar-top-actions .btn{ width:100%; justify-content:center; }
-  }
-  @media (min-width:701px) and (max-width:1180px){
-    .toolbar-row.top{ flex-wrap:wrap; }
-    .toolbar-left{ flex-wrap:wrap; }
+    .toolbar-top-actions{ width:100%; margin-left:0; flex-wrap:wrap; justify-content:stretch; }
+    .toolbar-top-actions .btn{ flex:1; justify-content:center; }
   }
 
-  /* ═══ Panel / table ═══ */
+  /* Panel / table */
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
   .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
@@ -170,13 +149,16 @@
 
   .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .chip i{ font-size:6px; }
-  /* Status chips — pending now shares the amber "awaiting review" color */
   .chip-pending{ background:var(--amber-bg); color:var(--amber); }
   .chip-accepted{ background:var(--green-bg); color:var(--green); }
   .chip-rejected{ background:var(--red-bg); color:var(--red); }
-  /* Source chips — where the batch came from */
   .chip-kitchen{ background:var(--blue-bg); color:var(--blue); }
   .chip-store{ background:var(--purple-bg); color:var(--purple); }
+  /* StoreService requisition statuses (Pending | Partial | Full | Rejected) —
+     used only in the Recently Submitted panel below, separate from the
+     Accepted/Rejected transfer statuses above. */
+  .chip-partial{ background:var(--blue-bg); color:var(--blue); }
+  .chip-full{ background:var(--green-bg); color:var(--green); }
 
   .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
@@ -186,8 +168,37 @@
   .btn-danger{ background:rgba(240,68,56,0.1); border-color:rgba(240,68,56,0.3); color:var(--red); font-weight:700; }
   .btn-danger:hover{ background:rgba(240,68,56,0.18); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .btn-order{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
+  .btn-order:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
   .btn-ghost{ background:none; border:none; color:var(--text3); font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
   .btn-ghost:hover{ color:var(--gold); }
+
+  /* Request form modal — host stays light; re-theme GraceHotelRequestForm vars */
+  #reqModal.modal-overlay{ z-index:320; }
+  #reqModal .modal{ width:min(920px,96vw); max-height:min(92vh,900px); overflow-y:auto; padding:20px 22px 22px; }
+  #reqModal .modal::before{ background:var(--gold); }
+  #reqFormHost{
+    --ghrf-gold:#2f6fed; --ghrf-gold-light:#5b8ff9; --ghrf-gold-dim:rgba(47,111,237,.10); --ghrf-gold-border:rgba(47,111,237,.25);
+    --ghrf-green:#12b76a; --ghrf-green-bg:rgba(18,183,106,.12);
+    --ghrf-amber:#f79009; --ghrf-amber-bg:rgba(247,144,9,.12);
+    --ghrf-red:#f04438; --ghrf-red-bg:rgba(240,68,56,.12);
+    --ghrf-blue:#2f6fed; --ghrf-blue-bg:rgba(47,111,237,.12);
+    --ghrf-purple:#8b5cf6; --ghrf-purple-bg:rgba(139,92,246,.12);
+    --ghrf-tx:#1c2440; --ghrf-tx2:#6b7280; --ghrf-tx3:#9aa1b3;
+    --ghrf-border:#eef0f6; --ghrf-card:#ffffff; --ghrf-surface2:#f4f6fb; --ghrf-input-bg:#f4f6fb;
+  }
+  #reqFormHost .ghrf-card{ box-shadow:var(--shadow); }
+  #reqFormHost .ghrf-btn-submit{ color:#fff; }
+
+  /* Recently Submitted — built here, not by the component (its own docs
+     say that list was intentionally removed from GraceHotelRequestForm). */
+  .req-recent{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+  .req-recent-title{ font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:800; margin-bottom:8px; }
+  .req-recent-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); font-size:12px; }
+  .req-recent-row:last-child{ border-bottom:none; }
+  .req-recent-no{ color:var(--gold); font-weight:700; }
+  .req-recent-empty{ padding:10px 2px; color:var(--text3); font-size:12px; }
+
   .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
   .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
@@ -251,13 +262,9 @@
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
-
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-  /* flatpickr theming — hardcoded to the page's light palette since
-     flatpickr appends its calendar straight to <body>, outside the
-     .content/.modal-overlay scope that holds the CSS variables. */
-  .flatpickr-calendar{ background:#ffffff !important; border:1px solid #eef0f6 !important; box-shadow:0 18px 46px rgba(15,34,55,0.16) !important; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif !important; }
+  .flatpickr-calendar{ background:#ffffff !important; border:1px solid #eef0f6 !important; box-shadow:0 18px 46px rgba(15,34,55,0.16) !important; font-family:'Outfit',sans-serif !important; }
   .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after{ border-bottom-color:#ffffff !important; }
   .flatpickr-months, .flatpickr-weekdays{ background:#ffffff !important; }
   .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year{ color:#1c2440 !important; }
@@ -275,24 +282,21 @@
     body{ background:#fff !important; color:#000 !important; }
     .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
     .tbl-wrap{ overflow:visible !important; }
+    .print-header{ display:block !important; margin-bottom:14px; }
   }
+  .print-header{ display:none; }
+  .print-header h2{ font-family:'Cormorant Garamond',serif; font-size:18px; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
 </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- Sidebar is rendered here by restaurant-shell.js — Restaurant nav only -->
   <div id="sidebarSlot"></div>
-
   <div class="main">
-    <!-- Topbar is rendered here by restaurant-shell.js -->
     <div id="topbarSlot"></div>
-
     <div class="content">
-
       <div class="kpi-row" id="kpiRow"></div>
 
-      <!-- ═══ FILTER BAR ═══ -->
       <div class="toolbar no-print">
         <div class="toolbar-row top">
           <div class="toolbar-left">
@@ -328,12 +332,15 @@
             </div>
             <div class="flt-group">
               <span class="flt-label">&nbsp;</span>
-              <div class="toolbar-top-actions">
+              <div style="display:flex;align-items:center;gap:6px;">
                 <button class="icon-btn" id="moreFiltersBtn" onclick="toggleMoreFilters()" title="More filters"><i class="fa-solid fa-chevron-down" id="moreFiltersChevron"></i></button>
-                <button class="btn-ghost" id="clearFiltersBtn" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
-                <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+                <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
               </div>
             </div>
+          </div>
+          <div class="toolbar-top-actions">
+            <button class="btn btn-order btn-sm" id="btnNewReq" onclick="openRequestForm()"><i class="fa-solid fa-file-circle-plus"></i> New Requisition</button>
+            <button class="btn btn-outline btn-sm" onclick="printPage()"><i class="fa-solid fa-print"></i> Print</button>
           </div>
         </div>
         <div class="toolbar-more" id="toolbarMore">
@@ -342,7 +349,7 @@
               <span class="flt-label">Date Sent</span>
               <div class="daterange-box" id="dateRangeBox">
                 <i class="fa-solid fa-calendar-days" style="color:var(--text3);font-size:12px;"></i>
-                <input type="text" id="fDateRange" placeholder="Date" readonly>
+                <input type="text" id="fDateRange" placeholder="Date range" readonly>
                 <button type="button" class="daterange-clear" id="dateRangeClear" title="Clear dates"><i class="fa-solid fa-xmark"></i></button>
               </div>
             </div>
@@ -364,6 +371,7 @@
       </div>
 
       <div class="panel">
+        <div class="print-header"><h2>Aurum Hotel — Restaurant Transfer History</h2><p id="printSub"></p></div>
         <div class="panel-head">
           <div class="panel-title">Transfer History — grouped by batch</div>
           <span class="toolbar-count" id="tblCount">—</span>
@@ -392,12 +400,26 @@
           <div class="page-btns" id="pageBtns"></div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- TRANSFER DETAILS MODAL — footer adapts: Accept/Reject shown only while pending -->
+<!-- NEW REQUISITION MODAL (GraceHotelRequestForm) -->
+<div class="modal-overlay" id="reqModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-file-circle-plus" style="color:var(--gold);"></i> New Requisition</div>
+      <button class="modal-close" onclick="closeModal('reqModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="reqFormHost"></div>
+    <div class="req-recent">
+      <div class="req-recent-title">Recently Submitted</div>
+      <div id="reqRecentList"><div class="req-recent-empty">No requisitions submitted yet.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal">
     <div class="modal-header">
@@ -426,7 +448,7 @@
       <div class="modal-title accept-title"><i class="fa-solid fa-circle-check"></i> Accept Transfer</div>
       <button class="modal-close" onclick="closeModal('acceptModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="val-note">Accepting <strong id="acName"></strong> will add <strong id="acQty"></strong> item line(s) to Restaurant Inventory and log the movement.</div>
+    <div class="val-note">Accepting <strong id="acName"></strong> will add <strong id="acQty"></strong> item line(s) to Restaurant stock and log the movement.</div>
     <div class="form-group">
       <label class="form-label">Received By</label>
       <input class="form-input" type="text" id="acReceivedBy" placeholder="Staff name">
@@ -449,7 +471,7 @@
       <div class="modal-title reject-title"><i class="fa-solid fa-ban"></i> Reject Transfer</div>
       <button class="modal-close" onclick="closeModal('rejectModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="val-note">Rejecting <strong id="rjName"></strong> will move it to history — no inventory will be added.</div>
+    <div class="val-note">Rejecting <strong id="rjName"></strong> will move it to history — no stock will be added.</div>
     <div class="form-group">
       <label class="form-label">Reason for Rejection</label>
       <textarea class="form-textarea" id="rjReason" placeholder="e.g. Short delivery, wrong item, quality issue…"></textarea>
@@ -462,259 +484,239 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<script src="../services/permissions.js"></script>
+<script src="data/restaurant-seed.js"></script>
+<script src="services/restaurant-service.js"></script>
+<script src="../store/data/store-seed.js"></script>
+<script src="../store/services/store-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
+<script src="../component/grace-request-form.js"></script>
 <script>
-/* ═══════════════════════════════════════════
-   Shell — sidebar + topbar, restaurant nav only.
-═══════════════════════════════════════════ */
+/**
+ * restaurant-transfer-history.html
+ * Call + render page: all data & mutations go through RestaurantService.
+ * Session + Permissions gate Accept / Reject (same pattern as Sales void).
+ *
+ * New Requisition form (GraceHotelRequestForm) requires StoreService —
+ * see ../store/services/store-service.js — for numbering and persistence.
+ * Loaded alongside RestaurantService above.
+ */
 const shell = RestaurantShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'restaurant-transfer-history.html',
   pageTitle:     'Transfer History',
-  pageSubtitle:  'Every pending, accepted and rejected batch transfer from Kitchen or Store',
-  apiMode:       'Demo',
-  user:          { name: 'Restaurant Manager', initials: 'RM' },
+  pageSubtitle:  'Pending, accepted & rejected batches from Kitchen or Store',
 });
 
-/* ═══════════════════════════════════════════
-   CONFIG, API LAYER & STORAGE
-   Set CFG.API_BASE and CFG.USE_DEMO=false to call a real backend.
-   On any failure (or in demo mode) this falls back to shared
-   storage (window.storage, or localStorage outside the Claude.ai
-   preview), and finally to the hardcoded demo seed below.
-
-   DATA MODEL — each row is a BATCH, not a single meal. A batch can
-   carry several items at once (t.items = [{name, qty, unit}, ...]),
-   and a batch's source can be either the Kitchen (a production run)
-   or the Store (a direct stock push) — t.source is 'Kitchen' | 'Store'.
-   Accept/Reject still move a row from KEY_TRANSFERS into KEY_HISTORY,
-   but now apply to every item in the batch at once.
-═══════════════════════════════════════════ */
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
-
-async function apiFetch(method, path, body=null){
-  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
-  const opts = { method, headers:{ 'Content-Type':'application/json' } };
-  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(CFG.API_BASE + path, opts);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
-
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
-
-const KEY_TRANSFERS = 'restaurant-pending-transfers';
-const KEY_INVENTORY = 'restaurant-inventory';
-const KEY_HISTORY    = 'restaurant-transfer-history';
-const KEY_MOVEMENTS  = 'restaurant-movements';
-
-async function loadShared(key, fallback){
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
-  } catch(e){}
-  return fallback;
-}
-async function saveShared(key, value){
-  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
+function currentShellTheme() {
+  return document.documentElement.getAttribute('data-theme') || 'dark';
 }
 
-/* Demo seed — only used the very first time, before anything syncs.
-   Mixes Kitchen-sourced production batches with Store-sourced pushes,
-   each carrying one or more items. */
-const DEMO_TRANSFERS = [
-  { no:'KTN-00045', batchNo:'BATCH-00031', source:'Kitchen', from:'Main Kitchen', restaurant:'Main Restaurant', sentBy:'Head Chef',
-    items:[ { name:'Fried Rice', qty:30, unit:'Plates' }, { name:'Moi Moi', qty:12, unit:'Pieces' } ],
-    date:'17/07/26 10:30 AM', remarks:'Lunch preparation' },
-  { no:'KTN-00044', batchNo:'BATCH-00030', source:'Kitchen', from:'Main Kitchen', restaurant:'Main Restaurant', sentBy:'Head Chef',
-    items:[ { name:'Jollof Rice', qty:20, unit:'Plates' } ],
-    date:'17/07/26 09:15 AM', remarks:'' },
-  { no:'STX-00019', batchNo:'', source:'Store', from:'Central Store', restaurant:'Main Restaurant', sentBy:'Store Keeper',
-    items:[ { name:'Bottled Water', qty:48, unit:'Bottles' }, { name:'Soft Drinks', qty:24, unit:'Bottles' } ],
-    date:'17/07/26 08:40 AM', remarks:'Weekend stock top-up' },
-];
-const DEMO_INVENTORY = [
-  { meal:'Egusi Soup',  qty:15, unit:'Portions', batch:'PROD-00094', received:'17/07/26', min:8 },
-  { meal:'Moi Moi',     qty:4,  unit:'Pieces',   batch:'PROD-00090', received:'16/07/26', min:8 },
-  { meal:'Jollof Rice', qty:0,  unit:'Plates',   batch:'PROD-00088', received:'16/07/26', min:6 },
-  { meal:'Fried Rice',  qty:18, unit:'Plates',   batch:'PROD-00085', received:'16/07/26', min:6 },
-];
-const DEMO_HISTORY = [
-  { no:'KTN-00040', batchNo:'BATCH-00026', source:'Kitchen', from:'Main Kitchen', restaurant:'Main Restaurant', sentBy:'Head Chef',
-    items:[ { name:'Jollof Rice', qty:25, unit:'Plates' } ],
-    date:'14/07/26 09:10 AM', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'14/07/26 09:40 AM' },
-  { no:'KTN-00041', batchNo:'BATCH-00027', source:'Kitchen', from:'Main Kitchen', restaurant:'Main Restaurant', sentBy:'Head Chef',
-    items:[ { name:'Egusi Soup', qty:16, unit:'Portions' } ],
-    date:'14/07/26 12:05 PM', remarks:'', status:'accepted', receivedBy:'Tunde, Waitstaff', actionRemarks:'', actionDate:'14/07/26 12:30 PM' },
-  { no:'KTN-00042', batchNo:'BATCH-00028', source:'Kitchen', from:'Banquet Kitchen', restaurant:'Main Restaurant', sentBy:'Sous Chef',
-    items:[ { name:'Moi Moi', qty:10, unit:'Pieces' } ],
-    date:'15/07/26 08:50 AM', remarks:'', status:'rejected', receivedBy:'', actionRemarks:'Wrong batch — texture off, sent back.', actionDate:'15/07/26 09:05 AM' },
-  { no:'KTN-00043', batchNo:'BATCH-00029', source:'Kitchen', from:'Main Kitchen', restaurant:'Main Restaurant', sentBy:'Head Chef',
-    items:[ { name:'Fried Rice', qty:22, unit:'Plates' } ],
-    date:'15/07/26 01:15 PM', remarks:'', status:'accepted', receivedBy:'Ada, Front of House', actionRemarks:'', actionDate:'15/07/26 01:45 PM' },
-  { no:'STX-00018', batchNo:'', source:'Store', from:'Central Store', restaurant:'Main Restaurant', sentBy:'Store Keeper',
-    items:[ { name:'Cutlery Sets', qty:50, unit:'Sets' }, { name:'Table Linens', qty:20, unit:'Pieces' } ],
-    date:'13/07/26 03:20 PM', remarks:'Monthly consumables restock', status:'accepted', receivedBy:'Tunde, Waitstaff', actionRemarks:'', actionDate:'13/07/26 03:50 PM' },
-];
+const _rstThemeBtn = document.getElementById('rst-themeBtn');
+if (_rstThemeBtn) {
+  _rstThemeBtn.addEventListener('click', () => {
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent('aurum:themechange', {
+        detail: { theme: currentShellTheme() },
+      }));
+    }, 0);
+  });
+}
 
-/* ═══════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════ */
-let transfers = [];   // pending batches only — source of truth for Accept/Reject
-let inventory = [];
-let history   = [];   // accepted + rejected batches — source of truth for history rows
-let movements = [];
-let activeNo  = null;
+/* ── Session & permissions ─────────────────────────────── */
+let session = null;
+let canAccept = false;
+let canReject = false;
+
+function waitForSession(maxMs) {
+  maxMs = maxMs || 800;
+  return new Promise(function (resolve) {
+    const started = Date.now();
+    const tick = function () {
+      const u = shell.getUser && shell.getUser();
+      if (u && u.role) {
+        resolve(u);
+        return;
+      }
+      if (Date.now() - started >= maxMs) {
+        resolve(shell.getUser && shell.getUser());
+        return;
+      }
+      setTimeout(tick, 40);
+    };
+    tick();
+  });
+}
+
+
+function canAcceptFromSession(s) {
+  if (!s) return false;
+  if (window.Permissions && typeof Permissions.hasPermission === 'function') {
+    // Role-level canApprove (admin/manager) or module override
+    if (Permissions.hasPermission(s, 'canApprove', 'restaurant')) return true;
+    if (Permissions.hasPermission(s, 'canApprove', null)) return true;
+  }
+  const role = (s.role || '').toLowerCase();
+  return role === 'admin' || role === 'manager';
+}
+
+function canRejectFromSession(s) {
+  if (!s) return false;
+  if (window.Permissions && typeof Permissions.hasPermission === 'function') {
+    if (Permissions.hasPermission(s, 'canReject', 'restaurant')) return true;
+    if (Permissions.hasPermission(s, 'canReject', null)) return true;
+    // Fall back to canApprove for roles that only declare canApprove
+    if (Permissions.hasPermission(s, 'canApprove', 'restaurant')) return true;
+    if (Permissions.hasPermission(s, 'canApprove', null)) return true;
+  }
+  const role = (s.role || '').toLowerCase();
+  return role === 'admin' || role === 'manager';
+}
+
+/* ── Page state (UI only — data lives in RestaurantService) ─ */
+const CFG = { PAGE_SIZE: 8 };
 let page = 1;
 let statusFilter = '';
-let sortKey = 'date', sortDir = 'desc';
-let rangeStart = null, rangeEnd = null; // single date-range filter (applies to Date Sent)
+let sortKey = 'date';
+let sortDir = 'desc';
+let rangeStart = null;
+let rangeEnd = null;
 let _filteredCache = [];
-let fp = null; // flatpickr instance
+let fp = null;
+let activeNo = null;
 
-function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
+const RS = window.RestaurantService;
 
-function parseTransferDate(str){
-  if (!str) return null;
-  const [datePart, timePart, ampm] = str.split(' ');
-  const [d, m, y] = datePart.split('/').map(n => parseInt(n, 10));
-  let hh = 0, mm = 0;
-  if (timePart) { const [h, mi] = timePart.split(':').map(n => parseInt(n, 10)); hh = h; mm = mi || 0; }
-  if (ampm) {
-    const upper = ampm.toUpperCase();
-    if (upper === 'PM' && hh < 12) hh += 12;
-    if (upper === 'AM' && hh === 12) hh = 0;
-  }
-  const fullYear = y < 100 ? 2000 + y : y;
-  return new Date(fullYear, m - 1, d, hh, mm);
+/* ── Helpers ───────────────────────────────────────────── */
+function itemsQty(t) {
+  return (t.items || []).reduce((sum, i) => sum + (i.qty || 0), 0);
 }
-function dateOnly(dt){ return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null; }
-
-/* ── Batch-level helpers ── */
-function itemsQty(t){ return (t.items||[]).reduce((sum,i)=>sum+i.qty,0); }
-function itemsSummary(t){
-  const names = (t.items||[]).map(i => `${i.name} ×${i.qty}`);
+function itemsSummary(t) {
+  const names = (t.items || []).map((i) => (i.name || 'Unknown') + ' ×' + (i.qty || 0));
+  if (names.length === 0) return '<span class="more">No items</span>';
   if (names.length <= 2) return names.join(', ');
-  return `${names.slice(0,2).join(', ')} <span class="more">+${names.length-2} more</span>`;
+  return names.slice(0, 2).join(', ') + ' <span class="more">+' + (names.length - 2) + ' more</span>';
 }
-function sourceChip(t){ return t.source === 'Store' ? { cls:'chip-store', label:'Store' } : { cls:'chip-kitchen', label:'Kitchen' }; }
-
-/* Merge pending + history into one unified list for the table */
-function getAllRecords(){
-  const pendingRows = transfers.map(t => ({ ...t, status:'pending', receivedBy:'', actionRemarks:'', actionDate:'' }));
-  const historyRows = history.map(h => ({ ...h }));
-  return [...pendingRows, ...historyRows];
+function sourceChip(t) {
+  const src = (t.source || '').toString().toLowerCase();
+  if (src === 'store') return { cls: 'chip-store', label: 'Store' };
+  return { cls: 'chip-kitchen', label: 'Kitchen' };
+}
+function normalizeSource(t) {
+  const s = (t.source || '').toString();
+  if (/store/i.test(s)) return 'Store';
+  if (/kitchen/i.test(s)) return 'Kitchen';
+  return s || 'Store';
 }
 
-/* ═══════════════════════════════════════════
-   SINGLE DATE-RANGE POPUP (flatpickr, mode:"range")
-═══════════════════════════════════════════ */
-function initDateRangePicker(){
+function getAllRecords() {
+  // Service keeps pending + history separate; merge for the table.
+  const pending = (RS.state.pending || []).map((t) =>
+    Object.assign({}, t, {
+      status: 'pending',
+      receivedBy: '',
+      actionRemarks: '',
+      actionDate: '',
+      source: normalizeSource(t),
+    })
+  );
+  const history = (RS.state.history || []).map((h) =>
+    Object.assign({}, h, { source: normalizeSource(h) })
+  );
+  return pending.concat(history);
+}
+
+/* ── Date range ────────────────────────────────────────── */
+function initDateRangePicker() {
   const input = document.getElementById('fDateRange');
   const box = document.getElementById('dateRangeBox');
   const clearBtn = document.getElementById('dateRangeClear');
-
   fp = flatpickr(input, {
     mode: 'range',
     dateFormat: 'd/m/Y',
-    altInput: false,
     onOpen: () => box.classList.add('open'),
     onClose: () => box.classList.remove('open'),
     onChange: (selectedDates) => {
       if (selectedDates.length === 2) {
-        rangeStart = dateOnly(selectedDates[0]);
-        rangeEnd = dateOnly(selectedDates[1]);
+        rangeStart = RS.dateOnly(selectedDates[0]);
+        rangeEnd = RS.dateOnly(selectedDates[1]);
         box.classList.add('has-value');
       } else if (selectedDates.length === 0) {
-        rangeStart = null; rangeEnd = null;
+        rangeStart = null;
+        rangeEnd = null;
         box.classList.remove('has-value');
       }
       page = 1;
       render();
-    }
+    },
   });
-
-  box.addEventListener('click', (e) => { if (e.target !== clearBtn && !clearBtn.contains(e.target)) fp.open(); });
+  box.addEventListener('click', (e) => {
+    if (!e.target.closest('#dateRangeClear')) fp.open();
+  });
   clearBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     fp.clear();
-    rangeStart = null; rangeEnd = null;
+    rangeStart = null;
+    rangeEnd = null;
     box.classList.remove('has-value');
     page = 1;
     render();
   });
 }
 
-/* ═══════════════════════════════════════════
-   FILTER OPTIONS — Item dropdown is rebuilt from every item name
-   across every batch (pending + history), since a batch can carry
-   several different items at once.
-═══════════════════════════════════════════ */
-function populateFilterOptions(){
+/* ── Filter options ────────────────────────────────────── */
+function populateFilterOptions() {
   const all = getAllRecords();
   const itemSel = document.getElementById('fItem');
   const curItem = itemSel.value;
-  const items = [...new Set(all.flatMap(t => (t.items||[]).map(i => i.name)))].sort();
-  itemSel.innerHTML = '<option value="">All Items</option>' + items.map(m => `<option${m===curItem?' selected':''}>${m}</option>`).join('');
+  const items = [...new Set(all.flatMap((t) => (t.items || []).map((i) => i.name)).filter(Boolean))].sort();
+  itemSel.innerHTML =
+    '<option value="">All Items</option>' +
+    items.map((m) => '<option' + (m === curItem ? ' selected' : '') + '>' + m + '</option>').join('');
 }
 
-/* ═══════════════════════════════════════════
-   KPIs — Pending / Accepted / Rejected / Acceptance Rate, built from
-   the full merged data set (batch counts, not item counts) so the
-   headline numbers stay stable while filtering the table.
-═══════════════════════════════════════════ */
-function renderKPIs(){
-  const all = getAllRecords();
-  const pending = all.filter(r => r.status === 'pending');
-  const accepted = all.filter(r => r.status === 'accepted');
-  const rejected = all.filter(r => r.status === 'rejected');
-  const decided = accepted.length + rejected.length;
-  const acceptRate = decided ? Math.round(accepted.length / decided * 100) : 0;
+/* ── KPIs ──────────────────────────────────────────────── */
+function renderKPIs() {
+  const kpis = RS.transferKPIs();
+  const decided = kpis.accepted + kpis.rejected;
+  const acceptRate = decided ? Math.round((kpis.accepted / decided) * 100) : 0;
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card clickable acc-amber" data-status="pending" onclick="setStatusFilter('pending')">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending Transfers</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${pending.length}</div>
-      <div class="kpi-trend ${pending.length>0?'warn':'up'}">${pending.length>0?'Awaiting review':'All clear'}</div>
+      <div class="kpi-value" style="color:var(--amber);">${kpis.pending}</div>
+      <div class="kpi-trend ${kpis.pending > 0 ? 'warn' : 'up'}">${kpis.pending > 0 ? 'Awaiting review' : 'All clear'}</div>
     </div>
     <div class="kpi-card clickable acc-green" data-status="accepted" onclick="setStatusFilter('accepted')">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Accepted Transfers</div></div>
-      <div class="kpi-value" style="color:var(--green);">${accepted.length}</div>
-      <div class="kpi-trend up">Added to inventory</div>
+      <div class="kpi-value" style="color:var(--green);">${kpis.accepted}</div>
+      <div class="kpi-trend up">Added to stock</div>
     </div>
     <div class="kpi-card clickable acc-red" data-status="rejected" onclick="setStatusFilter('rejected')">
       <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected Transfers</div></div>
-      <div class="kpi-value" style="color:var(--red);">${rejected.length}</div>
-      <div class="kpi-trend ${rejected.length>0?'warn':'up'}">${rejected.length>0?'Sent back to origin':'None on record'}</div>
+      <div class="kpi-value" style="color:var(--red);">${kpis.rejected}</div>
+      <div class="kpi-trend ${kpis.rejected > 0 ? 'warn' : 'up'}">${kpis.rejected > 0 ? 'Sent back to origin' : 'None on record'}</div>
     </div>
     <div class="kpi-card acc-blue">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-chart-line"></i></div><div class="kpi-label">Acceptance Rate</div></div>
       <div class="kpi-value" style="color:var(--blue);">${acceptRate}%</div>
-      <div class="kpi-trend ${acceptRate>=80?'up':acceptRate>=50?'warn':'down'}">${decided} decided record${decided!==1?'s':''}</div>
+      <div class="kpi-trend ${acceptRate >= 80 ? 'up' : acceptRate >= 50 ? 'warn' : 'down'}">${decided} decided record${decided !== 1 ? 's' : ''}</div>
     </div>`;
 }
 
-function setStatusFilter(status){
+function setStatusFilter(status) {
   statusFilter = statusFilter === status ? '' : status;
-  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
-  const target = statusFilter ? document.querySelector(`.status-pill[data-status="${statusFilter}"]`) : document.querySelector('.status-pill.all');
+  document.querySelectorAll('.status-pill').forEach((x) => x.classList.remove('on'));
+  const target = statusFilter
+    ? document.querySelector('.status-pill[data-status="' + statusFilter + '"]')
+    : document.querySelector('.status-pill.all');
   if (target) target.classList.add('on');
   page = 1;
   render();
 }
 
-/* ═══════════════════════════════════════════
-   MORE FILTERS ACCORDION
-═══════════════════════════════════════════ */
-function toggleMoreFilters(){
+function toggleMoreFilters() {
   const panel = document.getElementById('toolbarMore');
   const btn = document.getElementById('moreFiltersBtn');
   const open = panel.classList.toggle('expanded');
@@ -722,14 +724,11 @@ function toggleMoreFilters(){
   btn.title = open ? 'Fewer filters' : 'More filters';
 }
 
-/* ═══════════════════════════════════════════
-   STATUS PILLS
-═══════════════════════════════════════════ */
-function bindStatusPills(){
-  document.querySelectorAll('.status-pill').forEach(p => {
+function bindStatusPills() {
+  document.querySelectorAll('.status-pill').forEach((p) => {
     p.addEventListener('click', () => {
       statusFilter = p.dataset.status;
-      document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+      document.querySelectorAll('.status-pill').forEach((x) => x.classList.remove('on'));
       p.classList.add('on');
       page = 1;
       render();
@@ -737,29 +736,30 @@ function bindStatusPills(){
   });
 }
 
-/* ═══════════════════════════════════════════
-   FILTER + SORT + PAGINATE
-═══════════════════════════════════════════ */
-function getFiltered(){
-  const q       = document.getElementById('fSearch').value.toLowerCase();
-  const item    = document.getElementById('fItem').value;
-  const source  = document.getElementById('fSource').value;
+/* ── Filter + sort ─────────────────────────────────────── */
+function getFiltered() {
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const item = document.getElementById('fItem').value;
+  const source = document.getElementById('fSource').value;
   const sortVal = document.getElementById('fSort').value;
-  [sortKey, sortDir] = sortVal.split('_');
+  const parts = sortVal.split('_');
+  sortKey = parts[0];
+  sortDir = parts[1];
 
-  let rows = getAllRecords().filter(t => {
-    const mq = !q
-      || t.no.toLowerCase().includes(q)
-      || (t.batchNo||'').toLowerCase().includes(q)
-      || (t.sentBy||'').toLowerCase().includes(q)
-      || (t.receivedBy||'').toLowerCase().includes(q)
-      || (t.items||[]).some(i => i.name.toLowerCase().includes(q));
-    const mItem = !item || (t.items||[]).some(i => i.name === item);
-    const mSource = !source || t.source === source;
+  let rows = getAllRecords().filter((t) => {
+    const mq =
+      !q ||
+      (t.no || '').toLowerCase().includes(q) ||
+      (t.batchNo || '').toLowerCase().includes(q) ||
+      (t.sentBy || '').toLowerCase().includes(q) ||
+      (t.receivedBy || '').toLowerCase().includes(q) ||
+      (t.items || []).some((i) => (i.name || '').toLowerCase().includes(q));
+    const mItem = !item || (t.items || []).some((i) => i.name === item);
+    const mSource = !source || normalizeSource(t) === source;
     const mStatus = !statusFilter || t.status === statusFilter;
     let mDate = true;
     if (rangeStart && rangeEnd) {
-      const td = dateOnly(parseTransferDate(t.date));
+      const td = RS.dateOnly(RS.parseStamp(t.date));
       if (!td || td < rangeStart || td > rangeEnd) mDate = false;
     }
     return mq && mItem && mSource && mStatus && mDate;
@@ -767,158 +767,233 @@ function getFiltered(){
 
   rows = rows.sort((a, b) => {
     let cmp = 0;
-    if (sortKey === 'date') cmp = (parseTransferDate(a.date) - parseTransferDate(b.date));
+    if (sortKey === 'date') cmp = (RS.parseStamp(a.date) || 0) - (RS.parseStamp(b.date) || 0);
     else if (sortKey === 'qty') cmp = itemsQty(a) - itemsQty(b);
-    else if (sortKey === 'no') cmp = a.no.localeCompare(b.no);
+    else if (sortKey === 'no') cmp = (a.no || '').localeCompare(b.no || '');
     return sortDir === 'desc' ? -cmp : cmp;
   });
-
   return rows;
 }
 
-function renderSortArrows(){
-  ['qty','date'].forEach(k => {
+function renderSortArrows() {
+  ['qty', 'date'].forEach((k) => {
     const el = document.getElementById('arrow-' + k);
     if (!el) return;
     el.textContent = sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : '';
   });
 }
 
-function renderActiveChips(){
+function renderActiveChips() {
   const chips = [];
   const q = document.getElementById('fSearch').value;
   const item = document.getElementById('fItem').value;
   const source = document.getElementById('fSource').value;
+  const statusLabels = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected' };
 
-  const statusLabels = { pending:'Pending', accepted:'Accepted', rejected:'Rejected' };
-  if (statusFilter) chips.push({ label: `Status: ${statusLabels[statusFilter]}`, clear: () => setStatusFilter(statusFilter) });
-  if (q) chips.push({ label: `Search: "${q}"`, clear: () => { document.getElementById('fSearch').value = ''; } });
-  if (item) chips.push({ label: `Item: ${item}`, clear: () => { document.getElementById('fItem').value = ''; } });
-  if (source) chips.push({ label: `Source: ${source}`, clear: () => { document.getElementById('fSource').value = ''; } });
+  if (statusFilter) {
+    chips.push({
+      label: 'Status: ' + statusLabels[statusFilter],
+      clear: () => setStatusFilter(statusFilter),
+    });
+  }
+  if (q) {
+    chips.push({
+      label: 'Search: "' + q + '"',
+      clear: () => { document.getElementById('fSearch').value = ''; },
+    });
+  }
+  if (item) {
+    chips.push({
+      label: 'Item: ' + item,
+      clear: () => { document.getElementById('fItem').value = ''; },
+    });
+  }
+  if (source) {
+    chips.push({
+      label: 'Source: ' + source,
+      clear: () => { document.getElementById('fSource').value = ''; },
+    });
+  }
   if (rangeStart && rangeEnd) {
-    const fmt = d => d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit' });
-    chips.push({ label: `Date Sent: ${fmt(rangeStart)} – ${fmt(rangeEnd)}`, clear: () => { fp.clear(); rangeStart=null; rangeEnd=null; document.getElementById('dateRangeBox').classList.remove('has-value'); } });
+    const fmt = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    chips.push({
+      label: 'Date Sent: ' + fmt(rangeStart) + ' – ' + fmt(rangeEnd),
+      clear: () => {
+        fp.clear();
+        rangeStart = null;
+        rangeEnd = null;
+        document.getElementById('dateRangeBox').classList.remove('has-value');
+      },
+    });
   }
 
   const chipsRow = document.getElementById('chipsRow');
   const wrap = document.getElementById('activeChips');
-  if (chips.length === 0) { chipsRow.style.display = 'none'; wrap.innerHTML = ''; return; }
+  if (chips.length === 0) {
+    chipsRow.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
   chipsRow.style.display = '';
-  wrap.innerHTML = chips.map((c, i) => `<span class="active-chip">${c.label}<button data-chip="${i}"><i class="fa-solid fa-xmark"></i></button></span>`).join('');
-  wrap.querySelectorAll('[data-chip]').forEach(btn => {
-    btn.addEventListener('click', () => { chips[parseInt(btn.dataset.chip, 10)].clear(); page = 1; render(); });
-  });
-}
-
-function clearFilters(){
-  document.getElementById('fSearch').value = '';
-  document.getElementById('fItem').value = '';
-  document.getElementById('fSource').value = '';
-  document.getElementById('fSort').value = 'date_desc';
-  if (fp) fp.clear();
-  rangeStart = null; rangeEnd = null;
-  document.getElementById('dateRangeBox').classList.remove('has-value');
-  statusFilter = '';
-  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
-  document.querySelector('.status-pill.all').classList.add('on');
-  page = 1;
-  render();
-}
-
-function renderPagination(total){
-  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
-  if (page > totalPages) page = totalPages;
-  const from = total === 0 ? 0 : (page - 1) * CFG.PAGE_SIZE + 1;
-  const to = Math.min(page * CFG.PAGE_SIZE, total);
-  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
-
-  const wrap = document.getElementById('pageBtns');
-  wrap.innerHTML = '';
-  const mk = (label, p, disabled, active) => {
-    const b = document.createElement('button');
-    b.className = 'page-btn' + (active ? ' active' : '');
-    b.innerHTML = label; b.disabled = !!disabled;
-    b.addEventListener('click', () => { page = p; renderTable(); });
-    return b;
-  };
-  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>', page - 1, page === 1, false));
-  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
-  start = Math.max(1, end - 4);
-  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
-  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>', page + 1, page >= totalPages, false));
-}
-
-function renderTable(){
-  const rows = _filteredCache;
-  document.getElementById('tblCount').textContent = rows.length + ' batch' + (rows.length!==1?'es':'');
-  const start = (page - 1) * CFG.PAGE_SIZE;
-  const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
-
-  document.getElementById('tblBody').innerHTML = pageRows.length === 0
-    ? `<tr class="empty-row"><td colspan="10">No transfers match your filters.</td></tr>`
-    : pageRows.map(t => { const src = sourceChip(t); return `
-      <tr onclick="openDetail('${t.no}')">
-        <td style="font-weight:700;">${t.no}${t.batchNo ? `<div style="font-weight:500;color:var(--text3);font-size:10.5px;">${t.batchNo}</div>` : ''}</td>
-        <td><span class="chip ${src.cls}"><i class="fa-solid fa-circle"></i>${src.label}</span></td>
-        <td class="items-summary">${itemsSummary(t)}</td>
-        <td>${t.from}</td>
-        <td>${t.sentBy || '—'}</td>
-        <td>${t.date}</td>
-        <td class="${t.status==='pending'?'muted':''}">${t.actionDate || '—'}</td>
-        <td class="${t.status!=='accepted'?'muted':''}">${t.status === 'accepted' ? (t.receivedBy || '—') : '—'}</td>
-        <td><span class="chip chip-${t.status}"><i class="fa-solid fa-circle"></i>${t.status==='pending'?'Pending':t.status==='accepted'?'Accepted':'Rejected'}</span></td>
-        <td class="no-print" onclick="event.stopPropagation()">
-          ${t.status === 'pending' ? `
-          <div class="act-btns">
-            <button class="act-btn" onclick="openDetail('${t.no}')"><i class="fa-solid fa-eye"></i> View</button>
-            <button class="act-btn accept" onclick="openAccept('${t.no}')"><i class="fa-solid fa-check"></i> Accept</button>
-            <button class="act-btn reject" onclick="openReject('${t.no}')"><i class="fa-solid fa-ban"></i> Reject</button>
-          </div>` : `
-          <div class="act-btns">
-            <button class="act-btn" onclick="openDetail('${t.no}')"><i class="fa-solid fa-eye"></i> View</button>
-          </div>`}
-        </td>
-      </tr>`; }).join('');
-
-  renderPagination(rows.length);
-}
-
-function render(){
-  populateFilterOptions();
-  _filteredCache = getFiltered();
-  renderKPIs();
-  renderSortArrows();
-  renderActiveChips();
-  renderTable();
-  // Keep the sidebar nav badge + topbar bell in sync with the TOTAL
-  // pending batch count (not the filtered view).
-  shell.setPendingBadge(transfers.length);
-  shell.setNotifBadge(transfers.length);
-}
-
-function bindHeaderSort(){
-  document.querySelectorAll('th[data-sortkey]').forEach(th => {
-    th.addEventListener('click', () => {
-      const key = th.dataset.sortkey;
-      if (key !== 'qty' && key !== 'date') return;
-      const sel = document.getElementById('fSort');
-      const [curKey, curDir] = sel.value.split('_');
-      let nextDir = 'desc';
-      if (curKey === key) nextDir = curDir === 'desc' ? 'asc' : 'desc';
-      sel.value = `${key}_${nextDir}`;
+  wrap.innerHTML = chips
+    .map(
+      (c, i) =>
+        '<span class="active-chip">' +
+        c.label +
+        '<button data-chip="' +
+        i +
+        '"><i class="fa-solid fa-xmark"></i></button></span>'
+    )
+    .join('');
+  wrap.querySelectorAll('[data-chip]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      chips[parseInt(btn.dataset.chip, 10)].clear();
       page = 1;
       render();
     });
   });
 }
 
-/* ═══════════════════════════════════════════
-   TRANSFER DETAILS MODAL — shows batch meta + a full items table.
-   Footer shows Accept/Reject only while the batch is still pending.
-═══════════════════════════════════════════ */
-function openDetail(no){
+function clearFilters() {
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fItem').value = '';
+  document.getElementById('fSource').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  if (fp) fp.clear();
+  rangeStart = null;
+  rangeEnd = null;
+  document.getElementById('dateRangeBox').classList.remove('has-value');
+  statusFilter = '';
+  document.querySelectorAll('.status-pill').forEach((x) => x.classList.remove('on'));
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1;
+  render();
+}
+
+function renderPagination(total) {
+  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const from = total === 0 ? 0 : (page - 1) * CFG.PAGE_SIZE + 1;
+  const to = Math.min(page * CFG.PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent =
+    total === 0 ? 'No records' : from + '–' + to + ' of ' + total;
+
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  const mk = (label, p, disabled, active) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.innerHTML = label;
+    b.disabled = !!disabled;
+    b.addEventListener('click', () => {
+      page = p;
+      renderTable();
+    });
+    return b;
+  };
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>', page - 1, page === 1, false));
+  let start = Math.max(1, page - 2);
+  let end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>', page + 1, page >= totalPages, false));
+}
+
+function renderTable() {
+  const rows = _filteredCache;
+  document.getElementById('tblCount').textContent =
+    rows.length + ' batch' + (rows.length !== 1 ? 'es' : '');
+  const start = (page - 1) * CFG.PAGE_SIZE;
+  const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
+
+  document.getElementById('tblBody').innerHTML =
+    pageRows.length === 0
+      ? '<tr class="empty-row"><td colspan="10">No transfers match your filters.</td></tr>'
+      : pageRows
+          .map((t) => {
+            const src = sourceChip(t);
+            const showActions = t.status === 'pending' && (canAccept || canReject);
+            return `
+      <tr onclick="openDetail('${t.no}')">
+        <td style="font-weight:700;">${t.no}${
+              t.batchNo
+                ? '<div style="font-weight:500;color:var(--text3);font-size:10.5px;">' + t.batchNo + '</div>'
+                : ''
+            }</td>
+        <td><span class="chip ${src.cls}"><i class="fa-solid fa-circle"></i>${src.label}</span></td>
+        <td class="items-summary">${itemsSummary(t)}</td>
+        <td>${t.from || '—'}</td>
+        <td>${t.sentBy || '—'}</td>
+        <td>${t.date || '—'}</td>
+        <td class="${t.status === 'pending' ? 'muted' : ''}">${t.actionDate || '—'}</td>
+        <td class="${t.status !== 'accepted' ? 'muted' : ''}">${
+              t.status === 'accepted' ? t.receivedBy || '—' : '—'
+            }</td>
+        <td><span class="chip chip-${t.status}"><i class="fa-solid fa-circle"></i>${
+              t.status === 'pending' ? 'Pending' : t.status === 'accepted' ? 'Accepted' : 'Rejected'
+            }</span></td>
+        <td class="no-print" onclick="event.stopPropagation()">
+          ${
+            showActions
+              ? `<div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${t.no}')"><i class="fa-solid fa-eye"></i> View</button>
+            ${
+              canAccept
+                ? `<button class="act-btn accept" onclick="openAccept('${t.no}')"><i class="fa-solid fa-check"></i> Accept</button>`
+                : ''
+            }
+            ${
+              canReject
+                ? `<button class="act-btn reject" onclick="openReject('${t.no}')"><i class="fa-solid fa-ban"></i> Reject</button>`
+                : ''
+            }
+          </div>`
+              : `<div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${t.no}')"><i class="fa-solid fa-eye"></i> View</button>
+          </div>`
+          }
+        </td>
+      </tr>`;
+          })
+          .join('');
+
+  renderPagination(rows.length);
+}
+
+function render() {
+  populateFilterOptions();
+  _filteredCache = getFiltered();
+  renderKPIs();
+  renderSortArrows();
+  renderActiveChips();
+  renderTable();
+
+  // Keep shell badges in sync with TOTAL pending (not filtered view)
+  const pendingN = (RS.state.pending || []).length;
+  if (shell.setPendingBadge) shell.setPendingBadge(pendingN);
+  if (shell.setNotifBadge) shell.setNotifBadge(pendingN);
+}
+
+function bindHeaderSort() {
+  document.querySelectorAll('th[data-sortkey]').forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortkey;
+      if (key !== 'qty' && key !== 'date') return;
+      const sel = document.getElementById('fSort');
+      const cur = sel.value.split('_');
+      let nextDir = 'desc';
+      if (cur[0] === key) nextDir = cur[1] === 'desc' ? 'asc' : 'desc';
+      sel.value = key + '_' + nextDir;
+      page = 1;
+      render();
+    });
+  });
+}
+
+/* ── Detail modal ──────────────────────────────────────── */
+function openDetail(no) {
   activeNo = no;
-  const t = getAllRecords().find(x => x.no === no);
+  const t = getAllRecords().find((x) => x.no === no);
   if (!t) return;
   const src = sourceChip(t);
 
@@ -926,175 +1001,347 @@ function openDetail(no){
   modalEl.classList.remove('status-pending', 'status-accepted', 'status-rejected');
   modalEl.classList.add('status-' + t.status);
 
-  document.getElementById('dTitle').textContent = `Transfer ${t.no}`;
+  document.getElementById('dTitle').textContent = 'Transfer ' + t.no;
   document.getElementById('dGrid').innerHTML = `
     <div class="detail-item"><div class="detail-label">Source</div><div class="detail-value"><span class="chip ${src.cls}"><i class="fa-solid fa-circle"></i>${src.label}</span></div></div>
-    <div class="detail-item"><div class="detail-label">From</div><div class="detail-value">${t.from}</div></div>
+    <div class="detail-item"><div class="detail-label">From</div><div class="detail-value">${t.from || '—'}</div></div>
     <div class="detail-item"><div class="detail-label">Restaurant</div><div class="detail-value">${t.restaurant || 'Main Restaurant'}</div></div>
     <div class="detail-item"><div class="detail-label">Sent By</div><div class="detail-value">${t.sentBy || '—'}</div></div>
     ${t.batchNo ? `<div class="detail-item"><div class="detail-label">Batch No.</div><div class="detail-value">${t.batchNo}</div></div>` : ''}
-    <div class="detail-item"><div class="detail-label">Date Sent</div><div class="detail-value">${t.date}</div></div>
-    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-${t.status}"><i class="fa-solid fa-circle"></i>${t.status==='pending'?'Pending':t.status==='accepted'?'Accepted':'Rejected'}</span></div></div>
-    ${t.status !== 'pending' ? `
+    <div class="detail-item"><div class="detail-label">Date Sent</div><div class="detail-value">${t.date || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-${t.status}"><i class="fa-solid fa-circle"></i>${t.status === 'pending' ? 'Pending' : t.status === 'accepted' ? 'Accepted' : 'Rejected'}</span></div></div>
+    ${
+      t.status !== 'pending'
+        ? `
     <div class="detail-item"><div class="detail-label">Action Date</div><div class="detail-value">${t.actionDate || '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">${t.status === 'accepted' ? 'Received By' : 'Rejected — no receiver'}</div><div class="detail-value" style="color:${t.status==='accepted'?'var(--green)':'var(--red)'};">${t.status === 'accepted' ? (t.receivedBy || '—') : '—'}</div></div>` : ''}`;
+    <div class="detail-item"><div class="detail-label">${t.status === 'accepted' ? 'Received By' : 'Rejected — no receiver'}</div><div class="detail-value" style="color:${t.status === 'accepted' ? 'var(--green)' : 'var(--red)'};">${t.status === 'accepted' ? t.receivedBy || '—' : '—'}</div></div>`
+        : ''
+    }`;
 
-  document.getElementById('dItems').innerHTML = (t.items||[]).map(i => `
-    <tr><td>${i.name}</td><td class="r">${i.qty}</td><td class="r">${i.unit}</td></tr>`).join('');
+  document.getElementById('dItems').innerHTML = (t.items || [])
+    .map(
+      (i) =>
+        '<tr><td>' +
+        (i.name || '—') +
+        '</td><td class="r">' +
+        (i.qty || 0) +
+        '</td><td class="r">' +
+        (i.unit || '—') +
+        '</td></tr>'
+    )
+    .join('');
 
   const remarksEl = document.getElementById('dRemarks');
   remarksEl.classList.remove('status-pending', 'status-accepted', 'status-rejected');
   remarksEl.classList.add('status-' + t.status);
-  remarksEl.textContent = t.status === 'pending'
-    ? (t.remarks ? `Remarks: ${t.remarks}` : 'No remarks on this transfer.')
-    : (t.actionRemarks ? `Remarks: ${t.actionRemarks}` : (t.remarks ? `Original remarks: ${t.remarks}` : 'No remarks on this transfer.'));
+  remarksEl.textContent =
+    t.status === 'pending'
+      ? t.remarks
+        ? 'Remarks: ' + t.remarks
+        : 'No remarks on this transfer.'
+      : t.actionRemarks
+        ? 'Remarks: ' + t.actionRemarks
+        : t.remarks
+          ? 'Original remarks: ' + t.remarks
+          : 'No remarks on this transfer.';
 
   const acceptBtn = document.getElementById('dAcceptBtn');
   const rejectBtn = document.getElementById('dRejectBtn');
   if (t.status === 'pending') {
-    acceptBtn.style.display = ''; rejectBtn.style.display = '';
-    rejectBtn.onclick = () => { closeModal('detailModal'); openReject(t.no); };
-    acceptBtn.onclick = () => { closeModal('detailModal'); openAccept(t.no); };
+    acceptBtn.style.display = canAccept ? '' : 'none';
+    rejectBtn.style.display = canReject ? '' : 'none';
+    rejectBtn.onclick = () => {
+      closeModal('detailModal');
+      openReject(t.no);
+    };
+    acceptBtn.onclick = () => {
+      closeModal('detailModal');
+      openAccept(t.no);
+    };
   } else {
-    acceptBtn.style.display = 'none'; rejectBtn.style.display = 'none';
+    acceptBtn.style.display = 'none';
+    rejectBtn.style.display = 'none';
   }
   document.getElementById('detailModal').classList.add('show');
 }
 
-/* ═══════════════════════════════════════════
-   ACCEPT FLOW — applies to every item in the batch at once.
-═══════════════════════════════════════════ */
-function openAccept(no){
+/* ── Accept / Reject (service mutations) ───────────────── */
+function openAccept(no) {
+  if (!canAccept) {
+    showToast("You don't have permission to accept transfers.", 'error');
+    return;
+  }
   activeNo = no;
-  const t = transfers.find(x => x.no === no);
+  const t = (RS.state.pending || []).find((x) => x.no === no);
   if (!t) return;
-  document.getElementById('acName').textContent = `${t.no}${t.batchNo ? ' — ' + t.batchNo : ''}`;
-  document.getElementById('acQty').textContent = `${(t.items||[]).length}`;
-  document.getElementById('acReceivedBy').value = '';
+  document.getElementById('acName').textContent =
+    t.no + (t.batchNo ? ' — ' + t.batchNo : '');
+  document.getElementById('acQty').textContent = String((t.items || []).length);
+  document.getElementById('acReceivedBy').value = (session && session.name) || '';
   document.getElementById('acRemarks').value = '';
   document.getElementById('acceptModal').classList.add('show');
 }
 
-async function confirmAccept(){
-  const t = transfers.find(x => x.no === activeNo);
+async function confirmAccept() {
+  if (!canAccept) {
+    showToast("You don't have permission to accept transfers.", 'error');
+    return;
+  }
+  const t = (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
   const receivedBy = document.getElementById('acReceivedBy').value.trim();
-  if (!receivedBy) { showToast('Please enter who received the transfer.', 'error'); return; }
+  if (!receivedBy) {
+    showToast('Please enter who received the transfer.', 'error');
+    return;
+  }
   const remarks = document.getElementById('acRemarks').value.trim();
-  const stamp = nowStamp();
 
-  (t.items||[]).forEach(item => {
-    const existing = inventory.find(i => i.meal === item.name);
-    if (existing) {
-      existing.qty += item.qty;
-      existing.batch = t.batchNo || existing.batch;
-      existing.received = stamp.split(' ')[0];
-    } else {
-      inventory.push({ meal: item.name, qty: item.qty, unit: item.unit, batch: t.batchNo || '—', received: stamp.split(' ')[0], min: 6 });
-    }
-    const balance = inventory.find(i => i.meal === item.name).qty;
-    movements.unshift({ date: stamp, meal: item.name, qtyIn: item.qty, qtyOut: 0, balance, reason: `${t.source} Transfer (${t.no})` });
-  });
-
-  history.unshift({ ...t, status: 'accepted', receivedBy, actionRemarks: remarks, actionDate: stamp });
-  transfers = transfers.filter(x => x.no !== t.no);
-
-  await Promise.all([ saveShared(KEY_INVENTORY, inventory), saveShared(KEY_MOVEMENTS, movements), saveShared(KEY_HISTORY, history), saveShared(KEY_TRANSFERS, transfers) ]);
-  apiSave('PATCH', `/api/restaurant/transfers/${t.no}`, { status:'accepted', receivedBy, remarks });
-
-  closeModal('acceptModal');
-  showToast(`${t.no} accepted — ${(t.items||[]).length} item line(s) added to Restaurant Inventory.`, 'success');
-  render();
+  try {
+    await RS.acceptTransfer(t.no, { receivedBy, remarks });
+    closeModal('acceptModal');
+    showToast(
+      t.no + ' accepted — ' + (t.items || []).length + ' item line(s) added to stock.',
+      'success'
+    );
+    // onChange listener will re-render; call render as safety net
+    render();
+  } catch (e) {
+    showToast(e.message || 'Accept failed.', 'error');
+  }
 }
 
-/* ═══════════════════════════════════════════
-   REJECT FLOW
-═══════════════════════════════════════════ */
-function openReject(no){
+function openReject(no) {
+  if (!canReject) {
+    showToast("You don't have permission to reject transfers.", 'error');
+    return;
+  }
   activeNo = no;
-  const t = transfers.find(x => x.no === no);
+  const t = (RS.state.pending || []).find((x) => x.no === no);
   if (!t) return;
-  document.getElementById('rjName').textContent = `${t.no}${t.batchNo ? ' — ' + t.batchNo : ''}`;
+  document.getElementById('rjName').textContent =
+    t.no + (t.batchNo ? ' — ' + t.batchNo : '');
   document.getElementById('rjReason').value = '';
   document.getElementById('rejectModal').classList.add('show');
 }
 
-async function confirmReject(){
-  const t = transfers.find(x => x.no === activeNo);
+async function confirmReject() {
+  if (!canReject) {
+    showToast("You don't have permission to reject transfers.", 'error');
+    return;
+  }
+  const t = (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
   const reason = document.getElementById('rjReason').value.trim();
-  if (!reason) { showToast('Please enter a reason for rejecting this transfer.', 'error'); return; }
-  const stamp = nowStamp();
+  if (!reason) {
+    showToast('Please enter a reason for rejecting this transfer.', 'error');
+    return;
+  }
 
-  history.unshift({ ...t, status: 'rejected', receivedBy: '', actionRemarks: reason, actionDate: stamp });
-  transfers = transfers.filter(x => x.no !== t.no);
-
-  await Promise.all([ saveShared(KEY_HISTORY, history), saveShared(KEY_TRANSFERS, transfers) ]);
-  apiSave('PATCH', `/api/restaurant/transfers/${t.no}`, { status:'rejected', reason });
-
-  closeModal('rejectModal');
-  showToast(`${t.no} rejected and moved to history.`, 'error');
-  render();
+  try {
+    await RS.rejectTransfer(t.no, { reason });
+    closeModal('rejectModal');
+    showToast(t.no + ' rejected and moved to history.', 'error');
+    render();
+  } catch (e) {
+    showToast(e.message || 'Reject failed.', 'error');
+  }
 }
 
-/* ═══════════════════════════════════════════
-   MODAL HELPERS
-═══════════════════════════════════════════ */
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-['detailModal','acceptModal','rejectModal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
+/* ── New Requisition (GraceHotelRequestForm) ─────────────
+ * This wires up against the ACTUAL component in
+ * ../component/grace-request-form.js — attach() only accepts:
+ *   section, currentUser, service, storeService, departments,
+ *   catalog, getCatalog, defaultMode, onSubmit, onModeChange.
+ * There is no pageSize / showRecent / fulfillCenters / onOpenRequest
+ * option on that component — those did nothing and are gone.
+ *
+ * `section: 'restaurant'` locks routing (always → Store), "Requested By"
+ * (read-only, from currentUser), and Department (always "Restaurant / Bar").
+ * The item catalog comes from Restaurant's own stock via `service: RS`.
+ * StoreService owns requisition numbering + persistence — this page never
+ * touches req:<NO> / req-index itself.
+ *
+ * The component copies `currentUser` into an internal object at attach()
+ * time and exposes no way to update it afterwards (no setCurrentUser,
+ * and reset() re-reads that same internal copy — not a fresh session).
+ * So each time the modal opens we destroy the previous instance and
+ * re-attach with the current session's name, rather than trying to
+ * mutate anything after the fact.
+ *
+ * The component also intentionally does NOT render a "Recently
+ * Submitted" list any more (see its own header docs) — that panel
+ * below (#reqRecentList) is built here instead, reading directly from
+ * StoreService.getRequisitions({ mode: 'store_issue' }).
+ * ─────────────────────────────────────────────────────── */
+let reqForm = null;
+let canRaiseReq = false;
+
+function canRaiseFromSession(s) {
+  if (!s) return false;
+  if (window.Permissions && typeof Permissions.hasPermission === 'function') {
+    if (Permissions.hasPermission(s, 'canCreate', 'restaurant')) return true;
+    if (Permissions.hasPermission(s, 'canCreate', null)) return true;
+  }
+  const role = (s.role || '').toLowerCase();
+  return role === 'admin' || role === 'manager' || role === 'staff';
+}
+
+function buildRequestForm() {
+  if (!window.GraceHotelRequestForm) {
+    console.warn('[TransferHistory] GraceHotelRequestForm not loaded');
+    return null;
+  }
+  if (!window.StoreService || typeof StoreService.submitRequisition !== 'function') {
+    console.warn('[TransferHistory] StoreService not loaded — request form requires it');
+    showToast('Store service failed to load — cannot open the requisition form.', 'error');
+    return null;
+  }
+  return GraceHotelRequestForm.attach('#reqFormHost', {
+    section: 'restaurant',              // fixed routing: Restaurant -> Store
+    service: RS,                        // Restaurant's own stock -> item catalog
+    storeService: window.StoreService,  // owns numbering + persistence
+    currentUser: { name: (session && session.name) || '' },
+    onSubmit: function () {
+      renderRecentRequests();
+      render(); // refresh badges that depend on RestaurantService state
+    },
+  });
+}
+
+function openRequestForm() {
+  if (!canRaiseReq) {
+    showToast("You don't have permission to raise requisitions.", 'error');
+    return;
+  }
+  // Rebuild every time the modal opens so "Requested By" reflects the
+  // current session — see the note above on why this isn't a simple
+  // form.reset() call.
+  if (reqForm) {
+    reqForm.destroy();
+    reqForm = null;
+  }
+  reqForm = buildRequestForm();
+  if (!reqForm) {
+    showToast('Request form failed to load.', 'error');
+    return;
+  }
+  renderRecentRequests();
+  document.getElementById('reqModal').classList.add('show');
+}
+
+function renderRecentRequests() {
+  const el = document.getElementById('reqRecentList');
+  if (!el) return;
+  if (!window.StoreService) {
+    el.innerHTML = '<div class="req-recent-empty">Store service unavailable.</div>';
+    return;
+  }
+  const rows = StoreService.getRequisitions({ mode: 'store_issue' })
+    .filter((r) => r.dept === 'Restaurant / Bar')
+    .slice(0, 5);
+  if (!rows.length) {
+    el.innerHTML = '<div class="req-recent-empty">No requisitions submitted yet.</div>';
+    return;
+  }
+  el.innerHTML = rows
+    .map((r) => {
+      const status = r.status || 'Pending';
+      return (
+        '<div class="req-recent-row">' +
+          '<div><span class="req-recent-no">' + r.no + '</span> · ' +
+            (r.items || []).length + ' item' + ((r.items || []).length !== 1 ? 's' : '') +
+          '</div>' +
+          '<span class="chip chip-' + status.toLowerCase() + '"><i class="fa-solid fa-circle"></i>' + status + '</span>' +
+        '</div>'
+      );
+    })
+    .join('');
+}
+
+/* ── Modal / toast / print ─────────────────────────────── */
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+['detailModal', 'acceptModal', 'rejectModal', 'reqModal'].forEach((id) => {
+  document.getElementById(id).addEventListener('click', function (e) {
+    if (e.target === this) closeModal(id);
+  });
 });
 
-/* ═══════════════════════════════════════════
-   TOAST
-═══════════════════════════════════════════ */
-function showToast(msg, type='success'){
+function showToast(msg, type) {
+  type = type || 'success';
   const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
+  t.className = 'toast ' + type;
+  const icon =
+    type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
 
-/* ═══════════════════════════════════════════
-   INIT — tries a real API first (when CFG.USE_DEMO=false), falls
-   back to shared storage, and finally to the hardcoded demo seed.
-═══════════════════════════════════════════ */
-async function init(){
-  initDateRangePicker();
+function printPage() {
+  document.getElementById('printSub').textContent =
+    'Printed: ' +
+    new Date().toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }) +
+    ' · ' +
+    document.getElementById('tblCount').textContent;
+  window.print();
+}
 
-  if (!CFG.USE_DEMO) {
-    try {
-      const data = await apiFetch('GET', '/api/restaurant/transfers');
-      transfers = data.pending || [];
-      inventory = data.inventory || [];
-      history   = data.history || [];
-      movements = data.movements || [];
-      shell.setApiMode('Live');
-      bindStatusPills();
-      bindHeaderSort();
-      render();
-      return;
-    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+/* ── Init (call service, then render) ──────────────────── */
+async function init() {
+  session = await waitForSession(800);
+  canAccept = canAcceptFromSession(session);
+  canReject = canRejectFromSession(session);
+  canRaiseReq = canRaiseFromSession(session);
+
+  // Hide New Requisition when user cannot create
+  const btnReq = document.getElementById('btnNewReq');
+  if (btnReq && !canRaiseReq) btnReq.style.display = 'none';
+
+  const shellCfg = shell.getConfig && shell.getConfig();
+  if (shellCfg && shell.setApiMode) {
+    shell.setApiMode(shellCfg.USE_DEMO === false ? 'Live' : 'Demo');
   }
 
-  transfers = await loadShared(KEY_TRANSFERS, DEMO_TRANSFERS);
-  inventory = await loadShared(KEY_INVENTORY, DEMO_INVENTORY);
-  history   = await loadShared(KEY_HISTORY, DEMO_HISTORY);
-  movements = await loadShared(KEY_MOVEMENTS, []);
-
-  // Seed shared storage the very first time so Dashboard / Inventory /
-  // any other page all read the same live data going forward.
-  await Promise.all([
-    saveShared(KEY_TRANSFERS, transfers),
-    saveShared(KEY_INVENTORY, inventory),
-    saveShared(KEY_HISTORY, history),
-    saveShared(KEY_MOVEMENTS, movements),
-  ]);
-
+  initDateRangePicker();
   bindStatusPills();
   bindHeaderSort();
+
+  // Subscribe to service changes (accept/reject/load from other tabs)
+  RS.onChange(function () {
+    render();
+  });
+
+  try {
+    await RS.loadAll();
+  } catch (e) {
+    console.warn('[TransferHistory] loadAll failed:', e);
+    showToast('Could not load transfer data.', 'error');
+  }
+
+  // StoreService backs the New Requisition form (numbering, persistence).
+  // Load it alongside RestaurantService so it's ready the moment the
+  // modal opens, not lazily on first click.
+  if (window.StoreService) {
+    try {
+      await StoreService.loadAll();
+      StoreService.onChange(function (state, reason) {
+        if (reason === 'requisition:submit') renderRecentRequests();
+      });
+    } catch (e) {
+      console.warn('[TransferHistory] StoreService.loadAll failed:', e);
+    }
+  } else {
+    console.warn('[TransferHistory] StoreService script not found — New Requisition will be unavailable.');
+  }
+
+  // loadAll already emits 'load' → onChange → render; render() as safety net
   render();
 }
 init();

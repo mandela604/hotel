@@ -1,5 +1,14 @@
-// component/booking-shell.js
+/* ═══════════════════════════════════════════════════════════════
+   BookingShell — sidebar + topbar for Front Desk / Booking module.
+   Drop this in as component/booking-shell.js.
 
+   Session rules (same as PoolBar / Restaurant):
+     USE_DEMO true  → always DEMO_USER
+     USE_DEMO false → GET /api/auth/session
+                      success → real user
+                      failure → redirect to LOGIN_URL (no demo fallback)
+   Pages read session only via shell.getUser().
+═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
   const NAV = [
@@ -154,25 +163,53 @@
   // ── CONFIG — the only place to change Demo↔Live ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,  // ← flip to false for production
+    USE_DEMO: true,
+    LOGIN_URL: '../login.html',
     DEMO_USER: { name: 'Front Desk Staff', initials: 'FD', role: 'staff', privilege: 'front_desk' },
   };
 
+  function goLogin(reason) {
+    console.warn('[BookingShell] Auth failed — redirecting to login:', reason || '');
+    const next = encodeURIComponent(location.pathname + location.search);
+    const base = CONFIG.LOGIN_URL || '../login.html';
+    location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
+  }
+
+  /**
+   * Demo  → DEMO_USER
+   * Live  → real user from API
+   * Live fail → redirect (never returns demo)
+   */
   async function fetchSession() {
-    if (!CONFIG.USE_DEMO) {
-      try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-          headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-        });
-        if (!res.ok) throw new Error(`Session API returned ${res.status}`);
-        const data = await res.json();
-        // Expect { name, initials, role, privilege, permissions? }
-        return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege };
-      } catch (err) {
-        console.warn('[BookingShell] Session fetch failed, using demo user:', err.message);
-      }
+    if (CONFIG.USE_DEMO) {
+      return CONFIG.DEMO_USER;
     }
-    return CONFIG.DEMO_USER;
+
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
+        credentials: 'include',
+        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+      });
+      if (res.status === 401 || res.status === 403) {
+        goLogin('HTTP ' + res.status);
+        return null;
+      }
+      if (!res.ok) throw new Error('Session API returned ' + res.status);
+      const data = await res.json();
+      if (!data || !data.role) {
+        goLogin('missing role');
+        return null;
+      }
+      return {
+        name: data.name,
+        initials: data.initials,
+        role: data.role,
+        privilege: data.privilege || null,
+      };
+    } catch (err) {
+      goLogin(err && err.message);
+      return null;
+    }
   }
 
   function attach(opts) {
@@ -183,11 +220,12 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Start with the passed user (or empty) — we'll replace with fetched session
-    let user = opts.user || CONFIG.DEMO_USER;
-    let initials = user.initials || (user.name || 'FD').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
+    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    let initials = user
+      ? (user.initials || (user.name || 'FD').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
+      : '…';
 
-    // ── Render sidebar ──
     sidebarTarget.innerHTML = `
       <div id="bks-overlay"></div>
       <aside id="bks-sidebar">
@@ -219,7 +257,6 @@
         <div class="bks-copyright">© 2026 Grace Hotel</div>
       </aside>`;
 
-    // ── Render topbar ──
     topbarTarget.innerHTML = `
       <div id="bks-topbar">
         <button class="bks-hamburger" id="bks-hamburger"><i class="fa-solid fa-bars"></i></button>
@@ -233,13 +270,12 @@
           <div class="bks-date" id="bks-date"></div>
           <div class="bks-apibadge" id="bks-apiBadge"><span class="dot"></span><span id="bks-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
           <div class="bks-notif"><i class="fa-regular fa-bell"></i><div class="bks-notifdot"></div></div>
-          <div class="bks-avatar" id="bks-avatar" title="${user.name || ''}">${initials}</div>
+          <div class="bks-avatar" id="bks-avatar" title="${user ? (user.name || '') : ''}">${initials}</div>
         </div>
       </div>`;
 
     document.getElementById('bks-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    // ── Sidebar toggle logic ──
     const sidebar   = document.getElementById('bks-sidebar');
     const overlay   = document.getElementById('bks-overlay');
     const collapseBtn = document.getElementById('bks-collapseBtn');
@@ -265,7 +301,6 @@
       document.body.style.overflow = '';
     });
 
-    // ── Theme toggle ──
     let isDark = false;
     const themeBtn    = document.getElementById('bks-themeBtn');
     const themeIcon   = document.getElementById('bks-themeIcon');
@@ -287,7 +322,6 @@
     } catch (e) {}
     applyTheme();
 
-    // ── Fetch real session and update avatar ──
     const handle = {
       setApiMode(mode) {
         const badge = document.getElementById('bks-apiBadge');
@@ -315,31 +349,26 @@
       getUser() {
         return user;
       },
-      // Expose CONFIG so pages can check USE_DEMO
       getConfig() {
-        return { ...CONFIG };
+        return Object.assign({}, CONFIG);
       },
     };
 
-    // Fetch session and update avatar + user
-    fetchSession().then(sessionUser => {
-      if (sessionUser) {
-        user = sessionUser;
-        initials = user.initials || (user.name || 'FD').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-        const avatar = document.getElementById('bks-avatar');
-        if (avatar) {
-          avatar.textContent = initials;
-          avatar.title = user.name || '';
-        }
-        // Update API badge to show Live/Demo
-        handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+    fetchSession().then(function (sessionUser) {
+      if (!sessionUser) return; // live fail → already redirected
+      user = sessionUser;
+      initials = user.initials || (user.name || 'FD').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
+      const avatar = document.getElementById('bks-avatar');
+      if (avatar) {
+        avatar.textContent = initials;
+        avatar.title = user.name || '';
       }
+      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
     });
 
     return handle;
   }
 
-  // Expose CONFIG so pages can use it
-  global.BookingShell = { attach, CONFIG };
+  global.BookingShell = { attach: attach, CONFIG: CONFIG };
 
 })(window);

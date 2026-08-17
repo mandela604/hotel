@@ -31,7 +31,6 @@
 
   .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
 
-  /* ═══ KPI CARDS — same shape/tokens as Requisition History ═══ */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -58,7 +57,6 @@
   .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
-  /* Toolbar — same pattern as Requisition History */
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
   .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
   .toolbar-row.top{ justify-content:space-between; }
@@ -118,15 +116,14 @@
   .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  /* ═══ ADD SUPPLIER MODAL — same modal pattern used elsewhere in the suite.
-     NOTE: this modal sits outside .content in the DOM, so the --surface/
-     --border/--text custom properties (scoped to .content) aren't available
-     here — every color below is hardcoded to match them instead of using
-     var(), otherwise the modal renders with no background at all. ═══ */
+  /* ═══ MODALS — sit outside .content in the DOM, so --surface/--border/
+     --text (scoped to .content) aren't available here — every color
+     below is hardcoded to match them instead of using var(). ═══ */
   .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,20,45,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
   .modal{ background:#ffffff; border:1px solid #eef0f6; border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
   .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:#2f6fed; }
+  .modal-sm{ width:min(420px,96vw); }
   @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
   .modal-title{ font-size:17px; font-weight:800; color:#1c2440; }
@@ -137,13 +134,35 @@
   .form-group{ display:flex; flex-direction:column; gap:5px; }
   .form-group.span2{ grid-column:span 2; }
   @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
-  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:#9aa1b3; font-weight:700; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:#9aa1b3; font-weight:700; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .form-input, .form-select, .form-textarea{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:10px; padding:9px 12px; color:#1c2440; font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
   .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:rgba(47,111,237,0.25); }
   .form-textarea{ resize:vertical; min-height:60px; }
+  .cat-select-row{ display:flex; gap:6px; align-items:stretch; }
+  .cat-select-row .form-select{ flex:1; }
+  .icon-btn-sm{ flex-shrink:0; width:36px; background:#f4f6fb; border:1px solid #eef0f6; border-radius:10px; color:#6b7280; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .icon-btn-sm:hover{ border-color:rgba(47,111,237,0.3); color:#2f6fed; background:rgba(47,111,237,0.08); }
+  .manage-cat-link{ font-size:10px; color:#2f6fed; cursor:pointer; font-weight:700; text-transform:none; letter-spacing:0; }
+  .manage-cat-link:hover{ text-decoration:underline; }
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid #eef0f6; flex-wrap:wrap; }
+  .modal-footer-split{ display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid #eef0f6; flex-wrap:wrap; gap:8px; }
   .field-error{ font-size:10.5px; color:#f04438; display:none; }
   .field-error.show{ display:block; }
+
+  /* Manage Categories modal */
+  .cat-list{ display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; margin-bottom:14px; }
+  .cat-row{ display:flex; align-items:center; gap:8px; background:#f4f6fb; border:1px solid #eef0f6; border-radius:10px; padding:8px 10px; }
+  .cat-row-name{ flex:1; font-size:13px; color:#1c2440; font-weight:600; cursor:pointer; padding:2px 4px; border-radius:6px; }
+  .cat-row-name:hover{ background:rgba(47,111,237,0.08); color:#2f6fed; }
+  .cat-row-input{ flex:1; background:#ffffff; border:1px solid rgba(47,111,237,0.35); border-radius:6px; padding:5px 8px; font-family:inherit; font-size:13px; color:#1c2440; outline:none; }
+  .cat-row-actions{ display:flex; gap:4px; flex-shrink:0; }
+  .cat-icon-btn{ width:26px; height:26px; border-radius:6px; border:1px solid #eef0f6; background:#ffffff; color:#9aa1b3; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .cat-icon-btn:hover{ border-color:rgba(47,111,237,0.3); color:#2f6fed; }
+  .cat-icon-btn.danger:hover{ border-color:rgba(240,68,56,0.35); color:#f04438; background:#feecec; }
+  .cat-icon-btn.confirm:hover{ border-color:rgba(18,183,106,0.35); color:#12b76a; background:#e9f9f0; }
+  .cat-add-row{ display:flex; gap:8px; }
+  .cat-add-row .form-input{ flex:1; }
+  .cat-empty{ text-align:center; padding:20px; color:#9aa1b3; font-size:12.5px; }
 
   .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; font-weight:600; color:var(--text); box-shadow:var(--shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
   .toast.success{ border-left:3px solid var(--green); } .toast.success i{ color:var(--green); }
@@ -194,13 +213,6 @@
               <span class="flt-label">Category</span>
               <select class="filter-select" id="spCat" onchange="spPage=1;renderSuppliers()">
                 <option value="">All Categories</option>
-                <option value="Food & Beverage">Food & Beverage</option>
-                <option value="Toiletries & Amenities">Toiletries & Amenities</option>
-                <option value="Cleaning Supplies">Cleaning Supplies</option>
-                <option value="Linen & Uniforms">Linen & Uniforms</option>
-                <option value="IT & Electronics">IT & Electronics</option>
-                <option value="Maintenance & Equipment">Maintenance & Equipment</option>
-                <option value="Office Supplies">Office Supplies</option>
               </select>
             </div>
             <div class="flt-group">
@@ -243,11 +255,11 @@
   </div>
 </div>
 
-<!-- ADD SUPPLIER MODAL -->
+<!-- ADD / EDIT SUPPLIER MODAL -->
 <div class="modal-overlay" id="supplierModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Add Supplier</div>
+      <div class="modal-title" id="supplierModalTitle">Add Supplier</div>
       <button class="modal-close" onclick="closeSupplierModal()"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="form-row">
@@ -257,16 +269,11 @@
         <span class="field-error" id="fsNameErr">Supplier name is required.</span>
       </div>
       <div class="form-group">
-        <label class="form-label">Category</label>
-        <select class="form-select" id="fsCat">
-          <option>Food & Beverage</option>
-          <option>Toiletries & Amenities</option>
-          <option>Cleaning Supplies</option>
-          <option>Linen & Uniforms</option>
-          <option>IT & Electronics</option>
-          <option>Maintenance & Equipment</option>
-          <option>Office Supplies</option>
-        </select>
+        <label class="form-label">Category <span class="manage-cat-link" onclick="openCategoryModal()">Manage categories</span></label>
+        <div class="cat-select-row">
+          <select class="form-select" id="fsCat"></select>
+          <button type="button" class="icon-btn-sm" onclick="openCategoryModal()" title="Add / manage categories"><i class="fa-solid fa-plus"></i></button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Status</label>
@@ -298,34 +305,76 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeSupplierModal()">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveSupplier()"><i class="fa-solid fa-check"></i> Save Supplier</button>
+      <button class="btn btn-primary btn-sm" id="fsSaveBtn" onclick="saveSupplier()"><i class="fa-solid fa-check"></i> Save Supplier</button>
     </div>
   </div>
 </div>
 
+<!-- MANAGE CATEGORIES MODAL -->
+<div class="modal-overlay" id="categoryModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Manage Categories</div>
+      <button class="modal-close" onclick="closeCategoryModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="cat-list" id="catList"></div>
+    <div class="cat-add-row">
+      <input class="form-input" type="text" id="catNewInput" placeholder="New category name…">
+      <button class="btn btn-primary btn-sm" onclick="addCategoryFromModal()"><i class="fa-solid fa-plus"></i> Add</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeCategoryModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<script src="../services/permissions.js"></script>
+<script src="data/procurement-seed.js"></script>
+<script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
-<script src="procurement-api.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
+/**
+ * suppliers.html — call-and-render only.
+ *
+ * Every mutation (add supplier, edit supplier, add/rename/delete
+ * category) goes through ProcurementService.* — this page never touches
+ * DEMO_SUPPLIERS, DEMO_PR, the category list, or localStorage directly.
+ * It only collects form input, calls the service, and re-renders from
+ * whatever the service returns / already knows.
+ */
 const shell = ProcurementShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'suppliers.html',
   pageTitle:     'Suppliers',
   pageSubtitle:  'Supplier directory and performance',
-  apiMode:       ProcurementAPI.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
   user:          { name: 'Procurement Officer', initials: 'PO' },
 });
+
+// Local caches — populated once by init() via ProcurementService.getSuppliers()
+// / getPRs() / getCategories(). Nothing on this page touches
+// ProcurementService.DEMO_SUPPLIERS, ProcurementService.DEMO_PR, or
+// localStorage directly.
+let allSuppliers = [];
+let allPRsForSpend = [];
+let allCategories = [];
 
 let spPage = 1;
 const SP_PAGE_SIZE = 10;
 let filteredSP = [];
 
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+// Edit state for the Add/Edit Supplier modal — null means "creating new".
+let editingSupplierId = null;
+// Which category row (by name) is currently showing its inline rename input.
+let editingCategoryName = null;
+
+function fmtN(n){ return ProcurementService.fmtN(n); }
 
 /* Suppliers created in this session don't have status set by the original
    demo seed, so anything missing the field is treated as Active — keeps
-   old demo rows working without needing to touch procurement-api.js. */
+   old demo rows working without needing to touch procurement-seed.js. */
 function supplierStatus(sp){ return sp.status || 'Active'; }
 
 function renderPagination(btnId,labelId,page,total,size,cb){
@@ -342,15 +391,18 @@ function renderPagination(btnId,labelId,page,total,size,cb){
 
 /* ═══ KPI CARDS ═══ */
 function renderKpis(){
-  const suppliers = ProcurementAPI.DEMO_SUPPLIERS;
-  const prs = ProcurementAPI.DEMO_PR;
+  const suppliers = allSuppliers;
+  const prs = allPRsForSpend;
   const total = suppliers.length;
   const active = suppliers.filter(sp => supplierStatus(sp) === 'Active').length;
   const totalSpend = suppliers.reduce((s,sp) => {
     const spend = prs.filter(p => p.supplier === sp.name).reduce((ss,p) => ss + p.totalAmount, 0);
     return s + spend;
   }, 0);
-  const categories = new Set(suppliers.map(sp => sp.cat)).size;
+  // Total categories DEFINED in the system (via ProcurementService.getCategories()),
+  // not just the ones currently in use by a supplier — now that categories
+  // are independently manageable, this is the more meaningful count.
+  const categoryCount = allCategories.length;
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card acc-blue">
@@ -370,9 +422,25 @@ function renderKpis(){
     </div>
     <div class="kpi-card acc-amber">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-layer-group"></i></div><div class="kpi-label">Categories Tracked</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${categories}</div>
-      <div class="kpi-trend neutral">Across the directory</div>
+      <div class="kpi-value" style="color:var(--amber);">${categoryCount}</div>
+      <div class="kpi-trend neutral">Manage from any supplier</div>
     </div>`;
+}
+
+/* Category <select> options — shared by the toolbar filter and the
+   Add/Edit Supplier modal. Always rebuilt from
+   ProcurementService.getCategories(), never hardcoded. */
+function populateCategorySelects(){
+  allCategories = ProcurementService.getCategories();
+
+  const filterSel = document.getElementById('spCat');
+  const curFilter = filterSel.value;
+  filterSel.innerHTML = `<option value="">All Categories</option>` +
+    allCategories.map(c => `<option${c===curFilter?' selected':''}>${c}</option>`).join('');
+
+  const formSel = document.getElementById('fsCat');
+  const curForm = formSel.value;
+  formSel.innerHTML = allCategories.map(c => `<option${c===curForm?' selected':''}>${c}</option>`).join('');
 }
 
 function renderSuppliers(){
@@ -380,7 +448,7 @@ function renderSuppliers(){
   const cat = document.getElementById('spCat').value;
   const status = document.getElementById('spStatus').value;
 
-  filteredSP = ProcurementAPI.DEMO_SUPPLIERS.filter(sp => {
+  filteredSP = allSuppliers.filter(sp => {
     const mq = !q || sp.name.toLowerCase().includes(q) || sp.contact.toLowerCase().includes(q);
     const mc = !cat || sp.cat === cat;
     const ms = !status || supplierStatus(sp) === status;
@@ -399,11 +467,11 @@ function renderSupplierPage(){
   document.getElementById('spBody').innerHTML = rows.length===0
     ? `<tr class="empty-row"><td colspan="8">No suppliers found.</td></tr>`
     : rows.map(sp => {
-        const orders = ProcurementAPI.DEMO_PR.filter(p => p.supplier === sp.name).length;
-        const spend = ProcurementAPI.DEMO_PR.filter(p => p.supplier === sp.name).reduce((s,p) => s + p.totalAmount, 0);
+        const orders = allPRsForSpend.filter(p => p.supplier === sp.name).length;
+        const spend = allPRsForSpend.filter(p => p.supplier === sp.name).reduce((s,p) => s + p.totalAmount, 0);
         const status = supplierStatus(sp);
         return `
-      <tr>
+      <tr onclick="openSupplierModal('${sp.id}')">
         <td style="font-weight:700;">${sp.name}</td>
         <td>${sp.cat}</td>
         <td>${sp.contact}</td>
@@ -417,34 +485,57 @@ function renderSupplierPage(){
   renderPagination('spPageBtns','spPaginLabel',spPage,total,SP_PAGE_SIZE,p=>{spPage=p;renderSupplierPage();});
 }
 
-/* ═══ ADD SUPPLIER MODAL ═══ */
-function openSupplierModal(){
-  document.getElementById('fsName').value = '';
-  document.getElementById('fsCat').value = 'Food & Beverage';
-  document.getElementById('fsStatus').value = 'Active';
-  document.getElementById('fsContact').value = '';
-  document.getElementById('fsPhone').value = '';
-  document.getElementById('fsEmail').value = '';
-  document.getElementById('fsAddress').value = '';
-  document.getElementById('fsNotes').value = '';
+/* ═══ ADD / EDIT SUPPLIER MODAL ═══
+   Same modal for both — openSupplierModal() with no id clears the form
+   and creates on save; openSupplierModal(id) populates from the existing
+   supplier (via ProcurementService.getSupplierById) and saves through
+   updateSupplier() instead. */
+function openSupplierModal(id){
+  editingSupplierId = id || null;
+  populateCategorySelects();
+
+  const titleEl = document.getElementById('supplierModalTitle');
+  const saveBtn = document.getElementById('fsSaveBtn');
+
+  if (editingSupplierId) {
+    const sp = allSuppliers.find(s => s.id === editingSupplierId);
+    if (!sp) { showToast('Supplier not found.', 'error'); return; }
+    titleEl.textContent = 'Edit Supplier';
+    saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes';
+    document.getElementById('fsName').value = sp.name || '';
+    document.getElementById('fsCat').value = sp.cat || allCategories[0] || '';
+    document.getElementById('fsStatus').value = supplierStatus(sp);
+    document.getElementById('fsContact').value = sp.contact && sp.contact !== '—' ? sp.contact : '';
+    document.getElementById('fsPhone').value = sp.phone && sp.phone !== '—' ? sp.phone : '';
+    document.getElementById('fsEmail').value = sp.email && sp.email !== '—' ? sp.email : '';
+    document.getElementById('fsAddress').value = sp.address || '';
+    document.getElementById('fsNotes').value = sp.notes || '';
+  } else {
+    titleEl.textContent = 'Add Supplier';
+    saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Supplier';
+    document.getElementById('fsName').value = '';
+    document.getElementById('fsCat').value = allCategories[0] || '';
+    document.getElementById('fsStatus').value = 'Active';
+    document.getElementById('fsContact').value = '';
+    document.getElementById('fsPhone').value = '';
+    document.getElementById('fsEmail').value = '';
+    document.getElementById('fsAddress').value = '';
+    document.getElementById('fsNotes').value = '';
+  }
   document.getElementById('fsNameErr').classList.remove('show');
   document.getElementById('supplierModal').classList.add('show');
 }
 function closeSupplierModal(){
   document.getElementById('supplierModal').classList.remove('show');
+  editingSupplierId = null;
 }
 document.getElementById('supplierModal').addEventListener('click', function(e){ if (e.target === this) closeSupplierModal(); });
 
-function saveSupplier(){
+async function saveSupplier(){
   const name = document.getElementById('fsName').value.trim();
   const nameErr = document.getElementById('fsNameErr');
   if (!name) { nameErr.classList.add('show'); return; }
   nameErr.classList.remove('show');
-
-  if (ProcurementAPI.DEMO_SUPPLIERS.some(sp => sp.name.toLowerCase() === name.toLowerCase())) {
-    showToast('A supplier with that name already exists.', 'error');
-    return;
-  }
 
   const entry = {
     name,
@@ -457,13 +548,123 @@ function saveSupplier(){
     notes: document.getElementById('fsNotes').value.trim() || '',
   };
 
-  ProcurementAPI.DEMO_SUPPLIERS.push(entry);
-  try { localStorage.setItem('hotel-suppliers', JSON.stringify(ProcurementAPI.DEMO_SUPPLIERS)); } catch(e){}
+  try {
+    if (editingSupplierId) {
+      // updateSupplier() does the duplicate-name check (against every
+      // OTHER supplier) and persistence — this page never writes to the
+      // array or to localStorage itself.
+      await ProcurementService.updateSupplier(editingSupplierId, entry, ProcurementService.resolveSession());
+      showToast(`${name} updated.`, 'success');
+    } else {
+      // createSupplier() does the duplicate-name check, validation, id
+      // assignment, and persistence.
+      await ProcurementService.createSupplier(entry, ProcurementService.resolveSession());
+      showToast(`${name} added to supplier directory.`, 'success');
+    }
+    allSuppliers = await ProcurementService.getSuppliers();
+    closeSupplierModal();
+    spPage = 1;
+    renderSuppliers();
+  } catch (err) {
+    showToast(err.message || 'Failed to save supplier.', 'error');
+  }
+}
 
-  closeSupplierModal();
-  showToast(`${name} added to supplier directory.`, 'success');
-  spPage = 1;
+/* ═══ MANAGE CATEGORIES MODAL ═══
+   Add / rename / delete all go through ProcurementService — renaming or
+   deleting a category also re-points every supplier that used it
+   (handled inside the service, not here). */
+function openCategoryModal(){
+  editingCategoryName = null;
+  document.getElementById('catNewInput').value = '';
+  renderCategoryList();
+  document.getElementById('categoryModal').classList.add('show');
+}
+function closeCategoryModal(){
+  document.getElementById('categoryModal').classList.remove('show');
+  editingCategoryName = null;
+  // Categories may have changed while this modal was open — refresh the
+  // selects/filter and the table (category names can appear in rows).
+  populateCategorySelects();
   renderSuppliers();
+}
+document.getElementById('categoryModal').addEventListener('click', function(e){ if (e.target === this) closeCategoryModal(); });
+
+function renderCategoryList(){
+  const cats = ProcurementService.getCategories();
+  const list = document.getElementById('catList');
+  if (!cats.length) { list.innerHTML = `<div class="cat-empty">No categories yet.</div>`; return; }
+
+  list.innerHTML = cats.map(c => {
+    if (c === editingCategoryName) {
+      return `<div class="cat-row">
+        <input class="cat-row-input" id="catEditInput" type="text" value="${c.replace(/"/g,'&quot;')}">
+        <div class="cat-row-actions">
+          <button class="cat-icon-btn confirm" onclick="confirmRenameCategory('${c.replace(/'/g,"\\'")}')" title="Save"><i class="fa-solid fa-check"></i></button>
+          <button class="cat-icon-btn" onclick="cancelRenameCategory()" title="Cancel"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>`;
+    }
+    return `<div class="cat-row">
+      <span class="cat-row-name" onclick="startRenameCategory('${c.replace(/'/g,"\\'")}')" title="Click to rename">${c}</span>
+      <div class="cat-row-actions">
+        <button class="cat-icon-btn" onclick="startRenameCategory('${c.replace(/'/g,"\\'")}')" title="Rename"><i class="fa-solid fa-pen"></i></button>
+        <button class="cat-icon-btn danger" onclick="deleteCategoryFromModal('${c.replace(/'/g,"\\'")}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (editingCategoryName) {
+    const input = document.getElementById('catEditInput');
+    if (input) { input.focus(); input.select(); }
+  }
+}
+
+function startRenameCategory(name){
+  editingCategoryName = name;
+  renderCategoryList();
+}
+function cancelRenameCategory(){
+  editingCategoryName = null;
+  renderCategoryList();
+}
+async function confirmRenameCategory(oldName){
+  const input = document.getElementById('catEditInput');
+  const newName = input ? input.value.trim() : '';
+  if (!newName) { showToast('Category name cannot be empty.', 'error'); return; }
+  try {
+    await ProcurementService.renameCategory(oldName, newName, ProcurementService.resolveSession());
+    editingCategoryName = null;
+    showToast(`Renamed to "${newName}".`, 'success');
+    renderCategoryList();
+  } catch (err) {
+    showToast(err.message || 'Failed to rename category.', 'error');
+  }
+}
+
+async function deleteCategoryFromModal(name){
+  if (!confirm(`Delete "${name}"? Any supplier using it will be moved to "Other".`)) return;
+  try {
+    await ProcurementService.deleteCategory(name, { reassignTo: 'Other' }, ProcurementService.resolveSession());
+    showToast(`"${name}" deleted.`, 'success');
+    renderCategoryList();
+  } catch (err) {
+    showToast(err.message || 'Failed to delete category.', 'error');
+  }
+}
+
+async function addCategoryFromModal(){
+  const input = document.getElementById('catNewInput');
+  const name = input.value.trim();
+  if (!name) { showToast('Enter a category name.', 'error'); return; }
+  try {
+    await ProcurementService.addCategory(name, ProcurementService.resolveSession());
+    input.value = '';
+    showToast(`"${name}" added.`, 'success');
+    renderCategoryList();
+  } catch (err) {
+    showToast(err.message || 'Failed to add category.', 'error');
+  }
 }
 
 function showToast(msg, type='success'){
@@ -475,9 +676,23 @@ function showToast(msg, type='success'){
   setTimeout(() => t.remove(), 3400);
 }
 
-// Init
-renderKpis();
-renderSuppliers();
+// Init — populates suppliers, PRs (for per-supplier order-count/spend),
+// and the category list, then renders from the caches.
+async function init(){
+  try {
+    [allSuppliers, allPRsForSpend] = await Promise.all([
+      ProcurementService.getSuppliers(),
+      ProcurementService.getPRs(),
+    ]);
+    populateCategorySelects();
+    renderKpis();
+    renderSuppliers();
+  } catch (err) {
+    document.getElementById('spBody').innerHTML =
+      `<tr class="empty-row"><td colspan="8" style="color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message || 'Failed to load suppliers.'}</td></tr>`;
+  }
+}
+init();
 </script>
 </body>
 </html>

@@ -5,58 +5,62 @@
  * then attach it to a container:
  *
  *   const approval = GraceHotelStoreApproval.attach('#approvalPlaceholder', {
+ *     storeService: StoreService,      // REQUIRED — svc.loadAll() must already have resolved
  *     reqNo: 'KREQ-2025-00045',        // omit to read ?req= from the URL instead
- *     stock: { 'Rice (Long Grain)':35, 'Palm Oil':4, ... },  // name -> qty on hand,
- *                                       // or a function(name) => qty
  *     preparedBy: 'Store Keeper',      // optional, shown on the delivery panel
  *     noteText: '...',                 // optional, overrides the footer note copy
  *     showBackButton: true,            // false = hide the back arrow entirely
  *     backHref: 'all-requisitions.html',
- *
- *     // Storage adapter — defaults to window.storage (Claude.ai preview) or
- *     // localStorage. Use the SAME adapter you pass to GraceHotelRequestForm
- *     // so both components read/write the same req:<NO> / req-index keys.
- *     storage: myStorageAdapter,
- *
- *     onApprove: (req) => { ... your API call, req is the saved requisition ... },
- *     onReject:  (req) => { ... your API call ... },
- *     onBack:    () => { ... optional side-effect, back-btn still navigates normally ... },
+ *     onApprove: (req) => { ... },     // fires after svc.approveAndIssue() resolves
+ *     onReject:  (req) => { ... },     // fires after svc.rejectRequisition() resolves
+ *     onBack:    () => { ... },        // optional side-effect, back-btn still navigates normally
  *   });
  *
  *   approval.load('KREQ-2025-00046'); // switch to a different requisition
  *   approval.getReq();                // read the currently loaded requisition
- *   approval.setStock(newStockMap);   // update stock-on-hand and re-render
  *   approval.refresh();               // re-render from current in-memory state
  *   approval.destroy();               // remove and clean up
  *
- * ── DATA MODEL ────────────────────────────────────────────────────────
- * Reads/writes the exact same storage contract as grace-request-form.js:
- *   req:<REQ_NO>   -> full requisition JSON
- *   req-index      -> JSON array of every REQ_NO ever created, newest first
+ * ── SERVICE IS REQUIRED — NO STANDALONE MODE ────────────────────────
+ * This component has exactly one way to get and change data: through
+ * `options.storeService` (services/store-service.js). There is no
+ * fallback path that talks to storage/localStorage directly and no
+ * built-in demo requisition — if you need a demo, seed one via
+ * data/store-seed.js (StoreService's own seed), not this file.
  *
+ * Prototyping vs. production is entirely StoreService's concern: it
+ * writes to localStorage today and can swap to a real API tomorrow
+ * without this component (or any caller of it) changing at all. That's
+ * the whole point of always passing the service — this file only ever
+ * calls `storeService.*` and renders whatever comes back.
+ *
+ * ── DATA MODEL ────────────────────────────────────────────────────────
+ * Same requisition shape StoreService owns everywhere else:
  *   {
  *     no, mode: 'store_issue'|'purchase', by, dept, needed, priority,
  *     remark, fulfillStore, supplier, linked,
  *     items: [{ name, unit, qty, cost, remark, issuedQty }],
- *     status: 'Pending'|'Partial'|'Full'|'Rejected', dateRaised, dateRaisedDisplay,
+ *     status: 'Pending'|'Partial'|'Full'|'Rejected', rejectReason?,
+ *     dateRaised, dateRaisedDisplay,
  *   }
- * Approving sets status to 'Full' (all items issued in full), 'Partial'
- * (some issued), or leaves 'Pending' (nothing issued yet) based on the
- * issued quantities entered; rejecting always sets 'Rejected'. Rejection
- * stays available at every status except 'Rejected' itself — a fully
- * issued requisition can still be rejected up until the recipient
- * actually accepts/confirms it.
+ *
+ * ── BEHAVIOUR ─────────────────────────────────────────────────────────
+ * - Requisition comes from `storeService.getRequisition(no)` — StoreService
+ *   owns the load (via its own loadAll()/shared-storage contract), this
+ *   component never touches req:<NO> / req-index directly.
+ * - "Available in Store" per item comes from `storeService.stockQtyFor(name)`,
+ *   the same stock-on-hand every other Store page reads.
+ * - Approving calls `storeService.approveAndIssue(no, issuedQtyByItem)`,
+ *   which deducts stock and recomputes status (Pending/Partial/Full) —
+ *   this component never writes storage or decides status itself.
+ * - Rejecting calls `storeService.rejectRequisition(no, reason)`.
+ * - Subscribes to `storeService.onChange()` so if the same requisition is
+ *   edited from another tab/page, this view stays in sync automatically.
  *
  * ── LIGHT / DARK ──────────────────────────────────────────────────────
- * Ships dark by default (matches the rest of Grace Hotel HMS). All colors
- * are var(--ghsa-*) custom properties — override them on the host page
- * or on the container element to re-theme without touching this file.
- *
- * ── DEMO DATA ─────────────────────────────────────────────────────────
- * If the requested requisition isn't found in storage yet, a demo
- * requisition (KREQ-2025-00045) is seeded automatically so the component
- * renders something real to look at on first load, exactly like
- * store-approval.html used to on its own.
+ * Ships dark by default. All colors are var(--ghsa-*) custom properties —
+ * override them on the host page or on the container element to re-theme
+ * without touching this file.
  */
 
 (function () {
@@ -213,39 +217,6 @@
     document.head.appendChild(link);
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // Defaults
-  // ══════════════════════════════════════════════════════════════════
-  const DEFAULT_STORAGE = window.storage || {
-    async get(key, shared) { const v = localStorage.getItem(key); return v == null ? null : { key, value: v, shared }; },
-    async set(key, value, shared) { localStorage.setItem(key, value); return { key, value, shared }; },
-    async delete(key, shared) { localStorage.removeItem(key); return { key, deleted: true, shared }; },
-    async list(prefix, shared) { const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return { keys, prefix, shared }; },
-  };
-
-  const DEMO_NO = 'KREQ-2025-00045';
-  const DEFAULT_STOCK = {
-    'Rice (Long Grain)': 35, 'Palm Oil': 4, 'Chicken (Frozen)': 20, 'Tomatoes': 15, 'Onions': 20,
-    'Star Lager': 240, 'Heineken': 180, 'Hennessy VS': 6, 'Bottled Water 1.5L': 60, 'Ice Cream Tubs': 12,
-    'Bleach 5L': 18, 'Floor Cleaner 5L': 9, 'Industrial Detergent 10kg': 5, 'Glass Cleaner 1L': 14,
-    'King Duvet Set': 22, 'Pillow Cases (pair)': 40, 'Guest Shampoo 250ml': 300,
-    'Commercial Dishwasher': 1, 'POS Terminal': 2, 'Branded Envelopes': 8,
-  };
-  const DEFAULT_DEMO_REQ = {
-    no: DEMO_NO, mode: 'store_issue', by: 'Chef Samuel', dept: 'Kitchen', needed: '2025-05-15', priority: 'Normal',
-    remark: 'Weekly ingredients request for kitchen operations',
-    fulfillStore: 'Main Kitchen Store', supplier: null, linked: null,
-    status: 'Pending',
-    dateRaised: '2025-05-14', dateRaisedDisplay: '14 May 2025 08:45',
-    items: [
-      { name: 'Rice (Long Grain)', unit: 'kg', qty: 50, cost: 1200, remark: '', issuedQty: 0 },
-      { name: 'Chicken (Frozen)', unit: 'kg', qty: 30, cost: 3500, remark: '', issuedQty: 0 },
-      { name: 'Palm Oil', unit: 'Ltr', qty: 10, cost: 2400, remark: 'Only 4L in store', issuedQty: 0 },
-      { name: 'Tomatoes', unit: 'kg', qty: 15, cost: 800, remark: '', issuedQty: 0 },
-      { name: 'Onions', unit: 'kg', qty: 20, cost: 700, remark: '', issuedQty: 0 },
-    ],
-  };
-
   function _fmtN(n) { return '₦' + Math.round(n || 0).toLocaleString('en-NG'); }
   function _fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
   function _todayDisplay() { return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
@@ -264,22 +235,23 @@
     const container = typeof target === 'string' ? document.querySelector(target) : target;
     if (!container) { console.warn('[GraceHotelStoreApproval] Target not found:', target); return null; }
 
+    const svc = options.storeService;
+    if (!svc || typeof svc.getRequisition !== 'function') {
+      console.error('[GraceHotelStoreApproval] options.storeService is required (services/store-service.js) — this component has no standalone/offline mode.');
+      container.innerHTML = `<div class="ghsa-empty-state">Store service was not provided. This component cannot load requisitions without it.</div>`;
+      return null;
+    }
+
     const instId = 'ghsa' + (++_instanceCounter);
-    const storage = options.storage || DEFAULT_STORAGE;
-    const demoReq = options.demoReq || DEFAULT_DEMO_REQ;
     const showBack = options.showBackButton !== false;
     const backHref = options.backHref || 'all-requisitions.html';
 
-    let stock = options.stock || DEFAULT_STOCK;
-    function stockFor(name) {
-      if (typeof stock === 'function') return stock(name) || 0;
-      const k = Object.keys(stock).find(s => s.toLowerCase() === (name || '').trim().toLowerCase());
-      return k ? stock[k] : 0;
-    }
+    function stockFor(name) { return svc.stockQtyFor(name) || 0; }
 
-    let currentNo = options.reqNo || new URLSearchParams(window.location.search).get('req') || demoReq.no;
+    let currentNo = options.reqNo || new URLSearchParams(window.location.search).get('req') || '';
     let req = null;
     let workingItems = []; // mutable copy of the requisition's items for editing
+    let unsubSvc = null;
 
     // ── Shell (topbar + content placeholder) ──
     container.innerHTML = `
@@ -352,20 +324,6 @@
       rejectReq(reason);
     });
 
-    // ── Demo seeding ──
-    async function seedDemoIfMissing() {
-      try {
-        const existing = await storage.get(`req:${demoReq.no}`, true);
-        if (existing) return;
-      } catch (e) {}
-      await storage.set(`req:${demoReq.no}`, JSON.stringify(demoReq), true);
-      try {
-        const idxRes = await storage.get('req-index', true);
-        const idx = idxRes ? JSON.parse(idxRes.value) : [];
-        if (!idx.includes(demoReq.no)) { idx.unshift(demoReq.no); await storage.set('req-index', JSON.stringify(idx), true); }
-      } catch (e) {}
-    }
-
     function statusFor(issued, requested) {
       if (req.status === 'Rejected') return 'rejected';
       if (issued <= 0) return 'pending';
@@ -373,22 +331,27 @@
       return 'partial';
     }
 
-    // ── Load a requisition ──
-    async function load(no) {
+    function buildWorkingItems(source) {
+      return source.items.map(i => ({
+        ...i,
+        issuedQty: (i.issuedQty && i.issuedQty > 0) ? i.issuedQty : Math.min(i.qty, stockFor(i.name)),
+      }));
+    }
+
+    // ── Load a requisition — always from StoreService's in-memory state ──
+    function load(no) {
       if (no) currentNo = no;
       document.getElementById(instId + '-content').innerHTML = `<div class="ghsa-empty-state">Loading requisition…</div>`;
-      await seedDemoIfMissing();
 
-      try {
-        const r = await storage.get(`req:${currentNo}`, true);
-        req = r ? JSON.parse(r.value) : null;
-      } catch (e) { req = null; }
-
+      req = currentNo ? svc.getRequisition(currentNo) : null;
       if (!req) {
-        document.getElementById(instId + '-content').innerHTML = `<div class="ghsa-empty-state">Requisition <b>${_esc(currentNo)}</b> was not found.<br><br>Try opening this with <code>?req=${_esc(demoReq.no)}</code>, or pass a valid <code>reqNo</code> option.</div>`;
+        const anyStoreIssue = (svc.getRequisitions({ mode: 'store_issue' }) || [])[0];
+        document.getElementById(instId + '-content').innerHTML = currentNo
+          ? `<div class="ghsa-empty-state">Requisition <b>${_esc(currentNo)}</b> was not found.${anyStoreIssue ? `<br><br>Try <code>?req=${_esc(anyStoreIssue.no)}</code> instead.` : ''}</div>`
+          : `<div class="ghsa-empty-state">No requisition number given.${anyStoreIssue ? `<br><br>Try <code>?req=${_esc(anyStoreIssue.no)}</code>.` : ' There are no store-issue requisitions yet.'}</div>`;
         return;
       }
-      workingItems = req.items.map(i => ({ ...i, issuedQty: (i.issuedQty && i.issuedQty > 0) ? i.issuedQty : Math.min(i.qty, stockFor(i.name)) }));
+      workingItems = buildWorkingItems(req);
       render();
     }
 
@@ -526,9 +489,18 @@
         btn.addEventListener('click', () => stepIssued(parseInt(btn.dataset.idx, 10), parseFloat(btn.dataset.delta)));
       });
       const rejectBtn = content.querySelector('[data-act="reject"]');
-      if (rejectBtn) rejectBtn.addEventListener('click', rejectReq);
+      if (rejectBtn) rejectBtn.addEventListener('click', openRejectModal);
       const approveBtn = content.querySelector('[data-act="approve"]');
       if (approveBtn) approveBtn.addEventListener('click', approveReq);
+      // "Confirm Receipt" isn't wired to a save action anywhere yet — there
+      // is no `Completed` status concept in StoreService (only
+      // Pending/Partial/Full/Rejected) and no confirmReceipt() method to
+      // call. Rather than leave the button silently doing nothing, it
+      // says so.
+      const confirmBtn = content.querySelector('[data-act="confirm"]');
+      if (confirmBtn) confirmBtn.addEventListener('click', () => {
+        showToast('Confirm Receipt isn\u2019t implemented yet — StoreService has no way to mark a requisition Completed.', 'error');
+      });
     }
 
     function updateIssued(idx, value) {
@@ -547,22 +519,35 @@
       render();
     }
 
-    async function saveCurrent(newStatus) {
-      req.items = workingItems.map(i => ({ ...i, issuedQty: parseFloat(i.issuedQty) || 0 }));
-      req.status = newStatus;
-      await storage.set(`req:${req.no}`, JSON.stringify(req), true);
-      render();
-      showToast(`${req.no} marked ${newStatus}.`, newStatus === 'Rejected' ? 'error' : 'success');
+    async function approveReq() {
+      // Build { itemName: issuedQty } and let StoreService deduct stock +
+      // decide Pending/Partial/Full — this component never computes
+      // status or touches storage itself.
+      const issuedQtyByItem = {};
+      workingItems.forEach(i => { issuedQtyByItem[i.name] = parseFloat(i.issuedQty) || 0; });
+      try {
+        const updated = await svc.approveAndIssue(req.no, issuedQtyByItem);
+        req = updated;
+        workingItems = buildWorkingItems(req);
+        render();
+        showToast(`${req.no} marked ${req.status}.`, 'success');
+        if (typeof options.onApprove === 'function') options.onApprove(req);
+      } catch (err) {
+        showToast((err && err.message) || 'Could not approve requisition.', 'error');
+      }
     }
 
-    function approveReq() {
-      const totalReq = workingItems.reduce((s, i) => s + i.qty, 0);
-      const totalIssued = workingItems.reduce((s, i) => s + (parseFloat(i.issuedQty) || 0), 0);
-      const status = totalIssued >= totalReq ? 'Full' : totalIssued > 0 ? 'Partial' : 'Pending';
-      saveCurrent(status).then(() => { if (typeof options.onApprove === 'function') options.onApprove(req); });
-    }
-    function rejectReq() {
-      saveCurrent('Rejected').then(() => { if (typeof options.onReject === 'function') options.onReject(req); });
+    async function rejectReq(reason) {
+      try {
+        const updated = await svc.rejectRequisition(req.no, reason);
+        req = updated;
+        workingItems = buildWorkingItems(req);
+        render();
+        showToast(`${req.no} rejected.`, 'error');
+        if (typeof options.onReject === 'function') options.onReject(req);
+      } catch (err) {
+        showToast((err && err.message) || 'Could not reject requisition.', 'error');
+      }
     }
 
     function showToast(msg, type) {
@@ -573,6 +558,19 @@
       setTimeout(() => t.remove(), 3200);
     }
 
+    // ── Stay in sync if the same requisition changes elsewhere (e.g.
+    // another tab issuing/rejecting it) ──
+    if (typeof svc.onChange === 'function') {
+      unsubSvc = svc.onChange(() => {
+        if (!req) return;
+        const fresh = svc.getRequisition(req.no);
+        if (!fresh) return;
+        req = fresh;
+        workingItems = buildWorkingItems(req);
+        render();
+      });
+    }
+
     // ── Init ──
     load(currentNo);
 
@@ -580,9 +578,11 @@
     return {
       load,
       getReq: () => req,
-      setStock(newStock) { stock = newStock; render(); },
       refresh: render,
-      destroy() { container.innerHTML = ''; },
+      destroy() {
+        if (typeof unsubSvc === 'function') { try { unsubSvc(); } catch (e) {} }
+        container.innerHTML = '';
+      },
     };
   }
 

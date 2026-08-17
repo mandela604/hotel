@@ -6,32 +6,21 @@
 <title>Grace Hotel — Rooms</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-/* This page owns layout + its own Rooms content only. Sidebar +
-   topbar look/markup live entirely in booking-shell.js — same split
-   used by booking-dashboard.html and booking-list.html.
-   NOTE: sidebar/topbar are deliberately left on the shared dark/blue
-   theme vars from booking-shell.js. The .content and .modal-overlay
-   scopes below re-declare the SAME variable names with light values,
-   so only the main content area + modals turn white — the sidebar
-   never sees these overrides. Mirrors booking-list.html exactly. */
+/* ── Same styles as before, unchanged ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
-
 html, body { height: 100%; overflow-x: hidden; }
 body {
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
   background: var(--bg); color: var(--text);
   transition: background var(--transition), color var(--transition);
 }
-
 .app { display: flex; min-height: 100vh; }
 .main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
 @media (max-width: 768px) { .main { margin-left: 0 !important; } }
 
 .content {
   flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
-  /* ── Light-theme override, scoped to content + modals only ── */
   --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
   --border: #eef0f6; --border2: #dfe3ec;
   --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
@@ -49,14 +38,12 @@ body {
 @media (max-width: 480px) { .content { padding: 14px; } }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-/* ═══════════ STATUS / FILTER CHIPS (same pill used on All Bookings) ═══════════ */
 .status-chips { display: flex; align-items: center; gap: 7px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; margin-bottom: 10px; flex-wrap: wrap; }
 .status-chips::-webkit-scrollbar { height: 0; }
 .sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
 .sc-btn:hover, .sc-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
 .sc-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-/* Stat pills — same shape/size as .sc-btn, non-interactive, sit at the end of the same row */
 .stat-pills { display: flex; gap: 7px; margin-left: auto; flex-wrap: wrap; }
 .stat-chip { flex-shrink: 0; border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 700; cursor: default; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border: 1px solid; }
 .stat-chip i { font-size: 10.5px; }
@@ -65,7 +52,6 @@ body {
 .stat-chip strong { font-weight: 800; }
 @media (max-width: 700px) { .stat-pills { margin-left: 0; width: 100%; } }
 
-/* ═══════════ TOOLBAR (identical to All Bookings) ═══════════ */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
 .toolbar-right { display: flex; gap: 7px; flex-shrink: 0; }
@@ -85,7 +71,6 @@ body {
   .filter-sel { width: 100%; }
 }
 
-/* ═══════════ BUTTONS (identical to All Bookings) ═══════════ */
 .btn-primary { background: var(--gold); color: #fff; border: 1px solid var(--gold); border-radius: var(--radius-sm); padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; box-shadow: 0 4px 10px rgba(47,111,237,0.28); }
 .btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
 .btn-primary i { font-size: 11px; }
@@ -93,13 +78,11 @@ body {
 .btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
 .btn-outline i { color: var(--text3); font-size: 12px; }
 
-/* ═══════════ PANEL ═══════════ */
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; animation: fadeUp 0.4s ease both; overflow: hidden; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 14px; flex-wrap: wrap; gap: 8px; }
 .panel-title { font-size: 14px; font-weight: 800; color: var(--text); }
 .panel-sub { font-size: 11.5px; color: var(--text3); font-weight: 600; }
 
-/* ═══════════ ROOM GRID — equal alignment across every card ═══════════ */
 .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; padding: 0 20px 20px; align-items: stretch; }
 @media (max-width: 480px) { .room-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); padding: 0 14px 14px; } }
 
@@ -116,7 +99,6 @@ body {
 .room-card.checkout::before    { background: var(--red); }
 .room-card.maintenance::before { background: var(--amber); }
 
-/* fixed-height rows so every card lines up the same, regardless of content */
 .room-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; min-height: 26px; }
 .room-num { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; }
 .room-type-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 700; margin: 3px 0 9px; min-height: 12px; }
@@ -146,7 +128,6 @@ body {
 
 .room-empty { grid-column: 1/-1; text-align: center; padding: 30px 0; color: var(--text3); font-size: 12.5px; }
 
-/* ═══════════ PAGINATION ═══════════ */
 .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
 .page-btns { display: flex; gap: 3px; flex-wrap: wrap; }
 .page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; font-family: inherit; padding: 0 7px; font-weight: 600; }
@@ -154,7 +135,7 @@ body {
 .page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 700; }
 .page-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
-/* ═══════════ MODAL (shared, identical to All Bookings) ═══════════ */
+/* ── MODAL OVERLAY (for Room Status and Room Edit) ── */
 .modal-overlay {
   display: none; position: fixed; inset: 0; background: rgba(15,20,40,0.55); backdrop-filter: blur(5px); z-index: 300;
   align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto;
@@ -196,41 +177,9 @@ body {
 .form-input[readonly] { opacity: 0.6; cursor: default; }
 .form-hint { font-size: 10.5px; color: var(--text3); margin-top: 4px; }
 
-.amount-box { background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: var(--radius-sm); padding: 10px 12px; }
-.amount-box.blue { background: var(--blue-bg); border-color: rgba(47,111,237,0.2); }
-.amount-box.red  { background: var(--red-bg); border-color: rgba(240,68,56,0.2); }
-.amount-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--gold); margin-bottom: 3px; font-weight: 700; }
-.amount-box.blue .amount-label { color: var(--blue); }
-.amount-box.red  .amount-label { color: var(--red); }
-.amount-value { font-size: 20px; font-weight: 800; color: var(--gold); }
-.amount-box.blue .amount-value { color: var(--blue); }
-.amount-box.red  .amount-value { color: var(--red); }
-.amount-sub { font-size: 10px; color: rgba(47,111,237,0.75); margin-top: 1px; font-weight: 600; }
-.amount-box.blue .amount-sub { color: rgba(47,111,237,0.7); }
-.amount-box.red  .amount-sub { color: rgba(240,68,56,0.7); }
-
-.num-pair { display: flex; align-items: center; }
-.num-pair button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 32px; height: 38px; font-size: 14px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.num-pair button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); border-right: none; }
-.num-pair button:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
-.num-pair button:hover { background: var(--gold-dim); color: var(--gold); }
-.num-pair input { flex: 1; border-radius: 0; border-left: none; border-right: none; text-align: center; }
-
 .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
 @media (max-width: 480px) { .modal-footer { flex-direction: column-reverse; } .modal-footer button { width: 100%; justify-content: center; } }
 
-.guest-search-wrap { position: relative; }
-.guest-dropdown { position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 400; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 12px 40px rgba(15,20,40,0.18); overflow: hidden; display: none; max-height: 220px; overflow-y: auto; }
-.guest-dropdown.show { display: block; }
-.guest-opt { padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
-.guest-opt:last-child { border-bottom: none; }
-.guest-opt:hover { background: var(--surface2); }
-.guest-opt-name { font-size: 13px; font-weight: 700; color: var(--text); }
-.guest-opt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
-.returning-tag { display: inline-block; font-size: 9px; background: var(--gold-dim); color: var(--gold); padding: 1px 6px; border-radius: 8px; margin-left: 5px; font-weight: 700; }
-.vip-tag { display: inline-block; font-size: 9px; background: var(--amber-bg); color: var(--amber); padding: 1px 6px; border-radius: 8px; margin-left: 5px; font-weight: 700; }
-
-/* ═══════════ TOAST ═══════════ */
 .toast {
   position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm);
   padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999;
@@ -243,7 +192,6 @@ body {
 @keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
 
-/* Print */
 @media print {
   #sidebarSlot, #topbarSlot, .status-chips, .toolbar, .room-acts, .pagination, .no-print { display: none !important; }
   .main { margin-left: 0 !important; }
@@ -256,24 +204,28 @@ body {
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+
+.room-card.cleaning::before { background: #0ea5e9; }
+.rc-cleaning { background: #e0f2fe; color: #0ea5e9; }
+.rc-cleaning::before { background: #0ea5e9; }
+
+/*#bks-apiBadge { display: none; }*/
+
 </style>
 </head>
 <body>
 
 <div class="app">
-  <!-- Sidebar rendered here by booking-shell.js — untouched, stays on its own dark/blue theme -->
   <div id="sidebarSlot"></div>
-
   <div class="main">
-    <!-- Topbar rendered here by booking-shell.js — untouched -->
     <div id="topbarSlot"></div>
-
     <div class="content">
 
       <div class="status-chips no-print" id="roomFilters">
         <button class="sc-btn active" data-f="all" onclick="filterRooms('all',this)">All Rooms</button>
         <button class="sc-btn" data-f="available" onclick="filterRooms('available',this)"><span class="sc-dot" style="background:var(--green)"></span>Available</button>
         <button class="sc-btn" data-f="checkedin" onclick="filterRooms('checkedin',this)"><span class="sc-dot" style="background:var(--gold)"></span>Occupied</button>
+        <button class="sc-btn" data-f="cleaning" onclick="filterRooms('cleaning',this)"><span class="sc-dot" style="background:#0ea5e9"></span>Cleaning</button>
         <button class="sc-btn" data-f="reserved" onclick="filterRooms('reserved',this)"><span class="sc-dot" style="background:var(--purple)"></span>Reserved</button>
         <button class="sc-btn" data-f="checkout" onclick="filterRooms('checkout',this)"><span class="sc-dot" style="background:var(--red)"></span>Check-out</button>
         <button class="sc-btn" data-f="maintenance" onclick="filterRooms('maintenance',this)"><span class="sc-dot" style="background:var(--amber)"></span>Maintenance</button>
@@ -321,86 +273,7 @@ body {
   </div>
 </div>
 
-<!-- ══ BOOKING MODAL (new bookings only — guest info belongs here, not on Room edit) ══ -->
-<div class="modal-overlay" id="bookingModal" onclick="handleModalBackdrop(event,'bookingModal')">
-  <div class="modal">
-    <div class="modal-header">
-      <div>
-        <div class="modal-title">New Booking</div>
-        <div class="modal-sub">Assign a guest to an available room</div>
-      </div>
-      <button class="modal-close" onclick="closeModal('bookingModal')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-solid fa-user"></i> Guest Information</div>
-      <div class="form-grid">
-        <div class="form-group span2">
-          <label class="form-label">Guest Full Name</label>
-          <div class="guest-search-wrap">
-            <input class="form-input" type="text" id="fName" placeholder="Type to search returning guests…" autocomplete="off" oninput="searchGuests(this.value)">
-            <div class="guest-dropdown" id="guestDrop"></div>
-          </div>
-        </div>
-        <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" type="tel" id="fPhone" placeholder="+234 800 000 0000"></div>
-        <div class="form-group"><label class="form-label">Email (optional)</label><input class="form-input" type="email" id="fEmail" placeholder="guest@email.com"></div>
-        <div class="form-group"><label class="form-label">ID Type</label>
-          <select class="form-select" id="fIdType"><option>NIN</option><option>Passport</option><option>Driver's Licence</option><option>Voter's Card</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">ID Number</label><input class="form-input" type="text" id="fIdNum" placeholder="e.g. 12345678901"></div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-solid fa-bed"></i> Room &amp; Stay</div>
-      <div class="form-grid">
-        <div class="form-group"><label class="form-label">Room Number</label>
-          <select class="form-select" id="fRoom" onchange="onRoomChange()"><option value="">Select room…</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Room Type</label><input class="form-input" type="text" id="fType" readonly placeholder="Auto-filled"></div>
-        <div class="form-group"><label class="form-label">Check-in Date</label><input class="form-input" type="date" id="fCheckin" onchange="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Check-out Date</label><input class="form-input" type="date" id="fCheckout" onchange="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Adults</label>
-          <div class="num-pair"><button type="button" onclick="adj('fAdults',-1)">−</button><input class="form-input" type="number" id="fAdults" value="1" min="1" max="50"><button type="button" onclick="adj('fAdults',1)">+</button></div>
-        </div>
-        <div class="form-group"><label class="form-label">Children</label>
-          <div class="num-pair"><button type="button" onclick="adj('fChildren',-1)">−</button><input class="form-input" type="number" id="fChildren" value="0" min="0" max="50"><button type="button" onclick="adj('fChildren',1)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-solid fa-sack-dollar"></i> Billing &amp; Payment</div>
-      <div class="form-grid-3">
-        <div class="form-group"><label class="form-label">Rate / Night (₦)</label><input class="form-input" type="number" id="fRate" placeholder="0" oninput="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Discount (%)</label><input class="form-input" type="number" id="fDiscount" placeholder="0" min="0" max="100" oninput="calcAmount()"></div>
-        <div class="form-group"><label class="form-label">Amount Paid (₦)</label><input class="form-input" type="number" id="fPaid" placeholder="0" oninput="calcBalance()"></div>
-        <div class="amount-box"><div class="amount-label">Gross Total</div><div class="amount-value" id="dispTotal">₦0</div><div class="amount-sub" id="dispNights">0 nights</div></div>
-        <div class="amount-box blue"><div class="amount-label">After Discount</div><div class="amount-value" id="dispAfterDisc">₦0</div><div class="amount-sub" id="dispDisc">No discount</div></div>
-        <div class="amount-box red"><div class="amount-label">Balance Due</div><div class="amount-value" id="dispBalance">₦0</div><div class="amount-sub" id="dispPaidSub">₦0 paid</div></div>
-        <div class="form-group"><label class="form-label">Payment Method</label>
-          <select class="form-select" id="fPayMethod"><option>Cash</option><option>POS</option><option>Transfer</option><option>Split – Cash + POS</option><option>Split – Cash + Transfer</option><option>Complimentary</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Payment Status</label>
-          <select class="form-select" id="fPayStatus"><option>Pending</option><option>Deposit Paid</option><option>Fully Paid</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="fRecordedBy" placeholder="Staff name"></div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title"><i class="fa-regular fa-note-sticky"></i> Notes</div>
-      <div class="form-group"><textarea class="form-input" style="min-height:60px;resize:vertical;" id="fNotes" placeholder="Late check-in, dietary needs, extra bedding, special requests…"></textarea></div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn-outline" onclick="closeModal('bookingModal')">Cancel</button>
-      <button class="btn-primary" onclick="saveBooking()"><i class="fa-solid fa-check"></i> Save Booking</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ ROOM MODAL — Add / Edit. Room details ONLY: number, type, rate, notes. No guest data ever appears here. ══ -->
+<!-- ROOM MODAL (Add/Edit Room) -->
 <div class="modal-overlay" id="roomModal" onclick="handleModalBackdrop(event,'roomModal')">
   <div class="modal modal-sm">
     <div class="modal-header">
@@ -432,7 +305,7 @@ body {
   </div>
 </div>
 
-<!-- ══ ROOM STATUS MODAL ══ -->
+<!-- ROOM STATUS MODAL -->
 <div class="modal-overlay" id="roomStatusModal" onclick="handleModalBackdrop(event,'roomStatusModal')">
   <div class="modal modal-sm">
     <div class="modal-header">
@@ -459,21 +332,14 @@ body {
   </div>
 </div>
 
-<!-- booking-shell.js is a classic (non-module) script that exposes the
-     global `BookingShell` — it must run before the module script below
-     so BookingShell.attach/CONFIG exist when the module executes. -->
+<!-- ─── SCRIPTS ─── -->
+<script src="../services/permissions.js"></script>
+<script src="data/booking-demo-seed.js"></script>
+<script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
-<script type="module">
-/* ═══════════════════════════════════════════════
-   This page no longer owns its own demo data, storage shim, or guest
-   directory. All of that now lives in services/booking-data.js
-   (shared with booking-dashboard.html / booking-list.html / guests.html
-   / booking-reports.html, so every module reads and writes the same
-   rooms/bookings/guests records) and services/permissions.js (shared
-   role/privilege rules — same file the other modules use).
-═══════════════════════════════════════════════ */
-import { getBookingData, saveBookingData } from '../services/booking-data.js';
-import { hasPermission } from '../services/permissions.js';
+<script src="../component/booking-modal.js"></script>
+<script>
+'use strict';
 
 /* ═══════════════════════════════════════════════
    Shell
@@ -484,74 +350,65 @@ const shell = BookingShell.attach({
   activeFile:    'booking-rooms.html',
   pageTitle:     'Rooms',
   pageSubtitle:  'Room inventory & live status',
-  // Same shape BookingShell's own CONFIG.DEMO_USER uses ({name, initials,
-  // role, privilege}) — this is what fetchSession() resolves to in demo
-  // mode, so the avatar never flickers between two different identities.
-  user: BookingShell.CONFIG.DEMO_USER,
 });
 
-/* Single source of truth for "who's logged in" for permission checks —
-   the exact same object the sidebar avatar reflects, so a front-desk
-   staff account sees the same restrictions in the UI and in the data
-   layer. permissions.js reads .role / .privilege off this. */
 function getSession() {
-  return shell.getUser() || BookingShell.CONFIG.DEMO_USER;
+  return shell.getUser();
 }
 
-let allRooms = [];
-let bookings = [];
-let guests   = [];
-
-/* Persist through booking-data.js so Rooms stays in sync with
-   Dashboard, All Bookings, Guests and Reports — no page-local
-   localStorage keys or demo arrays anymore. */
-async function persist() {
-  try {
-    await saveBookingData(allRooms, bookings, guests);
-  } catch (err) {
-    showToast(err.message || 'Failed to save.', 'error');
+function hasPermission(session, permission, module) {
+  if (window.Permissions && typeof Permissions.hasPermission === 'function') {
+    return Permissions.hasPermission(session, permission, module);
   }
+  return !!(session && String(session.role).toLowerCase() === 'admin');
 }
 
 /* ═══════════════════════════════════════════════
-   STATE
+   Global state
 ═══════════════════════════════════════════════ */
-let roomFilter    = 'all';
-let roomsPage     = 1;
-let roomModalMode = 'add';   // 'add' | 'edit'
+let allRooms = [];
+let bookings = [];
+let guests   = [];
+let roomFilter = 'all';
+let roomsPage  = 1;
+let roomModalMode = 'add';
 let roomEditNum   = null;
 let statusRoom    = null;
 const PAGE_ROOMS  = 24;
 
 /* ═══════════════════════════════════════════════
-   HELPERS
+   BookingModal instance
 ═══════════════════════════════════════════════ */
-function nights(ci, co) { if (!ci || !co) return 0; const n = (new Date(co) - new Date(ci)) / 86400000; return n > 0 ? n : 0; }
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+const bookingModal = BookingModal.create({
+  service: BookingData,
+  session: getSession(),
+  onSaved: function (row) {
+    // Refresh data and re-render
+    refreshDataAndRender();
+  },
+  onDeleted: function (roomNum) {
+    refreshDataAndRender();
+  },
+});
+
+/* ═══════════════════════════════════════════════
+   Helpers
+═══════════════════════════════════════════════ */
+function nights(ci, co) {
+  if (!ci || !co) return 0;
+  const n = (new Date(co) - new Date(ci)) / 86400000;
+  return n > 0 ? n : 0;
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
-function calcTotal(b) { const n = nights(b.checkin, b.checkout) || 1; return b.rate * n * (1 - (b.discount || 0) / 100); }
-function calcBal(b) { return Math.max(0, calcTotal(b) - (b.paid || 0)); }
 function getRoomStatus(num) {
   const b = bookings.find(r => r.room === num);
   if (!b || !b.status) return 'available';
   return b.status === 'vacant' ? 'available' : b.status;
 }
-
-const RC_CLS = { available:'rc-available', checkedin:'rc-checkedin', reserved:'rc-reserved', checkout:'rc-checkout', maintenance:'rc-maintenance' };
-const RC_LBL = { available:'Available', checkedin:'Occupied', reserved:'Reserved', checkout:'Check-out', maintenance:'Maintenance' };
-const STATUS_OPTS = {
-  available:   [{v:'maintenance', l:'Put Under Maintenance'}],
-  checkedin:   [{v:'checkout', l:'Check-out Guest'}],
-  reserved:    [{v:'checkedin', l:'Check In'}, {v:'vacant', l:'Cancel / Make Available'}, {v:'maintenance', l:'Put Under Maintenance'}],
-  checkout:    [{v:'vacant', l:'Mark Available'}, {v:'maintenance', l:'Put Under Maintenance'}],
-  maintenance: [{v:'vacant', l:'Mark Available'}],
-};
-
-/* ═══════════════════════════════════════════════
-   PERMISSIONS — gates every mutating action on this page. Booking
-   module rules (admin/manager/front_desk) live in permissions.js;
-   this page only ever asks, never redefines them.
-═══════════════════════════════════════════════ */
 function perms() {
   const session = getSession();
   return {
@@ -561,7 +418,6 @@ function perms() {
     canCheckout: hasPermission(session, 'canCheckout', 'booking'),
   };
 }
-
 function applyPermissionUI() {
   const p = perms();
   document.getElementById('addRoomBtn').style.display   = p.canEditRoom ? '' : 'none';
@@ -569,14 +425,40 @@ function applyPermissionUI() {
   return p;
 }
 
+const RC_CLS = { available: 'rc-available', checkedin: 'rc-checkedin', reserved: 'rc-reserved', checkout: 'rc-checkout', maintenance: 'rc-maintenance', cleaning: 'rc-cleaning' };
+const RC_LBL = { available: 'Available', checkedin: 'Occupied', reserved: 'Reserved', checkout: 'Check-out', maintenance: 'Maintenance', cleaning: 'Cleaning' };
+const STATUS_OPTS = {
+  available:   [{ v: 'maintenance', l: 'Put Under Maintenance' }],
+  checkedin:   [{ v: 'cleaning', l: 'Check out → Cleaning' }],
+  reserved:    [{ v: 'checkedin', l: 'Check In' }, { v: 'vacant', l: 'Cancel / Make Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
+  checkout:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
+  maintenance: [{ v: 'vacant', l: 'Mark Available' }],
+   cleaning:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }]
+};
+
 /* ═══════════════════════════════════════════════
-   PAGINATION
+   Data & Rendering
 ═══════════════════════════════════════════════ */
+async function refreshDataAndRender() {
+  try {
+    const data = await BookingData.getBookingData();
+    allRooms = data.rooms;
+    bookings = data.bookings;
+    guests   = data.guests || [];
+    // Update session in modal
+    const session = getSession();
+    bookingModal.setSession(session);
+    renderRoomGrid(roomFilter);
+  } catch (err) {
+    showToast(err.message || 'Failed to refresh data.', 'error');
+  }
+}
+
 function renderPagination(btnId, labelId, page, total, size, cb) {
   const totalPages = Math.max(1, Math.ceil(total / size));
   const from = total === 0 ? 0 : (page - 1) * size + 1;
   const to   = Math.min(page * size, total);
-  document.getElementById(labelId).textContent = total === 0 ? 'No rooms' : `${from}–${to} of ${total}`;
+  document.getElementById(labelId).textContent = total === 0 ? 'No rooms' : from + '–' + to + ' of ' + total;
   const wrap = document.getElementById(btnId);
   wrap.innerHTML = '';
   const prev = document.createElement('button');
@@ -585,20 +467,19 @@ function renderPagination(btnId, labelId, page, total, size, cb) {
   let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
   start = Math.max(1, end - 4);
   for (let i = start; i <= end; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'page-btn' + (i === page ? ' active' : '');
-    btn.textContent = i; btn.onclick = (function(p){return () => cb(p);})(i);
-    wrap.appendChild(btn);
+    (function (pg) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (pg === page ? ' active' : '');
+      btn.textContent = pg;
+      btn.onclick = () => cb(pg);
+      wrap.appendChild(btn);
+    })(i);
   }
   const next = document.createElement('button');
   next.className = 'page-btn'; next.textContent = '›'; next.disabled = (page >= totalPages);
   next.onclick = () => cb(page + 1); wrap.appendChild(next);
 }
 
-/* ═══════════════════════════════════════════════
-   STAT PILLS — Occupancy Rate & Revenue (same figures as the dashboard,
-   because both read the same rooms/bookings from booking-data.js)
-═══════════════════════════════════════════════ */
 function updateStatPills() {
   const totalRooms = allRooms.length || 1;
   const occupied = allRooms.filter(r => getRoomStatus(r.num) === 'checkedin').length;
@@ -608,30 +489,27 @@ function updateStatPills() {
   document.getElementById('revenueVal').textContent = fmtN(revenue);
 }
 
-/* ═══════════════════════════════════════════════
-   ROOM GRID
-═══════════════════════════════════════════════ */
-window.filterRooms = function(st, btn) {
+function filterRooms(st, btn) {
   document.querySelectorAll('#roomFilters .sc-btn[data-f]').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   roomFilter = st || 'all';
   roomsPage  = 1;
   renderRoomGrid(roomFilter);
-};
+}
 
 function renderRoomGrid(filter) {
   const p = applyPermissionUI();
-  const typeF = (document.getElementById('roomTypeFilter') || {}).value || '';
-  const q     = (document.getElementById('roomSearch').value || '').trim().toLowerCase();
+  const typeF = document.getElementById('roomTypeFilter').value || '';
+  const q     = document.getElementById('roomSearch').value.trim().toLowerCase();
   const filtered = allRooms.filter(r => {
-    const st = getRoomStatus(r.num);
+    const st = getRoomStatus(r.num) || 'available';
     const mf = filter === 'all' || st === filter;
     const mt = !typeF || r.type === typeF;
     const mq = !q || r.num.toLowerCase().includes(q);
     return mf && mt && mq;
   });
 
-  document.getElementById('roomsTitle').textContent = filter === 'all' ? 'All Rooms' : `${RC_LBL[filter] || 'Filtered'} Rooms`;
+  document.getElementById('roomsTitle').textContent = filter === 'all' ? 'All Rooms' : (RC_LBL[filter] || 'Filtered') + ' Rooms';
   document.getElementById('roomsCount').textContent  = filtered.length + ' of ' + allRooms.length + ' rooms';
 
   const total = filtered.length;
@@ -639,244 +517,96 @@ function renderRoomGrid(filter) {
   const page  = filtered.slice(start, start + PAGE_ROOMS);
   const grid  = document.getElementById('roomGrid');
 
-  grid.innerHTML = page.length === 0
-    ? `<div class="room-empty">No rooms match these filters.</div>`
-    : page.map(r => {
-        const st = getRoomStatus(r.num);
-        const bk = bookings.find(b => b.room === r.num);
-        const hasGuest = st !== 'available' && st !== 'maintenance' && bk && bk.guest;
-
-        const guestBlock = hasGuest
-          ? `<div class="room-guest-name">${bk.guest.split(',')[0]}</div><div class="room-dates">${fmtDate(bk.checkin)} → ${fmtDate(bk.checkout)}</div>`
-          : `<div class="room-guest-empty">${st === 'maintenance' ? (r.notes || bk?.notes || 'Under maintenance') : 'No active booking'}</div><div class="room-dates">&nbsp;</div>`;
-
-        let acts = '';
-        if (st === 'available') {
-          acts = `<div class="room-acts">
-            ${p.canCreate   ? `<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom('${r.num}')"><i class="fa-solid fa-clipboard-check"></i> Book</button>` : ''}
-            ${p.canEditRoom ? `<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal('edit','${r.num}')"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
-          </div>`;
-        } else {
-          const canStatus = p.canCheckin || p.canCheckout || p.canEditRoom;
-          acts = `<div class="room-acts">
-            ${canStatus     ? `<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal('${r.num}')"><i class="fa-solid fa-gear"></i> Status</button>` : ''}
-            ${p.canEditRoom ? `<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal('edit','${r.num}')"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
-          </div>`;
-        }
-
-        const clickable = p.canEditRoom;
-        return `<div class="room-card ${st}" ${clickable ? `onclick="openRoomModal('edit','${r.num}')"` : 'style="cursor:default;"'}>
-          <div class="room-card-head">
-            <div class="room-num">${r.num}</div>
-            <span class="room-chip ${RC_CLS[st]}">${RC_LBL[st]}</span>
-          </div>
-          <div class="room-type-lbl">${r.type}</div>
-          <div class="room-guest-block">${guestBlock}</div>
-          <div class="room-rate"><span>Rate</span> ${fmtN(r.rate)}/night</div>
-          ${acts}
-        </div>`;
-      }).join('');
-
-  renderPagination('roomPageBtns', 'roomPaginLabel', roomsPage, total, PAGE_ROOMS, p => { roomsPage = p; renderRoomGrid(roomFilter); });
-
-  updateStatPills();
-  // Keep sidebar's "All Bookings" badge in sync with reserved arrivals.
-  shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
-}
-window.renderRoomGrid = renderRoomGrid;
-
-window.openBookingForRoom = function(num) {
-  openBookingModal();
-  setTimeout(() => {
-    const r = allRooms.find(x => x.num === num);
-    if (!r) return;
-    const sel = document.getElementById('fRoom');
-    for (let o of sel.options) { if (o.value.startsWith(num + '|')) { sel.value = o.value; break; } }
-    onRoomChange();
-  }, 60);
-};
-
-/* ═══════════════════════════════════════════════
-   GUEST AUTOFILL — searches the same `guests` records booking-data.js
-   returns (and that guests.html reads), so a returning guest picked up
-   here shows the same stay/charge history there. Only used inside the
-   New Booking modal.
-═══════════════════════════════════════════════ */
-window.searchGuests = function(val) {
-  const drop = document.getElementById('guestDrop');
-  if (!val || val.length < 1) { drop.classList.remove('show'); return; }
-  const needle = val.toLowerCase();
-  const hits = guests.filter(g =>
-    (g.name || '').toLowerCase().includes(needle) ||
-    (g.phone || '').replace(/\s/g,'').includes(val.replace(/\s/g,''))
-  );
-  if (!hits.length) { drop.classList.remove('show'); return; }
-  drop._hits = hits;
-  drop.innerHTML = hits.map((g, i) => `
-    <div class="guest-opt" onclick="autofillGuest(${i})">
-      <div class="guest-opt-name">${g.name}<span class="returning-tag">Returning</span>${g.vip ? '<span class="vip-tag">VIP</span>' : ''}</div>
-      <div class="guest-opt-sub">${g.phone}${g.email ? ' · ' + g.email : ''}</div>
-    </div>`).join('');
-  drop.classList.add('show');
-};
-window.autofillGuest = function(i) {
-  const g = document.getElementById('guestDrop')._hits[i];
-  document.getElementById('fName').value   = g.name;
-  document.getElementById('fPhone').value  = g.phone || '';
-  document.getElementById('fEmail').value  = g.email || '';
-  document.getElementById('fIdType').value = g.idType || 'NIN';
-  document.getElementById('fIdNum').value  = g.idNum || '';
-  document.getElementById('guestDrop').classList.remove('show');
-};
-document.addEventListener('click', e => {
-  if (!e.target.closest('.guest-search-wrap')) document.getElementById('guestDrop').classList.remove('show');
-});
-
-/* ═══════════════════════════════════════════════
-   BOOKING MODAL (create-only — no guest editing lives on this page)
-═══════════════════════════════════════════════ */
-function populateRoomSelect() {
-  const sel = document.getElementById('fRoom');
-  sel.innerHTML = '<option value="">Select room…</option>';
-  allRooms.forEach(r => {
-    if (getRoomStatus(r.num) === 'available') {
-      const opt = document.createElement('option');
-      opt.value = `${r.num}|${r.type}|${r.rate}`;
-      opt.textContent = `${r.num} – ${r.type} (${fmtN(r.rate)}/night)`;
-      sel.appendChild(opt);
-    }
-  });
-}
-
-window.onRoomChange = function() {
-  const v = document.getElementById('fRoom').value;
-  if (!v) { document.getElementById('fType').value = ''; document.getElementById('fRate').value = ''; return; }
-  const p = v.split('|');
-  document.getElementById('fType').value = p[1] || '';
-  document.getElementById('fRate').value = p[2] || '';
-  calcAmount();
-};
-
-window.calcAmount = function() {
-  const ci   = document.getElementById('fCheckin').value;
-  const co   = document.getElementById('fCheckout').value;
-  const rate = parseFloat(document.getElementById('fRate').value) || 0;
-  const disc = parseFloat(document.getElementById('fDiscount').value) || 0;
-  const n    = nights(ci, co);
-  const raw  = rate * n;
-  const discAmt = raw * disc / 100;
-  const after   = raw - discAmt;
-  document.getElementById('dispTotal').textContent     = fmtN(raw);
-  document.getElementById('dispNights').textContent    = n === 1 ? '1 night' : `${n} nights`;
-  document.getElementById('dispAfterDisc').textContent = fmtN(after);
-  document.getElementById('dispDisc').textContent      = disc > 0 ? `${disc}% off (−${fmtN(discAmt)})` : 'No discount';
-  calcBalance();
-};
-
-window.calcBalance = function() {
-  const ci   = document.getElementById('fCheckin').value;
-  const co   = document.getElementById('fCheckout').value;
-  const rate = parseFloat(document.getElementById('fRate').value) || 0;
-  const disc = parseFloat(document.getElementById('fDiscount').value) || 0;
-  const paid = parseFloat(document.getElementById('fPaid').value) || 0;
-  const n    = nights(ci, co);
-  const bal  = Math.max(0, rate * n * (1 - disc / 100) - paid);
-  document.getElementById('dispBalance').textContent = fmtN(bal);
-  document.getElementById('dispPaidSub').textContent = fmtN(paid) + ' paid';
-};
-
-window.adj = function(id, d) {
-  const el = document.getElementById(id);
-  el.value = Math.min(parseInt(el.max) || 99, Math.max(parseInt(el.min) || 0, (parseInt(el.value) || 0) + d));
-};
-
-function clearBookingForm() {
-  ['fName','fPhone','fEmail','fIdNum','fCheckin','fCheckout','fRate','fDiscount','fPaid','fRecordedBy','fNotes'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('fType').value      = '';
-  document.getElementById('fAdults').value    = '1';
-  document.getElementById('fChildren').value  = '0';
-  document.getElementById('fIdType').value    = 'NIN';
-  document.getElementById('fPayMethod').value = 'Cash';
-  document.getElementById('fPayStatus').value = 'Pending';
-  ['dispTotal','dispAfterDisc','dispBalance'].forEach(id => document.getElementById(id).textContent = '₦0');
-  document.getElementById('dispNights').textContent  = '0 nights';
-  document.getElementById('dispDisc').textContent    = 'No discount';
-  document.getElementById('dispPaidSub').textContent = '₦0 paid';
-}
-
-window.openBookingModal = function() {
-  if (!perms().canCreate) { showToast("You don't have permission to create bookings.", 'error'); return; }
-  clearBookingForm();
-  populateRoomSelect();
-  document.getElementById('fCheckin').value = new Date().toISOString().split('T')[0];
-  document.getElementById('bookingModal').classList.add('show');
-};
-
-window.saveBooking = async function() {
-  if (!perms().canCreate) { showToast("You don't have permission to create bookings.", 'error'); return; }
-
-  const name = document.getElementById('fName').value.trim();
-  const ci   = document.getElementById('fCheckin').value;
-  const co   = document.getElementById('fCheckout').value;
-  if (!name || !ci || !co) { showToast('Please fill in guest name and dates.', 'error'); return; }
-  const roomVal = document.getElementById('fRoom').value;
-  const roomNum = roomVal ? roomVal.split('|')[0] : '';
-  if (!roomNum) { showToast('Please select a room.', 'error'); return; }
-
-  const entry = {
-    room: roomNum, type: document.getElementById('fType').value,
-    guest: name, phone: document.getElementById('fPhone').value, email: document.getElementById('fEmail').value,
-    idType: document.getElementById('fIdType').value, idNum: document.getElementById('fIdNum').value,
-    checkin: ci, checkout: co,
-    rate: parseFloat(document.getElementById('fRate').value) || 0,
-    discount: parseFloat(document.getElementById('fDiscount').value) || 0,
-    paid: parseFloat(document.getElementById('fPaid').value) || 0,
-    payMethod: document.getElementById('fPayMethod').value,
-    payStatus: document.getElementById('fPayStatus').value,
-    recordedBy: document.getElementById('fRecordedBy').value,
-    adults: parseInt(document.getElementById('fAdults').value) || 1,
-    children: parseInt(document.getElementById('fChildren').value) || 0,
-    notes: document.getElementById('fNotes').value,
-    status: 'reserved',
-  };
-
-  const existIdx = bookings.findIndex(b => b.room === roomNum);
-  if (existIdx >= 0) bookings[existIdx] = entry; else bookings.push(entry);
-
-  // Upsert the guest record — same collection guests.html reads, so
-  // this stay shows up in that guest's history immediately.
-  const stay = { room: roomNum, type: entry.type, checkin: ci, checkout: co, total: calcTotal(entry), paid: entry.paid, status: 'reserved' };
-  let guest = guests.find(g => (g.name || '').toLowerCase() === name.toLowerCase());
-  if (guest) {
-    const sIdx = guest.stays.findIndex(s => s.room === roomNum && s.status !== 'checkout');
-    if (sIdx >= 0) guest.stays[sIdx] = stay; else guest.stays.push(stay);
-    guest.phone  = entry.phone  || guest.phone;
-    guest.email  = entry.email  || guest.email;
-    guest.idType = entry.idType || guest.idType;
-    guest.idNum  = entry.idNum  || guest.idNum;
+  if (page.length === 0) {
+    grid.innerHTML = '<div class="room-empty">No rooms match these filters.</div>';
   } else {
-    guest = { id: 'g' + Date.now(), name, phone: entry.phone, email: entry.email, idType: entry.idType, idNum: entry.idNum, vip: false, notes: '', stays: [stay], charges: [] };
-    guests.push(guest);
+    grid.innerHTML = page.map(r => {
+      const st = getRoomStatus(r.num) || 'available';  // fallback
+      const bk = bookings.find(b => b.room === r.num);
+      const hasGuest = st !== 'available' && st !== 'maintenance' && bk && bk.guest;
+
+      const guestBlock = hasGuest
+        ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
+        : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
+
+      let acts = '';
+      if (st === 'available') {
+        acts = '<div class="room-acts">' +
+          (p.canCreate   ? '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' : '') +
+          (p.canEditRoom ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
+          '</div>';
+      } else {
+        const canStatus = p.canCheckin || p.canCheckout || p.canEditRoom;
+        acts = '<div class="room-acts">' +
+          (canStatus     ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' : '') +
+          (p.canEditRoom ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
+          '</div>';
+      }
+
+      const clickable = p.canEditRoom;
+      return '<div class="room-card ' + st + '" ' + (clickable ? 'onclick="openRoomModal(\'edit\',\'' + r.num + '\')"' : 'style="cursor:default;"') + '>' +
+        '<div class="room-card-head">' +
+          '<div class="room-num">' + r.num + '</div>' +
+          '<span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' +
+        '</div>' +
+        '<div class="room-type-lbl">' + r.type + '</div>' +
+        '<div class="room-guest-block">' + guestBlock + '</div>' +
+        '<div class="room-rate"><span>Rate</span> ' + fmtN(r.rate) + '/night</div>' +
+        acts +
+      '</div>';
+    }).join('');
   }
 
-  showToast('Booking saved. Room marked as Reserved.', 'success');
-  await persist();
-  closeModal('bookingModal');
-  renderRoomGrid(roomFilter);
-};
+  renderPagination('roomPageBtns', 'roomPaginLabel', roomsPage, total, PAGE_ROOMS, p => {
+    roomsPage = p;
+    renderRoomGrid(roomFilter);
+  });
+
+  updateStatPills();
+  if (shell.setPendingBadge) {
+    shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
+  }
+}
+
+
 
 /* ═══════════════════════════════════════════════
-   ROOM MODAL — Add / Edit (room details only, ever)
+   BookingModal wrappers
 ═══════════════════════════════════════════════ */
-window.openRoomModal = function(mode, num) {
-  if (!perms().canEditRoom) { showToast("You don't have permission to manage rooms.", 'error'); return; }
+function openBookingModal() {
+  const session = getSession();
+  if (!perms().canCreate) {
+    showToast("You don't have permission to create bookings.", 'error');
+    return;
+  }
+  // Pass current session to modal
+  bookingModal.setSession(session);
+  bookingModal.openNew({});
+}
+
+function openBookingForRoom(num) {
+  const session = getSession();
+  if (!perms().canCreate) {
+    showToast("You don't have permission to create bookings.", 'error');
+    return;
+  }
+  bookingModal.setSession(session);
+  bookingModal.openNew({ room: num });
+}
+
+/* ═══════════════════════════════════════════════
+   Room Modal (Add/Edit Room)
+═══════════════════════════════════════════════ */
+function openRoomModal(mode, num) {
+  if (!perms().canEditRoom) {
+    showToast("You don't have permission to manage rooms.", 'error');
+    return;
+  }
   roomModalMode = mode;
   roomEditNum = num || null;
   const isEdit = mode === 'edit';
 
-  document.getElementById('roomModalTitle').textContent   = isEdit ? `Edit Room ${num}` : 'Add Room';
+  document.getElementById('roomModalTitle').textContent   = isEdit ? 'Edit Room ' + num : 'Add Room';
   document.getElementById('roomModalSub').textContent     = isEdit ? 'Room details only — guest info is never shown here' : 'Room details only — no guest information';
   document.getElementById('roomModalSaveBtn').innerHTML   = isEdit ? '<i class="fa-solid fa-check"></i> Save Changes' : '<i class="fa-solid fa-plus"></i> Add Room';
   document.getElementById('rmEditHint').style.display     = isEdit ? 'block' : 'none';
@@ -898,125 +628,122 @@ window.openRoomModal = function(mode, num) {
     document.getElementById('rmStatus').value = 'vacant';
   }
   document.getElementById('roomModal').classList.add('show');
-};
+}
 
-window.saveRoomModal = async function() {
-  if (!perms().canEditRoom) { showToast("You don't have permission to manage rooms.", 'error'); return; }
-
+async function saveRoomModal() {
+  if (!perms().canEditRoom) {
+    showToast("You don't have permission to manage rooms.", 'error');
+    return;
+  }
   const num   = document.getElementById('rmNum').value.trim();
   const type  = document.getElementById('rmType').value;
   const rate  = parseFloat(document.getElementById('rmRate').value) || 0;
   const notes = document.getElementById('rmNotes').value.trim();
   if (!num) { showToast('Please enter a room number.', 'error'); return; }
 
-  if (roomModalMode === 'add') {
-    if (allRooms.find(r => r.num === num)) { showToast(`Room ${num} already exists.`, 'error'); return; }
-    const status = document.getElementById('rmStatus').value;
-    allRooms.push({ num, type, rate, notes });
-    bookings.push({ room:num, type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status, notes, idType:'NIN', idNum:'' });
-    showToast(`Room ${num} added.`, 'success');
-  } else {
-    const idx = allRooms.findIndex(r => r.num === roomEditNum);
-    if (idx >= 0) { allRooms[idx].type = type; allRooms[idx].rate = rate; allRooms[idx].notes = notes; }
-    // keep the room's own type/rate reflected on a still-vacant booking record
-    const bIdx = bookings.findIndex(b => b.room === roomEditNum);
-    if (bIdx >= 0 && !bookings[bIdx].guest) { bookings[bIdx].type = type; bookings[bIdx].rate = rate; bookings[bIdx].notes = notes; }
-    showToast(`Room ${roomEditNum} updated.`, 'success');
+  try {
+    if (roomModalMode === 'add') {
+      if (allRooms.find(r => r.num === num)) {
+        showToast('Room ' + num + ' already exists.', 'error');
+        return;
+      }
+      const status = document.getElementById('rmStatus').value;
+      await BookingData.saveRoom({ num, type, rate, notes });
+      if (status === 'maintenance') {
+        await BookingData.setRoomStatus(num, 'maintenance', { notes });
+      }
+      showToast('Room ' + num + ' added.', 'success');
+    } else {
+      await BookingData.saveRoom({ num: roomEditNum, type, rate, notes });
+      showToast('Room ' + roomEditNum + ' updated.', 'success');
+    }
+    closeModal('roomModal');
+    await refreshDataAndRender();
+  } catch (err) {
+    showToast(err.message || 'Failed to save room.', 'error');
   }
-
-  await persist();
-  closeModal('roomModal');
-  renderRoomGrid(roomFilter);
-};
+}
 
 /* ═══════════════════════════════════════════════
-   ROOM STATUS MODAL
+   Room Status Modal
 ═══════════════════════════════════════════════ */
-window.openRoomStatusModal = function(num) {
+function openRoomStatusModal(num) {
   const p = perms();
-  if (!p.canCheckin && !p.canCheckout && !p.canEditRoom) { showToast("You don't have permission to change room status.", 'error'); return; }
-
+  if (!p.canCheckin && !p.canCheckout && !p.canEditRoom) {
+    showToast("You don't have permission to change room status.", 'error');
+    return;
+  }
   statusRoom = num;
   const r   = allRooms.find(x => x.num === num);
   const bk  = bookings.find(b => b.room === num);
   const cur = getRoomStatus(num);
   document.getElementById('rsRoomNum').textContent   = num;
-  document.getElementById('rsRoomType').textContent  = r?.type || '';
+  document.getElementById('rsRoomType').textContent  = (r && r.type) || '';
   document.getElementById('rsCurStatus').textContent = RC_LBL[cur] || cur;
-  document.getElementById('rsNote').value            = bk?.notes || '';
+  document.getElementById('rsNote').value            = (bk && bk.notes) || '';
   const opts = STATUS_OPTS[cur] || [];
   const sel  = document.getElementById('rsNewStatus');
   sel.innerHTML = opts.length === 0
     ? '<option value="">No changes available</option>'
-    : opts.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+    : opts.map(o => '<option value="' + o.v + '">' + o.l + '</option>').join('');
   document.getElementById('roomStatusModal').classList.add('show');
-};
+}
 
-window.saveRoomStatus = async function() {
+async function saveRoomStatus() {
   if (!statusRoom) return;
   const newSt = document.getElementById('rsNewStatus').value;
   if (!newSt) return;
   const note = document.getElementById('rsNote').value.trim();
-  const i = bookings.findIndex(b => b.room === statusRoom);
-  if (i >= 0) {
-    if (newSt === 'vacant') {
-      const prev = bookings[i];
-      // If a guest was checking out, close their stay record too so
-      // Guests.html shows a completed stay instead of a dangling one.
-      const g = guests.find(x => (x.name || '').toLowerCase() === (prev.guest || '').toLowerCase());
-      if (g) {
-        const s = g.stays.find(s => s.room === prev.room && s.status !== 'checkout');
-        if (s) s.status = 'checkout';
-      }
-      bookings[i] = { room:prev.room, type:prev.type, guest:'', phone:'', email:'', checkin:'', checkout:'', rate:prev.rate, discount:0, paid:0, payMethod:'Cash', payStatus:'Pending', recordedBy:'', adults:1, children:0, status:'vacant', notes:note||'', idType:'NIN', idNum:'' };
-    } else {
-      bookings[i].status = newSt;
-      if (note) bookings[i].notes = note;
-      const g = guests.find(x => (x.name || '').toLowerCase() === (bookings[i].guest || '').toLowerCase());
-      if (g) {
-        const s = g.stays.find(s => s.room === bookings[i].room && s.status !== 'checkout');
-        if (s) s.status = newSt;
-      }
-    }
+
+  try {
+    await BookingData.setRoomStatus(statusRoom, newSt, { notes: note });
+    closeModal('roomStatusModal');
+    showToast('Room ' + statusRoom + ' → ' + (RC_LBL[newSt] || newSt) + '.', 'success');
+    await refreshDataAndRender();
+  } catch (err) {
+    showToast(err.message || 'Failed to update status.', 'error');
   }
-  await persist();
-  closeModal('roomStatusModal');
-  showToast(`Room ${statusRoom} → ${RC_LBL[newSt] || newSt}.`, 'success');
-  renderRoomGrid(roomFilter);
-};
+}
 
 /* ═══════════════════════════════════════════════
-   UTILITIES
+   Utilities
 ═══════════════════════════════════════════════ */
-window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
-window.handleModalBackdrop = function(e, id) { if (e.target === document.getElementById(id)) closeModal(id); };
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function handleModalBackdrop(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
 
-function showToast(msg, type = 'success') {
+function showToast(msg, type) {
+  type = type || 'success';
   const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
 
 /* ═══════════════════════════════════════════════
-   INIT — everything comes from booking-data.js now. In production
-   mode (CONFIG.USE_DEMO = false in booking-data.js) getBookingData()
-   throws on failure instead of silently falling back to demo data,
-   so a real API error surfaces to the user instead of masking itself
-   as an empty room grid.
+   Init
 ═══════════════════════════════════════════════ */
 async function init() {
+  if (!window.BookingData) {
+    document.getElementById('roomGrid').innerHTML =
+      '<div class="room-empty">BookingData not loaded. Check script order.</div>';
+    return;
+  }
   try {
-    const data = await getBookingData();
+    const data = await BookingData.getBookingData();
     allRooms = data.rooms;
     bookings = data.bookings;
     guests   = data.guests || [];
+    const session = getSession();
+    bookingModal.setSession(session);
     renderRoomGrid('all');
   } catch (err) {
     showToast(err.message || 'Failed to load room data.', 'error');
-    document.getElementById('roomGrid').innerHTML = `<div class="room-empty">Couldn't load room data. Please refresh.</div>`;
+    document.getElementById('roomGrid').innerHTML =
+      '<div class="room-empty">Couldn\'t load room data. Please refresh.</div>';
   }
 }
 init();

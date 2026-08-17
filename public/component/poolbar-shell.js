@@ -2,9 +2,12 @@
    PoolBarShell — sidebar + topbar for the standalone Pool Bar
    module. Drop this in as component/poolbar-shell.js.
 
-   Rebuilt to match booking-shell.js pattern exactly: fetches session
-   from API when USE_DEMO = false, falls back to demo user otherwise.
-   All pages get session via shell.getUser() for permission checks.
+   Session rules:
+     USE_DEMO true  → always DEMO_USER
+     USE_DEMO false → GET /api/auth/session
+                      success → real user
+                      failure → redirect to LOGIN_URL (no demo fallback)
+   Pages read session only via shell.getUser().
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -160,23 +163,52 @@
   const CONFIG = {
     API_BASE: '',
     USE_DEMO: true,
-    DEMO_USER: { name: 'Pool Bar Manager', initials: 'PB', role: 'staff', privilege: 'pool_bar_staff' },
+    LOGIN_URL: '../login.html',
+    DEMO_USER: { name: 'Pool Bar Manager', initials: 'PB', role: 'manager', privilege: 'pool_bar_staff' },
   };
 
+  function goLogin(reason) {
+    console.warn('[PoolBarShell] Auth failed — redirecting to login:', reason || '');
+    const next = encodeURIComponent(location.pathname + location.search);
+    const base = CONFIG.LOGIN_URL || '../login.html';
+    location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
+  }
+
+  /**
+   * Demo  → DEMO_USER
+   * Live  → real user from API
+   * Live fail → redirect (never returns demo)
+   */
   async function fetchSession() {
-    if (!CONFIG.USE_DEMO) {
-      try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-          headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-        });
-        if (!res.ok) throw new Error(`Session API returned ${res.status}`);
-        const data = await res.json();
-        return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege };
-      } catch (err) {
-        console.warn('[PoolBarShell] Session fetch failed, using demo user:', err.message);
-      }
+    if (CONFIG.USE_DEMO) {
+      return CONFIG.DEMO_USER;
     }
-    return CONFIG.DEMO_USER;
+
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
+        credentials: 'include',
+        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+      });
+      if (res.status === 401 || res.status === 403) {
+        goLogin('HTTP ' + res.status);
+        return null;
+      }
+      if (!res.ok) throw new Error('Session API returned ' + res.status);
+      const data = await res.json();
+      if (!data || !data.role) {
+        goLogin('missing role');
+        return null;
+      }
+      return {
+        name: data.name,
+        initials: data.initials,
+        role: data.role,
+        privilege: data.privilege || null,
+      };
+    } catch (err) {
+      goLogin(err && err.message);
+      return null;
+    }
   }
 
   function attach(opts) {
@@ -187,11 +219,12 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Start with passed user or demo default
-    let user = opts.user || CONFIG.DEMO_USER;
-    let initials = user.initials || (user.name || 'PB').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
+    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    let initials = user
+      ? (user.initials || (user.name || 'PB').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
+      : '…';
 
-    // ── Render sidebar ──
     sidebarTarget.innerHTML = `
       <div id="pbs-overlay"></div>
       <aside id="pbs-sidebar">
@@ -223,7 +256,6 @@
         <div class="pbs-copyright">© 2026 Grace Hotel</div>
       </aside>`;
 
-    // ── Render topbar ──
     topbarTarget.innerHTML = `
       <div id="pbs-topbar">
         <button class="pbs-hamburger" id="pbs-hamburger"><i class="fa-solid fa-bars"></i></button>
@@ -243,7 +275,6 @@
 
     document.getElementById('pbs-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    // ── Sidebar toggle logic ──
     const sidebar   = document.getElementById('pbs-sidebar');
     const overlay   = document.getElementById('pbs-overlay');
     const collapseBtn = document.getElementById('pbs-collapseBtn');
@@ -269,7 +300,6 @@
       document.body.style.overflow = '';
     });
 
-    // ── Theme toggle ──
     let isDark = false;
     const themeBtn   = document.getElementById('pbs-themeBtn');
     const themeIcon  = document.getElementById('pbs-themeIcon');
@@ -291,7 +321,6 @@
     } catch (e) {}
     applyTheme();
 
-    // ── Fetch real session and update avatar ──
     const handle = {
       setApiMode(mode) {
         const badge = document.getElementById('pbs-apiBadge');
@@ -326,28 +355,25 @@
         return user;
       },
       getConfig() {
-        return { ...CONFIG };
+        return Object.assign({}, CONFIG);
       },
     };
 
-    // Fetch session and update avatar + user
-    fetchSession().then(sessionUser => {
-      if (sessionUser) {
-        user = sessionUser;
-        initials = user.initials || (user.name || 'PB').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-        const avatar = document.getElementById('pbs-avatar');
-        if (avatar) {
-          avatar.textContent = initials;
-          avatar.title = user.name || '';
-        }
-        handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+    fetchSession().then(function (sessionUser) {
+      if (!sessionUser) return; // live fail → already redirected
+      user = sessionUser;
+      initials = user.initials || (user.name || 'PB').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
+      const avatar = document.getElementById('pbs-avatar');
+      if (avatar) {
+        avatar.textContent = initials;
+        avatar.title = user.name || '';
       }
+      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
     });
 
     return handle;
   }
 
-  // Expose CONFIG so pages can use it
-  global.PoolBarShell = { attach, CONFIG };
+  global.PoolBarShell = { attach: attach, CONFIG: CONFIG };
 
 })(window);

@@ -16,7 +16,6 @@ body{
 .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
 @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-/* ── Content area — same light palette + tokens as guests.html / booking-list.html ── */
 .content{
   --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
   --border:#eef0f6; --border2:#dfe3ec;
@@ -36,7 +35,6 @@ body{
 @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
 @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
-/* ── KPI cards — identical to guests.html / booking-list.html ── */
 .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
 @media (max-width:900px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -66,14 +64,13 @@ body{
 .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
 .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
 
-/* ── Toolbar / filter card — same as guests.html ── */
 .toolbar{
   background:var(--surface); border:1px solid var(--border); border-radius:14px;
   box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0;
 }
 .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
 .toolbar-left{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; flex:1; min-width:0; }
-.toolbar-right{ display:flex; gap:8px; flex-shrink:0; }
+.toolbar-right{ display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
 .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
 .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
 .search-box{
@@ -108,22 +105,19 @@ body{
   .filter-select{ width:100%; }
 }
 
-/* status chips — level filter row, same pattern as booking-list.html */
 .status-chips{ display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch; }
 .status-chips::-webkit-scrollbar{ height:0; }
 .sc-btn{ flex-shrink:0; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:5px 13px; font-size:11.5px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .2s; font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
 .sc-btn:hover, .sc-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
 .sc-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
-/* ── Panel ── */
 .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; flex-shrink:0; }
 .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
 .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
 .panel-count{ font-size:11.5px; color:var(--text3); font-weight:600; white-space:nowrap; }
 
-/* ── Table ── */
 .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px; }
+table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
 thead th{
   text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase;
   letter-spacing:1.5px; color:var(--text3); font-weight:700;
@@ -150,7 +144,6 @@ tbody td.center{ text-align:center; }
 .empty-row td{ text-align:center; padding:32px; color:var(--text3); }
 tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text); background:var(--surface2); border-top:1px solid var(--border); white-space:nowrap; }
 
-/* mobile cards — same pattern as guests.html */
 @media (max-width:960px){
   .tbl-wrap{ overflow-x:visible; }
   table{ min-width:0; width:100%; }
@@ -173,7 +166,6 @@ tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text
   tbody td::before{ padding-top:0; }
 }
 
-/* ── Pagination ── */
 .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
 .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
 .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; padding:0 7px; font-family:inherit; }
@@ -181,34 +173,43 @@ tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text
 .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
 .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-/* ── Modal ── */
+/* Category / delete modals (kept on page) */
 .modal-overlay{
   display:none; position:fixed; inset:0; background:rgba(15,20,40,0.55); backdrop-filter:blur(4px); z-index:300;
-  align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto;
+  align-items:center; justify-content:center; padding:20px; overflow-y:auto;
   font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
 }
 .modal-overlay.show{ display:flex; }
-.modal{ background:#fff; border:1px solid #eef0f6; border-radius:18px; padding:24px; width:min(520px,96vw); box-shadow:0 30px 80px rgba(15,20,40,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; color:#1c2440; }
-.modal-sm{ width:min(380px,96vw); }
+.modal{
+  background:#fff; border:1px solid #eef0f6; border-radius:18px; padding:24px;
+  width:min(480px,96vw); box-shadow:0 30px 80px rgba(15,20,40,0.25);
+  animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; color:#1c2440;
+  display:flex; flex-direction:column; max-height:calc(100vh - 40px);
+}
+.modal-sm{ width:min(400px,96vw); }
 @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-.modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-shrink:0; }
 .modal-title{ font-size:18px; font-weight:800; color:#1c2440; }
-.modal-close{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:8px; width:30px; height:30px; color:#6b7280; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.modal-close{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:8px; width:30px; height:30px; color:#6b7280; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .modal-close:hover{ color:var(--red); border-color:rgba(240,68,56,0.3); }
+.modal-body{ flex:1; overflow-y:auto; min-height:0; }
 .form-section-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:800; margin-bottom:10px; padding-bottom:7px; border-bottom:1px solid var(--gold-border); }
-.form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
-@media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
-.form-group{ display:flex; flex-direction:column; gap:5px; }
-.form-group.span2{ grid-column:span 2; }
-@media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
+.form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
 .form-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:#9aa1b3; font-weight:700; }
-.form-input, .form-select{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:9px; padding:9px 12px; color:#1c2440; font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
-.form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
-.modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid #eef0f6; flex-wrap:wrap; }
-.val-note{ font-size:12.5px; color:#6b7280; margin-bottom:14px; line-height:1.6; }
+.form-input{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:9px; padding:9px 12px; color:#1c2440; font-family:inherit; font-size:13px; outline:none; width:100%; }
+.form-input:focus{ border-color:var(--gold-border); }
+.modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid #eef0f6; flex-shrink:0; }
+.val-note{ font-size:12.5px; color:#6b7280; line-height:1.6; }
 .val-note strong{ color:#1c2440; }
 
-/* toast */
+.cat-list{ display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto; margin-bottom:14px; }
+.cat-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:#f4f6fb; border:1px solid #eef0f6; border-radius:10px; }
+.cat-row .cat-name{ flex:1; font-weight:600; font-size:13px; color:#1c2440; }
+.cat-row .cat-count{ font-size:11px; color:#9aa1b3; font-weight:600; }
+.cat-row .cat-actions{ display:flex; gap:4px; }
+.cat-add-row{ display:flex; gap:8px; margin-top:4px; }
+.cat-add-row input{ flex:1; }
+
 .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface,#fff); border:1px solid var(--border,#eef0f6); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text,#1c2440); box-shadow:var(--shadow-lg,0 8px 28px rgba(15,34,55,.15)); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:inherit; }
 .toast.success{ border-left:3px solid var(--green,#12b76a); }
 .toast.error{   border-left:3px solid var(--red,#f04438); }
@@ -270,8 +271,9 @@ tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text
             <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear</button>
           </div>
           <div class="toolbar-right">
+            <button class="btn btn-outline btn-sm" onclick="openCategoryModal()"><i class="fa-solid fa-tags"></i> Categories</button>
             <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-            <button class="btn btn-primary btn-sm" onclick="openItemModal()"><i class="fa-solid fa-plus"></i> Add Item</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddItem()"><i class="fa-solid fa-plus"></i> Add Item</button>
           </div>
         </div>
         <div class="status-chips" id="levelTabs"></div>
@@ -279,7 +281,7 @@ tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text
 
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">Stock Items</div>
+          <div class="panel-title">Central Store — Item Master</div>
           <span class="panel-count" id="tableCount">—</span>
         </div>
         <div class="tbl-wrap">
@@ -291,7 +293,7 @@ tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text
                 <th class="center">Unit</th>
                 <th class="center">On Hand</th>
                 <th class="center">Reorder Level</th>
-                <th class="center">Unit Cost (₦)</th>
+                <th class="center">Avg Cost (₦)</th>
                 <th class="center">Total Value (₦)</th>
                 <th class="center">Status</th>
                 <th class="center no-print">Actions</th>
@@ -317,126 +319,105 @@ tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text
   </div>
 </div>
 
-<!-- ADD / EDIT ITEM MODAL -->
-<div class="modal-overlay" id="itemModal">
+<!-- CATEGORY MANAGER -->
+<div class="modal-overlay" id="categoryModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="itemModalTitle">Add Stock Item</div>
-      <button class="modal-close" onclick="closeModal('itemModal')"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-title">Manage Categories</div>
+      <button class="modal-close" onclick="closeModal('categoryModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="form-section-title">Item Details</div>
-    <div class="form-row">
-      <div class="form-group span2">
-        <label class="form-label">Item Name</label>
-        <input class="form-input" type="text" id="fName" placeholder="e.g. Rice (Long Grain)">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Category</label>
-        <select class="form-select" id="fItemCat">
-          <option>Food</option><option>Beverages</option><option>Cleaning Supplies</option>
-          <option>Linen & Amenities</option><option>Equipment</option><option>Other</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Unit</label>
-        <select class="form-select" id="fUnit">
-          <option>kg</option><option>Ltr</option><option>Bottles</option><option>Cans</option>
-          <option>Pieces</option><option>Packs</option><option>Cartons</option><option>Bags</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Quantity On Hand</label>
-        <input class="form-input" type="number" id="fQty" placeholder="0" min="0">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Reorder Level</label>
-        <input class="form-input" type="number" id="fReorder" placeholder="0" min="0">
-      </div>
-      <div class="form-group span2">
-        <label class="form-label">Unit Cost (₦)</label>
-        <input class="form-input" type="number" id="fCost" placeholder="0" min="0">
+    <div class="modal-body">
+      <div class="form-section-title">Existing Categories</div>
+      <div class="cat-list" id="catList"></div>
+      <div class="form-section-title">Add New Category</div>
+      <div class="cat-add-row">
+        <input class="form-input" type="text" id="newCatName" placeholder="Category name…">
+        <button type="button" class="btn btn-primary btn-sm" onclick="addCategory()"><i class="fa-solid fa-plus"></i> Add</button>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('itemModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveItem()"><i class="fa-solid fa-check"></i> Save Item</button>
+      <button type="button" class="btn btn-outline" onclick="closeModal('categoryModal')">Close</button>
     </div>
   </div>
 </div>
 
-<!-- RESTOCK MODAL -->
-<div class="modal-overlay" id="restockModal">
+<!-- EDIT CATEGORY -->
+<div class="modal-overlay" id="editCatModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <div class="modal-title">Restock Item</div>
-      <button class="modal-close" onclick="closeModal('restockModal')"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-title">Edit Category</div>
+      <button class="modal-close" onclick="closeModal('editCatModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="val-note">Adding stock for <strong id="restockName"></strong> — currently <strong id="restockCurrent"></strong> on hand.</div>
-    <div class="form-group">
-      <label class="form-label">Quantity to Add</label>
-      <input class="form-input" type="number" id="restockQty" placeholder="0" min="1">
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Category Name</label>
+        <input class="form-input" type="text" id="editCatName">
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('restockModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmRestock()"><i class="fa-solid fa-plus"></i> Add Stock</button>
+      <button type="button" class="btn btn-outline" onclick="closeModal('editCatModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveCategoryEdit()"><i class="fa-solid fa-check"></i> Save</button>
     </div>
   </div>
 </div>
 
-<!-- DELETE CONFIRM MODAL -->
+<!-- DELETE CONFIRM -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <div class="modal-title" style="color:var(--red);">Delete Item</div>
+      <div class="modal-title" style="color:var(--red);">Confirm Delete</div>
       <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <p class="val-note" id="deleteMsg"></p>
+    <div class="modal-body">
+      <p class="val-note" id="deleteMsg"></p>
+    </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="act-btn danger" style="padding:9px 16px;font-size:13px;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
+      <button type="button" class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+      <button type="button" class="act-btn danger" style="padding:9px 16px;font-size:13px;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
 </div>
 
+<script src="data/store-seed.js"></script>
+<script src="services/store-service.js"></script>
 <script src="../component/store-shell.js"></script>
-<script type="module">
-import { getStoreData, saveStock } from '../services/store-data.js';
-
-/* ═══════════════════════════════════════════
-   Shell — sidebar + topbar. Page-specific topbar buttons (Print, Add
-   Item) go through topbarActionsHtml since the shell only owns the
-   generic chrome (title, date, API badge) — same pattern as every
-   other Store page.
-═══════════════════════════════════════════ */
-const shell = GraceStoreShell.attach({
+<script src="component/store-item-form.js"></script>
+<script>
+/* ═══════════════════════════════════════════════
+   Shell — same call signature/theme tokens as every other Store page.
+   NOTE: global export is StoreShell (not GraceStoreShell), and it uses
+   activeFile/pageTitle/pageSubtitle only — no apiMode/user options.
+   Demo↔Live and the current user come from StoreService.CONFIG /
+   shell.getUser(), not hardcoded per-page.
+═══════════════════════════════════════════════ */
+const shell = StoreShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'stock.html',
   pageTitle:     'Stock',
-  pageSubtitle:  'Central Store inventory — on-hand quantities, reorder levels and value',
-  apiMode:       'Demo',
-  user:          { name: 'Store Manager', initials: 'SM' },
+  pageSubtitle:  'Item Master — define items Store will hold. Qty & cost start at 0 until Procurement sends goods.',
 });
 
-/* ═══════════════════════════════════════════
-   DATA — sourced from the shared store-data.js service, same as
-   dashboard.html / all-requisitions.html. STOCK is kept in memory
-   here and pushed back through saveStock() after every change.
-═══════════════════════════════════════════ */
+const svc = window.StoreService;
+
 const PAGE_SIZE = 10;
-let STOCK = [];
 
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.reorder ? 'low' : 'ok'); }
-function itemValue(s){ return s.qty * s.cost; }
-function genId(){ return 's' + Date.now(); }
+function fmtN(n){ if (svc && svc.fmtN) return svc.fmtN(n); return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+// Low/out-of-stock threshold + its display chip class/label live in
+// StoreService (single source of truth, same pattern as PoolBarService) —
+// this page never redefines the rule itself.
+function itemValue(s){ return (s.qty||0) * (s.cost||0); }
 
-const CAT_COLOR = {
-  'Food':'var(--green)', 'Beverages':'var(--blue)', 'Cleaning Supplies':'var(--amber)',
-  'Linen & Amenities':'var(--pink)', 'Equipment':'var(--purple)', 'Other':'var(--text3)'
-};
-const LEVEL_LABEL = { ok:'In Stock', low:'Low Stock', out:'Out of Stock' };
-const LEVEL_CHIP  = { ok:'chip-ok', low:'chip-low', out:'chip-out' };
+const CAT_COLORS = [
+  'var(--green)','var(--blue)','var(--amber)','var(--purple)',
+  '#e11d48','#16a34a','#ca8a04','var(--pink)','#0ea5e9','#64748b'
+];
+function catColor(cat){
+  const cats = svc.getCategories();
+  const idx = cats.indexOf(cat);
+  return CAT_COLORS[idx >= 0 ? idx % CAT_COLORS.length : 0];
+}
+
 const LEVEL_TABS  = [
   {k:'',    l:'All',           dot:'var(--gold)'},
   {k:'ok',  l:'In Stock',      dot:'var(--green)'},
@@ -446,26 +427,21 @@ const LEVEL_TABS  = [
 
 let page = 1;
 let activeLevel = '';
+let deleteTarget = null;
+let editCatOldName = null;
 
-async function persistStock(){
-  try { await saveStock(STOCK); }
-  catch(e){ showToast(e.message || 'Failed to save stock.', 'error'); }
-}
-
-/* ═══════════════════════════════════════════
-   KPIs
-═══════════════════════════════════════════ */
 function renderKPIs(){
-  const total = STOCK.length;
-  const low   = STOCK.filter(s=>stockLevel(s)==='low').length;
-  const out   = STOCK.filter(s=>stockLevel(s)==='out').length;
-  const value = STOCK.reduce((sum,s)=>sum+itemValue(s),0);
+  const stock = svc.state.stock;
+  const total = stock.length;
+  const low   = stock.filter(s=>svc.stockLevel(s)==='low').length;
+  const out   = stock.filter(s=>svc.stockLevel(s)==='out').length;
+  const value = stock.reduce((sum,s)=>sum+itemValue(s),0);
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card acc-blue">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Total SKUs</div></div>
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Total Items</div></div>
       <div class="kpi-value" style="color:var(--blue)">${total}</div>
-      <div class="kpi-trend neutral">Across ${new Set(STOCK.map(s=>s.cat)).size} categories</div>
+      <div class="kpi-trend neutral">${svc.getCategories().length} categories</div>
     </div>
     <div class="kpi-card acc-amber" onclick="setLevel('low')">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock</div></div>
@@ -475,28 +451,22 @@ function renderKPIs(){
     <div class="kpi-card acc-red" onclick="setLevel('out')">
       <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Out of Stock</div></div>
       <div class="kpi-value" style="color:var(--red)">${out}</div>
-      <div class="kpi-trend ${out>0?'down':'up'}">${out>0?'Unavailable to issue':'None'}</div>
+      <div class="kpi-trend ${out>0?'down':'up'}">${out>0?'No quantity yet':'None'}</div>
     </div>
     <div class="kpi-card acc-green">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Stock Value</div></div>
       <div class="kpi-value" style="color:var(--green);font-size:${value>=1000000?'17px':'22px'}">${fmtN(value)}</div>
-      <div class="kpi-trend up">At current unit cost</div>
+      <div class="kpi-trend up">At current average cost</div>
     </div>`;
 }
 
-/* ═══════════════════════════════════════════
-   CATEGORY FILTER
-═══════════════════════════════════════════ */
 function populateCategoryFilter(){
   const sel = document.getElementById('fCat');
   const cur = sel.value;
-  const cats = [...new Set(STOCK.map(s=>s.cat))].sort();
-  sel.innerHTML = '<option value="">All Categories</option>' + cats.map(c=>`<option${c===cur?' selected':''}>${c}</option>`).join('');
+  sel.innerHTML = '<option value="">All Categories</option>' +
+    svc.getCategories().map(c => `<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
 }
 
-/* ═══════════════════════════════════════════
-   LEVEL TABS
-═══════════════════════════════════════════ */
 function renderLevelTabs(){
   document.getElementById('levelTabs').innerHTML = LEVEL_TABS.map(t => `
     <button class="sc-btn ${t.k===activeLevel?'active':''}" onclick="setLevel('${t.k}')">
@@ -514,31 +484,25 @@ window.clearFilters = function(){
   render();
 };
 
-/* ═══════════════════════════════════════════
-   FILTER / SORT
-═══════════════════════════════════════════ */
 function getFiltered(){
   const q    = document.getElementById('fSearch').value.toLowerCase();
   const cat  = document.getElementById('fCat').value;
   const sort = document.getElementById('fSort').value;
 
-  let rows = STOCK.filter(s => {
-    const mq = !q || s.name.toLowerCase().includes(q);
+  let rows = svc.state.stock.filter(s => {
+    const mq = !q || (s.name||'').toLowerCase().includes(q);
     const mc = !cat || s.cat === cat;
-    const ml = !activeLevel || stockLevel(s) === activeLevel;
+    const ml = !activeLevel || svc.stockLevel(s) === activeLevel;
     return mq && mc && ml;
   });
 
-  if (sort === 'name_asc') rows.sort((a,b)=>a.name.localeCompare(b.name));
-  else if (sort === 'qty_asc') rows.sort((a,b)=>a.qty-b.qty);
-  else if (sort === 'value_desc') rows.sort((a,b)=>itemValue(b)-itemValue(a));
+  if (sort === 'name_asc') rows.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+  else if (sort === 'qty_asc') rows.sort((a,b)=> (a.qty||0)-(b.qty||0));
+  else if (sort === 'value_desc') rows.sort((a,b)=> itemValue(b)-itemValue(a));
 
   return rows;
 }
 
-/* ═══════════════════════════════════════════
-   PAGINATION
-═══════════════════════════════════════════ */
 function renderPagination(total){
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const from = total === 0 ? 0 : (page-1)*PAGE_SIZE + 1;
@@ -560,9 +524,6 @@ function renderPagination(total){
   wrap.appendChild(mk('<i class="fa-solid fa-chevron-right" style="font-size:9px"></i>', page+1, page>=totalPages, false));
 }
 
-/* ═══════════════════════════════════════════
-   RENDER TABLE
-═══════════════════════════════════════════ */
 function render(){
   renderLevelTabs();
   const rows = getFiltered();
@@ -572,23 +533,22 @@ function render(){
   const pageRows = rows.slice(start, start+PAGE_SIZE);
 
   document.getElementById('tbody').innerHTML = pageRows.length === 0
-    ? `<tr class="empty-row"><td colspan="9">No stock items match your filters.</td></tr>`
+    ? `<tr class="empty-row"><td colspan="9">No items yet. Click “Add Item” to define what the Store will hold.</td></tr>`
     : pageRows.map(s => {
-        const lvl = stockLevel(s);
+        const lvl = svc.stockLevel(s);
         return `<tr>
-          <td class="item-name" data-label="Item">${s.name}</td>
-          <td data-label="Category"><span class="cat-chip"><span class="cat-dot" style="background:${CAT_COLOR[s.cat]||'var(--text3)'}"></span>${s.cat}</span></td>
-          <td class="center" data-label="Unit">${s.unit}</td>
-          <td class="center" data-label="On Hand">${s.qty}</td>
-          <td class="center" data-label="Reorder Level">${s.reorder}</td>
-          <td class="center" data-label="Unit Cost">${fmtN(s.cost)}</td>
+          <td class="item-name" data-label="Item">${s.name||'—'}</td>
+          <td data-label="Category"><span class="cat-chip"><span class="cat-dot" style="background:${catColor(s.cat)}"></span>${s.cat||'—'}</span></td>
+          <td class="center" data-label="Unit">${s.unit||'—'}</td>
+          <td class="center" data-label="On Hand">${s.qty??0}</td>
+          <td class="center" data-label="Reorder Level">${s.min??0}</td>
+          <td class="center" data-label="Avg Cost">${fmtN(s.cost||0)}</td>
           <td class="center" data-label="Total Value">${fmtN(itemValue(s))}</td>
-          <td class="center" data-label="Status"><span class="chip ${LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${LEVEL_LABEL[lvl]}</span></td>
+          <td class="center" data-label="Status"><span class="chip ${svc.LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${svc.LEVEL_LABEL[lvl]}</span></td>
           <td class="center no-print" data-label="Actions">
             <div class="act-btns">
-              <button class="act-btn" onclick="openRestockModal('${s.id}')"><i class="fa-solid fa-plus"></i> Restock</button>
-              <button class="act-btn" onclick="openItemModal('${s.id}')"><i class="fa-solid fa-pen"></i></button>
-              <button class="act-btn danger" onclick="openDeleteModal('${s.id}')"><i class="fa-solid fa-trash"></i></button>
+              <button class="act-btn" onclick="openEditItem('${s.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button class="act-btn danger" onclick="openDeleteItem('${s.id}')"><i class="fa-solid fa-trash"></i></button>
             </div>
           </td>
         </tr>`;
@@ -599,116 +559,162 @@ function render(){
 }
 
 /* ═══════════════════════════════════════════
-   ADD / EDIT MODAL
+   ADD / EDIT via StoreItemForm component — all mutations go through
+   StoreService, which persists to shared storage and notifies onChange.
 ═══════════════════════════════════════════ */
-let editItemId = null;
-window.openItemModal = function(id=null){
-  editItemId = id;
-  const isEdit = !!id;
-  document.getElementById('itemModalTitle').textContent = isEdit ? 'Edit Stock Item' : 'Add Stock Item';
-  if (isEdit) {
-    const s = STOCK.find(x=>x.id===id);
-    document.getElementById('fName').value = s.name;
-    document.getElementById('fItemCat').value = s.cat;
-    document.getElementById('fUnit').value = s.unit;
-    document.getElementById('fQty').value = s.qty;
-    document.getElementById('fReorder').value = s.reorder;
-    document.getElementById('fCost').value = s.cost;
-  } else {
-    document.getElementById('fName').value = '';
-    document.getElementById('fItemCat').value = 'Food';
-    document.getElementById('fUnit').value = 'kg';
-    document.getElementById('fQty').value = '';
-    document.getElementById('fReorder').value = '';
-    document.getElementById('fCost').value = '';
-  }
-  document.getElementById('itemModal').classList.add('show');
+window.openAddItem = function(){
+  StoreItemForm.open({
+    mode: 'add',
+    categories: svc.getCategories(),
+    onSave: async (entry) => {
+      try {
+        await svc.addStockItem({ name: entry.name, cat: entry.cat, unit: entry.unit, min: entry.reorder || 0 });
+        showToast('Item added. Quantity and cost will update when Procurement sends goods.', 'success');
+      } catch (e) {
+        showToast(e.message || 'Could not add item.', 'error');
+      }
+    },
+    onError: (msg) => showToast(msg, 'error'),
+  });
 };
 
-window.saveItem = async function(){
-  const name = document.getElementById('fName').value.trim();
-  if (!name) { showToast('Please enter an item name.', 'error'); return; }
-  const entry = {
-    id: editItemId || genId(),
-    name,
-    cat: document.getElementById('fItemCat').value,
-    unit: document.getElementById('fUnit').value,
-    qty: parseFloat(document.getElementById('fQty').value) || 0,
-    reorder: parseFloat(document.getElementById('fReorder').value) || 0,
-    cost: parseFloat(document.getElementById('fCost').value) || 0,
-  };
-  if (editItemId) {
-    const idx = STOCK.findIndex(s=>s.id===editItemId);
-    STOCK[idx] = entry;
-    showToast('Item updated.', 'success');
-  } else {
-    STOCK.push(entry);
-    showToast('Item added.', 'success');
-  }
-  closeModal('itemModal');
-  populateCategoryFilter();
-  renderKPIs();
-  render();
-  await persistStock();
+window.openEditItem = function(id){
+  const item = svc.findStockById(id);
+  if (!item) return;
+  StoreItemForm.open({
+    mode: 'edit',
+    item: item,
+    categories: svc.getCategories(),
+    onSave: async (entry) => {
+      try {
+        // qty + cost intentionally not editable here (StoreService.editStockItem drops them) —
+        // those only move via requisitions / goods receipt.
+        await svc.editStockItem(id, { name: entry.name, cat: entry.cat, unit: entry.unit, min: entry.reorder || 0 });
+        showToast('Item updated.', 'success');
+      } catch (e) {
+        showToast(e.message || 'Could not update item.', 'error');
+      }
+    },
+    onError: (msg) => showToast(msg, 'error'),
+  });
 };
 
 /* ═══════════════════════════════════════════
-   RESTOCK MODAL
+   CATEGORY MANAGER — categories are derived from stock items by
+   StoreService, so "adding" a category with no items yet isn't
+   persisted server-side until an item uses it. We still let the user
+   type a new name into the Add-Item form's category field; this modal
+   focuses on renaming/deleting categories that already have items.
 ═══════════════════════════════════════════ */
-let restockId = null;
-window.openRestockModal = function(id){
-  restockId = id;
-  const s = STOCK.find(x=>x.id===id);
-  document.getElementById('restockName').textContent = s.name;
-  document.getElementById('restockCurrent').textContent = `${s.qty} ${s.unit}`;
-  document.getElementById('restockQty').value = '';
-  document.getElementById('restockModal').classList.add('show');
-};
-window.confirmRestock = async function(){
-  const add = parseFloat(document.getElementById('restockQty').value) || 0;
-  if (add < 1) { showToast('Enter a valid quantity.', 'error'); return; }
-  const s = STOCK.find(x=>x.id===restockId);
-  s.qty += add;
-  closeModal('restockModal');
-  showToast(`Added ${add} ${s.unit} of ${s.name}.`, 'success');
-  renderKPIs();
-  render();
-  await persistStock();
+window.openCategoryModal = function(){
+  renderCategoryList();
+  document.getElementById('newCatName').value = '';
+  document.getElementById('categoryModal').classList.add('show');
 };
 
-/* ═══════════════════════════════════════════
-   DELETE MODAL
-═══════════════════════════════════════════ */
-let deleteId = null;
-window.openDeleteModal = function(id){
-  deleteId = id;
-  const s = STOCK.find(x=>x.id===id);
-  document.getElementById('deleteMsg').textContent = `Delete "${s.name}" from stock? This cannot be undone.`;
+function renderCategoryList(){
+  const list = document.getElementById('catList');
+  const cats = svc.getCategories();
+  if (!cats.length) {
+    list.innerHTML = '<div style="text-align:center;color:#9aa1b3;padding:16px;">No categories yet.</div>';
+    return;
+  }
+  list.innerHTML = cats.map(c => {
+    const count = svc.state.stock.filter(s => s.cat === c).length;
+    const safe = c.replace(/'/g, "\\'");
+    return `<div class="cat-row">
+      <span class="cat-dot" style="background:${catColor(c)};width:8px;height:8px;border-radius:50%;flex-shrink:0;"></span>
+      <span class="cat-name">${c}</span>
+      <span class="cat-count">${count} item${count!==1?'s':''}</span>
+      <div class="cat-actions">
+        <button class="act-btn" onclick="openEditCategory('${safe}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="act-btn danger" onclick="openDeleteCategory('${safe}')"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.addCategory = function(){
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) { showToast('Enter a category name.', 'error'); return; }
+  if (svc.getCategories().some(c => c.toLowerCase() === name.toLowerCase())) {
+    showToast('Category already exists.', 'error'); return;
+  }
+  showToast('Category "' + name + '" will appear once you add or move an item into it.', 'info');
+  document.getElementById('newCatName').value = '';
+};
+
+window.openEditCategory = function(name){
+  editCatOldName = name;
+  document.getElementById('editCatName').value = name;
+  document.getElementById('editCatModal').classList.add('show');
+};
+
+window.saveCategoryEdit = async function(){
+  const newName = document.getElementById('editCatName').value.trim();
+  if (!newName) { showToast('Enter a category name.', 'error'); return; }
+  try {
+    await svc.renameCategory(editCatOldName, newName);
+    closeModal('editCatModal');
+    renderCategoryList();
+    populateCategoryFilter();
+    renderKPIs();
+    render();
+    showToast('Category updated.', 'success');
+  } catch (e) {
+    showToast(e.message || 'Could not rename category.', 'error');
+  }
+};
+
+window.openDeleteCategory = function(name){
+  const count = svc.state.stock.filter(s => s.cat === name).length;
+  deleteTarget = { type: 'category', name };
+  document.getElementById('deleteMsg').textContent = count > 0
+    ? 'Delete category "' + name + '"? ' + count + ' item(s) currently use it. They will be moved to "Other".'
+    : 'Delete category "' + name + '"?';
   document.getElementById('deleteModal').classList.add('show');
 };
+
+window.openDeleteItem = function(id){
+  const s = svc.findStockById(id);
+  if (!s) return;
+  deleteTarget = { type: 'item', id };
+  document.getElementById('deleteMsg').textContent = 'Delete "' + s.name + '" from the item master? This cannot be undone.';
+  document.getElementById('deleteModal').classList.add('show');
+};
+
 window.confirmDelete = async function(){
-  const s = STOCK.find(x=>x.id===deleteId);
-  STOCK = STOCK.filter(x=>x.id!==deleteId);
+  if (!deleteTarget) return;
+
+  try {
+    if (deleteTarget.type === 'item') {
+      const s = svc.findStockById(deleteTarget.id);
+      await svc.deleteStockItem(deleteTarget.id);
+      showToast('"' + (s && s.name || 'Item') + '" removed.', 'error');
+    } else if (deleteTarget.type === 'category') {
+      await svc.deleteCategory(deleteTarget.name, { reassignTo: 'Other' });
+      showToast('Category "' + deleteTarget.name + '" deleted.', 'error');
+      renderCategoryList();
+    }
+  } catch (e) {
+    showToast(e.message || 'Could not delete.', 'error');
+  }
+
+  deleteTarget = null;
   closeModal('deleteModal');
-  showToast(`"${s.name}" removed.`, 'error');
   populateCategoryFilter();
   renderKPIs();
   render();
-  await persistStock();
 };
 
-/* ═══════════════════════════════════════════
-   MODAL HELPERS
-═══════════════════════════════════════════ */
 window.closeModal = function(id){ document.getElementById(id).classList.remove('show'); };
-['itemModal','restockModal','deleteModal'].forEach(id => {
+['categoryModal','editCatModal','deleteModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e){ if (e.target===this) closeModal(id); });
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') ['itemModal','restockModal','deleteModal'].forEach(closeModal); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') ['categoryModal','editCatModal','deleteModal'].forEach(closeModal);
+});
 
-/* ═══════════════════════════════════════════
-   TOAST
-═══════════════════════════════════════════ */
 function showToast(msg, type='success'){
   const icon = type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info';
   const t = document.createElement('div');
@@ -718,21 +724,29 @@ function showToast(msg, type='success'){
   setTimeout(()=>t.remove(), 3400);
 }
 
-/* ═══════════════════════════════════════════
-   INIT — pulls stock from the shared store-data.js service
-═══════════════════════════════════════════ */
 async function init(){
+  if (!svc) {
+    console.error('[Stock] StoreService not loaded — check script order: data/store-seed.js → services/store-service.js → this page.');
+    showToast('StoreService not loaded.', 'error');
+    return;
+  }
   try {
-    const { stock } = await getStoreData();
-    STOCK = stock;
+    await svc.loadAll();
   } catch (err) {
     console.error('[Stock] Failed to load store data:', err);
     showToast(err.message || 'Failed to load stock data.', 'error');
-    STOCK = [];
   }
   populateCategoryFilter();
   renderKPIs();
   render();
+
+  if (svc.onChange) {
+    svc.onChange(() => {
+      populateCategoryFilter();
+      renderKPIs();
+      render();
+    });
+  }
 }
 init();
 </script>

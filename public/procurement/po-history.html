@@ -7,14 +7,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  /* This page only owns layout + its own KPI/panel content.
-     Sidebar + topbar look/markup live entirely in procurement-shell.js and
-     stay on the shared dark/blue theme. The .content scope below re-declares
-     the SAME variable names with light values, so only the main content
-     area turns white — the sidebar never sees these overrides. Same
-     palette + fonts + icon system as dashboard.html / requisition-history.html
-     (Segoe UI, Font Awesome, kpi-top/kpi-ic cards, status pills, toolbar).
-     Date filter (calendar popover) matches requisition-history.html exactly. */
   html{ height:auto; }
   body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
@@ -39,7 +31,6 @@
 
   .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
 
-  /* ═══ KPI CARDS — same shape/tokens as dashboard.html / requisition-history.html ═══ */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -67,7 +58,6 @@
   .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
-  /* Toolbar — identical pattern to requisition-history.html: status pills, search, filter selects, calendar date filter */
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; position:relative; z-index:20; }
   .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
   .toolbar-row.top{ justify-content:space-between; }
@@ -94,11 +84,6 @@
   .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
   .btn-ghost:hover{ color:var(--gold); }
 
-  /* ═══════════════════════════════════════════════════════════════
-     Single-box date filter — same anchored-popover calendar as
-     requisition-history.html, copied verbatim (position:fixed,
-     recalculated on open/scroll/resize so it never drifts).
-  ═══════════════════════════════════════════════════════════════ */
   .date-filter-btn{ display:flex; align-items:center; gap:7px; white-space:nowrap; }
   .date-filter-btn.active{ border-color:var(--gold-border); color:var(--gold); background:var(--gold-dim); }
   .date-filter-panel{
@@ -140,14 +125,13 @@
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
 
-  /* Panel / Table */
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
   .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
   .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; position:relative; scrollbar-width:thin; }
   .tbl-wrap::-webkit-scrollbar{ height:8px; }
   .tbl-wrap::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:1030px; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
   thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
   thead th.center{ text-align:center; }
   tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
@@ -157,8 +141,8 @@
   tbody td.center{ text-align:center; }
   .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
   .pr-no{ color:var(--gold); font-weight:700; }
-  .dept-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); }
-  .dept-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--purple); }
+  .pr-no-sub{ font-weight:500; color:var(--text3); font-size:10.5px; margin-top:1px; }
+  .amount-dash{ color:var(--text3); font-weight:600; }
 
   .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .chip i{ font-size:6px; }
@@ -169,6 +153,8 @@
   .chip-approved{ background:var(--green-bg); color:var(--green); }
   .chip-fulfilled{ background:var(--purple-bg); color:var(--purple); }
   .chip-rejected{ background:var(--red-bg); color:var(--red); }
+  .chip-store{ background:var(--blue-bg); color:var(--blue); }
+  .chip-procurement{ background:var(--purple-bg); color:var(--purple); }
 
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
@@ -177,7 +163,6 @@
   .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  /* Print-only header, shown only inside @media print */
   .print-header{ display:none; }
 
   ::-webkit-scrollbar{ width:6px; height:6px; }
@@ -201,11 +186,9 @@
 <body>
 <div class="app">
 
-  <!-- Sidebar rendered here by procurement-shell.js -->
   <div id="sidebarSlot"></div>
 
   <div class="main">
-    <!-- Topbar rendered here by procurement-shell.js -->
     <div id="topbarSlot"></div>
 
     <div class="content">
@@ -233,13 +216,15 @@
               <span class="flt-label">Search</span>
               <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
-                <input type="text" id="poSearch" placeholder="PO no., PR no., supplier…" oninput="poPage=1;renderPOs()">
+                <input type="text" id="poSearch" placeholder="PO no., PR no., supplier, staff…" oninput="poPage=1;renderPOs()">
               </div>
             </div>
             <div class="flt-group">
-              <span class="flt-label">Department</span>
-              <select class="filter-select" id="poDept" onchange="poPage=1;renderPOs()">
-                <option value="">All Departments</option>
+              <span class="flt-label">Source</span>
+              <select class="filter-select" id="poSource" onchange="poPage=1;renderPOs()">
+                <option value="">All Sources</option>
+                <option value="Store">Store</option>
+                <option value="Procurement">Procurement</option>
               </select>
             </div>
             <div class="flt-group" id="dateFilterWrap">
@@ -295,7 +280,7 @@
           <table>
             <thead>
               <tr>
-                <th>PO No.</th><th>PR Ref.</th><th>Supplier</th><th>Department</th><th>Date Issued</th>
+                <th>Reference No.</th><th>Supplier / Raised By</th><th>Source</th><th>Date Issued</th>
                 <th class="center">Amount (₦)</th><th class="center">Review Stage</th><th>Status</th>
               </tr>
             </thead>
@@ -311,8 +296,10 @@
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="data/procurement-seed.js"></script>
+<script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
-<script src="procurement-api.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
 const shell = ProcurementShell.attach({
@@ -321,27 +308,14 @@ const shell = ProcurementShell.attach({
   activeFile:    'po-history.html',
   pageTitle:     'PO History',
   pageSubtitle:  'Purchase order tracking',
-  apiMode:       ProcurementAPI.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
   user:          { name: 'Procurement Officer', initials: 'PO' },
 });
 
-/* A handful of extra demo purchase orders so every status pill (including
-   Pending, which had no example rows before) has something to filter to.
-   procurement-api.js wasn't available to edit directly, so these are
-   seeded into ProcurementAPI.DEMO_PR from here — guarded by id so
-   re-visiting the page never duplicates them. */
-const EXTRA_DEMO_POS = [
-  { id:'po-extra-1', prNo:'PR-2091', poNo:'PO-2091', supplier:'Sunrise Foods Ltd.',      dept:'Kitchen',      date:'2026-07-28', totalAmount:184500, approvalStage:'pending' },
-  { id:'po-extra-2', prNo:'PR-2092', poNo:'PO-2092', supplier:'Coastal Beverages Co.',   dept:'Pool Bar',     date:'2026-07-26', totalAmount:96200,  approvalStage:'accountant' },
-  { id:'po-extra-3', prNo:'PR-2093', poNo:'PO-2093', supplier:'Everclean Supplies',      dept:'Housekeeping', date:'2026-07-22', totalAmount:52300,  approvalStage:'gm' },
-  { id:'po-extra-4', prNo:'PR-2094', poNo:'PO-2094', supplier:'Prime Meats & Produce',   dept:'Restaurant',   date:'2026-07-18', totalAmount:271000, approvalStage:'pending' },
-];
-function seedExtraDemoPOs(){
-  if (!Array.isArray(ProcurementAPI.DEMO_PR)) return;
-  EXTRA_DEMO_POS.forEach(extra => {
-    if (!ProcurementAPI.DEMO_PR.some(p => p.id === extra.id)) ProcurementAPI.DEMO_PR.push(extra);
-  });
-}
+// Single source of truth for this page — populated once by init() via
+// ProcurementService.getPOs(). Nothing below touches
+// ProcurementService.DEMO_PR or localStorage directly.
+let allPOsCache = [];
 
 let poPage = 1;
 const PO_PAGE_SIZE = 10;
@@ -352,8 +326,7 @@ let filteredPO = [];
 let printMode = false;
 
 /* Status pills still group by the underlying approvalStage (accountant/
-   gm/md all bucket under "review") — that's about filtering the table.
-   The table itself now shows two separate things per row: */
+   gm/md all bucket under "review") — that's about filtering the table. */
 const STAGE_TO_GROUP = { pending:'pending', accountant:'review', gm:'review', md:'review', approved:'approved', fulfilled:'fulfilled', rejected:'rejected' };
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -367,11 +340,7 @@ const SIMPLE_STATUS_CHIP  = { pending:'chip-pending', approved:'chip-approved', 
 /* Review Stage column:
    - Resolved POs (approved/rejected/fulfilled) mirror the Status label —
      no separate "reviewer" once the pipeline is done.
-   - Still-pending POs show which department needs to approve next,
-     truncated where the full name runs long ("Acc. Review" for
-     Accountant; GM/MD are already short enough as-is). Plain "pending"
-     (not yet routed to anyone) is treated the same as "accountant",
-     since Accountant is always the first stop in the approval chain. */
+   - Still-pending POs show which department needs to approve next. */
 const REVIEW_STAGE_LABEL = {
   pending: 'Acc. Review',
   accountant: 'Acc. Review',
@@ -391,20 +360,28 @@ const REVIEW_STAGE_CHIP = {
   rejected: 'chip-rejected',
 };
 
+/* Source column — WHO raised the PO, not which department the goods are
+   for. Only two values ever show here: Store or Procurement. Any record
+   missing `source` (older demo rows) defaults to Procurement, since this
+   module only ever wrote POs itself before Store could raise purchase
+   requisitions. */
+const SOURCE_CHIP = { Store: 'chip-store', Procurement: 'chip-procurement' };
+function sourceOf(p){ return p.source === 'Store' ? 'Store' : 'Procurement'; }
+
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
 function pad2(n){ return String(n).padStart(2,'0'); }
 function ymd(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
 
-/* Every PO on this page is a PR that has had a PO number assigned to it. */
-function allPOs(){ return ProcurementAPI.DEMO_PR.filter(p => p.poNo); }
+/* Every PO on this page is a PR that has had a PO number assigned to it.
+   allPOsCache is populated once in init() via ProcurementService.getPOs(). */
+function allPOs(){ return allPOsCache; }
 
-/* ═══ KPI CARDS — same markup pattern as dashboard.html / requisition-history.html ═══ */
 function renderKpis(){
   const pos = allPOs();
   const total = pos.length;
-  const totalValue = pos.reduce((s,p)=>s+p.totalAmount,0);
+  const totalValue = pos.reduce((s,p)=>s+(p.totalAmount||0),0);
   const fulfilled = pos.filter(p=>p.approvalStage==='fulfilled').length;
   const pending = pos.filter(p=>p.approvalStage==='pending'||p.approvalStage==='accountant'||p.approvalStage==='gm'||p.approvalStage==='md').length;
 
@@ -431,14 +408,6 @@ function renderKpis(){
     </div>`;
 }
 
-function populateDeptFilter(){
-  const sel = document.getElementById('poDept');
-  const current = sel.value;
-  const depts = [...new Set(allPOs().map(p=>p.dept))].sort();
-  sel.innerHTML = `<option value="">All Departments</option>` + depts.map(d=>`<option value="${d}">${d}</option>`).join('');
-  sel.value = current;
-}
-
 function bindStatusPills(){
   document.querySelectorAll('.status-pill').forEach(p => {
     p.addEventListener('click', () => {
@@ -452,10 +421,7 @@ function bindStatusPills(){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Single-box date filter — anchored popover calendar, ported
-   verbatim from requisition-history.html (position:fixed, recalculated
-   on open/scroll/resize; every internal click stops propagation so
-   picking dates never closes the panel early).
+   Single-box date filter — anchored popover calendar.
 ═══════════════════════════════════════════════════════════════ */
 let calYear, calMonth;
 let rangeStart = null, rangeEnd = null;
@@ -584,7 +550,7 @@ function clearDateFilter(e){
 
 function clearFilters(){
   document.getElementById('poSearch').value = '';
-  document.getElementById('poDept').value = '';
+  document.getElementById('poSource').value = '';
   document.getElementById('poSort').value = 'date_desc';
   statusGroup = '';
   document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
@@ -606,40 +572,58 @@ function renderPagination(btnId,labelId,page,total,size,cb){
 
 function renderPOs(){
   const q = (document.getElementById('poSearch').value||'').toLowerCase();
-  const dept = document.getElementById('poDept').value;
+  const source = document.getElementById('poSource').value;
   const sort = document.getElementById('poSort').value;
 
   filteredPO = allPOs().filter(p=>{
-    const mq = !q || p.poNo.toLowerCase().includes(q) || p.prNo.toLowerCase().includes(q) || (p.supplier||'').toLowerCase().includes(q);
+    const mq = !q
+      || (p.poNo||'').toLowerCase().includes(q)
+      || (p.prNo||'').toLowerCase().includes(q)
+      || (p.supplier||'').toLowerCase().includes(q)
+      || (p.by||'').toLowerCase().includes(q);
     const mg = !statusGroup || STAGE_TO_GROUP[p.approvalStage] === statusGroup;
-    const md = !dept || p.dept === dept;
+    const ms = !source || sourceOf(p) === source;
     const mdF = !dateFrom || p.date >= dateFrom;
     const mdT = !dateTo || p.date <= dateTo;
-    return mq && mg && md && mdF && mdT;
+    return mq && mg && ms && mdF && mdT;
   });
 
   if (sort==='date_desc') filteredPO.sort((a,b)=>b.date.localeCompare(a.date));
   else if (sort==='date_asc') filteredPO.sort((a,b)=>a.date.localeCompare(b.date));
-  else if (sort==='amount_desc') filteredPO.sort((a,b)=>(b.totalAmount)-(a.totalAmount));
-  else if (sort==='amount_asc') filteredPO.sort((a,b)=>(a.totalAmount)-(b.totalAmount));
+  else if (sort==='amount_desc') filteredPO.sort((a,b)=>(b.totalAmount||0)-(a.totalAmount||0));
+  else if (sort==='amount_asc') filteredPO.sort((a,b)=>(a.totalAmount||0)-(b.totalAmount||0));
 
   document.getElementById('tblCount').textContent = filteredPO.length + ' order' + (filteredPO.length!==1?'s':'');
   renderPOPage();
   renderKpis();
 }
 
+/* Row click → open po-form.html pre-filled with this PO's data, instead
+   of a read-only detail modal. po-form.html reads ?id=<id> and loads the
+   record via ProcurementService.getPR() to populate the form for editing
+   (e.g. Procurement pricing a Store-raised PO that came in with no
+   amount set). */
+function openPODetail(id){
+  window.location.href = 'po-form.html?id=' + encodeURIComponent(id);
+}
+
 function rowHtml(p){
   const simple = SIMPLE_STATUS[p.approvalStage] || 'pending';
   const reviewLabel = REVIEW_STAGE_LABEL[p.approvalStage];
   const reviewChip  = REVIEW_STAGE_CHIP[p.approvalStage];
+  const src = sourceOf(p);
+  const raisedBy = p.supplier || p.by || '—';
+  const hasAmount = (p.totalAmount || 0) > 0;
   return `
-      <tr onclick="ProcurementModals.showPRDetail(ProcurementAPI.DEMO_PR.find(pr=>pr.id==='${p.id}'))">
-        <td class="pr-no">${p.poNo}</td>
-        <td>${p.prNo}</td>
-        <td>${p.supplier || '—'}</td>
-        <td><span class="dept-chip"><span class="dept-dot"></span>${p.dept}</span></td>
+      <tr onclick="openPODetail('${p.id}')">
+        <td>
+          <div class="pr-no">${p.poNo || p.prNo}</div>
+          ${p.poNo && p.prNo ? `<div class="pr-no-sub">${p.prNo}</div>` : ''}
+        </td>
+        <td>${raisedBy}</td>
+        <td><span class="chip ${SOURCE_CHIP[src]}"><i class="fa-solid fa-circle"></i>${src}</span></td>
         <td>${fmtDate(p.date)}</td>
-        <td class="center" style="font-weight:700;color:var(--gold);">${fmtN(p.totalAmount)}</td>
+        <td class="center" style="font-weight:700;${hasAmount ? 'color:var(--gold);' : ''}">${hasAmount ? fmtN(p.totalAmount) : `<span class="amount-dash">—</span>`}</td>
         <td class="center">${reviewLabel ? `<span class="chip ${reviewChip}"><i class="fa-solid fa-circle"></i>${reviewLabel}</span>` : `<span style="color:var(--text3);">—</span>`}</td>
         <td><span class="chip ${SIMPLE_STATUS_CHIP[simple]}"><i class="fa-solid fa-circle"></i>${SIMPLE_STATUS_LABEL[simple]}</span></td>
       </tr>`;
@@ -649,14 +633,14 @@ function renderPOPage(){
   const total = filteredPO.length;
   if (printMode){
     document.getElementById('poBody').innerHTML = total===0
-      ? `<tr class="empty-row"><td colspan="8">No purchase orders found.</td></tr>`
+      ? `<tr class="empty-row"><td colspan="7">No purchase orders found.</td></tr>`
       : filteredPO.map(rowHtml).join('');
     return;
   }
   const start = (poPage-1)*PO_PAGE_SIZE;
   const rows = filteredPO.slice(start, start+PO_PAGE_SIZE);
   document.getElementById('poBody').innerHTML = rows.length===0
-    ? `<tr class="empty-row"><td colspan="8">No purchase orders found.</td></tr>`
+    ? `<tr class="empty-row"><td colspan="7">No purchase orders found.</td></tr>`
     : rows.map(rowHtml).join('');
   renderPagination('poPageBtns','poPaginLabel',poPage,total,PO_PAGE_SIZE,p=>{poPage=p;renderPOPage();});
 }
@@ -676,11 +660,19 @@ window.addEventListener('afterprint', () => {
   renderPOPage();
 });
 
-// Init
-seedExtraDemoPOs();
-populateDeptFilter();
-bindStatusPills();
-renderPOs();
+// Init — single round trip to the service; allPOs() reads allPOsCache,
+// populated here.
+async function init(){
+  try {
+    allPOsCache = await ProcurementService.getPOs();
+    bindStatusPills();
+    renderPOs();
+  } catch (err) {
+    document.getElementById('poBody').innerHTML =
+      `<tr class="empty-row"><td colspan="7" style="color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message || 'Failed to load purchase orders.'}</td></tr>`;
+  }
+}
+init();
 </script>
 </body>
 </html>

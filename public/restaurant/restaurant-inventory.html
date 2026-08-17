@@ -8,13 +8,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  /* This page owns layout + its own content only. Sidebar + topbar look/markup
-     live entirely in restaurant-shell.js and stay on the shared dark/blue
-     theme. The .content (and .modal-overlay, since modals render outside
-     .content) scopes below re-declare the SAME variable names with light
-     values, so only the main content area + its modals turn white — the
-     sidebar never sees this. Same palette + fonts + icon system as the
-     Pool Bar pages (Segoe UI stack, Font Awesome, kpi-top/kpi-ic cards). */
   html{ height:auto; }
   body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
@@ -37,8 +30,6 @@
   .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  /* ═══ KPI cards — same shape/tokens as the Pool Bar pages: kpi-top
-     (colored icon box + label), kpi-value, kpi-trend, top accent border. ═══ */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -47,12 +38,12 @@
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
-  .kpi-card.active-filter{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold), var(--shadow-lg); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
   .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
   .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
   .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
   .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
   .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
   .ic-blue{ background:var(--blue-bg); color:var(--blue); }
@@ -75,9 +66,9 @@
   .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; font-family:inherit; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; font-family:inherit; }
   .filter-select:focus{ border-color:var(--gold-border); }
   .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
@@ -87,7 +78,7 @@
   .status-pill.on.ok{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
   .status-pill.on.low{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
   .status-pill.on.out{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; font-family:inherit; }
   .btn-ghost:hover{ color:var(--gold); }
 
   @media (max-width:700px){
@@ -97,53 +88,15 @@
     .flt-group{ width:100%; }
     .search-box{ max-width:100%; }
     .filter-select{ width:100%; }
-    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .toolbar-row.top > .btn, .toolbar-actions .btn{ width:100%; justify-content:center; }
   }
 
-  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
-  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
-  .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
-  thead th.center{ text-align:center; }
-  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
-  tbody tr:last-child{ border-bottom:none; }
-  tbody tr:hover{ background:var(--surface2); }
-  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
-  tbody td.center{ text-align:center; }
-  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
-  .meal-name{ font-weight:600; }
-  .meal-meta{ font-size:11px; color:var(--text3); margin-top:1px; }
-  .meal-badge{ display:inline-flex; align-items:center; gap:6px; }
-  .meal-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-  .src-badge{ font-size:9px; padding:1px 7px; border-radius:20px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
-  .src-kitchen{ background:var(--gold-dim); color:var(--gold); }
-  .src-store{ background:var(--blue-bg); color:var(--blue); }
-
-  .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-  .chip i{ font-size:6px; }
-  .chip-ok{ background:var(--green-bg); color:var(--green); }
-  .chip-low{ background:var(--amber-bg); color:var(--amber); }
-  .chip-out{ background:var(--red-bg); color:var(--red); }
-
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; }
   .btn-primary{ background:var(--gold); color:#fff; font-weight:700; }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
-  .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
-  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
-
-  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
-  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; padding:0 7px; }
-  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
-  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
   .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
@@ -162,10 +115,11 @@
   .form-group.span2{ grid-column:span 2; }
   @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
   .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; }
-  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; transition:border-color .2s; width:100%; font-family:inherit; }
   .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:var(--gold-border); }
   .form-textarea{ resize:vertical; min-height:60px; }
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .form-hint{ font-size:11px; color:var(--text3); margin-top:2px; }
 
   .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
   .toast.success{ border-left:3px solid var(--green); }
@@ -176,15 +130,12 @@
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
-
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
   @media print{
-    #rst-sidebar, #rst-topbar, .toolbar, .pagination, .act-btns, .no-print{ display:none !important; }
+    #rst-sidebar, #rst-topbar, .toolbar, .no-print{ display:none !important; }
     .main{ margin-left:0 !important; }
     body{ background:#fff !important; color:#000 !important; }
-    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
-    .tbl-wrap{ overflow:visible !important; }
   }
 </style>
 </head>
@@ -213,99 +164,68 @@
               <span class="flt-label">Search</span>
               <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
-                <input type="text" id="fSearch" placeholder="Meal name, batch…" oninput="page=1;render()">
+                <input type="text" id="fSearch" placeholder="Item name, batch, category…" oninput="render()">
               </div>
             </div>
             <div class="flt-group">
-              <span class="flt-label">Source</span>
-              <select class="filter-select" id="fSource" onchange="page=1;render()">
-                <option value="">All Sources</option>
-                <option value="Kitchen">Kitchen (Food)</option>
-                <option value="Store">Store (Drinks)</option>
+              <span class="flt-label">Category</span>
+              <select class="filter-select" id="fCategory" onchange="render()">
+                <option value="">All Categories</option>
               </select>
             </div>
             <div class="flt-group">
               <span class="flt-label">Sort By</span>
-              <select class="filter-select" id="fSort" onchange="page=1;render()">
-                <option value="name_asc">Meal (A → Z)</option>
+              <select class="filter-select" id="fSort" onchange="render()">
+                <option value="name_asc">Item (A → Z)</option>
                 <option value="qty_asc">Lowest Stock First</option>
                 <option value="qty_desc">Highest Stock First</option>
                 <option value="received_desc">Recently Received</option>
               </select>
             </div>
-            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+            <button class="btn-ghost" type="button" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
           <div class="toolbar-actions">
-            <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-            <button class="btn btn-primary btn-sm" onclick="openItemModal()"><i class="fa-solid fa-plus"></i> Add Item</button>
+            <button class="btn btn-outline btn-sm" type="button" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+            <button class="btn btn-primary btn-sm" type="button" id="btnAddItem" onclick="openItemModal()" style="display:none"><i class="fa-solid fa-plus"></i> Add Item</button>
           </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">Restaurant Inventory <span style="font-weight:400;color:var(--text3);font-size:11px;">— every sellable item, food and drink, one source of truth for Orders</span></div>
-          <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th class="center">Source</th>
-                <th class="center">Unit</th>
-                <th class="center">On Hand</th>
-                <th class="center">Reorder Level</th>
-                <th class="center">Price (₦)</th>
-                <th>Batch / Prod No.</th>
-                <th>Last Received</th>
-                <th class="center">Status</th>
-                <th class="no-print center">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="tblBody"></tbody>
-          </table>
-        </div>
-        <div class="pagination">
-          <span id="paginLabel">—</span>
-          <div class="page-btns" id="pageBtns"></div>
-        </div>
-      </div>
+      <!-- InventoryTable mounts here -->
+      <div id="tableSlot"></div>
 
     </div>
   </div>
 </div>
 
-<!-- ADD / EDIT ITEM MODAL — matches the Menu page's modal (no section-title
-     divider, no Date Received field; received date is tracked automatically). -->
+<!-- ADD / EDIT ITEM -->
 <div class="modal-overlay" id="itemModal">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="itemModalTitle">Add Item to Inventory</div>
-      <button class="modal-close" onclick="closeModal('itemModal')"><i class="fa-solid fa-xmark"></i></button>
+      <button class="modal-close" type="button" onclick="closeModal('itemModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="form-row">
       <div class="form-group span2">
         <label class="form-label">Item Name</label>
-        <input class="form-input" type="text" id="fName" placeholder="e.g. Egusi Soup">
+        <input class="form-input" type="text" id="fName" placeholder="e.g. Jollof Rice">
       </div>
       <div class="form-group">
-        <label class="form-label">Source</label>
-        <select class="form-select" id="fSourceType">
-          <option value="Kitchen">Kitchen (Food — via Transfers)</option>
-          <option value="Store">Store (Drinks — via Requisition)</option>
-        </select>
+       <label class="form-label">Category</label>
+       <select class="form-select" id="fCat" onchange="onCatChange()"></select>
+       <input class="form-input" type="text" id="fCatCustom" placeholder="New category name…" style="display:none;margin-top:6px;">
       </div>
       <div class="form-group">
         <label class="form-label">Unit</label>
         <select class="form-select" id="fUnit">
-          <option>Portions</option><option>Plates</option><option>Pieces</option>
-          <option>Litres</option><option>Packs</option><option>Bottles</option>
+          <option>portion</option>
+          <option>bowl</option>
+          <option>glass</option>
+          <option>bottle</option>
+          <option>pack</option>
+          <option>piece</option>
+          <option>plate</option>
         </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Quantity On Hand</label>
-        <input class="form-input" type="number" id="fQty" placeholder="0" min="0">
       </div>
       <div class="form-group">
         <label class="form-label">Reorder Level</label>
@@ -315,356 +235,435 @@
         <label class="form-label">Sale Price (₦)</label>
         <input class="form-input" type="number" id="fPrice" placeholder="0" min="0">
       </div>
-      <div class="form-group">
-        <label class="form-label">Batch / Prod No.</label>
-        <input class="form-input" type="text" id="fBatch" placeholder="e.g. PROD-00099">
-      </div>
       <div class="form-group span2">
-        <label class="form-label">Description <span style="text-transform:none;">(shown to guests / staff on Orders)</span></label>
+        <label class="form-label">Description <span style="text-transform:none;">(optional)</span></label>
         <input class="form-input" type="text" id="fDesc" placeholder="Brief description…">
+        <div class="form-hint" id="qtyHint">Qty on hand is set by transfers &amp; sales — not edited here.</div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('itemModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveItem()"><i class="fa-solid fa-check"></i> Save Item</button>
+      <button class="btn btn-outline btn-sm" type="button" onclick="closeModal('itemModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" type="button" onclick="saveItem()"><i class="fa-solid fa-check"></i> Save Item</button>
     </div>
   </div>
 </div>
 
-<!-- DELETE CONFIRM MODAL -->
+<!-- DELETE CONFIRM -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <div class="modal-title" style="color:var(--red);">Delete Item</div>
-      <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
+      <button class="modal-close" type="button" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;" id="deleteMsg"></p>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn btn-danger btn-sm" style="background:var(--red-bg);border-color:rgba(240,68,56,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
+      <button class="btn btn-outline btn-sm" type="button" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-sm" type="button" style="background:var(--red-bg);border:1px solid rgba(240,68,56,0.3);color:var(--red);font-weight:700;" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="data/restaurant-seed.js"></script>
+<script src="services/restaurant-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
+<script src="../component/inventory-table.js"></script>
 <script>
+'use strict';
+
 const shell = RestaurantShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'restaurant-inventory.html',
   pageTitle:     'Restaurant Inventory',
-  pageSubtitle:  'Every sellable item — food from Kitchen, drinks from Store',
-  apiMode:       'Demo',
-  user:          { name: 'Restaurant Manager', initials: 'RM' },
+  pageSubtitle:  'Every sellable item — food & drinks, one source of truth for Orders',
 });
 
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
-
-async function apiFetch(method, path, body=null){
-  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
-  const opts = { method, headers:{ 'Content-Type':'application/json' } };
-  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(CFG.API_BASE + path, opts);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
-
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
-
-const KEY_INVENTORY = 'restaurant-inventory';
-
-async function loadShared(key, fallback){
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
-  } catch(e){}
-  return fallback;
-}
-async function saveShared(key, value){
-  try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); }
-}
-
-/* Demo seed — merges the old Restaurant Inventory (food, from Kitchen)
-   with the old separate Menu (drinks, from Store). One list now:
-   every item has qty/min/unit (stock) AND price/desc (sellable info). */
-const DEMO_INVENTORY = [
-  { meal:'Egusi Soup',   source:'Kitchen', unit:'Portions', qty:15, min:8,  batch:'PROD-00094', received:'17/07/26', price:6000,  desc:'Spicy egusi with assorted meat' },
-  { meal:'Moi Moi',      source:'Kitchen', unit:'Pieces',   qty:4,  min:8,  batch:'PROD-00090', received:'16/07/26', price:2500,  desc:'Steamed bean pudding' },
-  { meal:'Jollof Rice',  source:'Kitchen', unit:'Plates',   qty:0,  min:6,  batch:'PROD-00088', received:'16/07/26', price:5500,  desc:'Party-style jollof rice' },
-  { meal:'Fried Rice',   source:'Kitchen', unit:'Plates',   qty:18, min:6,  batch:'PROD-00085', received:'16/07/26', price:6000,  desc:'Vegetable fried rice' },
-  { meal:'Chapman',      source:'Store',   unit:'Bottles',  qty:24, min:10, batch:'REQ-00031',  received:'17/07/26', price:2500,  desc:'Classic Nigerian mocktail mix' },
-  { meal:'Heineken',     source:'Store',   unit:'Bottles',  qty:40, min:15, batch:'REQ-00031',  received:'17/07/26', price:1500,  desc:'33cl chilled beer' },
-  { meal:'Mojito Cocktail', source:'Store', unit:'Bottles', qty:0,  min:5,  batch:'REQ-00028',  received:'14/07/26', price:5500,  desc:'Rum, mint, lime, soda' },
-];
-
-let inventory = [];
-let page = 1;
 let levelFilter = '';
+let editName = null;
+let deleteName = null;
+let invTable = null;
+let canMutate = false; // edit / delete / add
 
-function fmtToday(){ return new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-function invLevel(i){ return i.qty<=0 ? 'out' : (i.qty<=i.min ? 'low' : 'ok'); }
-const LEVEL_CHIP  = { ok:'chip-ok', low:'chip-low', out:'chip-out' };
-const LEVEL_LABEL = { ok:'In Stock', low:'Low Stock', out:'Out of Stock' };
-const MEAL_COLORS = { 'Jollof Rice':'#2f6fed', 'Fried Rice':'#5b8ff9', 'Egusi Soup':'#8b5cf6', 'Moi Moi':'#12b76a' };
-function mealColor(meal){ return MEAL_COLORS[meal] || '#9aa1b3'; }
-
-/* ═══ KPI CARDS — same markup pattern as the Pool Bar pages: kpi-top
-   (colored icon box + label), kpi-value, kpi-trend, top accent border
-   (acc-blue/acc-amber/acc-red/acc-purple). ═══ */
-function renderKPIs(){
-  const total = inventory.length;
-  const low = inventory.filter(i => invLevel(i)==='low').length;
-  const out = inventory.filter(i => invLevel(i)==='out').length;
-  const units = inventory.reduce((s,i)=>s+i.qty,0);
-
-  document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card acc-blue" onclick="setLevel('')">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Items Tracked</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${total}</div>
-      <div class="kpi-trend neutral">Food + Drinks</div>
-    </div>
-    <div class="kpi-card acc-amber" onclick="setLevel('low')">
-      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${low}</div>
-      <div class="kpi-trend ${low>0?'warn':'up'}">${low>0?'Needs restock':'All above threshold'}</div>
-    </div>
-    <div class="kpi-card acc-red" onclick="setLevel('out')">
-      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Out of Stock</div></div>
-      <div class="kpi-value" style="color:var(--red);">${out}</div>
-      <div class="kpi-trend ${out>0?'warn':'up'}">${out>0?'Unavailable to sell':'None'}</div>
-    </div>
-    <div class="kpi-card acc-purple" onclick="setLevel('')">
-      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-cubes"></i></div><div class="kpi-label">Total Units On Hand</div></div>
-      <div class="kpi-value" style="color:var(--purple);">${units}</div>
-      <div class="kpi-trend info">Across ${total} item${total!==1?'s':''}</div>
-    </div>`;
+function getSession() {
+  if (shell && typeof shell.getUser === 'function') return shell.getUser();
+  return null;
 }
 
-function bindStatusPills(){
-  document.querySelectorAll('.status-pill').forEach(p => {
-    p.addEventListener('click', () => {
-      levelFilter = p.dataset.level;
-      document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+/** Admin, manager, or staff with canEdit on restaurant module. */
+function canEditInventory() {
+  const session = getSession();
+  if (!session || !session.role) return false;
+  const role = String(session.role).toLowerCase();
+  if (role === 'admin' || role === 'manager') return true;
+  if (window.Permissions) {
+    return !!Permissions.hasPermission(session, 'canEdit', 'restaurant');
+  }
+  return false;
+}
+
+function fmtN(n) {
+  if (window.RestaurantService && RestaurantService.fmtN) return RestaurantService.fmtN(n);
+  return '₦' + Math.round(n || 0).toLocaleString('en-NG');
+}
+function invLevel(i) {
+  if (window.RestaurantService && RestaurantService.stockLevel) return RestaurantService.stockLevel(i);
+  return i.qty <= 0 ? 'out' : (i.qty <= (i.min || 0) ? 'low' : 'ok');
+}
+function itemName(i) { return i.name || i.meal || '—'; }
+
+function parseDDMMYY(s) {
+  if (!s || s === '—') return 0;
+  var parts = String(s).split('/');
+  if (parts.length < 3) return 0;
+  var d = parseInt(parts[0], 10), m = parseInt(parts[1], 10), y = parseInt(parts[2], 10);
+  return new Date(2000 + y, m - 1, d).getTime();
+}
+
+function getStock() {
+  return (RestaurantService.state && RestaurantService.state.stock) || [];
+}
+
+function getCategoriesList() {
+  if (window.RestaurantService && RestaurantService.getCategories) {
+    return RestaurantService.getCategories();
+  }
+  var cats = [];
+  getStock().forEach(function (i) {
+    var c = i.category || 'Uncategorized';
+    if (cats.indexOf(c) === -1) cats.push(c);
+  });
+  return cats.sort();
+}
+
+function fillCategorySelect() {
+  var sel = document.getElementById('fCategory');
+  var current = sel.value;
+  var cats = getCategoriesList();
+  sel.innerHTML = '<option value="">All Categories</option>' +
+    cats.map(function (c) {
+      return '<option value="' + c.replace(/"/g, '&quot;') + '"' +
+        (c === current ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+}
+
+function renderKPIs() {
+  var stock = getStock();
+  var total = stock.length;
+  var low = stock.filter(function (i) { return invLevel(i) === 'low'; }).length;
+  var out = stock.filter(function (i) { return invLevel(i) === 'out'; }).length;
+  var units = stock.reduce(function (s, i) { return s + (i.qty || 0); }, 0);
+  var lowOk = low === 0;
+  var outOk = out === 0;
+
+  document.getElementById('kpiRow').innerHTML =
+    '<div class="kpi-card acc-blue" onclick="setLevel(\'\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Items Tracked</div></div>' +
+      '<div class="kpi-value" style="color:var(--blue);">' + total + '</div>' +
+      '<div class="kpi-trend neutral">Across all categories</div>' +
+    '</div>' +
+    '<div class="kpi-card ' + (lowOk ? 'acc-green' : 'acc-amber') + '" onclick="setLevel(\'low\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ' + (lowOk ? 'ic-green' : 'ic-amber') + '"><i class="fa-solid fa-triangle-exclamation"></i></div>' +
+      '<div class="kpi-label">Low Stock</div></div>' +
+      '<div class="kpi-value" style="color:' + (lowOk ? 'var(--green)' : 'var(--amber)') + ';">' + low + '</div>' +
+      '<div class="kpi-trend ' + (lowOk ? 'up' : 'warn') + '">' + (lowOk ? 'All above threshold' : 'Needs restock') + '</div>' +
+    '</div>' +
+    '<div class="kpi-card ' + (outOk ? 'acc-green' : 'acc-red') + '" onclick="setLevel(\'out\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ' + (outOk ? 'ic-green' : 'ic-red') + '"><i class="fa-solid fa-ban"></i></div>' +
+      '<div class="kpi-label">Out of Stock</div></div>' +
+      '<div class="kpi-value" style="color:' + (outOk ? 'var(--green)' : 'var(--red)') + ';">' + out + '</div>' +
+      '<div class="kpi-trend ' + (outOk ? 'up' : 'warn') + '">' + (outOk ? 'None' : 'Unavailable to sell') + '</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-purple" onclick="setLevel(\'\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-cubes"></i></div><div class="kpi-label">Total Units On Hand</div></div>' +
+      '<div class="kpi-value" style="color:var(--purple);">' + units + '</div>' +
+      '<div class="kpi-trend info">Across ' + total + ' item' + (total !== 1 ? 's' : '') + '</div>' +
+    '</div>';
+}
+
+function bindStatusPills() {
+  document.querySelectorAll('.status-pill').forEach(function (p) {
+    p.addEventListener('click', function () {
+      levelFilter = p.dataset.level || '';
+      document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
       p.classList.add('on');
-      page = 1;
       render();
     });
   });
 }
-function setLevel(k){
-  levelFilter = k;
-  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
-  const target = document.querySelector(`.status-pill[data-level="${k}"]`);
+
+function setLevel(k) {
+  levelFilter = k || '';
+  document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
+  var target = document.querySelector('.status-pill[data-level="' + levelFilter + '"]');
   if (target) target.classList.add('on');
-  page = 1;
   render();
 }
 
-function clearFilters(){
+function clearFilters() {
   document.getElementById('fSearch').value = '';
-  document.getElementById('fSource').value = '';
+  document.getElementById('fCategory').value = '';
   document.getElementById('fSort').value = 'name_asc';
   levelFilter = '';
-  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
-  document.querySelector('.status-pill.all').classList.add('on');
-  page = 1;
+  document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
+  var all = document.querySelector('.status-pill.all');
+  if (all) all.classList.add('on');
   render();
 }
 
-function parseDDMMYY(s){
-  if (!s) return 0;
-  const [d,m,y] = s.split('/').map(n=>parseInt(n,10));
-  return new Date(2000+y, m-1, d).getTime();
+function applyMutateUI() {
+  canMutate = canEditInventory();
+  var addBtn = document.getElementById('btnAddItem');
+  if (addBtn) addBtn.style.display = canMutate ? '' : 'none';
 }
-function getFiltered(){
-  const q = document.getElementById('fSearch').value.toLowerCase();
-  const source = document.getElementById('fSource').value;
-  const sort = document.getElementById('fSort').value;
 
-  let rows = inventory.filter(i => {
-    const mq = !q || i.meal.toLowerCase().includes(q) || (i.batch||'').toLowerCase().includes(q);
-    const ml = !levelFilter || invLevel(i) === levelFilter;
-    const ms = !source || i.source === source;
-    return mq && ml && ms;
+/** (Re)create InventoryTable with current permission flags. */
+function mountInventoryTable() {
+  canMutate = canEditInventory();
+  if (invTable && typeof invTable.destroy === 'function') invTable.destroy();
+
+  invTable = InventoryTable.create({
+    target: '#tableSlot',
+    pageSize: 8,
+    title: 'Restaurant Inventory',
+    emptyText: 'No inventory items match your filters.',
+    showActions: canMutate,
+    showDeduct: false,
+    showEdit: canMutate,
+    showDelete: canMutate,
+    rowClickable: false,
+    formatMoney: fmtN,
+    stockLevel: invLevel,
+    onEdit: function (item) {
+      if (!canEditInventory()) return;
+      openItemModal(item.name || item.meal);
+    },
+    onDelete: function (item) {
+      if (!canEditInventory()) return;
+      openDeleteModal(item.name || item.meal);
+    },
+  });
+  applyMutateUI();
+  if (invTable) invTable.setRows(getFiltered());
+}
+
+function getFiltered() {
+  var q = (document.getElementById('fSearch').value || '').toLowerCase();
+  var cat = document.getElementById('fCategory').value;
+  var sort = document.getElementById('fSort').value;
+
+  var rows = getStock().filter(function (i) {
+    var name = itemName(i).toLowerCase();
+    var batch = String(i.batch || '').toLowerCase();
+    var category = String(i.category || '').toLowerCase();
+    var mq = !q || name.indexOf(q) !== -1 || batch.indexOf(q) !== -1 || category.indexOf(q) !== -1;
+    var ml = !levelFilter || invLevel(i) === levelFilter;
+    var mc = !cat || (i.category || 'Uncategorized') === cat;
+    return mq && ml && mc;
   });
 
-  if (sort === 'name_asc') rows.sort((a,b)=>a.meal.localeCompare(b.meal));
-  else if (sort === 'qty_asc') rows.sort((a,b)=>a.qty-b.qty);
-  else if (sort === 'qty_desc') rows.sort((a,b)=>b.qty-a.qty);
-  else if (sort === 'received_desc') rows.sort((a,b)=>parseDDMMYY(b.received)-parseDDMMYY(a.received));
+  if (sort === 'name_asc') rows.sort(function (a, b) { return itemName(a).localeCompare(itemName(b)); });
+  else if (sort === 'qty_asc') rows.sort(function (a, b) { return (a.qty || 0) - (b.qty || 0); });
+  else if (sort === 'qty_desc') rows.sort(function (a, b) { return (b.qty || 0) - (a.qty || 0); });
+  else if (sort === 'received_desc') rows.sort(function (a, b) { return parseDDMMYY(b.received) - parseDDMMYY(a.received); });
 
   return rows;
 }
 
-function renderPagination(total){
-  const totalPages = Math.max(1, Math.ceil(total / CFG.PAGE_SIZE));
-  if (page > totalPages) page = totalPages;
-  const from = total === 0 ? 0 : (page-1)*CFG.PAGE_SIZE + 1;
-  const to = Math.min(page*CFG.PAGE_SIZE, total);
-  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
-  const wrap = document.getElementById('pageBtns');
-  wrap.innerHTML = '';
-  const prev = document.createElement('button'); prev.className='page-btn'; prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>'; prev.disabled=(page===1);
-  prev.onclick = () => { page--; render(); }; wrap.appendChild(prev);
-  let start = Math.max(1, page-2), end = Math.min(totalPages, start+4); start = Math.max(1, end-4);
-  for (let i=start;i<=end;i++){
-    const b = document.createElement('button'); b.className = 'page-btn' + (i===page?' active':''); b.textContent = i;
-    b.onclick = (p=>()=>{ page=p; render(); })(i); wrap.appendChild(b);
-  }
-  const next = document.createElement('button'); next.className='page-btn'; next.innerHTML='<i class="fa-solid fa-chevron-right"></i>'; next.disabled=(page>=totalPages);
-  next.onclick = () => { page++; render(); }; wrap.appendChild(next);
-}
-
-function render(){
+function render() {
+  fillCategorySelect();
   renderKPIs();
-  const rows = getFiltered();
-  document.getElementById('tblCount').textContent = rows.length + ' item' + (rows.length!==1?'s':'');
-
-  const start = (page-1)*CFG.PAGE_SIZE;
-  const pageRows = rows.slice(start, start+CFG.PAGE_SIZE);
-
-  document.getElementById('tblBody').innerHTML = pageRows.length === 0
-    ? `<tr class="empty-row"><td colspan="10">No inventory items match your filters.</td></tr>`
-    : pageRows.map(i => {
-        const lvl = invLevel(i);
-        return `<tr>
-          <td class="meal-name"><span class="meal-badge"><span class="meal-dot" style="background:${mealColor(i.meal)}"></span>${i.meal}</span></td>
-          <td class="center"><span class="src-badge ${i.source==='Store'?'src-store':'src-kitchen'}">${i.source||'Kitchen'}</span></td>
-          <td class="center">${i.unit}</td>
-          <td class="center" style="font-weight:700;color:${lvl==='out'?'var(--red)':lvl==='low'?'var(--amber)':'var(--text)'};">${i.qty}</td>
-          <td class="center">${i.min}</td>
-          <td class="center" style="color:var(--gold);font-weight:700;">${fmtN(i.price)}</td>
-          <td>${i.batch || '—'}</td>
-          <td>${i.received || '—'}</td>
-          <td class="center"><span class="chip ${LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${LEVEL_LABEL[lvl]}</span></td>
-          <td class="no-print center">
-            <div class="act-btns">
-              <button class="act-btn" onclick="openItemModal('${i.meal}')"><i class="fa-solid fa-pen"></i> Edit</button>
-              <button class="act-btn danger" onclick="openDeleteModal('${i.meal}')"><i class="fa-solid fa-trash"></i></button>
-            </div>
-          </td>
-        </tr>`;
-      }).join('');
-
-  renderPagination(rows.length);
+  if (invTable) invTable.setRows(getFiltered());
 }
 
-let editMeal = null;
-function openItemModal(meal=null){
-  editMeal = meal;
-  const isEdit = !!meal;
+/* ═══ Add / Edit ═══ */
+function fillCatModalSelect(selected) {
+  var sel = document.getElementById('fCat');
+  var cats = getCategoriesList();
+  sel.innerHTML = cats.map(function (c) {
+    return '<option value="' + c.replace(/"/g, '&quot;') + '"' +
+      (c === selected ? ' selected' : '') + '>' + c + '</option>';
+  }).join('') +
+    '<option value="__new__">＋ New category…</option>';
+  document.getElementById('fCatCustom').style.display = 'none';
+  document.getElementById('fCatCustom').value = '';
+}
+
+function onCatChange() {
+  var v = document.getElementById('fCat').value;
+  var custom = document.getElementById('fCatCustom');
+  if (v === '__new__') {
+    custom.style.display = '';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+    custom.value = '';
+  }
+}
+
+function resolveCategoryFromForm() {
+  var sel = document.getElementById('fCat').value;
+  if (sel === '__new__') {
+    var n = document.getElementById('fCatCustom').value.trim();
+    if (!n) throw new Error('Enter a name for the new category.');
+    return n;
+  }
+  return sel || 'Uncategorized';
+}
+
+function openItemModal(name) {
+  if (!canEditInventory()) {
+    showToast('You do not have permission to edit inventory.', 'error');
+    return;
+  }
+  editName = name || null;
+  var isEdit = !!editName;
   document.getElementById('itemModalTitle').textContent = isEdit ? 'Edit Item' : 'Add Item to Inventory';
+  document.getElementById('qtyHint').style.display = isEdit ? '' : 'none';
+
   if (isEdit) {
-    const i = inventory.find(x=>x.meal===meal);
-    document.getElementById('fName').value = i.meal;
-    document.getElementById('fSourceType').value = i.source || 'Kitchen';
-    document.getElementById('fUnit').value = i.unit;
-    document.getElementById('fQty').value = i.qty;
-    document.getElementById('fMin').value = i.min;
-    document.getElementById('fPrice').value = i.price || '';
-    document.getElementById('fBatch').value = i.batch || '';
+    var i = RestaurantService.findStock(editName);
+    if (!i) { showToast('Item not found.', 'error'); return; }
+    document.getElementById('fName').value = i.name;
+    document.getElementById('fName').disabled = true;
+    fillCatModalSelect(i.category || 'Uncategorized');
+    document.getElementById('fUnit').value = i.unit || 'portion';
+    document.getElementById('fMin').value = i.min != null ? i.min : '';
+    document.getElementById('fPrice').value = i.price != null ? i.price : '';
     document.getElementById('fDesc').value = i.desc || '';
   } else {
     document.getElementById('fName').value = '';
-    document.getElementById('fSourceType').value = 'Kitchen';
-    document.getElementById('fUnit').value = 'Portions';
-    document.getElementById('fQty').value = '';
+    document.getElementById('fName').disabled = false;
+    fillCatModalSelect('Mains');
+    document.getElementById('fUnit').value = 'portion';
     document.getElementById('fMin').value = '';
     document.getElementById('fPrice').value = '';
-    document.getElementById('fBatch').value = '';
     document.getElementById('fDesc').value = '';
   }
   document.getElementById('itemModal').classList.add('show');
 }
 
-async function saveItem(){
-  const name = document.getElementById('fName').value.trim();
+async function saveItem() {
+  var name = document.getElementById('fName').value.trim();
   if (!name) { showToast('Please enter an item name.', 'error'); return; }
-  const existing = editMeal ? inventory.find(i=>i.meal===editMeal) : null;
-  const entry = {
-    meal: name,
-    source: document.getElementById('fSourceType').value,
+
+  var category;
+  try {
+    category = resolveCategoryFromForm();
+  } catch (e) {
+    showToast(e.message, 'error');
+    return;
+  }
+
+  var payload = {
+    category: category,
     unit: document.getElementById('fUnit').value,
-    qty: parseFloat(document.getElementById('fQty').value) || 0,
     min: parseFloat(document.getElementById('fMin').value) || 0,
     price: parseFloat(document.getElementById('fPrice').value) || 0,
-    batch: document.getElementById('fBatch').value.trim(),
-    received: existing ? existing.received : fmtToday(),
     desc: document.getElementById('fDesc').value.trim(),
   };
-  if (editMeal) {
-    const idx = inventory.findIndex(i=>i.meal===editMeal);
-    inventory[idx] = entry;
-    apiSave('PUT', `/api/restaurant/inventory/${encodeURIComponent(editMeal)}`, entry);
-    showToast('Item updated.', 'success');
-  } else {
-    if (inventory.some(i=>i.meal.toLowerCase()===name.toLowerCase())) { showToast('That item is already tracked — edit it instead.', 'error'); return; }
-    inventory.push(entry);
-    apiSave('POST', '/api/restaurant/inventory', entry);
-    showToast('Item added to inventory.', 'success');
+
+  try {
+    if (editName) {
+      await RestaurantService.editStockItem(editName, payload);
+      showToast('Item updated.', 'success');
+    } else {
+      await RestaurantService.addStockItem({
+        name: name,
+        category: payload.category,
+        unit: payload.unit,
+        min: payload.min,
+        price: payload.price,
+        desc: payload.desc,
+      });
+      showToast('Item added to inventory.', 'success');
+    }
+    closeModal('itemModal');
+    render();
+  } catch (err) {
+    showToast(err.message || 'Could not save item.', 'error');
   }
-  closeModal('itemModal');
-  render();
-  await saveShared(KEY_INVENTORY, inventory);
 }
 
-let deleteMeal = null;
-function openDeleteModal(meal){
-  deleteMeal = meal;
+function openDeleteModal(name) {
+  if (!canEditInventory()) {
+    showToast('You do not have permission to delete inventory items.', 'error');
+    return;
+  }
+  deleteName = name;
   document.querySelector('#deleteModal .modal').classList.add('mode-delete');
-  document.getElementById('deleteMsg').textContent = `Remove "${meal}" from Restaurant Inventory? This cannot be undone.`;
+  document.getElementById('deleteMsg').textContent =
+    'Remove "' + name + '" from Restaurant Inventory? This cannot be undone.';
   document.getElementById('deleteModal').classList.add('show');
 }
-async function confirmDelete(){
-  const i = inventory.find(x=>x.meal===deleteMeal);
-  inventory = inventory.filter(x=>x.meal!==deleteMeal);
-  apiSave('DELETE', `/api/restaurant/inventory/${encodeURIComponent(deleteMeal)}`);
-  closeModal('deleteModal');
-  showToast(`"${i ? i.meal : deleteMeal}" removed from inventory.`, 'error');
-  render();
-  await saveShared(KEY_INVENTORY, inventory);
+
+async function confirmDelete() {
+  if (!deleteName) return;
+  try {
+    await RestaurantService.deleteStockItem(deleteName);
+    showToast('"' + deleteName + '" removed from inventory.', 'error');
+    closeModal('deleteModal');
+    render();
+  } catch (err) {
+    showToast(err.message || 'Could not delete item.', 'error');
+  }
 }
 
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-['itemModal','deleteModal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e){ if (e.target === this) closeModal(id); });
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+['itemModal', 'deleteModal'].forEach(function (id) {
+  document.getElementById(id).addEventListener('click', function (e) {
+    if (e.target === this) closeModal(id);
+  });
 });
 
-function showToast(msg, type='success'){
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
+function showToast(msg, type) {
+  type = type || 'success';
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3400);
+  setTimeout(function () { t.remove(); }, 3400);
 }
 
-async function init(){
-  if (!CFG.USE_DEMO) {
-    try {
-      const data = await apiFetch('GET', '/api/restaurant/inventory');
-      inventory = data.inventory || data || [];
-      shell.setApiMode('Live');
-      bindStatusPills();
-      render();
-      return;
-    } catch(e) { console.warn('[API] Falling back to shared/demo data:', e.message); }
+async function init() {
+  if (!window.RestaurantService) {
+    document.getElementById('kpiRow').innerHTML =
+      '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text3);">RestaurantService not loaded. Check script order.</div>';
+    return;
+  }
+  if (!window.InventoryTable) {
+    document.getElementById('tableSlot').innerHTML =
+      '<div style="padding:24px;text-align:center;color:var(--text3);">InventoryTable component not loaded.</div>';
+    return;
   }
 
-  inventory = await loadShared(KEY_INVENTORY, DEMO_INVENTORY);
-  await saveShared(KEY_INVENTORY, inventory);
+  try {
+    await RestaurantService.loadAll();
 
-  bindStatusPills();
-  render();
+    mountInventoryTable();
+    bindStatusPills();
+    render();
+
+    // Live session may resolve after first paint — refresh action visibility
+    setTimeout(function () {
+      var next = canEditInventory();
+      if (next !== canMutate) mountInventoryTable();
+      else applyMutateUI();
+    }, 400);
+
+    if (RestaurantService.onChange) {
+      RestaurantService.onChange(function () { render(); });
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('kpiRow').innerHTML =
+      '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text3);">Could not load inventory.</div>';
+  }
 }
+
 init();
 </script>
 </body>

@@ -2,29 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>Kitchen Stock | Grace Kitchen</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="color-scheme" content="light">
-<title>Inventory | Aurum Kitchen</title>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-  /* This page owns layout + its own content only. Sidebar + topbar look/markup
-     live entirely in kitchen-shell.js and stay on the shared dark/blue theme.
-     The .content (and .modal-overlay, since modals render outside .content)
-     scopes below re-declare the SAME variable names with light values, so only
-     the main content area + its modals turn white — the sidebar never sees this.
-     KPI icon-box pattern + Font Awesome icon language mirror poolbar-dashboard.html /
-     poolbar-requisition-history.html so every module reads as one product. */
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
-  html, body{ height:100%; overflow-x:hidden; }
-  body{ font-family:'Outfit', system-ui, -apple-system, sans-serif; font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  html{ height:auto; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  /* ── Light-theme variables, scoped to content + modal only ── */
   .content, .modal-overlay{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec;
@@ -39,11 +28,9 @@
     --purple:#8b5cf6; --purple-bg:#f4efff;
   }
   .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
-  @media (max-width:768px){ .content{ padding:16px; } }
-  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  /* ═══ KPI CARDS — icon-box pattern from poolbar-dashboard.html / poolbar-requisition-history.html ═══ */
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
@@ -52,11 +39,11 @@
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
   .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
   .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
   .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
   .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
   .ic-blue{ background:var(--blue-bg); color:var(--blue); }
@@ -65,149 +52,93 @@
   .ic-purple{ background:var(--purple-bg); color:var(--purple); }
   .ic-red{ background:var(--red-bg); color:var(--red); }
   .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin:4px 0 6px; }
-  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
-  .kpi-trend{ font-size:11px; font-weight:600; color:var(--text3); margin-top:auto; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
   .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
   .toolbar-row.top{ justify-content:space-between; }
   .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
-  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:250px; flex:1; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; font-family:inherit; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; font-family:inherit; }
+  .filter-select:focus{ border-color:var(--gold-border); }
   .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
-  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
   .status-pill.on.ok{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
   .status-pill.on.low{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
   .status-pill.on.out{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; font-family:inherit; }
   .btn-ghost:hover{ color:var(--gold); }
-  @media (max-width:900px){ .toolbar-row.top{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .flt-group{ width:100%; } .search-box{ max-width:100%; } .filter-select{ width:100%; } .toolbar-row.top > .btns-right{ width:100%; } .toolbar-row.top > .btns-right .btn{ flex:1; justify-content:center; } }
-  .btns-right{ display:flex; gap:8px; flex-wrap:wrap; }
 
-  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
-  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
-  .panel-title .sub{ font-weight:400; color:var(--text3); font-size:11px; }
-  .tbl-wrap{ overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
-  thead th.center{ text-align:center; }
-  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
-  tbody tr:last-child{ border-bottom:none; }
-  tbody tr:hover{ background:var(--surface2); }
-  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
-  tbody td.center{ text-align:center; }
-  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; }
-  .ing-name{ font-weight:600; }
-  .ing-badge{ display:inline-flex; align-items:center; gap:6px; }
-  .ing-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-  .cat-chip{ font-size:9px; padding:2px 8px; border-radius:20px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; background:var(--gold-dim); color:var(--gold); white-space:nowrap; }
-
-  tfoot td{ padding:11px 14px; font-weight:700; font-size:12.5px; color:var(--text); background:var(--surface2); border-top:1px solid var(--border); white-space:nowrap; }
-
-  @media (max-width:960px){
-    .tbl-wrap{ overflow-x:visible; }
-    table{ min-width:0; width:100%; }
-    thead{ display:none; }
-    table, tbody, tr, td{ display:block; width:100%; }
-    tbody tr{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; margin:0 0 10px; padding:6px 14px; }
-    tbody tr:last-child{ margin-bottom:0; }
-    tbody td{ border:none; padding:8px 0; white-space:normal !important; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; text-align:right; }
-    tbody td:not(:last-child){ border-bottom:1px dashed var(--border); }
-    tbody td::before{ content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; flex-shrink:0; text-align:left; }
-    .empty-row{ display:block; } .empty-row td{ display:block; text-align:center; } .empty-row td::before{ content:none; }
-    tfoot, tfoot tr{ display:none; }
-  }
-
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-  .chip-ok{ background:var(--green-bg); color:var(--green); } .chip-ok::before{ background:var(--green); }
-  .chip-low{ background:var(--amber-bg); color:var(--amber); } .chip-low::before{ background:var(--amber); }
-  .chip-out{ background:var(--red-bg); color:var(--red); } .chip-out::before{ background:var(--red); }
-  .chip-production{ background:var(--purple-bg); color:var(--purple); } .chip-production::before{ background:var(--purple); }
-  .chip-restock{ background:var(--green-bg); color:var(--green); } .chip-restock::before{ background:var(--green); }
-  .chip-wastage{ background:var(--red-bg); color:var(--red); } .chip-wastage::before{ background:var(--red); }
-  .chip-correction{ background:var(--blue-bg); color:var(--blue); } .chip-correction::before{ background:var(--blue); }
-  .chip-other{ background:var(--surface3); color:var(--text2); } .chip-other::before{ background:var(--text3); }
-
-  .act-btns{ display:flex; gap:4px; flex-wrap:nowrap; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
-  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
-
-  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
-  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; padding:0 7px; font-family:'Outfit',sans-serif; }
-  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
-  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
-
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
-  .btn-primary{ background:var(--gold); color:#fff; font-weight:600; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; }
+  .btn-primary{ background:var(--gold); color:#fff; font-weight:700; }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-danger{ background:var(--red-bg); border-color:rgba(240,68,56,0.3); color:var(--red); font-weight:700; }
-  .btn-danger:hover{ background:#fddcd8; }
+  .btn-danger{ background:var(--red-bg); border-color:rgba(240,68,56,.3); color:var(--red); font-weight:700; }
+  .btn-danger:hover{ background:var(--red); color:#fff; }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
 
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
-  .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(600px,96vw); box-shadow:0 30px 80px rgba(15,34,55,0.25); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
-  .modal-sm{ max-width:420px; }
-  @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
-  @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:16px; cursor:pointer; padding:4px; line-height:1; display:flex; align-items:center; justify-content:center; }
-  .modal-close:hover{ color:var(--text); }
-  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
-  .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
-  .val-note strong{ color:var(--text); }
+  .table-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column; }
+  .table-head-bar{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+  .table-title{ font-size:13px; font-weight:800; color:var(--text); }
+  .table-wrap{ overflow-x:auto; width:100%; }
+  table.data-tbl{ width:100%; border-collapse:collapse; text-align:left; font-size:13px; }
+  table.data-tbl th{ background:var(--surface2); color:var(--text3); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; padding:10px 14px; border-bottom:1px solid var(--border); }
+  table.data-tbl td{ padding:12px 14px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:middle; }
+  table.data-tbl tr:last-child td{ border-bottom:none; }
+  table.data-tbl tr:hover td{ background:rgba(47,111,237,0.02); }
 
-  .form-section-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
+  .item-name{ font-weight:700; color:var(--text); }
+  .cat-badge{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:3px 8px; border-radius:12px; background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+  .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
+  .chip-ok{ background:var(--green-bg); color:var(--green); }
+  .chip-low{ background:var(--amber-bg); color:var(--amber); }
+  .chip-out{ background:var(--red-bg); color:var(--red); }
+  .act-btns{ display:flex; align-items:center; gap:6px; }
+  .act-btn{ background:var(--surface2); border:1px solid var(--border); color:var(--text2); width:28px; height:28px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; font-size:11px; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); background:var(--gold-dim); }
+  .act-btn.del:hover{ border-color:rgba(240,68,56,.3); color:var(--red); background:var(--red-bg); }
+
+  .pagin{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:8px; font-size:11.5px; color:var(--text2); }
+  .page-btns{ display:flex; align-items:center; gap:4px; }
+  .page-btn{ width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11.5px; font-weight:600; }
+  .page-btn.active{ background:var(--gold); border-color:var(--gold); color:#fff; font-weight:700; }
+  .page-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(520px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal.mode-delete::before{ background:var(--red); }
+  .modal-sm{ width:min(400px,96vw); }
+  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-size:18px; font-weight:800; color:var(--text); }
+  .modal-close{ background:none; border:none; color:var(--text3); font-size:16px; cursor:pointer; padding:4px; line-height:1; }
+  .modal-close:hover{ color:var(--text); }
   .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
-  @media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
   .form-group{ display:flex; flex-direction:column; gap:5px; }
   .form-group.span2{ grid-column:span 2; }
-  @media (max-width:480px){ .form-group.span2{ grid-column:span 1; } }
-  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:500; }
-  .form-hint{ font-size:10.5px; color:var(--text3); margin-top:1px; }
-  .form-input,.form-select,.form-textarea{ background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
-  .form-input:focus,.form-select:focus,.form-textarea:focus{ border-color:var(--gold); }
-  .form-input[readonly]{ background:var(--surface3); color:var(--text2); cursor:not-allowed; }
-  .form-textarea{ resize:vertical; min-height:60px; }
+  .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .form-input, .form-select, .form-textarea{ background:var(--input-bg,var(--surface2)); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; transition:border-color .2s; width:100%; font-family:inherit; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus{ border-color:var(--gold-border); }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
 
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
-  .toast.success{ border-left:3px solid var(--green); }
-  .toast.error{ border-left:3px solid var(--red); }
-  .toast.info{ border-left:3px solid var(--blue); }
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-weight:600; }
+  .toast.success{ border-left:3px solid var(--green); } .toast.error{ border-left:3px solid var(--red); } .toast.info{ border-left:3px solid var(--blue); }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-  @media (max-width:480px){ .toast{ left:12px; right:12px; bottom:12px; max-width:none; } }
-
-  ::-webkit-scrollbar{ width:6px; height:6px; }
-  ::-webkit-scrollbar-track{ background:transparent; }
-  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
-
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-
-  @media print{
-    #kit-sidebar, #kit-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
-    .main{ margin-left:0 !important; }
-    body{ background:#fff !important; color:#000 !important; }
-    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
-    .tbl-wrap{ overflow:visible !important; }
-  }
 </style>
 </head>
 <body>
@@ -217,83 +148,83 @@
     <div id="topbarSlot"></div>
     <div class="content">
 
+      <!-- KPI CARDS -->
       <div class="kpi-row" id="kpiRow"></div>
 
-      <div class="toolbar no-print">
+      <!-- TOOLBAR -->
+      <div class="toolbar">
         <div class="toolbar-row top">
           <div class="toolbar-left">
             <div class="flt-group">
-              <span class="flt-label">Status</span>
-              <div class="status-pills" id="statusPills">
-                <div class="status-pill on all" data-level="">All</div>
-                <div class="status-pill ok" data-level="ok"><span class="pdot" style="background:var(--green)"></span>In Stock</div>
-                <div class="status-pill low" data-level="low"><span class="pdot" style="background:var(--amber)"></span>Low Stock</div>
-                <div class="status-pill out" data-level="out"><span class="pdot" style="background:var(--red)"></span>Out of Stock</div>
+              <div class="flt-label">Search</div>
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
+                <input type="text" id="fSearch" placeholder="Search ingredient or batch…">
               </div>
             </div>
-            <div class="flt-group" style="flex:1;min-width:180px;max-width:250px;">
-              <span class="flt-label">Search</span>
-              <div class="search-box"><i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i><input type="text" id="fSearch" placeholder="Ingredient, batch…" oninput="page=1;render()"></div>
-            </div>
-            <div class="flt-group"><span class="flt-label">Category</span>
-              <select class="filter-select" id="fCat" onchange="page=1;render()"><option value="">All Categories</option></select>
-            </div>
-            <div class="flt-group"><span class="flt-label">Sort By</span>
-              <select class="filter-select" id="fSort" onchange="page=1;render()">
-                <option value="name_asc">Name (A → Z)</option>
-                <option value="qty_asc">Lowest Stock First</option>
-                <option value="qty_desc">Highest Stock First</option>
-                <option value="value_desc">Highest Value First</option>
-                <option value="received_desc">Recently Received</option>
+            <div class="flt-group">
+              <div class="flt-label">Category</div>
+              <select class="filter-select" id="fCat">
+                <option value="">All Categories</option>
               </select>
             </div>
-            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+            <div class="flt-group">
+              <div class="flt-label">Sort By</div>
+              <select class="filter-select" id="fSort">
+                <option value="name_asc">Name (A–Z)</option>
+                <option value="qty_asc">Qty (Low to High)</option>
+                <option value="qty_desc">Qty (High to Low)</option>
+                <option value="value_desc">Total Value (High to Low)</option>
+              </select>
+            </div>
           </div>
-          <div class="btns-right">
-            <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-            <button class="btn btn-primary btn-sm" onclick="openItemModal()"><i class="fa-solid fa-plus"></i> Add Ingredient</button>
+          <div class="toolbar-actions">
+            <button class="btn btn-primary" onclick="openItemModal()"><i class="fa-solid fa-plus"></i> Add Ingredient</button>
           </div>
+        </div>
+
+        <div class="toolbar-row">
+          <div class="status-pills" id="statusPills">
+            <div class="status-pill on all" data-level=""><i class="fa-solid fa-layer-group"></i> All Ingredients</div>
+            <div class="status-pill ok" data-level="ok"><i class="fa-solid fa-circle"></i> In Stock</div>
+            <div class="status-pill low" data-level="low"><i class="fa-solid fa-triangle-exclamation"></i> Low Stock</div>
+            <div class="status-pill out" data-level="out"><i class="fa-solid fa-ban"></i> Out of Stock</div>
+          </div>
+          <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-rotate"></i> Reset</button>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">Kitchen Inventory <span class="sub">— raw ingredients used in production</span></div>
-          <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
+      <!-- TABLE CARD -->
+      <div class="table-card">
+        <div class="table-head-bar">
+          <div class="table-title">Raw Ingredient Stock</div>
+          <div style="font-size:11.5px;color:var(--text3);font-weight:600;" id="tblCount">Loading…</div>
         </div>
-        <div class="tbl-wrap">
-          <table>
+        <div class="table-wrap">
+          <table class="data-tbl">
             <thead>
               <tr>
-                <th>Ingredient</th><th class="center">Category</th><th class="center">Unit</th>
-                <th class="center">On Hand</th><th class="center">Reorder Level</th>
-                <th class="center">Unit Cost (₦)</th><th class="center">Total Value (₦)</th>
-                <th>Last Received</th><th class="center">Status</th><th class="no-print center">Actions</th>
+                <th>Ingredient</th>
+                <th>Category</th>
+                <th>On Hand</th>
+                <th>Reorder Level</th>
+                <th>Status</th>
+                <th>Unit Cost</th>
+                <th>Total Value</th>
+                <th style="text-align:right;">Actions</th>
               </tr>
             </thead>
-            <tbody id="tblBody"></tbody>
-            <tfoot>
-              <tr>
-                <td colspan="6">TOTAL VALUE (FILTERED)</td>
-                <td class="center" id="footTotal">₦0</td>
-                <td colspan="3"></td>
-              </tr>
-            </tfoot>
+            <tbody id="tblBody">
+              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">Loading inventory data…</td></tr>
+            </tbody>
           </table>
         </div>
-        <div class="pagination"><span id="paginLabel">—</span><div class="page-btns" id="pageBtns"></div></div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">Recent Stock Movements <span class="sub">— production deductions and manual adjustments, most recent first</span></div>
-          <span style="font-size:11px;color:var(--text3);" id="movCount">—</span>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>When</th><th>Type</th><th>Reference</th><th>Details</th></tr></thead>
-            <tbody id="movBody"></tbody>
-          </table>
+        <div class="pagin">
+          <div>Total Stock Value: <strong style="color:var(--gold);" id="footTotal">₦0</strong></div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span id="paginLabel">1–8 of 8</span>
+            <div class="page-btns" id="pageBtns"></div>
+          </div>
         </div>
       </div>
 
@@ -301,36 +232,49 @@
   </div>
 </div>
 
-<!-- ═══ ADD / EDIT INGREDIENT MODAL ═══ -->
+<!-- ADD / EDIT MODAL -->
 <div class="modal-overlay" id="itemModal">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="itemModalTitle">Add Ingredient</div>
       <button class="modal-close" onclick="closeModal('itemModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="form-section-title">Ingredient Details</div>
     <div class="form-row">
-      <div class="form-group span2"><label class="form-label">Ingredient Name</label><input class="form-input" type="text" id="fName" placeholder="e.g. Rice"></div>
-      <div class="form-group"><label class="form-label">Category</label>
-        <select class="form-select" id="fCat2">
-          <option>Grains</option><option>Proteins</option><option>Vegetables</option>
-          <option>Spices &amp; Seasoning</option><option>Oils &amp; Fats</option><option>Dairy &amp; Eggs</option><option>Other</option>
-        </select>
+      <div class="form-group span2">
+        <div class="form-label">Ingredient Name *</div>
+        <input class="form-input" id="fName" type="text" placeholder="e.g. Rice (Long Grain)">
       </div>
-      <div class="form-group"><label class="form-label">Unit</label>
-        <select class="form-select" id="fUnit">
-          <option>kg</option><option>Ltr</option><option>pcs</option><option>Bags</option><option>Packs</option>
+      <div class="form-group">
+        <div class="form-label">Category</div>
+        <select class="form-select" id="fCat2">
+          <option value="Grains">Grains</option>
+          <option value="Protein">Protein</option>
+          <option value="Produce">Produce</option>
+          <option value="Pantry">Pantry</option>
+          <option value="Oils & Fats">Oils & Fats</option>
+          <option value="Spices & Seasoning">Spices & Seasoning</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Quantity On Hand</label>
-        <input class="form-input" type="number" id="fQty" placeholder="0" min="0" readonly>
-        <span class="form-hint">View only — updates from deliveries &amp; production usage</span>
+        <div class="form-label">Unit of Measure</div>
+        <input class="form-input" id="fUnit" type="text" placeholder="e.g. kg, litre, pack">
       </div>
-      <div class="form-group"><label class="form-label">Reorder Level</label><input class="form-input" type="number" id="fMin" placeholder="0" min="0"></div>
-      <div class="form-group"><label class="form-label">Unit Cost (₦)</label><input class="form-input" type="number" id="fCost" placeholder="0" min="0"></div>
-      <div class="form-group"><label class="form-label">Batch / Source Ref.</label><input class="form-input" type="text" id="fBatch" placeholder="e.g. STK-00512"></div>
-      <div class="form-group span2"><label class="form-label">Date Received</label><input class="form-input" type="date" id="fReceived"></div>
+      <div class="form-group">
+        <div class="form-label">Initial Quantity On Hand</div>
+        <input class="form-input" id="fQty" type="number" min="0" step="0.1" placeholder="0">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Reorder Level (Min)</div>
+        <input class="form-input" id="fMin" type="number" min="0" step="0.1" placeholder="0">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Unit Cost (₦)</div>
+        <input class="form-input" id="fCost" type="number" min="0" step="1" placeholder="0">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Batch / Ref No.</div>
+        <input class="form-input" id="fBatch" type="text" placeholder="e.g. GR-0091">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('itemModal')">Cancel</button>
@@ -339,146 +283,116 @@
   </div>
 </div>
 
-<!-- ═══ DELETE CONFIRM MODAL ═══ -->
+<!-- DELETE MODAL -->
 <div class="modal-overlay" id="deleteModal">
-  <div class="modal modal-sm">
+  <div class="modal modal-sm mode-delete">
     <div class="modal-header">
-      <div class="modal-title" style="color:var(--red);">Delete Ingredient</div>
+      <div class="modal-title" style="color:var(--red);">Remove Ingredient</div>
       <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;" id="deleteMsg"></p>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Remove</button>
     </div>
   </div>
 </div>
 
+<script src="data/kitchen-seed.js"></script>
+<script src="services/kitchen-service.js"></script>
 <script src="../component/kitchen-shell.js"></script>
 <script>
 const shell = KitchenShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'kitchen-inventory.html',
-  pageTitle:     'Inventory',
-  pageSubtitle:  'Raw ingredient stock, valuation and movement history',
+  pageTitle:     'Kitchen Stock',
+  pageSubtitle:  'Raw ingredient inventory, valuation and reorder levels',
   apiMode:       'Demo',
-  user:          { name: 'Head Chef', initials: 'HC' },
 });
 
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p) && p.length) return p; } } catch(e){}
-  return fallback;
-}
-async function saveShared(key, value){ try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); } }
-
-const KEY_STOCK     = 'kitchen-stock';
-const KEY_MOVEMENTS = 'kitchen-movements';
-
-/* Demo seed — SAME quantities/reorder levels already used by
-   kitchen-production.html's own DEMO_STOCK fallback, so opening this
-   page never contradicts what the production form has been deducting
-   from. Category, unit cost, batch ref and received date are this
-   page's own addition for valuation and traceability. */
-const DEMO_STOCK = [
-  { name:'Rice',        cat:'Grains',              unit:'kg', qty:112, min:30, cost:1200, batch:'STK-00512', received:'17/07/26' },
-  { name:'Oil',         cat:'Oils & Fats',         unit:'Ltr',qty:18,  min:10, cost:2200, batch:'STK-00508', received:'16/07/26' },
-  { name:'Curry',       cat:'Spices & Seasoning',  unit:'kg', qty:4,   min:3,  cost:3500, batch:'STK-00501', received:'14/07/26' },
-  { name:'Green Peas',  cat:'Vegetables',          unit:'kg', qty:9,   min:5,  cost:1800, batch:'STK-00514', received:'17/07/26' },
-  { name:'Chicken',     cat:'Proteins',            unit:'kg', qty:38,  min:15, cost:3200, batch:'STK-00516', received:'17/07/26' },
-  { name:'Seasoning',   cat:'Spices & Seasoning',  unit:'kg', qty:6,   min:2,  cost:2800, batch:'STK-00503', received:'15/07/26' },
-  { name:'Tomato',      cat:'Vegetables',          unit:'kg', qty:22,  min:10, cost:900,  batch:'STK-00515', received:'17/07/26' },
-  { name:'Pepper',      cat:'Vegetables',          unit:'kg', qty:5,   min:4,  cost:1600, batch:'STK-00509', received:'16/07/26' },
-  { name:'Egusi',       cat:'Grains',              unit:'kg', qty:14,  min:6,  cost:4200, batch:'STK-00505', received:'15/07/26' },
-  { name:'Palm Oil',    cat:'Oils & Fats',         unit:'Ltr',qty:3,   min:5,  cost:2400, batch:'STK-00499', received:'12/07/26' },
-  { name:'Spinach',     cat:'Vegetables',          unit:'kg', qty:8,   min:4,  cost:700,  batch:'STK-00513', received:'17/07/26' },
-  { name:'Scent Leaf',  cat:'Vegetables',          unit:'kg', qty:2,   min:2,  cost:500,  batch:'STK-00500', received:'13/07/26' },
-  { name:'Beans Flour', cat:'Grains',              unit:'kg', qty:12,  min:6,  cost:2600, batch:'STK-00504', received:'15/07/26' },
-  { name:'Egg',         cat:'Dairy & Eggs',        unit:'pcs',qty:60,  min:24, cost:80,   batch:'STK-00517', received:'17/07/26' },
-];
-
-let stock = [];
-let movements = [];
+const CFG = { PAGE_SIZE:10 };
 let page = 1;
 let levelFilter = '';
+let editName = null;
+let deleteName = null;
 
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-function fmtQty(n){ return (Math.round((n||0)*100)/100).toString(); }
-function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.min ? 'low' : 'ok'); }
-function itemValue(s){ return (s.qty||0) * (s.cost||0); }
-function todayISO(){ return new Date().toISOString().split('T')[0]; }
-function todayDDMMYY(){ const d=new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; }
-function ddmmyyToISO(s){ if(!s) return ''; const [d,m,y]=s.split('/'); return `20${y}-${m}-${d}`; }
-function isoToDDMMYY(s){ if(!s) return todayDDMMYY(); const [y,m,d]=s.split('-'); return `${d}/${m}/${y.slice(2)}`; }
+function fmtN(n){ return KitchenService.fmtN(n); }
+function fmtQty(n){ return (Math.round((n||0)*100)/100).toLocaleString('en-NG'); }
+function stockLevel(s){ return KitchenService.stockLevel(s); }
+function itemValue(s){ return (s.qty||0) * (s.price||s.cost||0); }
 
-const LEVEL_CHIP = { ok:'chip-ok', low:'chip-low', out:'chip-out' };
-const LEVEL_LABEL = { ok:'In Stock', low:'Low Stock', out:'Out of Stock' };
-const REASON_CHIP = {
-  'Kitchen Delivery':'chip-restock', 'Production Usage':'chip-production', 'Production':'chip-production',
-  'Wastage / Spoilage':'chip-wastage', 'Stock Correction':'chip-correction', 'Other':'chip-other'
-};
+const LEVEL_CHIP = KitchenService.LEVEL_CHIP;
+const LEVEL_LABEL = KitchenService.LEVEL_LABEL;
 
-/* ═══════════════════════════════════════
-   KPIs — icon-box cards matching poolbar-dashboard.html /
-   poolbar-requisition-history.html
-═══════════════════════════════════════ */
 function renderKPIs(){
-  const total = stock.length;
-  const low = stock.filter(s=>stockLevel(s)==='low').length;
-  const out = stock.filter(s=>stockLevel(s)==='out').length;
+  const kpis = KitchenService.stockKPIs();
+  const stock = KitchenService.state.stock || [];
   const value = stock.reduce((s,i)=>s+itemValue(i),0);
+  const categories = new Set(stock.map(s=>s.category||s.cat||'General'));
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card acc-blue" onclick="setLevel('')">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Ingredients Tracked</div></div>
-      <div class="kpi-value">${total}</div>
-      <div class="kpi-trend neutral">Across ${new Set(stock.map(s=>s.cat)).size} categories</div>
+      <div class="kpi-top">
+        <div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div>
+        <div class="kpi-label">Ingredients Tracked</div>
+      </div>
+      <div class="kpi-value" style="color:var(--blue);">${kpis.total}</div>
+      <div class="kpi-trend neutral">Across ${categories.size} categories</div>
     </div>
     <div class="kpi-card acc-amber" onclick="setLevel('low')">
-      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${low}</div>
-      <div class="kpi-trend ${low>0?'warn':'up'}">${low>0?'Needs restocking':'All above threshold'}</div>
+      <div class="kpi-top">
+        <div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="kpi-label">Low Stock</div>
+      </div>
+      <div class="kpi-value" style="color:var(--amber);">${kpis.low}</div>
+      <div class="kpi-trend ${kpis.low>0?'warn':'up'}">${kpis.low>0?'Needs restocking':'✓ All above threshold'}</div>
     </div>
     <div class="kpi-card acc-red" onclick="setLevel('out')">
-      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-circle-xmark"></i></div><div class="kpi-label">Out of Stock</div></div>
-      <div class="kpi-value" style="color:var(--red);">${out}</div>
-      <div class="kpi-trend ${out>0?'warn':'up'}">${out>0?'Blocks affected recipes':'None'}</div>
+      <div class="kpi-top">
+        <div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div>
+        <div class="kpi-label">Out of Stock</div>
+      </div>
+      <div class="kpi-value" style="color:var(--red);">${kpis.out}</div>
+      <div class="kpi-trend ${kpis.out>0?'warn':'up'}">${kpis.out>0?'Unavailable for recipes':'✓ None'}</div>
     </div>
     <div class="kpi-card acc-purple">
-      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Stock Value</div></div>
-      <div class="kpi-value" style="font-size:22px;">${fmtN(value)}</div>
+      <div class="kpi-top">
+        <div class="kpi-ic ic-purple"><i class="fa-solid fa-sack-dollar"></i></div>
+        <div class="kpi-label">Total Stock Value</div>
+      </div>
+      <div class="kpi-value" style="color:var(--purple);">${fmtN(value)}</div>
       <div class="kpi-trend info">At current unit cost</div>
     </div>`;
-
-  shell.setInventoryBadge && shell.setInventoryBadge(low+out);
 }
 
-/* ═══════════════════════════════════════
-   FILTERS
-═══════════════════════════════════════ */
 function populateCategoryFilter(){
-  const sel = document.getElementById('fCat'); const cur = sel.value;
-  const cats = [...new Set(stock.map(s=>s.cat))].sort();
-  sel.innerHTML = '<option value="">All Categories</option>' + cats.map(c=>`<option${c===cur?' selected':''}>${c}</option>`).join('');
+  const sel = document.getElementById('fCat');
+  const cur = sel.value;
+  const stock = KitchenService.state.stock || [];
+  const cats = [...new Set(stock.map(s=>s.category||s.cat||'General'))].sort();
+  sel.innerHTML = '<option value="">All Categories</option>' + cats.map(c=>`<option value="${c.replace(/"/g, '&quot;')}"${c===cur?' selected':''}>${c}</option>`).join('');
 }
+
 function bindStatusPills(){
   document.querySelectorAll('#statusPills .status-pill').forEach(p=>{
-    p.addEventListener('click', ()=>setLevel(p.dataset.level));
+    p.addEventListener('click', ()=>setLevel(p.dataset.level || ''));
+  });
+  ['fSearch','fCat','fSort'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener(id==='fSearch'?'input':'change', ()=>{ page=1; render(); });
   });
 }
+
 function setLevel(k){
-  levelFilter = k;
+  levelFilter = k || '';
   document.querySelectorAll('#statusPills .status-pill').forEach(x=>x.classList.remove('on'));
-  const t = document.querySelector(`#statusPills .status-pill[data-level="${k}"]`);
-  if (t) t.classList.add('on');
+  const target = document.querySelector(`#statusPills .status-pill[data-level="${levelFilter}"]`);
+  if (target) target.classList.add('on');
   page = 1;
   render();
 }
+
 function clearFilters(){
   document.getElementById('fSearch').value = '';
   document.getElementById('fCat').value = '';
@@ -486,26 +400,25 @@ function clearFilters(){
   setLevel('');
 }
 
-/* ═══════════════════════════════════════
-   FILTER / SORT / TABLE
-═══════════════════════════════════════ */
 function getFiltered(){
-  const q = document.getElementById('fSearch').value.toLowerCase();
+  const stock = KitchenService.state.stock || [];
+  const q = (document.getElementById('fSearch').value || '').toLowerCase().trim();
   const cat = document.getElementById('fCat').value;
   const sort = document.getElementById('fSort').value;
   let rows = stock.filter(s=>{
     const mq = !q || s.name.toLowerCase().includes(q) || (s.batch||'').toLowerCase().includes(q);
-    const mc = !cat || s.cat === cat;
+    const mc = !cat || (s.category||s.cat) === cat;
     const ml = !levelFilter || stockLevel(s) === levelFilter;
     return mq && mc && ml;
   });
+
   if (sort==='name_asc') rows.sort((a,b)=>a.name.localeCompare(b.name));
   else if (sort==='qty_asc') rows.sort((a,b)=>a.qty-b.qty);
   else if (sort==='qty_desc') rows.sort((a,b)=>b.qty-a.qty);
   else if (sort==='value_desc') rows.sort((a,b)=>itemValue(b)-itemValue(a));
-  else if (sort==='received_desc') rows.sort((a,b)=>ddmmyyToISO(b.received).localeCompare(ddmmyyToISO(a.received)));
   return rows;
 }
+
 function renderPagination(total){
   const totalPg = Math.max(1, Math.ceil(total/CFG.PAGE_SIZE));
   if (page>totalPg) page=totalPg;
@@ -518,32 +431,33 @@ function renderPagination(total){
   for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
   wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>',page+1,page>=totalPg,false));
 }
+
 function render(){
-  renderKPIs();
   populateCategoryFilter();
+  renderKPIs();
   const rows = getFiltered();
-  document.getElementById('tblCount').textContent = rows.length + ' ingredient' + (rows.length!==1?'s':'');
   const start = (page-1)*CFG.PAGE_SIZE;
   const pageRows = rows.slice(start, start+CFG.PAGE_SIZE);
 
+  document.getElementById('tblCount').textContent = rows.length + ' ingredient' + (rows.length!==1?'s':'');
   document.getElementById('tblBody').innerHTML = pageRows.length===0
-    ? `<tr class="empty-row"><td colspan="10">No ingredients match your filters.</td></tr>`
+    ? `<tr class="empty-row"><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);">No ingredients found matching your search.</td></tr>`
     : pageRows.map(s => {
         const lvl = stockLevel(s);
+        const cat = s.category || s.cat || 'General';
+        const cost = s.price || s.cost || 0;
         return `<tr>
-          <td data-label="Ingredient" class="ing-name">${s.name}</td>
-          <td data-label="Category" class="center"><span class="cat-chip">${s.cat}</span></td>
-          <td data-label="Unit" class="center">${s.unit}</td>
-          <td data-label="On Hand" class="center" style="font-weight:600;color:${lvl==='out'?'var(--red)':lvl==='low'?'var(--amber)':'var(--text)'};">${fmtQty(s.qty)}</td>
-          <td data-label="Reorder Level" class="center">${fmtQty(s.min)}</td>
-          <td data-label="Unit Cost" class="center">${fmtN(s.cost)}</td>
-          <td data-label="Total Value" class="center" style="color:var(--gold);font-weight:600;">${fmtN(itemValue(s))}</td>
-          <td data-label="Last Received">${s.received || '—'}</td>
-          <td data-label="Status" class="center"><span class="chip ${LEVEL_CHIP[lvl]}">${LEVEL_LABEL[lvl]}</span></td>
-          <td data-label="" class="no-print center">
-            <div class="act-btns">
-              <button class="act-btn" onclick="openItemModal('${s.name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button>
-              <button class="act-btn danger" onclick="openDeleteModal('${s.name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
+          <td data-label="Ingredient"><span class="item-name">${s.name}</span></td>
+          <td data-label="Category"><span class="cat-badge">${cat}</span></td>
+          <td data-label="On Hand" style="font-weight:700;">${fmtQty(s.qty)} ${s.unit||''}</td>
+          <td data-label="Reorder Min">${fmtQty(s.min)} ${s.unit||''}</td>
+          <td data-label="Status"><span class="chip ${LEVEL_CHIP[lvl]}">${LEVEL_LABEL[lvl]}</span></td>
+          <td data-label="Unit Cost">${fmtN(cost)}</td>
+          <td data-label="Total Value" style="font-weight:700;color:var(--gold);">${fmtN(itemValue(s))}</td>
+          <td data-label="Actions" style="text-align:right;">
+            <div class="act-btns" style="justify-content:flex-end;">
+              <button class="act-btn" onclick="openItemModal('${s.name.replace(/'/g, "\\'")}')" title="Edit ingredient"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button class="act-btn del" onclick="openDeleteModal('${s.name.replace(/'/g, "\\'")}')" title="Delete ingredient"><i class="fa-solid fa-trash"></i></button>
             </div>
           </td>
         </tr>`;
@@ -551,117 +465,84 @@ function render(){
 
   document.getElementById('footTotal').textContent = fmtN(rows.reduce((s,i)=>s+itemValue(i),0));
   renderPagination(rows.length);
-  renderMovements();
 }
 
-/* ═══════════════════════════════════════
-   MOVEMENT LOG — reads the same 'kitchen-movements' array that
-   kitchen-production.html pushes deduction entries into, so a
-   production run shows up here automatically.
-═══════════════════════════════════════ */
-function renderMovements(){
-  const rows = movements.slice(0, 20);
-  document.getElementById('movCount').textContent = movements.length + ' logged';
-  document.getElementById('movBody').innerHTML = rows.length===0
-    ? `<tr class="empty-row"><td colspan="4">No stock movements recorded yet.</td></tr>`
-    : rows.map(m => {
-        const type = m.type || 'Other';
-        const chipCls = REASON_CHIP[type] || 'chip-other';
-        const when = m.date ? `${m.date} · ${m.time||''}` : (m.time || '—');
-        return `<tr>
-          <td data-label="When">${when}</td>
-          <td data-label="Type"><span class="chip ${chipCls}">${type}</span></td>
-          <td data-label="Reference">${m.ref || '—'}</td>
-          <td data-label="Details" style="white-space:normal;">${m.text || '—'}</td>
-        </tr>`;
-      }).join('');
-}
-
-/* ═══════════════════════════════════════
-   ADD / EDIT INGREDIENT — Quantity On Hand is read-only here.
-   New ingredients start at 0 and accrue only through deliveries /
-   production usage recorded elsewhere; editing an existing
-   ingredient shows its current quantity for reference but it
-   cannot be typed over from this form.
-═══════════════════════════════════════ */
-let editName = null;
 function openItemModal(name=null){
   editName = name;
   const isEdit = !!name;
   document.getElementById('itemModalTitle').textContent = isEdit ? 'Edit Ingredient' : 'Add Ingredient';
   if (isEdit) {
-    const s = stock.find(x=>x.name===name);
+    const s = KitchenService.findStock(name);
+    if (!s) return;
     document.getElementById('fName').value = s.name;
-    document.getElementById('fCat2').value = s.cat;
-    document.getElementById('fUnit').value = s.unit;
+    document.getElementById('fCat2').value = s.category || s.cat || 'Grains';
+    document.getElementById('fUnit').value = s.unit || '';
     document.getElementById('fQty').value = s.qty;
     document.getElementById('fMin').value = s.min;
-    document.getElementById('fCost').value = s.cost;
+    document.getElementById('fCost').value = s.price || s.cost || 0;
     document.getElementById('fBatch').value = s.batch || '';
-    document.getElementById('fReceived').value = ddmmyyToISO(s.received);
   } else {
     document.getElementById('fName').value = '';
     document.getElementById('fCat2').value = 'Grains';
     document.getElementById('fUnit').value = 'kg';
     document.getElementById('fQty').value = '0';
-    document.getElementById('fMin').value = '';
-    document.getElementById('fCost').value = '';
-    document.getElementById('fBatch').value = '';
-    document.getElementById('fReceived').value = todayISO();
+    document.getElementById('fMin').value = '10';
+    document.getElementById('fCost').value = '1000';
+    document.getElementById('fBatch').value = 'GR-' + Math.floor(1000 + Math.random()*9000);
   }
   document.getElementById('itemModal').classList.add('show');
 }
+
 async function saveItem(){
   const name = document.getElementById('fName').value.trim();
   if (!name) { showToast('Please enter an ingredient name.', 'error'); return; }
-  const entry = {
-    name, cat: document.getElementById('fCat2').value, unit: document.getElementById('fUnit').value,
+  const payload = {
+    category: document.getElementById('fCat2').value,
+    cat: document.getElementById('fCat2').value,
+    unit: document.getElementById('fUnit').value.trim(),
     qty: parseFloat(document.getElementById('fQty').value) || 0,
     min: parseFloat(document.getElementById('fMin').value) || 0,
+    price: parseFloat(document.getElementById('fCost').value) || 0,
     cost: parseFloat(document.getElementById('fCost').value) || 0,
     batch: document.getElementById('fBatch').value.trim(),
-    received: isoToDDMMYY(document.getElementById('fReceived').value),
   };
-  if (editName) {
-    if (name !== editName && stock.some(s=>s.name.toLowerCase()===name.toLowerCase())) { showToast('An ingredient with that name already exists.', 'error'); return; }
-    const idx = stock.findIndex(s=>s.name===editName);
-    stock[idx] = entry;
-    showToast('Ingredient updated.', 'success');
-  } else {
-    if (stock.some(s=>s.name.toLowerCase()===name.toLowerCase())) { showToast('That ingredient is already tracked — edit it instead.', 'error'); return; }
-    stock.push(entry);
-    showToast('Ingredient added.', 'success');
+  try {
+    if (editName) {
+      await KitchenService.editStockItem(editName, payload);
+      showToast('Ingredient updated successfully.', 'success');
+    } else {
+      await KitchenService.addStockItem(Object.assign({ name }, payload));
+      showToast('Ingredient added to stock table.', 'success');
+      clearFilters();
+    }
+    closeModal('itemModal');
+  } catch (err) {
+    showToast(err.message || 'Could not save ingredient.', 'error');
   }
-  closeModal('itemModal');
-  render();
-  await saveShared(KEY_STOCK, stock);
 }
 
-/* ═══════════════════════════════════════
-   DELETE
-═══════════════════════════════════════ */
-let deleteName = null;
 function openDeleteModal(name){
   deleteName = name;
   document.getElementById('deleteMsg').textContent = `Remove "${name}" from Kitchen Inventory? This cannot be undone.`;
   document.getElementById('deleteModal').classList.add('show');
 }
+
 async function confirmDelete(){
-  const s = stock.find(x=>x.name===deleteName);
-  stock = stock.filter(x=>x.name!==deleteName);
-  closeModal('deleteModal');
-  showToast(`"${s ? s.name : deleteName}" removed from inventory.`, 'error');
-  render();
-  await saveShared(KEY_STOCK, stock);
+  try {
+    await KitchenService.deleteStockItem(deleteName);
+    closeModal('deleteModal');
+    showToast(`"${deleteName}" removed from inventory.`, 'error');
+  } catch (err) {
+    showToast(err.message || 'Could not delete item.', 'error');
+  }
 }
 
-/* ═══════════════════════════════════════
-   MODAL / TOAST UTILITIES
-═══════════════════════════════════════ */
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 ['itemModal','deleteModal'].forEach(id=>{
-  document.getElementById(id).addEventListener('click', function(e){ if (e.target===this) closeModal(id); });
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function(e){ if (e.target===this) closeModal(id); });
 });
+
 const TOAST_ICON = { success:'fa-circle-check', error:'fa-circle-xmark', info:'fa-circle-info' };
 function showToast(msg, type='success'){
   const t = document.createElement('div');
@@ -671,15 +552,11 @@ function showToast(msg, type='success'){
   setTimeout(() => t.remove(), 3400);
 }
 
-/* ═══════════════════════════════════════
-   INIT
-═══════════════════════════════════════ */
 async function init(){
-  stock = await loadShared(KEY_STOCK, DEMO_STOCK);
-  movements = await loadShared(KEY_MOVEMENTS, []);
   bindStatusPills();
+  await KitchenService.loadAll();
   render();
-  await Promise.all([ saveShared(KEY_STOCK, stock), saveShared(KEY_MOVEMENTS, movements) ]);
+  KitchenService.onChange(render);
 }
 init();
 </script>

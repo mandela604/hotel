@@ -7,11 +7,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  /* Same layout split as every other procurement page: sidebar/topbar
-     markup lives in procurement-shell.js on the shared dark/blue theme;
-     .content re-declares the same variable names with light values so
-     only the main area turns white. Same palette + Segoe UI + Font
-     Awesome + kpi/chip system as dashboard.html / requisition-history.html / po-history.html. */
   :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
   html{ height:auto; }
   body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
@@ -37,7 +32,6 @@
 
   .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
 
-  /* Panel */
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
   .panel-title{ font-size:13px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
@@ -45,7 +39,6 @@
   .panel-body{ padding:18px 20px 20px; }
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-  /* Form */
   .form-grid{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:18px; }
   @media (max-width:900px){ .form-grid{ grid-template-columns:1fr 1fr; } }
   @media (max-width:520px){ .form-grid{ grid-template-columns:1fr; } }
@@ -54,18 +47,21 @@
   .form-input, .form-select, textarea.form-input{ background:var(--input-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
   .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
 
-  /* Items — one live "entry line" to type a new item into, plus a
-     running list below of items already added via the + button. */
   .items-head-row, .entry-row{ display:grid; grid-template-columns:1fr 90px 140px 140px 34px; gap:10px; align-items:center; }
   .items-head-row{ padding:0 4px 8px; }
   .items-head-row span{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; }
-  .entry-row{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:10px; padding:8px; margin-bottom:14px; }
+  .entry-row{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:10px; padding:8px; transition:border-color .2s, background .2s; }
+  .entry-row.editing{ background:var(--blue-bg); border-color:rgba(47,111,237,.45); }
   .entry-subtotal{ font-weight:700; color:var(--text3); font-size:13px; text-align:right; padding-right:4px; }
   .item-add{ width:28px; height:28px; border-radius:8px; border:1px solid var(--gold-border); background:var(--gold); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .15s; flex-shrink:0; }
   .item-add:hover{ background:var(--gold-light); transform:translateY(-1px); }
 
-  /* Autocomplete dropdown under the item-name field — remembers items
-     used before (this session's additions, plus past purchase orders). */
+  .entry-edit-banner{ display:none; align-items:center; gap:8px; font-size:11.5px; color:var(--blue); font-weight:600; padding:2px 4px 10px; }
+  .entry-edit-banner.show{ display:flex; }
+  .entry-edit-banner b{ color:var(--text); font-weight:700; }
+  .entry-edit-cancel{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; text-decoration:underline; padding:0; }
+  .entry-edit-cancel:hover{ color:var(--red); }
+
   .entry-name-wrap{ position:relative; }
   .item-suggest-dropdown{ display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:50; background:var(--modal-bg); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-lg); max-height:220px; overflow-y:auto; }
   .item-suggest-dropdown.show{ display:block; }
@@ -75,27 +71,25 @@
   .item-suggest-opt .sn{ font-weight:600; }
   .item-suggest-opt .sp{ font-size:11px; color:var(--text3); white-space:nowrap; }
 
-  /* Added-items table — a real <table> (with a real <thead>) so it's
-     structured for printing/exporting, not a stack of separate boxes.
-     One shared background/border for the whole block; rows are just
-     divided by hairlines. */
-  .items-table-wrap{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:6px; }
+  .items-table-wrap{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:14px 0 6px; }
   .items-table{ width:100%; border-collapse:collapse; background:var(--surface); }
   .items-table thead th{ text-align:left; padding:9px 12px; font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
   .items-table thead th.center{ text-align:center; }
   .items-table thead th.right{ text-align:right; }
-  .items-table tbody tr{ border-bottom:1px solid var(--border); }
+  .items-table tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
   .items-table tbody tr:last-child{ border-bottom:none; }
+  .items-table tbody tr:hover{ background:var(--gold-dim); }
+  .items-table tbody tr.editing-row{ background:var(--blue-bg); }
   .items-table tbody td{ padding:10px 12px; font-size:13px; color:var(--text); vertical-align:middle; }
   .items-table tbody td.center{ text-align:center; }
   .items-table tbody td.right{ text-align:right; }
   .items-table td.item-subtotal{ font-weight:700; color:var(--text); }
   .items-table .item-remove{ width:28px; height:28px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .15s; margin:0 auto; }
   .items-table .item-remove:hover{ border-color:rgba(240,68,56,.4); color:var(--red); }
-  .items-empty{ display:none; padding:14px; text-align:center; color:var(--text3); font-size:12px; border:1px dashed var(--border2); border-radius:10px; margin-bottom:6px; }
+  .items-empty{ display:none; padding:14px; text-align:center; color:var(--text3); font-size:12px; border:1px dashed var(--border2); border-radius:10px; margin:14px 0 6px; }
   .items-empty.show{ display:block; }
+  .items-hint{ font-size:10.5px; color:var(--text3); padding:0 4px; margin-top:-2px; }
 
-  /* Total row + threshold hint */
   .total-row{ display:flex; align-items:center; justify-content:flex-end; gap:14px; padding:14px 4px 4px; border-top:1px solid var(--border); margin-top:14px; }
   .total-label{ font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
   .total-value{ font-size:24px; font-weight:800; color:var(--gold); }
@@ -114,11 +108,13 @@
   .form-actions{ display:flex; justify-content:flex-end; gap:10px; padding-top:18px; margin-top:6px; border-top:1px solid var(--border); flex-wrap:wrap; }
   @media (max-width:480px){ .form-actions{ flex-direction:column-reverse; } .form-actions button{ width:100%; justify-content:center; } }
 
-  .btn{ display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; }
+  .btn{ display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; text-decoration:none; }
   .btn-primary{ background:var(--gold); color:#fff; }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  #backToHistoryBtn{ text-decoration:none !important; font-weight:700; }
+  #backToHistoryBtn:hover{ text-decoration:none !important; }
 
   .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm); padding:11px 16px; font-size:13px; color:#1c2440; box-shadow:0 8px 28px rgba(15,20,40,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-weight:600; }
   .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
@@ -141,20 +137,21 @@
 
     <div class="content">
 
-      <div>
-        <div class="section-title">Create Purchase Order</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div class="section-title" id="pageSectionTitle">Create Purchase Order</div>
+        <a class="btn btn-outline" id="backToHistoryBtn" href="po-history.html"><i class="fa-solid fa-arrow-left"></i> Back to PO History</a>
       </div>
 
       <!-- ═══ FORM ═══ -->
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title"><i class="fa-solid fa-cart-shopping"></i> Purchase Order Details</div>
+          <div class="panel-title"><i class="fa-solid fa-cart-shopping"></i> <span id="panelTitleText">Purchase Order Details</span></div>
         </div>
         <div class="panel-body">
 
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Department</label>
+              <label class="form-label">Department <span id="deptLockNote" style="display:none;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);">🔒 locked</span></label>
               <select class="form-select" id="fDept">
                 <option value="">Select department…</option>
                 <option>Housekeeping</option>
@@ -179,7 +176,7 @@
               <input class="form-input" type="text" id="fSupplier" placeholder="e.g. Zenith Supplies Ltd.">
             </div>
             <div class="form-group">
-              <label class="form-label">Requested By</label>
+              <label class="form-label">Requested By <span id="byLockNote" style="display:none;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);">🔒 locked</span></label>
               <input class="form-input" type="text" id="fRequestedBy" placeholder="Staff name">
             </div>
           </div>
@@ -188,10 +185,17 @@
             <span>Item to Purchase</span><span>Qty</span><span>Unit Price (₦)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
           </div>
 
+          <div class="entry-edit-banner" id="entryEditBanner">
+            Editing <b id="entryEditName"></b> — update the fields and click the check to save, or
+            <button type="button" class="entry-edit-cancel" id="entryEditCancel">cancel</button>
+          </div>
+
           <!-- Entry line: type an item here (autocomplete suggests items you've
-               bought before), click + to add it to the table below. Clears
-               itself after each add so you can keep entering items one by one. -->
-          <div class="entry-row">
+               bought before), click + to add it to the table below. Also
+               doubles as the edit box — clicking any row in the table below
+               loads that item back in here so you can change qty/price/name,
+               then click the (now ✓) button to save it back into the list. -->
+          <div class="entry-row" id="entryRow">
             <div class="entry-name-wrap">
               <input class="form-input" type="text" id="entryName" placeholder="e.g. 20L Vegetable Oil" autocomplete="off">
               <div class="item-suggest-dropdown" id="itemSuggestDropdown"></div>
@@ -199,8 +203,10 @@
             <input class="form-input" type="number" min="1" value="1" id="entryQty">
             <input class="form-input" type="number" min="0" step="0.01" placeholder="0" id="entryPrice">
             <div class="entry-subtotal" id="entrySubtotal">₦0</div>
-            <button class="item-add" type="button" id="addEntryBtn" title="Add item to list"><i class="fa-solid fa-plus"></i></button>
+            <button class="item-add" type="button" id="addEntryBtn" title="Add item to list"><i class="fa-solid fa-plus" id="addEntryIcon"></i></button>
           </div>
+
+          <div class="items-hint" id="itemsHint" style="display:none;">Click any item below to edit it.</div>
 
           <div class="items-empty" id="itemsEmptyMsg">No items added yet — enter an item above and click the + button.</div>
           <div class="items-table-wrap" id="itemsTableWrap">
@@ -240,7 +246,7 @@
 
           <div class="form-actions">
             <button class="btn btn-outline" id="cancelFormBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
-            <button class="btn btn-primary" id="createBtn"><i class="fa-solid fa-check"></i> Create Purchase Order</button>
+            <button class="btn btn-primary" id="createBtn"><i class="fa-solid fa-check"></i> <span id="createBtnText">Create Purchase Order</span></button>
           </div>
 
         </div>
@@ -250,37 +256,36 @@
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="data/procurement-seed.js"></script>
+<script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
-<script src="procurement-api.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
+/* ═══════════════════════════════════════════════
+   EDIT MODE — po-history.html links here as
+   po-form.html?id=<id> to edit an existing PO.
+   No id in the URL = normal "create a new PO" mode.
+═══════════════════════════════════════════════ */
+const EDIT_ID = new URLSearchParams(location.search).get('id');
+const EDIT_MODE = !!EDIT_ID;
+let editingPR = null; // populated in init() when EDIT_MODE
+
 const shell = ProcurementShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'new-purchase-order.html',
-  pageTitle:     'New Purchase Order',
-  pageSubtitle:  'Create and track purchase orders',
-  apiMode:       (window.ProcurementAPI && ProcurementAPI.CONFIG && ProcurementAPI.CONFIG.USE_PROD) ? 'Live' : 'Demo',
+  pageTitle:     EDIT_MODE ? 'Edit Purchase Order' : 'New Purchase Order',
+  pageSubtitle:  EDIT_MODE ? 'Update an existing purchase order' : 'Create and track purchase orders',
+  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
   user:          { name: 'Procurement Officer', initials: 'PO' },
 });
 
-const MD_THRESHOLD = 100000;
-
-/* This page still writes into the exact same store po-history.html and
-   requisition-history.html already read from (ProcurementAPI.DEMO_PR),
-   so a PO created here still shows up on those pages — this page just
-   no longer displays its own copy of that list. If that array isn't
-   available for any reason, fall back to a local one instead of
-   crashing the page. */
-if (!window.ProcurementAPI) window.ProcurementAPI = { DEMO_PR: [] };
-if (!Array.isArray(ProcurementAPI.DEMO_PR)) ProcurementAPI.DEMO_PR = [];
-
-function persist(){
-  // Same localStorage key po-history.html's "Reset Demo" already uses —
-  // keeps this page's writes consistent with how the rest of the app
-  // already persists procurement data between reloads.
-  try { localStorage.setItem('hotel-procurement', JSON.stringify(ProcurementAPI.DEMO_PR)); } catch (e) {}
-}
+/* This page is call-and-render only — every bit of business logic (PR/PO
+   numbering, items-total + MD-approval-threshold recompute, item-name
+   autocomplete, create, and edit) lives in ProcurementService. This page
+   just gathers what's on screen and hands it to
+   ProcurementService.createPurchaseOrder() / .updatePurchaseOrder(). */
 
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -295,45 +300,15 @@ function showToast(msg, type='success'){
 }
 
 /* ═══════════════════════════════════════════════
-   ITEM AUTOCOMPLETE — remembers item names (and their
-   last price) both from this session and from every past
-   purchase order already in ProcurementAPI.DEMO_PR, so
-   typing something used before offers it as a suggestion.
+   ITEM AUTOCOMPLETE — item name + last price, sourced
+   fresh from ProcurementService.getItemCatalog() every
+   time the page loads. No page-local storage: the
+   service derives this straight from purchase history.
 ═══════════════════════════════════════════════ */
-const ITEM_CATALOG_KEY = 'hotel-procurement-item-catalog';
 let itemCatalog = [];
 
 function loadItemCatalog(){
-  try {
-    const raw = localStorage.getItem(ITEM_CATALOG_KEY);
-    itemCatalog = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(itemCatalog)) itemCatalog = [];
-  } catch (e) { itemCatalog = []; }
-  // First run: seed from whatever purchase-order history already exists,
-  // so suggestions aren't empty just because this browser is new.
-  if (!itemCatalog.length){
-    const seen = new Set();
-    (ProcurementAPI.DEMO_PR || []).forEach(pr => {
-      (pr.items || []).forEach(it => {
-        const key = (it.name||'').trim().toLowerCase();
-        if (!key || seen.has(key)) return;
-        seen.add(key);
-        itemCatalog.push({ name: it.name.trim(), price: it.price || 0 });
-      });
-    });
-    if (itemCatalog.length) saveItemCatalog();
-  }
-}
-function saveItemCatalog(){
-  try { localStorage.setItem(ITEM_CATALOG_KEY, JSON.stringify(itemCatalog)); } catch (e) {}
-}
-function rememberItem(name, price){
-  const key = name.trim().toLowerCase();
-  if (!key) return;
-  itemCatalog = itemCatalog.filter(it => it.name.toLowerCase() !== key);
-  itemCatalog.unshift({ name: name.trim(), price });
-  if (itemCatalog.length > 100) itemCatalog.length = 100;
-  saveItemCatalog();
+  itemCatalog = ProcurementService.getItemCatalog();
 }
 
 function showItemSuggestions(query){
@@ -368,13 +343,65 @@ function hideItemSuggestions(){
    ITEMS LIST — entering an item and clicking + (or
    pressing Enter) pushes it into `items`, then clears
    the entry line so the next item can be typed in.
+
+   Clicking a row already in the table instead loads
+   that item's name/qty/price back into the entry line
+   (editingIndex tracks which one) so it can be changed
+   and saved back in place — same box, same flow, for
+   both a brand-new PO and an existing one being edited.
 ═══════════════════════════════════════════════ */
 let items = [];
+let editingIndex = null; // index into items[] currently loaded into the entry line, or null when adding new
 
 function updateEntryPreview(){
   const qty = parseFloat(document.getElementById('entryQty').value) || 0;
   const price = parseFloat(document.getElementById('entryPrice').value) || 0;
   document.getElementById('entrySubtotal').textContent = fmtN(qty * price);
+}
+
+function setEntryEditingState(idx){
+  editingIndex = idx;
+  const banner = document.getElementById('entryEditBanner');
+  const row = document.getElementById('entryRow');
+  const icon = document.getElementById('addEntryIcon');
+  const addBtn = document.getElementById('addEntryBtn');
+
+  if (idx == null) {
+    banner.classList.remove('show');
+    row.classList.remove('editing');
+    icon.className = 'fa-solid fa-plus';
+    addBtn.title = 'Add item to list';
+  } else {
+    document.getElementById('entryEditName').textContent = items[idx].name;
+    banner.classList.add('show');
+    row.classList.add('editing');
+    icon.className = 'fa-solid fa-check';
+    addBtn.title = 'Save changes to this item';
+  }
+  renderItemsList();
+}
+
+function loadItemIntoEntry(idx){
+  const it = items[idx];
+  if (!it) return;
+  document.getElementById('entryName').value = it.name;
+  document.getElementById('entryQty').value = it.qty;
+  document.getElementById('entryPrice').value = it.price;
+  updateEntryPreview();
+  hideItemSuggestions();
+  setEntryEditingState(idx);
+  document.getElementById('entryName').focus();
+  document.getElementById('entryName').select();
+}
+
+function cancelEntryEdit(){
+  const nameEl = document.getElementById('entryName');
+  nameEl.value = '';
+  document.getElementById('entryQty').value = 1;
+  document.getElementById('entryPrice').value = '';
+  updateEntryPreview();
+  hideItemSuggestions();
+  setEntryEditingState(null);
 }
 
 function addItemFromEntry(){
@@ -389,9 +416,13 @@ function addItemFromEntry(){
   if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
   if (price <= 0){ showToast('Enter a unit price.', 'error'); priceEl.focus(); return; }
 
-  items.push({ name, qty, price, subtotal: qty * price });
-  rememberItem(name, price);
-  renderItemsList();
+  const entry = { name, qty, price, subtotal: qty * price };
+
+  if (editingIndex != null) {
+    items[editingIndex] = entry;
+  } else {
+    items.push(entry);
+  }
   recalcTotals();
 
   nameEl.value = '';
@@ -399,45 +430,65 @@ function addItemFromEntry(){
   priceEl.value = '';
   updateEntryPreview();
   hideItemSuggestions();
+  setEntryEditingState(null);
   nameEl.focus();
 }
 
 function removeItem(idx){
   items.splice(idx, 1);
-  renderItemsList();
+  if (editingIndex === idx) {
+    cancelEntryEdit();
+  } else {
+    if (editingIndex != null && editingIndex > idx) editingIndex--;
+    renderItemsList();
+  }
   recalcTotals();
 }
 
 function renderItemsList(){
   const wrap  = document.getElementById('itemsTableWrap');
   const empty = document.getElementById('itemsEmptyMsg');
+  const hint  = document.getElementById('itemsHint');
   const tbody = document.getElementById('itemsBody');
 
   if (!items.length){
     wrap.style.display = 'none';
     empty.classList.add('show');
+    hint.style.display = 'none';
     tbody.innerHTML = '';
     return;
   }
   empty.classList.remove('show');
   wrap.style.display = 'block';
+  hint.style.display = '';
   tbody.innerHTML = items.map((it, i) => `
-    <tr>
+    <tr class="${i === editingIndex ? 'editing-row' : ''}" data-idx="${i}">
       <td>${escapeHtml(it.name)}</td>
       <td class="center">${it.qty}</td>
       <td class="right">${fmtN(it.price)}</td>
       <td class="right item-subtotal">${fmtN(it.subtotal)}</td>
       <td class="center"><button class="item-remove" type="button" data-idx="${i}" title="Remove item"><i class="fa-solid fa-trash"></i></button></td>
     </tr>`).join('');
+
+  tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('.item-remove')) return;
+      loadItemIntoEntry(parseInt(tr.dataset.idx, 10));
+    });
+  });
   tbody.querySelectorAll('.item-remove').forEach(btn => {
-    btn.addEventListener('click', () => removeItem(parseInt(btn.dataset.idx, 10)));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeItem(parseInt(btn.dataset.idx, 10));
+    });
   });
 }
 
 function recalcTotals(){
+  renderItemsList();
   const total = items.reduce((s,i)=>s+i.subtotal, 0);
   document.getElementById('grandTotal').textContent = fmtN(total);
-  const needsMD = total > MD_THRESHOLD;
+  const needsMD = total > ProcurementService.CONFIG.MD_APPROVAL_THRESHOLD;
   document.getElementById('thresholdHint').classList.toggle('show', needsMD);
   renderApprovalPath(needsMD);
 }
@@ -452,15 +503,66 @@ function renderApprovalPath(needsMD){
 }
 
 /* ═══════════════════════════════════════════════
-   CREATE
+   EDIT-MODE FIELD LOCKING — Department and Requested
+   By come from who/what raised the PO originally and
+   aren't meant to change on an edit; Priority and
+   Supplier stay editable since those legitimately
+   change as Procurement works the order.
 ═══════════════════════════════════════════════ */
-function nextNumber(){
-  const n = ProcurementAPI.DEMO_PR.length + 1;
-  const year = new Date().getFullYear();
-  const seq = String(n).padStart(3,'0');
-  return { prNo: `PR-${year}-${seq}`, poNo: `PO-${year}-${seq}` };
+function lockDeptField(deptValue){
+  const sel = document.getElementById('fDept');
+  const hasOption = Array.from(sel.options).some(o => o.value === deptValue);
+  if (!hasOption && deptValue){
+    const opt = document.createElement('option');
+    opt.value = deptValue;
+    opt.textContent = deptValue;
+    sel.appendChild(opt);
+  }
+  sel.value = deptValue || '';
+  sel.disabled = true;
+  document.getElementById('deptLockNote').style.display = '';
 }
 
+function lockRequestedByField(byValue){
+  const inp = document.getElementById('fRequestedBy');
+  inp.value = byValue || '';
+  inp.readOnly = true;
+  document.getElementById('byLockNote').style.display = '';
+}
+
+function applyEditModeChrome(){
+  document.getElementById('pageSectionTitle').textContent = 'Edit Purchase Order';
+  document.getElementById('panelTitleText').textContent = `Purchase Order Details — ${editingPR.poNo || editingPR.prNo}`;
+  document.getElementById('createBtnText').textContent = 'Save Changes';
+}
+
+/* ═══════════════════════════════════════════════
+   POPULATE — fills the form from an existing PR/PO
+   when in edit mode. Items come straight from
+   editingPR.items (qty/price or qty/cost, either
+   shape — the service normalizes this on save).
+═══════════════════════════════════════════════ */
+function populateFromPR(pr){
+  lockDeptField(pr.dept || '');
+  lockRequestedByField(pr.by || '');
+  document.getElementById('fPriority').value = pr.priority || 'Normal';
+  document.getElementById('fSupplier').value = pr.supplier || '';
+  document.getElementById('fNotes').value = pr.notes || '';
+
+  items = (pr.items || []).map(it => {
+    const qty = Number(it.qty) || 0;
+    const price = it.price != null ? Number(it.price) : Number(it.cost) || 0;
+    return { name: it.name, qty, price, subtotal: qty * price };
+  });
+  setEntryEditingState(null);
+  recalcTotals();
+}
+
+/* ═══════════════════════════════════════════════
+   RESET — create-mode only. In edit mode "Cancel"
+   just navigates back without saving (see the
+   cancelFormBtn handler below).
+═══════════════════════════════════════════════ */
 function resetForm(){
   document.getElementById('fDept').value = '';
   document.getElementById('fPriority').value = 'Normal';
@@ -473,52 +575,68 @@ function resetForm(){
   updateEntryPreview();
   hideItemSuggestions();
   items = [];
-  renderItemsList();
+  setEntryEditingState(null);
   recalcTotals();
 }
 
-function createPO(){
+/* ═══════════════════════════════════════════════
+   SAVE — branches on EDIT_MODE, but either way just
+   gathers form state and hands off to the service.
+   Numbering, totals, and the MD-approval flag are all
+   computed inside createPurchaseOrder()/
+   updatePurchaseOrder() — never here.
+═══════════════════════════════════════════════ */
+async function handleSubmit(){
   const dept = document.getElementById('fDept').value;
 
   if (!dept){ showToast('Please select a department.', 'error'); return; }
-  if (!items.length){ showToast('Add at least one item before creating the purchase order.', 'error'); return; }
+  if (!items.length){ showToast('Add at least one item before saving the purchase order.', 'error'); return; }
 
-  const total = items.reduce((s,i)=>s+i.subtotal, 0);
-  const needsMD = total > MD_THRESHOLD;
-  const { prNo, poNo } = nextNumber();
-
-  const pr = {
-    id: 'pr_' + Date.now(),
-    prNo, poNo,
+  const basePayload = {
     dept,
     priority: document.getElementById('fPriority').value,
     supplier: document.getElementById('fSupplier').value.trim(),
-    by: document.getElementById('fRequestedBy').value.trim() || 'Procurement Officer',
     notes: document.getElementById('fNotes').value.trim(),
     items: items.map(i => ({ ...i })),
-    item: items.map(i=>i.name).join(', '),
-    totalAmount: total,
-    needsMDApproval: needsMD,
-    date: new Date().toISOString().slice(0,10),
-    approvalStage: 'pending',
   };
-  ProcurementAPI.DEMO_PR.unshift(pr);
-  persist();
-  showToast(`${pr.poNo} created and marked Pending.`, 'success');
 
-  if (shell.setPendingBadge){
-    shell.setPendingBadge(ProcurementAPI.DEMO_PR.filter(p=>['pending','accountant','gm','md'].includes(p.approvalStage)).length);
+  const createBtn = document.getElementById('createBtn');
+  createBtn.disabled = true;
+
+  try {
+    const session = ProcurementService.resolveSession();
+
+    if (EDIT_MODE){
+      const pr = await ProcurementService.updatePurchaseOrder(EDIT_ID, basePayload, session);
+      showToast(`${pr.poNo || pr.prNo} updated.`, 'success');
+      window.location.href = 'po-history.html';
+      return;
+    }
+
+    const payload = Object.assign({}, basePayload, {
+      by: document.getElementById('fRequestedBy').value.trim() || 'Procurement Officer',
+      date: new Date().toISOString().slice(0,10),
+    });
+    const pr = await ProcurementService.createPurchaseOrder(payload, session);
+    showToast(`${pr.poNo} created and marked Pending.`, 'success');
+
+    if (shell.setPendingBadge){
+      const allPRs = await ProcurementService.getPRs();
+      shell.setPendingBadge(allPRs.filter(p=>['pending','accountant','gm','md'].includes(p.approvalStage)).length);
+    }
+    resetForm();
+  } catch (err) {
+    showToast(err.message || 'Failed to save purchase order.', 'error');
+  } finally {
+    createBtn.disabled = false;
   }
-
-  resetForm();
 }
 
 /* ═══════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════ */
-loadItemCatalog();
-
 document.getElementById('addEntryBtn').addEventListener('click', addItemFromEntry);
+document.getElementById('entryEditCancel').addEventListener('click', cancelEntryEdit);
 ['entryQty','entryPrice'].forEach(id => document.getElementById(id).addEventListener('input', updateEntryPreview));
 document.getElementById('entryName').addEventListener('input', e => showItemSuggestions(e.target.value));
 document.getElementById('entryName').addEventListener('focus', e => { if (e.target.value) showItemSuggestions(e.target.value); });
@@ -527,14 +645,41 @@ document.addEventListener('click', e => {
 });
 ['entryName','entryQty','entryPrice'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key === 'Escape'){ hideItemSuggestions(); return; }
+    if (e.key === 'Escape'){ hideItemSuggestions(); if (editingIndex != null) cancelEntryEdit(); return; }
     if (e.key === 'Enter'){ e.preventDefault(); addItemFromEntry(); }
   });
 });
-document.getElementById('cancelFormBtn').addEventListener('click', () => { resetForm(); showToast('Form cleared.', 'info'); });
-document.getElementById('createBtn').addEventListener('click', createPO);
+document.getElementById('cancelFormBtn').addEventListener('click', () => {
+  if (EDIT_MODE){
+    window.location.href = 'po-history.html';
+    return;
+  }
+  resetForm();
+  showToast('Form cleared.', 'info');
+});
+document.getElementById('createBtn').addEventListener('click', handleSubmit);
 
-resetForm();
+async function init(){
+  loadItemCatalog();
+
+  if (EDIT_MODE){
+    try {
+      editingPR = await ProcurementService.getPR(EDIT_ID);
+    } catch (err) {
+      showToast(err.message || 'Failed to load this purchase order.', 'error');
+    }
+    if (!editingPR){
+      showToast('Purchase order not found.', 'error');
+      window.location.href = 'po-history.html';
+      return;
+    }
+    applyEditModeChrome();
+    populateFromPR(editingPR);
+  } else {
+    resetForm();
+  }
+}
+init();
 </script>
 </body>
 </html>

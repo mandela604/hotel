@@ -13,12 +13,8 @@
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
-
   .content{
     padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px;
-    /* ── Light-theme override, scoped to content + modals only ──
-       matches gym-dashboard.html: sidebar/topbar stay on gym-shell.js's
-       own theme, only this content area + modals turn white/blue. ── */
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
     --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
@@ -32,7 +28,6 @@
     background:var(--bg); color:var(--text);
   }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
-
   .section-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
   .section-title{ font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:600; }
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
@@ -56,10 +51,8 @@
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
   .act-btn.danger:hover{ border-color:var(--red); color:var(--red); }
   .empty-note{ font-size:12.5px; color:var(--text3); padding:40px; text-align:center; }
-
   .modal-overlay{
     display:none; position:fixed; inset:0; background:rgba(15,20,40,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto;
-    /* re-declare the same light overrides for content that lives inside the modal — matches .content above and gym-dashboard.html's modal-overlay */
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
     --input-bg:#f4f6fb; --modal-bg:#ffffff;
@@ -96,27 +89,17 @@
   .color-swatch:hover{ transform:scale(1.1); }
   .color-swatch.on{ border-color:var(--text); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--text); }
   .plan-form{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
-
-  .toast{
-    position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:10px;
-    padding:11px 16px; font-size:12.5px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999;
-    display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px);
-    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-weight:600;
-  }
+  .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:12.5px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-weight:600; }
   .toast.success{ border-left:3px solid #12b76a; }
   .toast.error{ border-left:3px solid #f04438; }
-  .toast.info{ border-left:3px solid #2f6fed; }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
-  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
 <div class="app">
-  <!-- Sidebar + topbar rendered by gym-shell.js — untouched, stays on its own theme -->
   <div id="sidebarSlot"></div>
   <div class="main">
     <div id="topbarSlot"></div>
@@ -150,91 +133,228 @@
     </div>
   </div>
 </div>
+
+<script src="../services/permissions.js"></script>
+<script src="data/gym-seed.js"></script>
+<script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
 <script>
+/* ═══════════════════════════════════════════
+   Shell — sidebar + topbar for Gym module.
+═══════════════════════════════════════════ */
 const shell = GymShell.attach({
-  sidebarTarget: '#sidebarSlot', topbarTarget: '#topbarSlot',
-  activeFile: 'gym-plans.html', pageTitle: 'Membership Plans', pageSubtitle: 'Manage gym membership tiers',
-  apiMode: 'Demo', user: { name: 'Gym Attendant', initials: 'GA' },
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'gym-plans.html',
+  pageTitle:     'Membership Plans',
+  pageSubtitle:  'Manage gym membership tiers',
 });
 document.documentElement.classList.add('gym-ready');
 
-const storage = window.storage || { async get(k,s){const v=localStorage.getItem(k);return v==null?null:{key:k,value:v,shared:s};}, async set(k,v,s){localStorage.setItem(k,v);return{key:k,value:v,shared:s};}, async delete(k){localStorage.removeItem(k);return{key:k,deleted:true};}, async list(p){const keys=Object.keys(localStorage).filter(k=>!p||k.startsWith(p));return{keys,prefix:p};} };
-const KEY_PLANS='gym-plans', KEY_MEMBERS='gym-members';
-async function load(k,f){ try{const r=await storage.get(k,true);if(r&&r.value){const p=JSON.parse(r.value);if(Array.isArray(p))return p;}}catch(e){} return f;}
-async function save(k,v){ try{await storage.set(k,JSON.stringify(v),true);}catch(e){console.warn(e);} }
+/* ── Globals ── */
+let editingPlanId = null;
+let deleteTarget = null;
 
-let plans=[], members=[], editingPlanId=null, deleteTarget=null;
-const COLOR_TOKENS={gold:{bg:'var(--gold-dim)',fg:'var(--gold-light)',dot:'var(--gold)'},blue:{bg:'var(--blue-bg)',fg:'var(--blue)',dot:'var(--blue)'},purple:{bg:'var(--purple-bg)',fg:'var(--purple)',dot:'var(--purple)'},green:{bg:'var(--green-bg)',fg:'var(--green)',dot:'var(--green)'},amber:{bg:'var(--amber-bg)',fg:'var(--amber)',dot:'var(--amber)'}};
-function _esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fmtN(n){return'₦'+Math.round(n||0).toLocaleString('en-NG');}
-function genId(p){return p+Date.now()+Math.floor(Math.random()*1000);}
+const COLOR_TOKENS = {
+  gold:   { bg: 'var(--gold-dim)', fg: 'var(--gold-light)', dot: 'var(--gold)' },
+  blue:   { bg: 'var(--blue-bg)',  fg: 'var(--blue)',       dot: 'var(--blue)' },
+  purple: { bg: 'var(--purple-bg)',fg: 'var(--purple)',     dot: 'var(--purple)' },
+  green:  { bg: 'var(--green-bg)', fg: 'var(--green)',      dot: 'var(--green)' },
+  amber:  { bg: 'var(--amber-bg)', fg: 'var(--amber)',      dot: 'var(--amber)' },
+};
 
-function renderPlanList(){
-  const el=document.getElementById('planList');
-  document.getElementById('planCount').textContent=plans.length+' plan'+(plans.length!==1?'s':'');
-  el.innerHTML=plans.length===0?'<div class="empty-note">No plans yet — add one above.</div>':plans.map(p=>{
-    const inUse=members.filter(m=>m.planId===p.id).length;
-    const c=COLOR_TOKENS[p.color]||COLOR_TOKENS.blue;
-    return '<div class="plan-card"><div class="plan-card-top"><span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(p.name)+'</span><div class="plan-card-actions"><button class="act-btn" onclick="showPlanForm(\''+p.id+'\')"><i class="fa-solid fa-pen"></i> Edit</button><button class="act-btn danger" onclick="openDeleteModal(\''+p.id+'\')"><i class="fa-solid fa-trash"></i></button></div></div><div class="plan-card-meta">'+fmtN(p.price)+' <span style="color:var(--text3);font-weight:400;">/ '+p.durationDays+' day'+(p.durationDays!==1?'s':'')+' · '+inUse+' member'+(inUse!==1?'s':'')+' enrolled</span></div>'+(p.notes?'<div class="plan-card-notes">'+_esc(p.notes)+'</div>':'')+'</div>';
+function _esc(s) {
+  return (s == null ? '' : String(s))
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function fmtN(n) { return '₦' + Math.round(n || 0).toLocaleString('en-NG'); }
+function getPlans() { return GymService.state.plans || []; }
+function getMembers() { return GymService.state.members || []; }
+
+/* ── Render plan list ── */
+function renderPlanList() {
+  const plans = getPlans();
+  const members = getMembers();
+  const el = document.getElementById('planList');
+  document.getElementById('planCount').textContent = plans.length + ' plan' + (plans.length !== 1 ? 's' : '');
+  if (!plans.length) {
+    el.innerHTML = '<div class="empty-note">No plans yet — add one above.</div>';
+    return;
+  }
+  el.innerHTML = plans.map(p => {
+    const inUse = members.filter(m => m.planId === p.id).length;
+    const c = COLOR_TOKENS[p.color] || COLOR_TOKENS.blue;
+    return `<div class="plan-card">
+      <div class="plan-card-top">
+        <span class="plan-chip" style="background:${c.bg};color:${c.fg};">
+          <span class="plan-dot" style="background:${c.dot};"></span>
+          ${_esc(p.name)}
+        </span>
+        <div class="plan-card-actions">
+          <button class="act-btn" onclick="showPlanForm('${p.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+          <button class="act-btn danger" onclick="openDeleteModal('${p.id}')"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="plan-card-meta">${fmtN(p.price)} <span style="color:var(--text3);font-weight:400;">/ ${p.durationDays} day${p.durationDays !== 1 ? 's' : ''} · ${inUse} member${inUse !== 1 ? 's' : ''} enrolled</span></div>
+      ${p.notes ? `<div class="plan-card-notes">${_esc(p.notes)}</div>` : ''}
+    </div>`;
   }).join('');
 }
-function showPlanForm(id=null){
-  editingPlanId=id;
-  const p=id?plans.find(x=>x.id===id):{name:'',price:'',durationDays:'',notes:'',color:'blue'};
-  const wrap=document.getElementById('planFormWrap');
-  wrap.innerHTML='<div class="plan-form"><div class="form-row"><div class="form-group"><label class="form-label">Plan Name</label><input class="form-input" id="pfName" placeholder="e.g. Basic"></div><div class="form-group"><label class="form-label">Price (₦)</label><input class="form-input" type="number" id="pfPrice" placeholder="0" min="0"></div><div class="form-group"><label class="form-label">Duration (days)</label><input class="form-input" type="number" id="pfDuration" placeholder="30" min="1"></div><div class="form-group"><label class="form-label">Color Tag</label><div class="color-swatches" id="pfColorRow">'+Object.keys(COLOR_TOKENS).map(c=>'<span class="color-swatch'+(c===p.color?' on':'')+'" data-color="'+c+'" style="background:'+COLOR_TOKENS[c].dot+'" title="'+c+'"></span>').join('')+'</div></div><div class="form-group span2"><label class="form-label">Notes / What\'s Included</label><textarea class="form-textarea" id="pfNotes" placeholder="Describe what members get on this plan…"></textarea></div></div><div class="modal-footer" style="margin-top:0;padding-top:12px;"><button class="btn btn-outline btn-sm" onclick="hidePlanForm()">Cancel</button><button class="btn btn-primary btn-sm" onclick="savePlan()"><i class="fa-solid fa-check"></i> '+(id?'Update Plan':'Add Plan')+'</button></div></div>';
-  document.getElementById('pfName').value=p.name;
-  document.getElementById('pfPrice').value=p.price;
-  document.getElementById('pfDuration').value=p.durationDays;
-  document.getElementById('pfNotes').value=p.notes||'';
-  wrap.querySelectorAll('.color-swatch').forEach(sw=>sw.addEventListener('click',()=>{wrap.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('on'));sw.classList.add('on');}));
-  wrap.style.display='block';
+
+/* ── Plan form ── */
+function showPlanForm(id) {
+  editingPlanId = id || null;
+  const plans = getPlans();
+  const p = id ? plans.find(x => x.id === id) : { name: '', price: '', durationDays: '', notes: '', color: 'blue' };
+  const wrap = document.getElementById('planFormWrap');
+  wrap.innerHTML = `
+    <div class="plan-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Plan Name</label>
+          <input class="form-input" id="pfName" placeholder="e.g. Basic" value="${_esc(p.name)}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price (₦)</label>
+          <input class="form-input" type="number" id="pfPrice" placeholder="0" min="0" value="${p.price || ''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Duration (days)</label>
+          <input class="form-input" type="number" id="pfDuration" placeholder="30" min="1" value="${p.durationDays || ''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color Tag</label>
+          <div class="color-swatches" id="pfColorRow">
+            ${Object.keys(COLOR_TOKENS).map(c => `
+              <span class="color-swatch${c === p.color ? ' on' : ''}" data-color="${c}" style="background:${COLOR_TOKENS[c].dot}" title="${c}"></span>
+            `).join('')}
+          </div>
+        </div>
+        <div class="form-group span2">
+          <label class="form-label">Notes / What's Included</label>
+          <textarea class="form-textarea" id="pfNotes" placeholder="Describe what members get on this plan…">${_esc(p.notes || '')}</textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top:0;padding-top:12px;">
+        <button class="btn btn-outline btn-sm" onclick="hidePlanForm()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="savePlan()"><i class="fa-solid fa-check"></i> ${id ? 'Update Plan' : 'Add Plan'}</button>
+      </div>
+    </div>
+  `;
+  // Bind color swatches
+  wrap.querySelectorAll('.color-swatch').forEach(sw => {
+    sw.addEventListener('click', function() {
+      wrap.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('on'));
+      this.classList.add('on');
+    });
+  });
+  wrap.style.display = 'block';
   document.getElementById('pfName').focus();
 }
-function hidePlanForm(){editingPlanId=null;document.getElementById('planFormWrap').style.display='none';document.getElementById('planFormWrap').innerHTML='';}
-async function savePlan(){
-  const name=document.getElementById('pfName').value.trim();
-  if(!name){showToast('Please enter a plan name.','error');return;}
-  const price=parseFloat(document.getElementById('pfPrice').value)||0;
-  const durationDays=parseInt(document.getElementById('pfDuration').value,10)||1;
-  const notes=document.getElementById('pfNotes').value.trim();
-  const colorEl=document.querySelector('#pfColorRow .color-swatch.on');
-  const color=colorEl?colorEl.dataset.color:'blue';
-  if(editingPlanId){const idx=plans.findIndex(p=>p.id===editingPlanId);plans[idx]={...plans[idx],name,price,durationDays,notes,color};showToast('Plan updated.','success');}
-  else{plans.push({id:genId('pl'),name,price,durationDays,notes,color});showToast('Plan added.','success');}
-  hidePlanForm();renderPlanList();await save(KEY_PLANS,plans);
+
+function hidePlanForm() {
+  editingPlanId = null;
+  document.getElementById('planFormWrap').style.display = 'none';
+  document.getElementById('planFormWrap').innerHTML = '';
 }
-function openDeleteModal(id){
-  const p=plans.find(x=>x.id===id);
-  const inUse=members.filter(m=>m.planId===id).length;
-  if(inUse>0){showToast('Can\'t delete "'+p.name+'" — '+inUse+' member'+(inUse!==1?'s are':' is')+' still on this plan.','error');return;}
-  deleteTarget={id};document.getElementById('deleteModalTitle').textContent='Delete Plan';document.getElementById('deleteMsg').textContent='Delete the "'+p.name+'" plan? This cannot be undone.';
+
+/* ── Save plan ── */
+async function savePlan() {
+  const name = document.getElementById('pfName').value.trim();
+  if (!name) { showToast('Please enter a plan name.', 'error'); return; }
+  const price = parseFloat(document.getElementById('pfPrice').value) || 0;
+  const durationDays = parseInt(document.getElementById('pfDuration').value, 10) || 1;
+  const notes = document.getElementById('pfNotes').value.trim();
+  const colorEl = document.querySelector('#pfColorRow .color-swatch.on');
+  const color = colorEl ? colorEl.dataset.color : 'blue';
+
+  try {
+    if (editingPlanId) {
+      await GymService.editPlan(editingPlanId, { name, price, durationDays, notes, color });
+      showToast('Plan updated.', 'success');
+    } else {
+      await GymService.addPlan({ name, price, durationDays, notes, color });
+      showToast('Plan added.', 'success');
+    }
+    hidePlanForm();
+    renderPlanList();
+  } catch (err) {
+    showToast(err.message || 'Could not save plan.', 'error');
+  }
+}
+
+/* ── Delete ── */
+function openDeleteModal(id) {
+  const plans = getPlans();
+  const p = plans.find(x => x.id === id);
+  if (!p) return;
+  const inUse = getMembers().filter(m => m.planId === id).length;
+  if (inUse > 0) {
+    showToast(`Can't delete "${p.name}" — ${inUse} member${inUse !== 1 ? 's are' : ' is'} still on this plan.`, 'error');
+    return;
+  }
+  deleteTarget = { id };
+  document.getElementById('deleteModalTitle').textContent = 'Delete Plan';
+  document.getElementById('deleteMsg').textContent = `Delete the "${p.name}" plan? This cannot be undone.`;
   document.getElementById('deleteModal').classList.add('show');
 }
-async function confirmDelete(){
-  if(!deleteTarget){closeModal('deleteModal');return;}
-  plans=plans.filter(x=>x.id!==deleteTarget.id);closeModal('deleteModal');renderPlanList();await save(KEY_PLANS,plans);showToast('Plan deleted.','error');deleteTarget=null;
-}
-function closeModal(id){document.getElementById(id).classList.remove('show');}
-function showToast(msg,t){
-  const icon = t === 'success' ? 'fa-circle-check' : t === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  const d=document.createElement('div');
-  d.className='toast '+(t||'success');
-  d.innerHTML='<i class="fa-solid '+icon+'"></i> '+msg;
-  document.body.appendChild(d);
-  setTimeout(()=>d.remove(),3200);
-}
-document.getElementById('deleteModal').addEventListener('click',function(e){if(e.target===this)closeModal('deleteModal');});
 
-async function init(){
-  plans=await load(KEY_PLANS,[
-    {id:'pl01',name:'Basic',price:15000,durationDays:30,notes:'Full gym floor access during opening hours. Locker included.',color:'blue'},
-    {id:'pl02',name:'Premium',price:35000,durationDays:30,notes:'Everything in Basic, plus group classes, sauna access, and one personal-training consult per month.',color:'gold'},
-    {id:'pl03',name:'Day Pass',price:5000,durationDays:1,notes:'Single-day access for hotel guests and walk-ins. No locker.',color:'purple'},
-  ]);
-  members=await load(KEY_MEMBERS,[]);
-  renderPlanList();
+async function confirmDelete() {
+  if (!deleteTarget) return;
+  try {
+    await GymService.deletePlan(deleteTarget.id);
+    closeModal('deleteModal');
+    renderPlanList();
+    showToast('Plan deleted.', 'error');
+  } catch (err) {
+    showToast(err.message || 'Delete failed.', 'error');
+  }
+  deleteTarget = null;
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal('deleteModal');
+});
+
+function showToast(msg, type) {
+  const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || 'success');
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ── Init ── */
+async function init() {
+  if (!window.GymService) {
+    document.getElementById('planList').innerHTML = '<div class="empty-note">GymService not loaded. Check script order.</div>';
+    return;
+  }
+  try {
+    // Load data (seeds automatically if empty)
+    await GymService.loadAll(GymSeed);
+    // Subscribe to changes from other tabs/pages
+    GymService.onChange(() => renderPlanList());
+    renderPlanList();
+    // Hide "Add Plan" if user lacks permission
+    const session = shell.getUser();
+    let canManage = false;
+    if (window.Permissions) {
+      canManage = Permissions.hasPermission(session, 'canManagePlans', 'gym') ||
+                  Permissions.hasPermission(session, 'canManagePlans', null);
+    } else {
+      const role = (session && session.role) || '';
+      canManage = (role === 'admin' || role === 'manager');
+    }
+    if (!canManage) {
+      document.querySelector('.section-header .btn-primary').style.display = 'none';
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('planList').innerHTML = '<div class="empty-note">Could not load plans.</div>';
+  }
 }
 init();
 </script>

@@ -288,7 +288,7 @@
                 <th class="center">Transactions</th>
               </tr>
             </thead>
-            <tbody id="tblBody"></tbody>
+            <tbody id="tblBody"><tr class="empty-row"><td colspan="6"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
             <tfoot>
               <tr>
                 <td>TOTAL</td>
@@ -307,6 +307,9 @@
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="accounting-seed.js"></script>
+<script src="services/accounting-service.js"></script>
 <script src="../component/accounting-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════════
@@ -323,22 +326,18 @@ const shell = AccountingShell.attach({
 });
 
 /* ═══════════════════════════════════════════
-   SHIFT-DAY LOGIC — a shift runs 9:00 AM → 9:00 AM the next day, with
-   a Shift Day / Calendar Day toggle that controls how revenue rows in
-   the ledger below are grouped.
+   SHIFT-DAY / CALENDAR-DAY LABELS — presentation only. The actual
+   shift-boundary rule (9AM→9AM) and transaction parsing now live in
+   services/accounting-service.js (AccountingData.shiftKeyFor /
+   calendarKeyFor / buildTransactions) — this page just asks for
+   numbers and renders them, same as accounting-dashboard.html.
 ═══════════════════════════════════════════ */
 const SHIFT_START_HOUR = 9;
 let dateMode = 'shift'; // 'shift' | 'calendar'
 
 function pad2(n){ return String(n).padStart(2,'0'); }
 function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-function shiftKeyFor(dt){
-  const d = new Date(dt);
-  if (d.getHours() < SHIFT_START_HOUR) d.setDate(d.getDate() - 1);
-  return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-}
-function calendarKeyFor(dt){ return ymd(new Date(dt)); }
-function keyFor(dt){ return dateMode === 'shift' ? shiftKeyFor(dt) : calendarKeyFor(dt); }
+function keyFor(dt){ return dateMode === 'shift' ? AccountingData.shiftKeyFor(dt) : AccountingData.calendarKeyFor(dt); }
 function dayLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   if (dateMode === 'shift') {
@@ -357,76 +356,16 @@ function shortDateLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   return new Date(y,m-1,d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 }
-function parseTxDate(str){
-  if (!str) return null;
-  const [datePart, timePart, ampm] = str.split(' ');
-  const [d,m,y] = datePart.split('/').map(n=>parseInt(n,10));
-  let hh=0, mm=0;
-  if (timePart) { const [h,mi]=timePart.split(':').map(n=>parseInt(n,10)); hh=h; mm=mi||0; }
-  if (ampm) { const u=ampm.toUpperCase(); if (u==='PM'&&hh<12) hh+=12; if (u==='AM'&&hh===12) hh=0; }
-  const fullYear = y<100 ? 2000+y : y;
-  return new Date(fullYear, m-1, d, hh, mm);
-}
+function fmtN(n){ return AccountingData.fmtN(n); }
 
 /* ═══════════════════════════════════════════
-   STORAGE + CONFIG
+   STATE — transactions now comes from AccountingData.getAccountingData()
+   + AccountingData.buildTransactions(), same source Dashboard uses, so
+   this report always agrees with it. No local storage shim or demo
+   arrays on this page anymore.
 ═══════════════════════════════════════════ */
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
-  return fallback;
-}
-async function saveShared(key, value){ try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); } }
-
-/* Demo data — identical seed/shape to every other Accounting page,
-   so this report always agrees with Dashboard/Breakdown/Transactions. */
-const DEMO_ROOM_TX = [
-  { id:'RM-2044', desc:'Room 312 — Checkout (Dr. Balogun)', amount:145000, method:'Room Charge', staff:'Adewale O.', date:'17/07/26 08:40 AM' },
-  { id:'RM-2043', desc:'Room 204 — Check-in (Mr. Adeyemi)', amount:98000,  method:'POS',         staff:'Adewale O.', date:'17/07/26 09:14 AM' },
-  { id:'RM-2042', desc:'Room 109 — Checkout (Ms. Okafor)',  amount:76000,  method:'Cash',         staff:'Ngozi Eze',  date:'17/07/26 08:05 AM' },
-  { id:'RM-2041', desc:'Room 402 — Check-in (Barr. Musa)',  amount:132000, method:'Transfer',     staff:'Adewale O.', date:'16/07/26 11:20 PM' },
-  { id:'RM-2040', desc:'Room 108 — Checkout (Mrs. Bello)',  amount:64000,  method:'Cash',         staff:'Kabiru Aliyu',date:'16/07/26 08:52 AM' },
-  { id:'RM-2039', desc:'Room 217 — Check-in (Mr. Chukwu)',  amount:120000, method:'POS',          staff:'Ngozi Eze',  date:'16/07/26 03:10 PM' },
-  { id:'RM-2038', desc:'Room 305 — Checkout (Chief Eze)',   amount:210000, method:'Room Charge',  staff:'Adewale O.', date:'15/07/26 08:15 AM' },
-  { id:'RM-2037', desc:'Room 210 — Checkout (Mr. Yusuf)',   amount:52000,  method:'Cash',         staff:'Amaka Okonkwo',date:'15/07/26 09:40 AM' },
-];
-const DEMO_RESTAURANT_SALES = [
-  { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', date:'17/07/26 11:05 AM', status:'completed' },
-  { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000}], total:18000, method:'POS', staff:'Tunde A.', table:'Table 2', date:'17/07/26 10:40 AM', status:'completed' },
-  { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', date:'17/07/26 09:52 AM', status:'completed' },
-  { id:'SALE-1040', items:[{meal:'Jollof Rice',qty:4,price:5500}], total:24300, method:'Room Charge', staff:'Tunde A.', table:'Room 204', date:'16/07/26 07:30 PM', status:'completed' },
-  { id:'SALE-1039', items:[{meal:'Egusi Soup',qty:1,price:6000}], total:6000, method:'Cash', staff:'Amaka O.', table:'Table 1', date:'16/07/26 01:15 PM', status:'voided' },
-  { id:'SALE-1038', items:[{meal:'Suya Platter',qty:2,price:5500}], total:11000, method:'Cash', staff:'Tunde A.', table:'Table 6', date:'17/07/26 12:20 AM', status:'completed' },
-  { id:'SALE-1030', items:[{meal:'Jollof Rice',qty:4,price:5500}], total:22000, method:'Cash', staff:'Amaka O.', table:'Table 1', date:'15/07/26 07:10 PM', status:'completed' },
-];
-const DEMO_POOLBAR_SALES = [
-  { id:'PBS-1021', item:'Heineken',  qty:3, total:4500,  method:'Cash',     staff:'Bola Nwosu', time:'17/07/26 11:15 AM' },
-  { id:'PBS-1020', item:'Mojito',    qty:2, total:11000, method:'POS',      staff:'Bola Nwosu', time:'17/07/26 10:50 AM' },
-  { id:'PBS-1019', item:'Chapman',   qty:1, total:2500,  method:'Transfer', staff:'Emeka U.',   time:'17/07/26 09:40 AM' },
-  { id:'PBS-1018', item:'Heineken',  qty:6, total:9000,  method:'Cash',     staff:'Emeka U.',   time:'17/07/26 01:05 AM' },
-  { id:'PBS-1017', item:'Star Lager',qty:4, total:4800,  method:'Cash',     staff:'Bola Nwosu', time:'16/07/26 06:20 PM' },
-  { id:'PBS-1012', item:'Guinness',  qty:4, total:6400,  method:'Cash',     staff:'Bola Nwosu', time:'15/07/26 06:30 PM' },
-];
-
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-
-/* ═══════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════ */
-let roomTx = [], restSales = [], poolSales = [];
 let transactions = [];
 let activePreset = 'today';
-
-function buildTransactions(){
-  const out = [];
-  roomTx.forEach(r => out.push({ id:r.id, dept:'Rooms', amount:r.amount, method:r.method, date:parseTxDate(r.date) }));
-  restSales.filter(s=>s.status!=='voided').forEach(s => out.push({ id:s.id, dept:'Restaurant', amount:s.total, method:s.method, date:parseTxDate(s.date) }));
-  poolSales.forEach(s => out.push({ id:s.id, dept:'Pool Bar', amount:s.total, method:s.method, date:parseTxDate(s.time) }));
-  return out.filter(t => t.date);
-}
 
 /* ═══════════════════════════════════════════
    MODE TOGGLE (Shift Day / Calendar Day)
@@ -736,7 +675,10 @@ function printReport(){
 }
 
 /* ═══════════════════════════════════════════
-   INIT
+   INIT — single call into AccountingData.getAccountingData(), same
+   as accounting-dashboard.html. No local storage shim, buildTransactions(),
+   or demo arrays on this page anymore — that logic lives once in
+   services/accounting-service.js and data/accounting-seed.js.
 ═══════════════════════════════════════════ */
 async function init(){
   initSelects();
@@ -744,13 +686,19 @@ async function init(){
   bindPresets();
   updateModeLabels();
 
-  roomTx    = await loadShared('accounting-room-tx', DEMO_ROOM_TX);
-  restSales = await loadShared('restaurant-sales', DEMO_RESTAURANT_SALES);
-  poolSales = await loadShared('poolbar-sales', DEMO_POOLBAR_SALES);
-  await saveShared('accounting-room-tx', roomTx);
+  if (!window.AccountingData) {
+    document.getElementById('tblBody').innerHTML = `<tr class="empty-row"><td colspan="6"><i class="fa-solid fa-triangle-exclamation"></i> AccountingData not loaded. Check script order.</td></tr>`;
+    return;
+  }
 
-  transactions = buildTransactions();
-  applyPreset('today');
+  try {
+    const { roomTx, restSales, poolSales } = await AccountingData.getAccountingData();
+    transactions = AccountingData.buildTransactions(roomTx, restSales, poolSales);
+    applyPreset('today');
+  } catch (err) {
+    console.error('[Accounting Reports] Failed to load:', err);
+    document.getElementById('tblBody').innerHTML = `<tr class="empty-row"><td colspan="6"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message || "Couldn't load accounting data."}</td></tr>`;
+  }
 }
 init();
 </script>

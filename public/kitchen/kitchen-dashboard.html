@@ -3,150 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Dashboard | Aurum Kitchen</title>
+<title>Kitchen Dashboard | Aurum Hotel</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-/* This page owns layout + its own Kitchen dashboard content only. Sidebar +
-   topbar look/markup live entirely in kitchen-shell.js.
-   NOTE: sidebar/topbar are deliberately left on the shared dark/blue
-   theme vars from kitchen-shell.js. The .content scope below re-declares
-   the SAME variable names with light values, so only the main content
-   area turns white — the sidebar never sees these overrides.
-   Palette / typography / KPI-icon-box / quick-action pattern mirrors
-   poolbar-dashboard.html so both dashboards read as one product. */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* 
+   Styles identical to your Store/Poolbar pattern 
+*/
+*{ box-sizing:border-box; margin:0; padding:0; }
+html, body{ height:100%; overflow:hidden; }
+body{
+  font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  font-size:13px; transition:background .3s,color .3s;
+}
+.app{ display:flex; height:100vh; overflow:hidden; }
+.main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+@media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-:root { --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1); }
-
-html, body { height: 100%; overflow-x: hidden; }
-body {
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
-  background: var(--bg); color: var(--text);
-  transition: background var(--transition), color var(--transition);
+.content{
+  --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+  --border:#eef0f6; --border2:#dfe3ec;
+  --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+  --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+  --green:#12b76a; --green-bg:#e9f9f0;
+  --red:#f04438;  --red-bg:#feecec;
+  --amber:#f79009; --amber-bg:#fff4e5;
+  --blue:#2f6fed;  --blue-bg:#eaf1ff;
+  --purple:#8b5cf6; --purple-bg:#f4efff;
+  flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; gap:16px; min-height:0;
+  background:var(--bg); color:var(--text);
 }
 
-.app { display: flex; min-height: 100vh; }
-.main { margin-left: 250px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left var(--transition); }
-@media (max-width: 768px) { .main { margin-left: 0 !important; } }
+.section-title{ font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:6px; }
 
-.content {
-  flex: 1; padding: 24px; min-width: 0; overflow-x: hidden;
-  /* ── Light-theme override, scoped to content only — same vars/values as poolbar-dashboard.html ── */
-  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
-  --border: #eef0f6; --border2: #dfe3ec;
-  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
-  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
-  --input-bg: #f4f6fb; --modal-bg: #ffffff;
-  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
-  --green: #12b76a; --green-bg: #e9f9f0;
-  --red: #f04438; --red-bg: #feecec;
-  --amber: #f79009; --amber-bg: #fff4e5;
-  --blue: #2f6fed; --blue-bg: #eaf1ff;
-  --purple: #8b5cf6; --purple-bg: #f4efff;
-  background: var(--bg);
-  color: var(--text);
-  display: flex; flex-direction: column; gap: 16px;
+.kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+@media (max-width:1200px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:640px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+
+.kpi-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:14px 14px 12px; position:relative; overflow:hidden;
+  box-shadow:var(--shadow); cursor:pointer; text-decoration:none; display:flex; flex-direction:column;
+  transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both;
 }
-@media (max-width: 480px) { .content { padding: 14px; } }
-@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+.kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+.kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.ic-blue{ background:var(--blue-bg); color:var(--blue); }
+.ic-green{ background:var(--green-bg); color:var(--green); }
+.ic-amber{ background:var(--amber-bg); color:var(--amber); }
+.ic-purple{ background:var(--purple-bg); color:var(--purple); }
+.ic-red{ background:var(--red-bg); color:var(--red); }
+.kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+.kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+.kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
 
-.section-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); font-weight: 700; margin-bottom: 2px; }
+.row{ display:flex; gap:14px; align-items:stretch; }
+@media (max-width:900px){ .row{ flex-direction:column; } }
+.panel{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both; }
+.panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+.panel-title{ font-size:13px; font-weight:800; color:var(--text); }
+.panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:700; white-space:nowrap; }
+.panel-body{ padding:6px 20px 16px; }
 
-/* ═══════════ KPI — icon-box pattern from poolbar-dashboard.html ═══════════ */
-.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
-@media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 700px) { .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; } }
-.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 14px 12px; position: relative; overflow: hidden;
-  box-shadow: var(--shadow); cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; text-decoration: none; display: flex; flex-direction: column; animation: fadeUp .4s ease both; }
-.kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
-.kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s} .kpi-card:nth-child(5){animation-delay:.2s}
-.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--gold-border); }
-.kpi-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
-.kpi-ic { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
-.ic-blue { background: var(--blue-bg); color: var(--blue); }
-.ic-green { background: var(--green-bg); color: var(--green); }
-.ic-amber { background: var(--amber-bg); color: var(--amber); }
-.ic-purple { background: var(--purple-bg); color: var(--purple); }
-.ic-red { background: var(--red-bg); color: var(--red); }
-.kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; line-height: 1.3; }
-.kpi-value { font-size: 22px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
-@media (max-width: 420px) { .kpi-value { font-size: 18px; } }
-.kpi-trend { font-size: 10.5px; font-weight: 600; color: var(--text3); margin-top: auto; }
-.kpi-trend.up { color: var(--green); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.down { color: var(--red); } .kpi-trend.neutral { color: var(--text3); }
+.list-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; }
+.list-row:last-child{ border-bottom:none; }
+.list-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.list-body{ flex:1; min-width:0; }
+.list-name{ font-size:12.5px; color:var(--text); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.list-meta{ font-size:11px; color:var(--text3); margin-top:1px; }
 
-/* ═══════════ ROW / PANEL ═══════════ */
-.row { display: grid; grid-template-columns: 1.3fr .7fr; gap: 14px; }
-@media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); min-width: 0; animation: fadeUp .4s ease both; }
-@media (max-width: 420px) { .panel { padding: 14px; } }
-.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; flex-wrap: wrap; }
-.panel-title { font-size: 12px; font-weight: 800; color: var(--gold); letter-spacing: .8px; text-transform: uppercase; }
-.panel-action { font-size: 11.5px; color: var(--gold); text-decoration: none; font-weight: 600; white-space: nowrap; background: none; border: none; font-family: inherit; cursor: pointer; }
-.panel-action:hover { color: var(--gold-light); }
-.empty-note { font-size: 12.5px; color: var(--text3); padding: 14px 0; text-align: center; }
+.chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+.chip-completed{ background:var(--purple-bg); color:var(--purple); }
+.chip-low{ background:var(--amber-bg); color:var(--amber); }
 
-/* ═══════════ LIST ROWS ═══════════ */
-.list-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; cursor: pointer; }
-.list-row:last-child { border-bottom: none; padding-bottom: 0; }
-.list-row:hover .list-name { color: var(--gold-light); }
-.list-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.list-body { flex: 1; min-width: 0; }
-.list-name { font-size: 12.5px; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s; }
-.list-meta { font-size: 11px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quick-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:14px 20px 18px; }
+@media (max-width:900px){ .quick-grid{ grid-template-columns:repeat(2,1fr); } }
+.quick-btn{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 12px; display:flex; align-items:center; gap:10px; color:var(--text2); text-decoration:none; font-weight:700; font-size:12.5px; }
+.quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
 
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 9.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-.chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-.chip-draft { background: var(--surface3); color: var(--text3); } .chip-draft::before { background: var(--text3); }
-.chip-sent { background: var(--blue-bg); color: var(--blue); } .chip-sent::before { background: var(--blue); }
-.chip-accepted { background: var(--green-bg); color: var(--green); } .chip-accepted::before { background: var(--green); }
-.chip-rejected { background: var(--red-bg); color: var(--red); } .chip-rejected::before { background: var(--red); }
-.chip-completed { background: var(--purple-bg); color: var(--purple); } .chip-completed::before { background: var(--purple); }
-.chip-low { background: var(--amber-bg); color: var(--amber); } .chip-low::before { background: var(--amber); }
-.chip-out { background: var(--red-bg); color: var(--red); } .chip-out::before { background: var(--red); }
-
-/* ═══════════ QUICK ACTIONS — truncated icon-box + label pattern from poolbar-dashboard.html ═══════════ */
-.quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-@media (max-width: 560px) { .quick-grid { grid-template-columns: 1fr 1fr; } }
-.quick-btn {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 12px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px;
-  font-family: inherit; font-size: 12.3px; font-weight: 700; color: var(--text2);
-  text-decoration: none; transition: all .2s; min-width: 0; overflow: hidden;
-}
-.quick-btn:hover { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
-.quick-icon { width: 28px; height: 28px; border-radius: 8px; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
-.quick-btn:hover .quick-icon { background: var(--gold); color: #fff; }
-.quick-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
-
-/* Print */
-@media print {
-  #sidebarSlot, #topbarSlot, .no-print { display: none !important; }
-  .main { margin-left: 0 !important; }
-  .content { padding: 0 !important; overflow: visible !important; }
-  body { background: #fff !important; color: #000 !important; }
-  .panel { box-shadow: none !important; border: 1px solid #ccc !important; }
-  @page { margin: 16mm; }
-}
+@keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- Sidebar is rendered here by kitchen-shell.js — Kitchen nav only -->
   <div id="sidebarSlot"></div>
-
   <div class="main">
-    <!-- Topbar is rendered here by kitchen-shell.js -->
     <div id="topbarSlot"></div>
-
     <div class="content">
 
       <div>
-        <div class="section-title">Kitchen Overview</div>
+        <div class="section-title">Kitchen at a Glance</div>
         <div class="kpi-row" id="kpiRow"></div>
       </div>
 
@@ -154,30 +103,35 @@ body {
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Recent Productions</div>
-            <button class="panel-action" onclick="location.href='kitchen-production-history.html'">View All <i class="fa-solid fa-arrow-right"></i></button>
+            <a class="panel-action" href="kitchen-production.html">Production Log <i class="fa-solid fa-arrow-right"></i></a>
           </div>
-          <div id="recentProd"></div>
+          <div class="panel-body" id="recentProdList"></div>
         </div>
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title">Low Stock Alerts</div>
-            <button class="panel-action" onclick="location.href='kitchen-inventory.html'">Open Inventory <i class="fa-solid fa-arrow-right"></i></button>
+            <div class="panel-title">Low Stock Ingredients</div>
+            <a class="panel-action" href="kitchen-inventory.html">Manage Inventory <i class="fa-solid fa-arrow-right"></i></a>
           </div>
-          <div id="lowStock"></div>
+          <div class="panel-body" id="lowStockList"></div>
         </div>
       </div>
 
       <div class="row">
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title">Pending Transfers to Restaurant</div>
-            <button class="panel-action" onclick="location.href='kitchen-transfers.html'">View All <i class="fa-solid fa-arrow-right"></i></button>
+            <div class="panel-title">Incoming Store Requisitions</div>
+            <a class="panel-action" href="kitchen-transfers.html">View All <i class="fa-solid fa-arrow-right"></i></a>
           </div>
-          <div id="pendingXfer"></div>
+          <div class="panel-body" id="incomingReqs"></div>
         </div>
         <div class="panel">
           <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
-          <div class="quick-grid" id="quickGrid"></div>
+          <div class="quick-grid">
+            <a class="quick-btn" href="kitchen-production.html"><i class="fa-solid fa-plus"></i> New Production</a>
+            <a class="quick-btn" href="kitchen-inventory.html"><i class="fa-solid fa-box"></i> Kitchen Stock</a>
+            <a class="quick-btn" href="kitchen-transfers.html"><i class="fa-solid fa-truck-ramp-box"></i> Meal Transfers</a>
+            <a class="quick-btn" href="kitchen-production-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History Log</a>
+          </div>
         </div>
       </div>
 
@@ -185,177 +139,120 @@ body {
   </div>
 </div>
 
+<!-- LOAD ORDER: Match the Store pattern exactly -->
+<script src="data/kitchen-seed.js"></script>
+<script src="services/kitchen-service.js"></script>
 <script src="../component/kitchen-shell.js"></script>
-<script type="module">
-/* ═══════════════════════════════════════════
-   Shell — sidebar + topbar for this page, Kitchen nav only.
-═══════════════════════════════════════════ */
-const shell = KitchenShell.attach({
-  sidebarTarget: '#sidebarSlot',
-  topbarTarget:  '#topbarSlot',
-  activeFile:    'kitchen-dashboard.html',
-  pageTitle:     'Dashboard',
-  pageSubtitle:  'Kitchen operations overview',
-  apiMode:       'Demo',
-  user:          { name: 'Head Chef', initials: 'HC' },
-});
 
-/* ═══════════════════════════════════════════
-   DATA + PERMISSIONS — sourced entirely from the shared
-   services. No demo data or storage shim lives on this page;
-   kitchen-data.js owns fetching/seeding, permissions.js owns
-   what the current user is allowed to do/see.
-═══════════════════════════════════════════ */
-import { getKitchenData, KITCHEN_CONFIG } from '../services/kitchen-data.js';
-import { hasPermission } from '../services/permissions.js';
+<script>
+/* ═══════════════════════════════════════════════
+   Initialization & Rendering
+═══════════════════════════════════════════════ */
+const svc = window.KitchenService;
 
-const STATUS_LBL = { draft:'Draft', sent:'Sent', accepted:'Accepted', rejected:'Rejected', completed:'Completed' };
-const TYPE_LBL = { rts:'Ready-to-Serve', coo:'Cook-on-Order' };
-const STATUS_DOT = { draft:'var(--text3)', sent:'var(--blue)', accepted:'var(--green)', rejected:'var(--red)', completed:'var(--purple)' };
+function paint(){
+  if(!svc || !svc.state.ready) return;
 
-function stockLevel(s){ return s.qty<=0 ? 'out' : (s.qty<=s.min ? 'low' : 'ok'); }
-function fmtQty(n){ return (Math.round(n*100)/100).toString(); }
-
-function mealLabel(p){
-  const meals = p.meals || [];
-  if (meals.length === 0) return '—';
-  const first = `${meals[0].qty} ${meals[0].unit} ${meals[0].name}`;
-  return meals.length > 1 ? `${first} +${meals.length - 1} more` : first;
-}
-function mealName(p){
-  const meals = p.meals || [];
-  return meals.length ? meals[0].name + (meals.length > 1 ? ` +${meals.length - 1}` : '') : '—';
-}
-
-/* ═══════════════════════════════════════════
-   KPI CARDS — icon-box markup (kpi-top / kpi-ic / kpi-label,
-   kpi-value, kpi-trend) matching poolbar-dashboard.html.
-═══════════════════════════════════════════ */
-function renderKPIs(productions, transfers, stock){
-  const today = productions.filter(p => p.status !== 'draft').length;
-  const lowStock = stock.filter(s => stockLevel(s) !== 'ok').length;
-  const pendingXfer = transfers.filter(t => t.status === 'sent').length;
-  const completedCoo = productions.filter(p => p.status === 'completed').length;
-  const rejected = productions.filter(p => p.status === 'rejected').length;
-
+  const kpis = svc.dashboardKPIs();
+  
+  // 1. KPIs
   document.getElementById('kpiRow').innerHTML = `
-    <a class="kpi-card" href="kitchen-production-history.html">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-kitchen-set"></i></div><div class="kpi-label">Today's Production</div></div>
-      <div class="kpi-value">${today}</div>
-      <div class="kpi-trend neutral">runs recorded</div>
-    </a>
-    <a class="kpi-card" href="kitchen-inventory.html">
-      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock Alerts</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${lowStock}</div>
-      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs restocking':'All clear'}</div>
-    </a>
-    <a class="kpi-card" href="kitchen-transfers.html">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck-fast"></i></div><div class="kpi-label">Pending Transfers</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${pendingXfer}</div>
-      <div class="kpi-trend ${pendingXfer>0?'warn':'up'}">${pendingXfer>0?'Awaiting Restaurant':'All accepted'}</div>
-    </a>
-    <a class="kpi-card" href="kitchen-production-history.html">
-      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-fire-burner"></i></div><div class="kpi-label">Cook-on-Order Completed</div></div>
-      <div class="kpi-value" style="color:var(--purple);">${completedCoo}</div>
-      <div class="kpi-trend neutral">Served direct to guest</div>
-    </a>
-    <a class="kpi-card" href="kitchen-production-history.html">
-      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected Runs</div></div>
-      <div class="kpi-value" style="color:${rejected>0?'var(--red)':'var(--text)'};">${rejected}</div>
-      <div class="kpi-trend ${rejected>0?'warn':'up'}">${rejected>0?'Review needed':'None on record'}</div>
-    </a>`;
+    <div class="kpi-card">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-fire-burner"></i></div><div class="kpi-label">Today's Productions</div></div>
+      <div class="kpi-value">${kpis.todayRunsCount}</div>
+      <div class="kpi-trend neutral">runs completed today</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock</div></div>
+      <div class="kpi-value" style="color:var(--amber)">${kpis.lowStock}</div>
+      <div class="kpi-trend warn">ingredients to reorder</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Production Cost</div></div>
+      <div class="kpi-value" style="color:var(--green)">${svc.fmtN(kpis.todayCost)}</div>
+      <div class="kpi-trend up">today's ingredient value</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Total Ingredients</div></div>
+      <div class="kpi-value" style="color:var(--purple)">${kpis.itemCount}</div>
+      <div class="kpi-trend neutral">tracked items</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-weight-hanging"></i></div><div class="kpi-label">Stock Units</div></div>
+      <div class="kpi-value">${kpis.units}</div>
+      <div class="kpi-trend neutral">total volume on hand</div>
+    </div>
+  `;
 
-  shell.setPendingBadge(pendingXfer);
-  shell.setInventoryBadge(lowStock);
+  // 2. Recent Productions
+  const recent = svc.state.production.slice(0, 5);
+  document.getElementById('recentProdList').innerHTML = recent.length ? recent.map(p => `
+    <div class="list-row">
+      <div class="list-ic ic-purple"><i class="fa-solid fa-utensils"></i></div>
+      <div class="list-body">
+        <div class="list-name">${p.dish}</div>
+        <div class="list-meta">${p.outputQty} ${p.outputUnit} · by ${p.staff} · ${p.date}</div>
+      </div>
+      <span class="chip chip-completed">${p.status.toUpperCase()}</span>
+    </div>
+  `).join('') : '<div class="empty-note">No recent production runs.</div>';
+
+  // 3. Low Stock List
+  const low = svc.state.stock.filter(i => svc.stockLevel(i) !== 'ok').slice(0, 5);
+  document.getElementById('lowStockList').innerHTML = low.length ? low.map(i => `
+    <div class="list-row">
+      <div class="list-ic ic-amber"><i class="fa-solid fa-box-open"></i></div>
+      <div class="list-body">
+        <div class="list-name">${i.name}</div>
+        <div class="list-meta">Have ${i.qty} ${i.unit} · Reorder at ${i.min}</div>
+      </div>
+      <span class="chip chip-low">LOW</span>
+    </div>
+  `).join('') : '<div class="empty-note">All stock levels healthy.</div>';
+
+  // 4. Incoming Requisitions (async call)
+  svc.getKitchenRequisitions().then(reqs => {
+    const pending = reqs.filter(r => r.status === 'Pending' || r.status === 'Partial').slice(0, 5);
+    document.getElementById('incomingReqs').innerHTML = pending.length ? pending.map(r => `
+      <a class="list-row" href="kitchen-requisition-history.html">
+        <div class="list-ic ic-blue"><i class="fa-solid fa-file-invoice"></i></div>
+        <div class="list-body">
+          <div class="list-name">${r.no} — Requisition</div>
+          <div class="list-meta">${r.items.length} items · Raised ${r.dateRaisedDisplay || r.dateRaised}</div>
+        </div>
+        <span class="chip" style="background:var(--blue-bg);color:var(--blue)">${r.status}</span>
+      </a>
+    `).join('') : '<div class="empty-note">No incoming requisitions from Store.</div>';
+    
+    // Update badge in shell
+    if(window.currentShell) window.currentShell.setReqHistBadge(pending.length);
+  });
 }
 
-function renderRecentProd(productions){
-  const el = document.getElementById('recentProd');
-  const recent = productions.slice(0, 6);
-  el.innerHTML = recent.length === 0
-    ? `<div class="empty-note">No productions yet.</div>`
-    : recent.map(p => `
-      <a class="list-row" href="kitchen-production-history.html">
-        <span class="list-dot" style="background:${STATUS_DOT[p.status]}"></span>
-        <div class="list-body"><div class="list-name">${p.no} — ${mealName(p)}</div><div class="list-meta">${mealLabel(p)} · ${TYPE_LBL[p.type] || p.type} · ${p.time}</div></div>
-        <span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span>
-      </a>`).join('');
-}
-
-function renderLowStock(stock){
-  const el = document.getElementById('lowStock');
-  const alerts = stock.filter(s => stockLevel(s) !== 'ok').slice(0, 6);
-  el.innerHTML = alerts.length === 0
-    ? `<div class="empty-note">All ingredients above their reorder level.</div>`
-    : alerts.map(s => { const lvl = stockLevel(s); return `
-      <a class="list-row" href="kitchen-inventory.html">
-        <span class="list-dot" style="background:${lvl==='out'?'var(--red)':'var(--amber)'}"></span>
-        <div class="list-body"><div class="list-name">${s.name}</div><div class="list-meta">${fmtQty(s.qty)} ${s.unit} on hand · reorder at ${s.min}</div></div>
-        <span class="chip ${lvl==='out'?'chip-out':'chip-low'}">${lvl==='out'?'OUT':'LOW'}</span>
-      </a>`; }).join('');
-}
-
-function renderPendingXfer(transfers){
-  const el = document.getElementById('pendingXfer');
-  const pend = transfers.filter(t => t.status === 'sent').slice(0, 6);
-  el.innerHTML = pend.length === 0
-    ? `<div class="empty-note">No transfers awaiting Restaurant action.</div>`
-    : pend.map(t => `
-      <a class="list-row" href="kitchen-transfers.html">
-        <span class="list-dot" style="background:var(--blue)"></span>
-        <div class="list-body"><div class="list-name">${t.transferNo} — ${t.meal}</div><div class="list-meta">${t.quantity} ${t.unit} · ${t.dateSent}</div></div>
-        <span class="chip chip-sent">Sent</span>
-      </a>`).join('');
-}
-
-/* ═══════════════════════════════════════════
-   QUICK ACTIONS — visibility gated by permissions.js. A user
-   without kitchen create rights (e.g. a view-only privilege)
-   only sees the read-only shortcuts; print is always available.
-═══════════════════════════════════════════ */
-function renderQuickActions(session){
-  const canCreate = hasPermission(session, 'canCreate', 'kitchen');
-  const canView   = hasPermission(session, 'canView', 'kitchen');
-
-  const actions = [
-    { show: canCreate, href: 'kitchen-production.html', icon: 'fa-solid fa-plus', label: 'New Production' },
-    { show: canView,   href: 'kitchen-production-history.html', icon: 'fa-solid fa-clipboard-list', label: 'Production History' },
-    { show: canCreate, href: 'kitchen-transfers.html', icon: 'fa-solid fa-truck-fast', label: 'Transfers' },
-    { show: canView,   href: 'kitchen-inventory.html', icon: 'fa-solid fa-boxes-stacked', label: 'Kitchen Inventory' },
-    { show: true,      href: 'javascript:window.print()', icon: 'fa-solid fa-print', label: 'Print Report' },
-  ];
-
-  document.getElementById('quickGrid').innerHTML = actions
-    .filter(a => a.show)
-    .map(a => `
-      <a class="quick-btn" href="${a.href}" title="${a.label}">
-        <span class="quick-icon"><i class="${a.icon}"></i></span>
-        <span class="quick-label">${a.label}</span>
-      </a>`).join('');
-}
-
-/* ═══════════════════════════════════════════
-   INIT — pull everything from kitchen-data.js. The service
-   already handles Demo↔Live switching and storage fallback
-   internally (see KITCHEN_CONFIG.USE_DEMO), so this page just
-   consumes whatever it returns.
-═══════════════════════════════════════════ */
 async function init(){
-  const { productions, transfers, stock } = await getKitchenData();
+  // Initialize UI Shell
+  window.currentShell = KitchenShell.attach({
+    sidebarTarget: '#sidebarSlot',
+    topbarTarget:  '#topbarSlot',
+    activeFile:    'kitchen-dashboard.html',
+    pageTitle:     'Kitchen Dashboard',
+    pageSubtitle:  'Operations & Production Overview'
+  });
 
-  // Use the shell's session (kept in sync with permissions.js roles/
-  // privileges) for what Quick Actions the current user can see.
-  const session = shell.getUser();
+  if(!svc) {
+    console.error("KitchenService not found!");
+    return;
+  }
 
-  shell.setApiMode(KITCHEN_CONFIG.USE_DEMO ? 'Demo' : 'Live');
-
-  renderKPIs(productions, transfers, stock);
-  renderRecentProd(productions);
-  renderLowStock(stock);
-  renderPendingXfer(transfers);
-  renderQuickActions(session);
+  // Load Data
+  await svc.loadAll();
+  paint();
+  
+  // Listen for changes (like in Store)
+  svc.onChange(paint);
 }
-init();
+
+window.addEventListener('load', init);
 </script>
 </body>
 </html>

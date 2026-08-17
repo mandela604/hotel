@@ -15,7 +15,7 @@
   .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  .content{
+  .content, .modal-overlay, .toast{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec;
     --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
@@ -27,12 +27,13 @@
     --amber:#f79009; --amber-bg:#fff4e5;
     --blue:#2f6fed; --blue-bg:#eaf1ff;
     --purple:#8b5cf6; --purple-bg:#f4efff;
+  }
+  .content{
     flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0;
     background:var(--bg); color:var(--text);
   }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  /* ═══ KPI CARDS — same icon-box system as poolbar-sales.html / poolbar-reports.html ═══ */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -40,6 +41,7 @@
     box-shadow:var(--shadow); cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; display:flex; flex-direction:column; animation:fadeUp .4s ease both; }
   .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
   .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card.clickable{ cursor:pointer; }
   .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
   .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
@@ -70,6 +72,7 @@
   .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
   .toolbar-row.top{ justify-content:space-between; }
   .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-top-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
   .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
   .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
@@ -97,7 +100,8 @@
     .search-box{ max-width:100%; }
     .filter-select{ width:100%; }
     .status-pills{ flex-wrap:wrap; }
-    .toolbar-row.top > .btn{ width:100%; justify-content:center; }
+    .toolbar-top-actions{ width:100%; }
+    .toolbar-top-actions .btn{ flex:1; justify-content:center; }
   }
 
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
@@ -120,9 +124,11 @@
 
   .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .chip i{ font-size:6px; }
-  .chip-completed{ background:var(--green-bg); color:var(--green); }
+  .chip-completed, .chip-full{ background:var(--green-bg); color:var(--green); }
   .chip-rejected{ background:var(--red-bg); color:var(--red); }
   .chip-transfer{ background:var(--blue-bg); color:var(--blue); }
+  .chip-partial{ background:var(--blue-bg); color:var(--blue); }
+  .chip-pending{ background:var(--amber-bg); color:var(--amber); }
   .chip-urgent{ background:var(--red-bg); color:var(--red); }
   .chip-normal{ background:var(--blue-bg); color:var(--blue); }
   .chip-req{ background:var(--purple-bg); color:var(--purple); }
@@ -131,6 +137,8 @@
   .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-order{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
+  .btn-order:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
   .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
@@ -142,11 +150,37 @@
   .modal-close-btn{ background:#fff; border:1px solid #eef0f6; color:#6b7280; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
   .modal-close-btn:hover{ border-color:rgba(47,111,237,0.25); color:#2f6fed; }
 
-  .xfer-detail{ background:#fff; border:1px solid #eef0f6; border-radius:14px; box-shadow:0 8px 40px rgba(15,34,55,0.10); overflow:hidden; }
-  .xfer-head{ padding:18px 20px; border-bottom:1px solid #eef0f6; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(920px,96vw); box-shadow:0 32px 80px rgba(15,34,55,.22); margin:auto; position:relative; overflow:hidden; max-height:min(92vh,900px); overflow-y:auto; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-size:17px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .modal-close{ background:var(--surface2); border:1px solid var(--border); color:var(--text2); width:30px; height:30px; border-radius:8px; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .modal-close:hover{ border-color:var(--red); color:var(--red); }
+
+  #reqFormHost{
+    --ghrf-gold:#2f6fed; --ghrf-gold-light:#5b8ff9; --ghrf-gold-dim:rgba(47,111,237,.10); --ghrf-gold-border:rgba(47,111,237,.25);
+    --ghrf-green:#12b76a; --ghrf-green-bg:rgba(18,183,106,.12);
+    --ghrf-amber:#f79009; --ghrf-amber-bg:rgba(247,144,9,.12);
+    --ghrf-red:#f04438; --ghrf-red-bg:rgba(240,68,56,.12);
+    --ghrf-blue:#2f6fed; --ghrf-blue-bg:rgba(47,111,237,.12);
+    --ghrf-purple:#8b5cf6; --ghrf-purple-bg:rgba(139,92,246,.12);
+    --ghrf-tx:#1c2440; --ghrf-tx2:#6b7280; --ghrf-tx3:#9aa1b3;
+    --ghrf-border:#eef0f6; --ghrf-card:#ffffff; --ghrf-surface2:#f4f6fb; --ghrf-input-bg:#f4f6fb;
+  }
+  #reqFormHost .ghrf-card{ box-shadow:var(--shadow); }
+  #reqFormHost .ghrf-btn-submit{ color:#fff; }
+
+  .req-recent{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+  .req-recent-title{ font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:800; margin-bottom:8px; }
+  .req-recent-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); font-size:12px; }
+  .req-recent-row:last-child{ border-bottom:none; }
+  .req-recent-no{ color:var(--gold); font-weight:700; }
+  .req-recent-empty{ padding:10px 2px; color:var(--text3); font-size:12px; }
+
+  .xfer-detail{ background:#fff; border-radius:0; overflow:hidden; }
+  .xfer-head{ padding:0 0 14px; border-bottom:1px solid #eef0f6; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
   .xfer-title{ font-size:15px; font-weight:700; color:#1c2440; }
   .xfer-meta{ font-size:12px; color:#9aa1b3; margin-top:4px; }
-  .xfer-body{ padding:16px 20px; }
   .xfer-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
   @media (max-width:600px){ .xfer-grid{ grid-template-columns:1fr 1fr; } }
   .xfer-field label{ display:block; font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:#9aa1b3; font-weight:600; margin-bottom:3px; }
@@ -156,6 +190,11 @@
   .xfer-table td{ padding:9px 10px; border-bottom:1px solid #eef0f6; color:#1c2440; }
   .xfer-table tr:last-child td{ border-bottom:none; }
   .xfer-note{ margin-top:12px; font-size:12.5px; color:#6b7280; background:#f4f6fb; border-radius:10px; padding:12px 14px; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:var(--shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
 
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
@@ -194,12 +233,12 @@
               <span class="flt-label">Search</span>
               <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
-                <input type="text" id="fSearch" placeholder="No., item, by, from…" oninput="page=1;render()">
+                <input type="text" id="fSearch" placeholder="No., item, by, from…">
               </div>
             </div>
             <div class="flt-group">
               <span class="flt-label">Source</span>
-              <select class="filter-select" id="fSource" onchange="page=1;render()">
+              <select class="filter-select" id="fSource">
                 <option value="">All sources</option>
                 <option value="requisition">Pool Bar Requisition</option>
                 <option value="store_push">Store Transfer</option>
@@ -207,21 +246,24 @@
             </div>
             <div class="flt-group">
               <span class="flt-label">Priority</span>
-              <select class="filter-select" id="fPriority" onchange="page=1;render()">
+              <select class="filter-select" id="fPriority">
                 <option value="">All</option><option>Urgent</option><option>Normal</option>
               </select>
             </div>
             <div class="flt-group">
               <span class="flt-label">Sort By</span>
-              <select class="filter-select" id="fSort" onchange="page=1;render()">
+              <select class="filter-select" id="fSort">
                 <option value="date_desc">Date (Newest)</option>
                 <option value="date_asc">Date (Oldest)</option>
                 <option value="items_desc">Items (High → Low)</option>
               </select>
             </div>
-            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+            <button class="btn-ghost" id="btnClearFilters"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+          <div class="toolbar-top-actions">
+            <button class="btn btn-order btn-sm" id="btnNewReq"><i class="fa-solid fa-file-circle-plus"></i> New Requisition</button>
+            <button class="btn btn-outline btn-sm" id="btnPrint"><i class="fa-solid fa-print"></i> Print</button>
+          </div>
         </div>
       </div>
       <div class="panel">
@@ -256,279 +298,413 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="detailModal">
-  <div class="modal-wide">
-    <div class="modal-close-row">
-      <button class="modal-close-btn" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
+<!-- NEW REQUISITION MODAL (GraceHotelRequestForm, section:'poolbar') -->
+<div class="modal-overlay" id="reqModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-file-circle-plus" style="color:var(--gold);"></i> New Requisition</div>
+      <button class="modal-close" id="reqModalClose"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div id="detailContainer"></div>
+    <div id="reqFormHost"></div>
+    <div class="req-recent">
+      <div class="req-recent-title">Recently Submitted</div>
+      <div id="reqRecentList"><div class="req-recent-empty">No requisitions submitted yet.</div></div>
+    </div>
   </div>
 </div>
 
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-wide">
+    <div class="modal-close-row">
+      <button class="modal-close-btn" id="detailModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="detailContainer" style="background:#fff;border:1px solid #eef0f6;border-radius:14px;box-shadow:0 8px 40px rgba(15,34,55,0.10);overflow:hidden;padding:16px 20px;"></div>
+  </div>
+</div>
+
+<script src="../services/permissions.js"></script>
+<script src="data/poolbar-seed.js"></script>
+<script src="services/poolbar-service.js"></script>
+<script src="../store/data/store-seed.js"></script>
+<script src="../store/services/store-service.js"></script>
 <script src="../component/poolbar-shell.js"></script>
 <script src="../component/grace-store-approval.js"></script>
+<script src="../component/grace-request-form.js"></script>
 <script>
+/**
+ * poolbar-requisition-history.html
+ * -----------------------------------------------------------------
+ * Pure DOM-wiring page. It does NOT touch window.storage/localStorage,
+ * does NOT keep its own seed data, and does NOT compute history rows,
+ * filter them, sort them, or work out KPI totals itself — all of that
+ * now comes straight from PoolBarService:
+ *
+ *   - PBS.getDepartmentHistory(dept) -> merges Pool Bar's own store
+ *     transfers with StoreService requisitions addressed to Pool Bar
+ *     (status Full/Rejected). This page never touches PBS.state
+ *     .transfers or SS.getRequisitions() to build the table itself.
+ *   - PBS.filterHistory(rows, filters) -> search/status/priority/source.
+ *   - PBS.sortHistory(rows, sortKey, sortDir) -> date/items sorting.
+ *   - PBS.getHistoryKPIs(rows) -> completed/rejected/transfers/totalUnits.
+ *   - PBS.getHistoryStatusDisplay(kind, status) -> {label, cls} for the
+ *     status chip — the page only decides which CSS class renders,
+ *     never what a given status *means*.
+ *   - GraceHotelRequestForm -> the "New Requisition" modal, attached
+ *     with section:'poolbar' so routing/department/catalog are all
+ *     locked/derived by the component + PoolBarService.
+ *   - GraceHotelStoreApproval -> renders requisition detail unchanged.
+ *
+ * Anything left on this page (which pill/column is active, table
+ * pagination) is pure UI state — it's never written back anywhere
+ * except through the services above.
+ */
+
 const shell = PoolBarShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'poolbar-requisition-history.html',
   pageTitle:     'Requisition History',
   pageSubtitle:  'Completed / rejected requisitions and Store transfers into Pool Bar',
-  apiMode:       'Demo',
-  user:          { name: 'Pool Bar Manager', initials: 'PB' },
 });
 
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
+const PBS = window.PoolBarService;
+const SS  = window.StoreService;
 
-const DEMO_HISTORY_REQS = [
-  {
-    no:'BREQ-2025-00009', mode:'store_issue', by:'Chidi (Bar Steward)', dept:'Bar', needed:'2025-07-15', priority:'Normal',
-    remark:'Weekly beer restock.', fulfillStore:'Central Store', supplier:null, linked:null, status:'Full',
-    dateRaised:'2025-07-13', dateRaisedDisplay:'13 Jul 2025 08:30',
-    items:[ { name:'Star Lager', unit:'Bottles', qty:24, cost:1200, remark:'', issuedQty:24 } ],
-  },
-  {
-    no:'BREQ-2025-00010', mode:'store_issue', by:'Ngozi (Bar Supervisor)', dept:'Bar', needed:'2025-07-16', priority:'Urgent',
-    remark:'Ice cream for a private event.', fulfillStore:'Central Store', supplier:null, linked:null, status:'Rejected',
-    dateRaised:'2025-07-14', dateRaisedDisplay:'14 Jul 2025 11:00', rejectReason:'Out of stock — none in Central Store until next delivery.',
-    items:[ { name:'Ice Cream Tubs', unit:'Pieces', qty:10, cost:2500, remark:'', issuedQty:0 } ],
-  },
-];
+// Integration contract with GraceHotelRequestForm's SECTION_META.poolbar
+// (component-internal, not seed config) — must stay 'Pool Bar' to match
+// section:'poolbar' below, independent of PBS.getDepartmentName().
+const POOLBAR_DEPT_LABEL = 'Pool Bar';
 
-const DEMO_STORE_TRANSFERS = [
-  {
-    no:'STX-00041', source:'store_push', from:'Central Store', sentBy:'Store Keeper',
-    date:'2025-07-17', dateDisplay:'17 Jul 2025 09:15', status:'Received',
-    remark:'Unsolicited restock — weekend rush prep.',
-    items:[ { name:'Heineken', unit:'Bottles', qty:24 }, { name:'Bottled Water', unit:'Bottles', qty:48 } ],
-  },
-  {
-    no:'STX-00038', source:'store_push', from:'Central Store', sentBy:'Store Keeper',
-    date:'2025-07-12', dateDisplay:'12 Jul 2025 14:40', status:'Received',
-    remark:'Surplus spirits moved to Pool Bar.',
-    items:[ { name:'Hennessy VS', unit:'Bottles', qty:3 }, { name:'Jameson', unit:'Bottles', qty:2 } ],
-  },
-];
+/* ── Session (role gates the New Requisition button) ─────────────── */
+let session = null;
+let canRaiseReq = false;
 
-async function seedDemoIfEmpty(){
-  let idx = [];
-  try { const r = await storage.get('req-index', true); idx = r ? JSON.parse(r.value) : []; } catch(e){}
-  const existingNos = new Set(idx);
-  let changed = false;
-  for (const req of DEMO_HISTORY_REQS) {
-    if (!existingNos.has(req.no)) {
-      await storage.set(`req:${req.no}`, JSON.stringify(req), true);
-      idx.push(req.no); changed = true;
-    }
+function waitForSession(maxMs) {
+  maxMs = maxMs || 800;
+  return new Promise(function (resolve) {
+    const started = Date.now();
+    (function tick() {
+      const u = shell.getUser && shell.getUser();
+      if (u && u.role) { resolve(u); return; }
+      if (Date.now() - started >= maxMs) { resolve(shell.getUser && shell.getUser()); return; }
+      setTimeout(tick, 40);
+    })();
+  });
+}
+
+function canRaiseFromSession(s) {
+  if (!s) return false;
+  if (window.Permissions && typeof Permissions.hasPermission === 'function') {
+    if (Permissions.hasPermission(s, 'canCreate', 'poolbar')) return true;
+    if (Permissions.hasPermission(s, 'canCreate', null)) return true;
   }
-  if (changed) await storage.set('req-index', JSON.stringify(idx), true);
-  try {
-    const r = await storage.get('poolbar-store-transfers', true);
-    if (!r || !r.value) await storage.set('poolbar-store-transfers', JSON.stringify(DEMO_STORE_TRANSFERS), true);
-  } catch(e){}
+  const role = (s.role || '').toLowerCase();
+  return role === 'admin' || role === 'manager' || role === 'staff';
 }
 
-function isFinalCompleted(r){ return r.status === 'Full' || r.status === 'Completed' || r.status === 'Received'; }
-function isFinalRejected(r){ return r.status === 'Rejected'; }
-function isStorePush(r){ return r.source === 'store_push' || r.kind === 'store_push'; }
-function displayStatus(r){
-  if (isStorePush(r)) return { label:'Store Transfer', cls:'chip-transfer' };
-  if (isFinalCompleted(r)) return { label:'Completed', cls:'chip-completed' };
-  if (isFinalRejected(r))  return { label:'Rejected',  cls:'chip-rejected'  };
-  return { label:r.status||'—', cls:'' };
-}
-function displaySource(r){
-  if (isStorePush(r)) return { label:'Store Transfer', cls:'chip-store' };
-  return { label:'Requisition', cls:'chip-req' };
+/* ── Row assembly — entirely PoolBarService's job now. ─────────────── */
+function getAllRows() {
+  return PBS.getDepartmentHistory(POOLBAR_DEPT_LABEL);
 }
 
-let allRows = [], page = 1, statusFilter = '', sortKey = 'date', sortDir = 'desc';
+function isTransfer(r) { return r._kind === 'transfer'; }
 
-async function loadAll(){
-  let idx = [];
-  try { const r = await storage.get('req-index', true); idx = r ? JSON.parse(r.value) : []; } catch(e){}
-  const reqs = [];
-  for (const no of idx) {
-    try {
-      const r = await storage.get(`req:${no}`, true);
-      if (r) {
-        const row = JSON.parse(r.value);
-        if ((row.dept||'').toLowerCase().includes('bar') && (isFinalCompleted(row) || isFinalRejected(row))) {
-          row._kind = 'requisition'; reqs.push(row);
-        }
-      }
-    } catch(e){}
-  }
-  let transfers = [];
-  try {
-    const r = await storage.get('poolbar-store-transfers', true);
-    if (r && r.value) {
-      const parsed = JSON.parse(r.value);
-      if (Array.isArray(parsed)) {
-        transfers = parsed.map(t => Object.assign({}, t, {
-          _kind:'store_push', source:'store_push', by:t.sentBy||t.from||'Store',
-          dateRaised:t.date, dateRaisedDisplay:t.dateDisplay||t.date, needed:t.date, priority:t.priority||'Normal',
-        }));
-      }
-    }
-  } catch(e){}
-  allRows = reqs.concat(transfers);
+/* ── Presentational-only mapping: which chip class / label to show.
+ * Status meaning comes from PBS.getHistoryStatusDisplay(); source
+ * labelling (Requisition vs Store Transfer) is pure page-level chip
+ * styling with no business rule behind it, so it stays here. */
+function displayStatus(r) {
+  return PBS.getHistoryStatusDisplay(r._kind, r.status);
+}
+function displaySource(r) {
+  return isTransfer(r) ? { label: 'Store Transfer', cls: 'chip-store' } : { label: 'Requisition', cls: 'chip-req' };
+}
+function rowByLine(r) {
+  return isTransfer(r) ? ((r.sentBy || 'Store') + ' · ' + (r.from || 'Central Store')) : (r.by || '—');
+}
+function rowDate(r) {
+  return r.dateDisplay || r.dateRaisedDisplay || r.date || r.dateRaised || '—';
+}
+function rowNeeded(r) {
+  if (isTransfer(r)) return '—';
+  if (!r.needed) return '—';
+  const d = new Date(r.needed);
+  return isNaN(d.getTime()) ? r.needed : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function itemsSummary(r) {
+  const names = (r.items || []).map(function (i) { return (i.name || '—') + ' ×' + (i.qty != null ? i.qty : (i.issuedQty || 0)); });
+  if (names.length <= 2) return names.join(', ');
+  return names.slice(0, 2).join(', ') + ' <span class="more">+' + (names.length - 2) + ' more</span>';
 }
 
-function fmtDate(d){ if (!d) return '—'; const dt = new Date(d); if (isNaN(dt.getTime())) return d; return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
-function itemsSummary(r){ const names = (r.items||[]).map(i => `${i.name} ×${i.qty}`); return names.length <= 2 ? names.join(', ') : `${names.slice(0,2).join(', ')} <span class="more">+${names.length-2} more</span>`; }
+/* ── Page state (UI only) ─────────────────────────────────────────── */
+let page = 1, statusFilter = '', sortKey = 'date', sortDir = 'desc';
+let _filteredCache = [];
+const PAGE_SIZE = 8;
 
-/* ═══════════════════════════════════════════
-   KPI CARDS — same markup/CSS pattern as poolbar-sales.html and
-   poolbar-reports.html: kpi-top (colored fa-icon box + label),
-   kpi-value, kpi-trend, plus the top accent border (acc-green /
-   acc-blue / acc-red / acc-purple).
-═══════════════════════════════════════════ */
-function renderKPIs(rows){
-  const completed = rows.filter(r => !isStorePush(r) && isFinalCompleted(r));
-  const rejected = rows.filter(r => isFinalRejected(r));
-  const transfers = rows.filter(isStorePush);
-  const totalUnits = completed.concat(transfers).reduce((s,r)=>s+(r.items||[]).reduce((a,i)=>a+(parseFloat(i.issuedQty!=null?i.issuedQty:i.qty)||0),0),0);
+function renderKPIs(rows) {
+  const k = PBS.getHistoryKPIs(rows);
 
-  document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card acc-green">
-      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></div><div class="kpi-label">Completed Requisitions</div></div>
-      <div class="kpi-value" style="color:var(--green);">${completed.length}</div>
-      <div class="kpi-trend up">Pool Bar requested · Store issued</div>
-    </div>
-    <div class="kpi-card acc-blue">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Store Transfers</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${transfers.length}</div>
-      <div class="kpi-trend info">Store sent without requisition</div>
-    </div>
-    <div class="kpi-card acc-red">
-      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected Requisitions</div></div>
-      <div class="kpi-value" style="color:var(--red);">${rejected.length}</div>
-      <div class="kpi-trend ${rejected.length>0?'warn':'up'}">${rejected.length>0?'Sent back by Store':'None on record'}</div>
-    </div>
-    <div class="kpi-card acc-purple">
-      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Units Received</div></div>
-      <div class="kpi-value" style="color:var(--gold);">${totalUnits}</div>
-      <div class="kpi-trend neutral">From completed + transfers</div>
-    </div>`;
+  document.getElementById('kpiRow').innerHTML =
+    '<div class="kpi-card acc-green">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></div><div class="kpi-label">Completed Requisitions</div></div>' +
+      '<div class="kpi-value" style="color:var(--green);">' + k.completed + '</div>' +
+      '<div class="kpi-trend up">Pool Bar requested · Store issued</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-blue">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Store Transfers</div></div>' +
+      '<div class="kpi-value" style="color:var(--blue);">' + k.transfers + '</div>' +
+      '<div class="kpi-trend info">Store sent without requisition</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-red">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected Requisitions</div></div>' +
+      '<div class="kpi-value" style="color:var(--red);">' + k.rejected + '</div>' +
+      '<div class="kpi-trend ' + (k.rejected > 0 ? 'warn' : 'up') + '">' + (k.rejected > 0 ? 'Sent back by Store' : 'None on record') + '</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-purple">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Units Received</div></div>' +
+      '<div class="kpi-value" style="color:var(--gold);">' + k.totalUnits + '</div>' +
+      '<div class="kpi-trend neutral">From completed + transfers</div>' +
+    '</div>';
 }
 
-function bindStatusPills(){
-  document.querySelectorAll('.status-pill').forEach(p => {
-    p.addEventListener('click', () => {
+function bindStatusPills() {
+  document.querySelectorAll('.status-pill').forEach(function (p) {
+    p.addEventListener('click', function () {
       statusFilter = p.dataset.status;
-      document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
-      p.classList.add('on'); page = 1; render();
+      document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
+      p.classList.add('on');
+      page = 1; render();
     });
   });
 }
 
-function getFiltered(){
-  const q = document.getElementById('fSearch').value.toLowerCase();
+function getFiltered() {
+  const q = document.getElementById('fSearch').value;
   const priority = document.getElementById('fPriority').value;
   const source = document.getElementById('fSource').value;
-  const [sk, sd] = document.getElementById('fSort').value.split('_');
-  sortKey = sk; sortDir = sd;
-  let rows = allRows.filter(r => {
-    const by = (r.by || r.sentBy || r.from || '').toLowerCase();
-    const mq = !q || (r.no||'').toLowerCase().includes(q) || by.includes(q) || (r.items||[]).some(i=>(i.name||'').toLowerCase().includes(q));
-    const mStatus = !statusFilter || (statusFilter==='Completed' && !isStorePush(r) && isFinalCompleted(r)) || (statusFilter==='Rejected' && isFinalRejected(r)) || (statusFilter==='Transfer' && isStorePush(r));
-    const mPrio = !priority || (r.priority||'Normal') === priority;
-    const mSrc = !source || (source==='requisition' && !isStorePush(r)) || (source==='store_push' && isStorePush(r));
-    return mq && mStatus && mPrio && mSrc;
+  const parts = document.getElementById('fSort').value.split('_');
+  sortKey = parts[0]; sortDir = parts[1];
+
+  const filtered = PBS.filterHistory(getAllRows(), {
+    search: q, status: statusFilter, priority: priority, source: source,
   });
-  rows.sort((a,b) => {
-    let cmp = 0;
-    const da = a.dateRaised || a.date || '', db = b.dateRaised || b.date || '';
-    if (sortKey==='date') cmp = String(da).localeCompare(String(db));
-    else if (sortKey==='items') cmp = (a.items||[]).length - (b.items||[]).length;
-    return sortDir==='desc' ? -cmp : cmp;
-  });
-  return rows;
+  return PBS.sortHistory(filtered, sortKey, sortDir);
 }
 
-function renderSortArrows(){ const el = document.getElementById('arrow-date'); if (el) el.textContent = sortKey==='date' ? (sortDir==='desc'?'▼':'▲') : ''; }
-function clearFilters(){
-  document.getElementById('fSearch').value = ''; document.getElementById('fPriority').value = '';
-  document.getElementById('fSource').value = ''; document.getElementById('fSort').value = 'date_desc';
-  statusFilter = ''; document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
-  document.querySelector('.status-pill.all').classList.add('on'); page = 1; render();
+function renderSortArrows() {
+  const el = document.getElementById('arrow-date');
+  if (el) el.textContent = sortKey === 'date' ? (sortDir === 'desc' ? '▼' : '▲') : '';
 }
 
-const PAGE_SIZE = 8;
-function renderPagination(total){
+function clearFilters() {
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fPriority').value = '';
+  document.getElementById('fSource').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  statusFilter = '';
+  document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1; render();
+}
+
+function renderPagination(total) {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (page > totalPages) page = totalPages;
-  const from = total===0?0:(page-1)*PAGE_SIZE+1, to = Math.min(page*PAGE_SIZE, total);
-  document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
-  const wrap = document.getElementById('pageBtns'); wrap.innerHTML = '';
-  const mk = (label,p,disabled,active)=>{ const b=document.createElement('button'); b.className='page-btn'+(active?' active':''); b.innerHTML=label; b.disabled=!!disabled; b.onclick=()=>{page=p;renderTable();}; return b; };
-  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>',page-1,page===1,false));
-  let start=Math.max(1,page-2), end=Math.min(totalPages,start+4); start=Math.max(1,end-4);
-  for (let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
-  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>',page+1,page>=totalPages,false));
+  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : (from + '–' + to + ' of ' + total);
+  const wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  function mk(label, p, disabled, active) {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.innerHTML = label; b.disabled = !!disabled;
+    b.addEventListener('click', function () { page = p; renderTable(); });
+    return b;
+  }
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>', page - 1, page === 1, false));
+  let start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>', page + 1, page >= totalPages, false));
 }
 
-let _filteredCache = [];
-function renderTable(){
+function renderTable() {
   const rows = _filteredCache;
-  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
-  const pageRows = rows.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
-  document.getElementById('tblBody').innerHTML = pageRows.length===0
-    ? `<tr class="empty-row"><td colspan="9">No history matches your filters.</td></tr>`
-    : pageRows.map(r => {
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length !== 1 ? 's' : '');
+  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? '<tr class="empty-row"><td colspan="9">No history matches your filters.</td></tr>'
+    : pageRows.map(function (r) {
         const st = displayStatus(r), src = displaySource(r);
-        const byLine = isStorePush(r) ? `${r.sentBy||'Store'} · ${r.from||'Central Store'}` : (r.by||'—');
-        return `<tr onclick="openDetail('${r.no}')">
-          <td style="font-weight:600;">${r.no}</td>
-          <td><span class="chip ${src.cls}"><i class="fa-solid fa-circle"></i>${src.label}</span></td>
-          <td>${byLine}</td>
-          <td class="items-summary">${itemsSummary(r)}</td>
-          <td>${r.dateRaisedDisplay||fmtDate(r.dateRaised||r.date)}</td>
-          <td>${isStorePush(r)?'—':fmtDate(r.needed)}</td>
-          <td><span class="chip chip-${(r.priority||'Normal').toLowerCase()}"><i class="fa-solid fa-circle"></i>${r.priority||'Normal'}</span></td>
-          <td><span class="chip ${st.cls}"><i class="fa-solid fa-circle"></i>${st.label}</span></td>
-          <td class="no-print" onclick="event.stopPropagation()"><button class="act-btn" onclick="openDetail('${r.no}')"><i class="fa-solid fa-eye"></i> View</button></td>
-        </tr>`;
+        return '<tr data-no="' + r.no + '">' +
+          '<td style="font-weight:600;">' + r.no + '</td>' +
+          '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + src.label + '</span></td>' +
+          '<td>' + rowByLine(r) + '</td>' +
+          '<td class="items-summary">' + itemsSummary(r) + '</td>' +
+          '<td>' + rowDate(r) + '</td>' +
+          '<td>' + rowNeeded(r) + '</td>' +
+          '<td><span class="chip chip-' + (r.priority || 'Normal').toLowerCase() + '"><i class="fa-solid fa-circle"></i>' + (r.priority || 'Normal') + '</span></td>' +
+          '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + st.label + '</span></td>' +
+          '<td class="no-print"><button class="act-btn" data-view="' + r.no + '"><i class="fa-solid fa-eye"></i> View</button></td>' +
+        '</tr>';
       }).join('');
   renderPagination(rows.length);
 }
 
-function render(){ _filteredCache = getFiltered(); renderKPIs(allRows); renderSortArrows(); renderTable(); }
+function render() {
+  _filteredCache = getFiltered();
+  renderKPIs(getAllRows());
+  renderSortArrows();
+  renderTable();
+}
 
+/* ── Detail modal — requisitions use the existing GraceHotelStoreApproval
+ * component unchanged; transfers get a plain read-out of service data. */
 let detailWidget = null;
-function openDetail(no){
-  const row = allRows.find(r => r.no === no);
+function openDetail(no) {
+  const row = getAllRows().find(function (r) { return r.no === no; });
   const container = document.getElementById('detailContainer');
   container.innerHTML = '';
-  if (detailWidget) { try { detailWidget.destroy(); } catch(e){} detailWidget = null; }
-  if (row && isStorePush(row)) {
-    container.innerHTML = `<div class="xfer-detail">
-      <div class="xfer-head"><div><div class="xfer-title">${row.no} — Store Transfer</div><div class="xfer-meta">Sent by Store without a Pool Bar requisition</div></div><span class="chip chip-transfer"><i class="fa-solid fa-circle"></i>Store Transfer</span></div>
-      <div class="xfer-body">
-        <div class="xfer-grid">
-          <div class="xfer-field"><label>From</label><div>${row.from||'Central Store'}</div></div>
-          <div class="xfer-field"><label>Sent By</label><div>${row.sentBy||'—'}</div></div>
-          <div class="xfer-field"><label>Date</label><div>${row.dateDisplay||fmtDate(row.date)}</div></div>
-        </div>
-        <table class="xfer-table"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th></tr></thead>
-        <tbody>${(row.items||[]).map(i=>`<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.unit||''}</td></tr>`).join('')}</tbody></table>
-        ${row.remark?`<div class="xfer-note">${row.remark}</div>`:''}
-      </div></div>`;
+  if (detailWidget) { try { detailWidget.destroy(); } catch (e) {} detailWidget = null; }
+
+  if (row && isTransfer(row)) {
+    container.innerHTML =
+      '<div class="xfer-detail">' +
+        '<div class="xfer-head"><div><div class="xfer-title">' + row.no + ' — Store Transfer</div>' +
+          '<div class="xfer-meta">Sent by Store without a Pool Bar requisition</div></div>' +
+          '<span class="chip chip-transfer"><i class="fa-solid fa-circle"></i>' + (row.status || 'Store Transfer') + '</span></div>' +
+        '<div class="xfer-grid">' +
+          '<div class="xfer-field"><label>From</label><div>' + (row.from || 'Central Store') + '</div></div>' +
+          '<div class="xfer-field"><label>Sent By</label><div>' + (row.sentBy || '—') + '</div></div>' +
+          '<div class="xfer-field"><label>Date</label><div>' + (row.dateDisplay || row.date || '—') + '</div></div>' +
+        '</div>' +
+        '<table class="xfer-table"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th></tr></thead>' +
+        '<tbody>' + (row.items || []).map(function (i) { return '<tr><td>' + i.name + '</td><td>' + i.qty + '</td><td>' + (i.unit || '') + '</td></tr>'; }).join('') + '</tbody></table>' +
+        (row.remark ? '<div class="xfer-note">' + row.remark + '</div>' : '') +
+      '</div>';
   } else {
-    detailWidget = GraceHotelStoreApproval.attach('#detailContainer', { reqNo:no, storage, showBackButton:false, preparedBy:'Central Store Keeper' });
+    detailWidget = GraceHotelStoreApproval.attach('#detailContainer', {
+      reqNo: no,
+      storage: PBS.storage,
+      showBackButton: false,
+      preparedBy: 'Central Store Keeper',
+    });
   }
   document.getElementById('detailModal').classList.add('show');
 }
-function closeDetailModal(){ document.getElementById('detailModal').classList.remove('show'); }
-document.getElementById('detailModal').addEventListener('click', function(e){ if (e.target===this) closeDetailModal(); });
 
-async function init(){ await seedDemoIfEmpty(); await loadAll(); bindStatusPills(); render(); }
+/* ── New Requisition (GraceHotelRequestForm, section:'poolbar') ──── */
+let reqForm = null;
+
+function buildRequestForm() {
+  if (!window.GraceHotelRequestForm) {
+    console.warn('[RequisitionHistory] GraceHotelRequestForm not loaded');
+    return null;
+  }
+  if (!SS || typeof SS.submitRequisition !== 'function') {
+    console.warn('[RequisitionHistory] StoreService not loaded — request form requires it');
+    showToast('Store service failed to load — cannot open the requisition form.', 'error');
+    return null;
+  }
+  return GraceHotelRequestForm.attach('#reqFormHost', {
+    section: 'poolbar',                 // fixed routing: Pool Bar -> Store
+    service: PBS,                       // Pool Bar's own stock -> item catalog
+    storeService: SS,                   // owns numbering + persistence
+    currentUser: { name: (session && session.name) || '' },
+    onSubmit: function () {
+      renderRecentRequests();
+      render();
+    },
+  });
+}
+
+function openRequestForm() {
+  if (!canRaiseReq) {
+    showToast("You don't have permission to raise requisitions.", 'error');
+    return;
+  }
+  if (reqForm) { reqForm.destroy(); reqForm = null; }
+  reqForm = buildRequestForm();
+  if (!reqForm) { showToast('Request form failed to load.', 'error'); return; }
+  renderRecentRequests();
+  document.getElementById('reqModal').classList.add('show');
+}
+
+function renderRecentRequests() {
+  const el = document.getElementById('reqRecentList');
+  if (!el) return;
+  if (!SS) { el.innerHTML = '<div class="req-recent-empty">Store service unavailable.</div>'; return; }
+  const rows = SS.getRequisitions({ mode: 'store_issue' })
+    .filter(function (r) { return r.dept === POOLBAR_DEPT_LABEL; })
+    .slice(0, 5);
+  if (!rows.length) { el.innerHTML = '<div class="req-recent-empty">No requisitions submitted yet.</div>'; return; }
+  el.innerHTML = rows.map(function (r) {
+    const status = r.status || 'Pending';
+    return '<div class="req-recent-row">' +
+      '<div><span class="req-recent-no">' + r.no + '</span> · ' + (r.items || []).length + ' item' + ((r.items || []).length !== 1 ? 's' : '') + '</div>' +
+      '<span class="chip chip-' + status.toLowerCase() + '"><i class="fa-solid fa-circle"></i>' + status + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+/* ── Modal / toast plumbing ────────────────────────────────────────── */
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+['detailModal', 'reqModal'].forEach(function (id) {
+  document.getElementById(id).addEventListener('click', function (e) { if (e.target === this) closeModal(id); });
+});
+document.getElementById('detailModalClose').addEventListener('click', function () { closeModal('detailModal'); });
+document.getElementById('reqModalClose').addEventListener('click', function () { closeModal('reqModal'); });
+
+function showToast(msg, type) {
+  type = type || 'success';
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 3400);
+}
+
+/* ── Event wiring ──────────────────────────────────────────────────── */
+document.getElementById('tblBody').addEventListener('click', function (e) {
+  const tr = e.target.closest('tr[data-no]');
+  if (tr) openDetail(tr.dataset.no);
+});
+['fSearch'].forEach(function (id) { document.getElementById(id).addEventListener('input', function () { page = 1; render(); }); });
+['fSource', 'fPriority', 'fSort'].forEach(function (id) { document.getElementById(id).addEventListener('change', function () { page = 1; render(); }); });
+document.getElementById('btnClearFilters').addEventListener('click', clearFilters);
+document.getElementById('btnPrint').addEventListener('click', function () { window.print(); });
+document.getElementById('btnNewReq').addEventListener('click', openRequestForm);
+document.querySelectorAll('th[data-sortkey="date"]').forEach(function (th) {
+  th.addEventListener('click', function () {
+    const sel = document.getElementById('fSort');
+    const cur = sel.value.split('_');
+    const nextDir = (cur[0] === 'date' && cur[1] === 'desc') ? 'asc' : 'desc';
+    sel.value = 'date_' + nextDir;
+    page = 1; render();
+  });
+});
+
+/* ── Init ──────────────────────────────────────────────────────────── */
+async function init() {
+  session = await waitForSession(800);
+  canRaiseReq = canRaiseFromSession(session);
+  const btnReq = document.getElementById('btnNewReq');
+  if (btnReq && !canRaiseReq) btnReq.style.display = 'none';
+
+  bindStatusPills();
+
+  await PBS.loadAll();
+  if (SS) await SS.loadAll();
+
+  PBS.onChange(function () { render(); });
+  if (SS) SS.onChange(function () { render(); });
+
+  render();
+}
 init();
 </script>
 </body>

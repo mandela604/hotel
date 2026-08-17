@@ -85,9 +85,6 @@ body.aur-sb-collapsed .main { margin-left:68px; }
 
 .two-col{ display:grid; grid-template-columns:1.3fr .7fr; gap:14px; }
 @media (max-width:960px){ .two-col{ grid-template-columns:1fr; } }
-.three-col{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-@media (max-width:960px){ .three-col{ grid-template-columns:1fr 1fr; } }
-@media (max-width:560px){ .three-col{ grid-template-columns:1fr; } }
 
 /* ═══ PANEL — same panel/panel-head/panel-title pattern as every module ═══ */
 .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
@@ -128,23 +125,6 @@ body.aur-sb-collapsed .main { margin-left:68px; }
 .act-ic{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; margin-top:1px; }
 .act-text{ font-size:12.5px; color:var(--text); line-height:1.4; transition:color .15s; }
 .act-time{ font-size:11px; color:var(--text3); margin-top:1px; }
-
-/* Quick actions */
-.quick-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-@media (max-width:900px){ .quick-grid{ grid-template-columns:repeat(2,1fr); } }
-@media (max-width:480px){ .quick-grid{ grid-template-columns:1fr 1fr; } }
-.quick-btn{ background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; cursor:pointer; display:flex; flex-direction:column; align-items:flex-start; gap:8px; font-family:inherit; font-size:12.5px; font-weight:700; color:var(--text2); transition:all .2s; text-decoration:none; }
-.quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); transform:translateY(-2px); }
-.quick-ic{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; background:var(--gold-dim); color:var(--gold); }
-.quick-sub{ font-size:10.5px; color:var(--text3); font-weight:500; }
-
-/* Module snapshot cards */
-.mod-card{ background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all .2s; text-decoration:none; }
-.mod-card:hover{ border-color:var(--gold-border); background:var(--gold-dim); }
-.mod-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-.mod-body{ flex:1; min-width:0; }
-.mod-title{ font-size:13px; font-weight:700; color:var(--text); }
-.mod-sub{ font-size:11px; color:var(--text3); margin-top:2px; }
 
 .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; flex-shrink:0; }
 .chip i{ font-size:6px; }
@@ -208,37 +188,16 @@ body.aur-sb-collapsed .main { margin-left:68px; }
       </div>
     </div>
 
-    <!-- Recent Activity + Quick Actions -->
-    <div class="two-col">
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title"><i class="fa-solid fa-bolt" style="color:var(--gold)"></i> Recent Activity — All Departments</div>
-          <span class="panel-action" id="actCount">—</span>
-        </div>
-        <div class="panel-body">
-          <div class="act-list" id="activityList"></div>
-        </div>
+    <!-- Recent Activity — now spans the full width of its own row -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title"><i class="fa-solid fa-bolt" style="color:var(--gold)"></i> Recent Activity — All Departments</div>
+        <span class="panel-action" id="actCount">—</span>
       </div>
-      <div class="panel">
-        <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-bolt-lightning" style="color:var(--gold)"></i> Quick Actions</div></div>
-        <div class="panel-body">
-          <div class="quick-grid">
-            <a class="quick-btn" href="booking/booking-dashboard.html"><span class="quick-ic"><i class="fa-solid fa-bed"></i></span>New Booking<span class="quick-sub">Reserve or check-in a guest</span></a>
-            <a class="quick-btn" href="booking/guests.html"><span class="quick-ic"><i class="fa-solid fa-user"></i></span>Guest Profiles<span class="quick-sub">Look up a guest or folio</span></a>
-            <a class="quick-btn" href="kitchen/kitchen-production.html"><span class="quick-ic"><i class="fa-solid fa-kitchen-set"></i></span>New Production<span class="quick-sub">Log a kitchen run</span></a>
-            <a class="quick-btn" href="procurement/procurement-dashboard.html"><span class="quick-ic"><i class="fa-solid fa-box"></i></span>New Request<span class="quick-sub">Raise a purchase request</span></a>
-            <a class="quick-btn" href="restaurant/restaurant-dashboard.html"><span class="quick-ic"><i class="fa-solid fa-utensils"></i></span>Restaurant POS<span class="quick-sub">Ring up a sale</span></a>
-            <a class="quick-btn" href="accounting/accounting-dashboard.html"><span class="quick-ic"><i class="fa-solid fa-chart-column"></i></span>Accounting<span class="quick-sub">Shift reconciliation &amp; reports</span></a>
-          </div>
-        </div>
+      <div class="panel-body">
+        <div class="act-list" id="activityList"></div>
       </div>
     </div>
-
-    <!-- Module Snapshots -->
-    <div class="section-header" style="margin-top:4px;">
-      <div class="section-title">Departments at a Glance</div>
-    </div>
-    <div class="three-col" id="moduleGrid"></div>
 
   </div>
 </div>
@@ -323,7 +282,7 @@ function renderRoomStatus(rooms){
 
 /* ═══════════════════════════════════════
    ACTIVITY FEED — colored icon box per department, same act-ic
-   pattern as the kpi-ic / mod-icon boxes elsewhere on this page.
+   pattern as the kpi-ic boxes elsewhere on this page.
 ═══════════════════════════════════════ */
 const ACT_ICON = { Booking:'fa-bed', Kitchen:'fa-kitchen-set', Restaurant:'fa-utensils', 'Pool Bar':'fa-glass-water', Accounting:'fa-chart-column', Staff:'fa-user-clock' };
 const ACT_CLASS = { gold:'ic-blue', purple:'ic-purple', blue:'ic-blue', green:'ic-green', amber:'ic-amber' };
@@ -343,31 +302,6 @@ function renderActivity(activity){
       <span class="act-ic ${ACT_CLASS[item.color]||'ic-blue'}"><i class="fa-solid ${ACT_ICON[item.dept]||'fa-circle-info'}"></i></span>
       <div><div class="act-text">${item.text}</div><div class="act-time">${item.dept} · ${item.time}</div></div>
     </div>`).join('');
-}
-
-/* ═══════════════════════════════════════
-   MODULE SNAPSHOTS
-═══════════════════════════════════════ */
-function renderModules(restRev, poolRev, rooms, lowStock, staffOnDuty, gymActive, storePendingReq, procPending){
-  const r = rooms || { total:48, occupied:31, vacant:11, dirty:4, maintenance:2 };
-  const modules = [
-    { title:'Booking (Rooms)',  sub:`${r.occupied}/${r.total} occupied`, icon:'fa-bed', color:'blue', href:'booking/booking-dashboard.html', badge:`${Math.round(r.occupied/r.total*100)}%`, badgeCls:'chip-ok' },
-    { title:'Guest Profiles',   sub:'Directory & folios', icon:'fa-user', color:'blue', href:'booking/guests.html', badge:null },
-    { title:'Kitchen',          sub:`${lowStock} low-stock ingredients`, icon:'fa-kitchen-set', color:'purple', href:'kitchen/kitchen-dashboard.html', badge: lowStock>0?String(lowStock):'OK', badgeCls: lowStock>0?'chip-warn':'chip-ok' },
-    { title:'Restaurant / Bar', sub:fmtN(restRev)+' today', icon:'fa-utensils', color:'blue', href:'restaurant/restaurant-dashboard.html', badge:null },
-    { title:'Pool Bar',         sub:fmtN(poolRev)+' today', icon:'fa-glass-water', color:'green', href:'poolbar/poolbar-dashboard.html', badge:null },
-    { title:'Gym',              sub:`${gymActive} active members today`, icon:'fa-dumbbell', color:'purple', href:'gym/gym-dashboard.html', badge:null },
-    { title:'Store',            sub:`${storePendingReq} pending requisitions`, icon:'fa-warehouse', color:'amber', href:'store/store-dashboard.html', badge: storePendingReq>0?String(storePendingReq):null, badgeCls:'chip-warn' },
-    { title:'Staff Management', sub:`${staffOnDuty} staff on duty`, icon:'fa-users', color:'blue', href:'staff.html', badge:null },
-    { title:'Procurement',      sub:`${procPending} in approval chain`, icon:'fa-box', color:'cyan', href:'procurement/procurement-dashboard.html', badge:String(procPending), badgeCls:'chip-warn' },
-  ];
-  const ICON_CLASS = { blue:'ic-blue', green:'ic-green', purple:'ic-purple', amber:'ic-amber', cyan:'ic-cyan' };
-  document.getElementById('moduleGrid').innerHTML = modules.map(m => `
-    <a class="mod-card" href="${m.href}">
-      <div class="mod-icon ${ICON_CLASS[m.color]}"><i class="fa-solid ${m.icon}"></i></div>
-      <div class="mod-body"><div class="mod-title">${m.title}</div><div class="mod-sub">${m.sub}</div></div>
-      ${m.badge?`<span class="chip ${m.badgeCls||'chip-ok'}"><i class="fa-solid fa-circle"></i>${m.badge}</span>`:''}
-    </a>`).join('');
 }
 
 /* ═══════════════════════════════════════
@@ -394,8 +328,6 @@ async function init(){
   const rooms     = await DataStore.get('ds_bookings_rooms').catch(() => null) || [];
   const prs       = await DataStore.get('ds_procurement_prs').catch(() => null) || [];
   const kitchenInv = await DataStore.get('ds_kitchen_inventory').catch(() => null) || [];
-  const staff     = await DataStore.get('ds_staff').catch(() => null) || [];
-  const gymCheckins = await DataStore.get('ds_gym_checkins').catch(() => null) || [];
 
   // Compute room stats from live data
   const totalRooms = rooms.length || 48;
@@ -409,14 +341,11 @@ async function init(){
 
   const procPending = prs.filter(p => p.status === 'pending' || p.status === 'accountant' || p.status === 'gm').length || 3;
   const lowStock = kitchenInv.filter(i => i.qty <= i.reorder).length || 3;
-  const staffOnDuty = staff.filter(s => s.status === 'on_duty').length || 18;
-  const gymActive = gymCheckins.length || 3;
 
   renderKPIs(roomRev, restRev, poolRev, roomsData, procPending, lowStock);
   renderRevenue(roomRev, restRev, poolRev);
   renderRoomStatus(roomsData);
   renderActivity(activity);
-  renderModules(restRev, poolRev, roomsData, lowStock, staffOnDuty, gymActive, 3, procPending);
 }
 
 /* ── Boot: login check, init DataStore, then render ── */

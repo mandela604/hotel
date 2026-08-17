@@ -9,9 +9,13 @@
   *{ box-sizing:border-box; margin:0; padding:0; }
   html{ height:auto; visibility:hidden; }
   html.gym-ready{ visibility:visible; }
-  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  body{
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); font-size:14px; min-height:100vh;
+    transition:background .3s,color .3s;
+  }
   .app{ display:block; }
-  .main{ margin-left:256px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
   .content{
@@ -86,6 +90,7 @@
   .empty-note{ font-size:12.5px; color:var(--text3); padding:24px; text-align:center; }
   .plan-chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .plan-dot{ width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .mode-chip{ display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; background:var(--surface3); color:var(--text2); }
 
   .report-actions{ display:flex; justify-content:flex-end; gap:8px; padding:0 24px 22px; }
 
@@ -132,7 +137,9 @@
               <label class="form-label">To</label>
               <input type="date" class="form-input" id="rTo" onchange="onCustomDateChange()">
             </div>
-            <button class="btn btn-primary" onclick="generateReport()"><i class="fa-solid fa-print"></i> Generate &amp; Print Report</button>
+            <button class="btn btn-primary" id="generateBtn" onclick="generateReport()">
+              <i class="fa-solid fa-print"></i> Generate &amp; Print Report
+            </button>
           </div>
           <div class="preview-line" id="previewLine">—</div>
         </div>
@@ -141,7 +148,9 @@
       <div class="panel" id="reportPanel" style="display:none;">
         <div id="reportOutput"></div>
         <div class="report-actions no-print">
-          <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print Again</button>
+          <button class="btn btn-outline btn-sm" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> Print Again
+          </button>
         </div>
       </div>
 
@@ -149,212 +158,325 @@
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="data/gym-seed.js"></script>
+<script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
 <script>
-const shell = GymShell.attach({
-  sidebarTarget: '#sidebarSlot', topbarTarget: '#topbarSlot',
-  activeFile: 'gym-revenue.html', pageTitle: 'Revenue Report', pageSubtitle: 'Generate & print revenue summaries',
-  apiMode: 'Demo', user: { name: 'Gym Attendant', initials: 'GA' },
+'use strict';
+
+/* UI only: call GymService / Permissions / shell, then render.
+   No USE_DEMO, no seed arrays, no revenue math on this page.
+   Live = swap service (+ shell auth). This file stays. */
+
+var shell = GymShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'gym-revenue.html',
+  pageTitle:     'Revenue Report',
+  pageSubtitle:  'Generate & print revenue summaries',
 });
+
 document.documentElement.classList.add('gym-ready');
 
-const storage = window.storage || { async get(k,s){const v=localStorage.getItem(k);return v==null?null:{key:k,value:v,shared:s};}, async set(k,v,s){localStorage.setItem(k,v);return{key:k,value:v,shared:s};}, async delete(k){localStorage.removeItem(k);return{key:k,deleted:true};}, async list(p){const keys=Object.keys(localStorage).filter(k=>!p||k.startsWith(p));return{keys,prefix:p};} };
-const KEY_MEMBERS='gym-members', KEY_PLANS='gym-plans', KEY_CHECKINS='gym-checkins';
-async function load(k,f){ try{const r=await storage.get(k,true);if(r&&r.value){const p=JSON.parse(r.value);if(Array.isArray(p))return p;}}catch(e){} return f;}
+var session = null;
+var canView = true;
+var activePreset = '30d';
 
-let members=[], plans=[], checkins=[];
-let activePreset = '30d';
+var COLOR_TOKENS = {
+  gold:   { bg: 'var(--gold-dim)',   fg: 'var(--gold-light)', dot: 'var(--gold)' },
+  blue:   { bg: 'var(--blue-bg)',    fg: 'var(--blue)',       dot: 'var(--blue)' },
+  purple: { bg: 'var(--purple-bg)',  fg: 'var(--purple)',     dot: 'var(--purple)' },
+  green:  { bg: 'var(--green-bg)',   fg: 'var(--green)',      dot: 'var(--green)' },
+  amber:  { bg: 'var(--amber-bg)',   fg: 'var(--amber)',      dot: 'var(--amber)' },
+};
 
-const COLOR_TOKENS={gold:{bg:'var(--gold-dim)',fg:'var(--gold-light)',dot:'var(--gold)'},blue:{bg:'var(--blue-bg)',fg:'var(--blue)',dot:'var(--blue)'},purple:{bg:'var(--purple-bg)',fg:'var(--purple)',dot:'var(--purple)'},green:{bg:'var(--green-bg)',fg:'var(--green)',dot:'var(--green)'},amber:{bg:'var(--amber-bg)',fg:'var(--amber)',dot:'var(--amber)'}};
-function _esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fmtN(n){return'₦'+Math.round(n||0).toLocaleString('en-NG');}
-function fmtDate(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
-function fmtDateFull(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});}
-function planById(id){return plans.find(p=>p.id===id)||{id:null,name:'No Plan',price:0,durationDays:0,notes:'',color:'blue'};}
-function planChipHtml(plan){const c=COLOR_TOKENS[plan.color]||COLOR_TOKENS.blue;return'<span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(plan.name)+'</span>';}
-
-const RANGE_PRESETS=[
-  {key:'7d',label:'Last 7 Days'},
-  {key:'30d',label:'Last 30 Days'},
-  {key:'3m',label:'Last 3 Months'},
-  {key:'6m',label:'Last 6 Months'},
-  {key:'1y',label:'This Year'},
-  {key:'all',label:'All Time'},
+var RANGE_PRESETS = [
+  { key: '7d',  label: 'Last 7 Days' },
+  { key: '30d', label: 'Last 30 Days' },
+  { key: '3m',  label: 'Last 3 Months' },
+  { key: '6m',  label: 'Last 6 Months' },
+  { key: '1y',  label: 'This Year' },
+  { key: 'all', label: 'All Time' },
 ];
 
-function renderPills(){
-  const wrap=document.getElementById('rangePills');
-  wrap.innerHTML = RANGE_PRESETS.map(p=>'<div class="range-pill'+(activePreset===p.key?' active':'')+'" data-key="'+p.key+'">'+p.label+'</div>').join('')
-    + '<div class="range-pill'+(activePreset===null?' active':'')+'" data-key="custom">Custom</div>';
-  wrap.querySelectorAll('.range-pill').forEach(el=>{
-    el.addEventListener('click',()=>{
-      const key = el.dataset.key;
-      if(key==='custom') return;
+function _esc(s) {
+  return (s == null ? '' : String(s))
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function fmtN(n) {
+  return '₦' + Math.round(n || 0).toLocaleString('en-NG');
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  return new Date(s + 'T00:00:00').toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+function fmtDateFull(s) {
+  if (!s) return '—';
+  return new Date(s + 'T00:00:00').toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  });
+}
+function planChipHtml(plan) {
+  var c = COLOR_TOKENS[(plan && plan.color) || 'blue'] || COLOR_TOKENS.blue;
+  return '<span class="plan-chip" style="background:' + c.bg + ';color:' + c.fg + ';">' +
+    '<span class="plan-dot" style="background:' + c.dot + ';"></span>' +
+    _esc((plan && plan.name) || 'No Plan') +
+  '</span>';
+}
+function modeChipHtml(mode) {
+  return '<span class="mode-chip">' + _esc(mode || 'Cash') + '</span>';
+}
+
+function getSession() {
+  if (shell && typeof shell.getUser === 'function') {
+    var u = shell.getUser();
+    if (u) return u;
+  }
+  return session;
+}
+
+function applyPermissionUI() {
+  var s = getSession();
+  if (window.Permissions && Permissions.hasPermission) {
+    canView = Permissions.hasPermission(s, 'canView', 'gym') ||
+              Permissions.hasPermission(s, 'canEdit', 'gym') ||
+              Permissions.hasPermission(s, 'canCreate', 'gym') ||
+              true;
+  } else {
+    canView = true;
+  }
+  var btn = document.getElementById('generateBtn');
+  if (btn) btn.style.display = canView ? '' : 'none';
+}
+
+/* ── Date range UI only ── */
+function renderPills() {
+  var wrap = document.getElementById('rangePills');
+  wrap.innerHTML = RANGE_PRESETS.map(function (p) {
+    return '<div class="range-pill' + (activePreset === p.key ? ' active' : '') +
+      '" data-key="' + p.key + '">' + p.label + '</div>';
+  }).join('') +
+    '<div class="range-pill' + (activePreset === null ? ' active' : '') +
+    '" data-key="custom">Custom</div>';
+
+  wrap.querySelectorAll('.range-pill').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var key = el.getAttribute('data-key');
+      if (key === 'custom') return;
       applyPreset(key);
     });
   });
 }
 
-function applyPreset(key){
-  const today=new Date(); today.setHours(0,0,0,0);
-  let from=null, to=today;
-  if(key==='7d'){ from=new Date(today); from.setDate(from.getDate()-6); }
-  else if(key==='30d'){ from=new Date(today); from.setDate(from.getDate()-29); }
-  else if(key==='3m'){ from=new Date(today); from.setMonth(from.getMonth()-3); }
-  else if(key==='6m'){ from=new Date(today); from.setMonth(from.getMonth()-6); }
-  else if(key==='1y'){ from=new Date(today.getFullYear(),0,1); }
-  else if(key==='all'){ from=null; to=null; }
+function applyPreset(key) {
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var from = null;
+  var to = today;
+
+  if (key === '7d')  { from = new Date(today); from.setDate(from.getDate() - 6); }
+  else if (key === '30d') { from = new Date(today); from.setDate(from.getDate() - 29); }
+  else if (key === '3m')  { from = new Date(today); from.setMonth(from.getMonth() - 3); }
+  else if (key === '6m')  { from = new Date(today); from.setMonth(from.getMonth() - 6); }
+  else if (key === '1y')  { from = new Date(today.getFullYear(), 0, 1); }
+  else if (key === 'all') { from = null; to = null; }
+
   document.getElementById('rFrom').value = from ? from.toISOString().split('T')[0] : '';
-  document.getElementById('rTo').value = to ? to.toISOString().split('T')[0] : '';
+  document.getElementById('rTo').value   = to   ? to.toISOString().split('T')[0]   : '';
   activePreset = key;
   renderPills();
   updatePreview();
 }
 
-function onCustomDateChange(){ activePreset=null; renderPills(); updatePreview(); }
-
-function getRange(){
-  return { from: document.getElementById('rFrom').value || null, to: document.getElementById('rTo').value || null };
-}
-function inRange(dateStr, from, to){
-  if(!dateStr) return false;
-  if(from && dateStr < from) return false;
-  if(to && dateStr > to) return false;
-  return true;
+function onCustomDateChange() {
+  activePreset = null;
+  renderPills();
+  updatePreview();
 }
 
-function updatePreview(){
-  const {from,to} = getRange();
-  const newMembers = members.filter(m=>inRange(m.joined, from, to));
-  const ciInRange = checkins.filter(ci=>inRange(ci.time?ci.time.split('T')[0]:null, from, to));
-  const rangeLabel = !from && !to ? 'all time' : (from&&to ? fmtDate(from)+' – '+fmtDate(to) : (from?'from '+fmtDate(from):'up to '+fmtDate(to)));
-  document.getElementById('previewLine').innerHTML = 'Matches <b>'+newMembers.length+'</b> new member'+(newMembers.length!==1?'s':'')+' and <b>'+ciInRange.length+'</b> check-in'+(ciInRange.length!==1?'s':'')+' for '+rangeLabel+'.';
+function getRange() {
+  return {
+    from: document.getElementById('rFrom').value || null,
+    to:   document.getElementById('rTo').value || null,
+  };
 }
 
-function generateReport(){
-  const {from,to} = getRange();
-  const newMembers = members.filter(m=>inRange(m.joined, from, to));
-  const ciInRange = checkins.filter(ci=>inRange(ci.time?ci.time.split('T')[0]:null, from, to));
+/* ── Call service for numbers; page only renders ── */
+function updatePreview() {
+  if (!window.GymService) {
+    document.getElementById('previewLine').textContent = 'Service not loaded.';
+    return;
+  }
+  var range = getRange();
+  var report = GymService.getRevenueReport(range.from, range.to);
+  var rangeLabel = !range.from && !range.to
+    ? 'all time'
+    : (range.from && range.to
+      ? fmtDate(range.from) + ' – ' + fmtDate(range.to)
+      : (range.from ? 'from ' + fmtDate(range.from) : 'up to ' + fmtDate(range.to)));
 
-  const revenueByPlan = {};
-  let totalRevenue = 0;
-  newMembers.forEach(m=>{
-    const plan = planById(m.planId);
-    const key = plan.id || 'none';
-    if(!revenueByPlan[key]) revenueByPlan[key] = { plan, count:0, subtotal:0 };
-    revenueByPlan[key].count++;
-    revenueByPlan[key].subtotal += plan.price || 0;
-    totalRevenue += plan.price || 0;
+  document.getElementById('previewLine').innerHTML =
+    'Matches <b>' + report.paymentsCount + '</b> payment' +
+    (report.paymentsCount !== 1 ? 's' : '') +
+    ' totalling <b>' + fmtN(report.totalRevenue) + '</b>' +
+    ' (' + report.checkinsCount + ' check-in' + (report.checkinsCount !== 1 ? 's' : '') + ')' +
+    ' for ' + rangeLabel + '.';
+}
+
+function generateReport() {
+  if (!canView) {
+    showToast("You don't have permission to view revenue reports.", 'error');
+    return;
+  }
+  if (!window.GymService) {
+    showToast('GymService not loaded.', 'error');
+    return;
+  }
+
+  var range = getRange();
+  var report = GymService.getRevenueReport(range.from, range.to);
+  var planRows = (report.revenueByPlan || []).slice().sort(function (a, b) {
+    return (b.subtotal || 0) - (a.subtotal || 0);
   });
-  const planRows = Object.values(revenueByPlan).sort((a,b)=>b.subtotal-a.subtotal);
+  var payments = (report.payments || []).slice(); // already sorted newest-first by the service
 
-  const rangeLabel = !from && !to ? 'All Time' : (from&&to ? fmtDateFull(from)+' – '+fmtDateFull(to) : (from?'From '+fmtDateFull(from):'Up to '+fmtDateFull(to)));
-  const generatedOn = new Date().toLocaleString('en-GB',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  var rangeLabel = !range.from && !range.to
+    ? 'All Time'
+    : (range.from && range.to
+      ? fmtDateFull(range.from) + ' – ' + fmtDateFull(range.to)
+      : (range.from ? 'From ' + fmtDateFull(range.from) : 'Up to ' + fmtDateFull(range.to)));
 
-  const activeAsOf = members.filter(m=>{
-    if(!m.planId) return false;
-    if(m.status==='frozen') return false;
-    if(!m.expiry) return true;
-    return new Date(m.expiry+'T00:00:00') >= new Date(new Date().toDateString());
-  }).length;
+  var generatedOn = new Date().toLocaleString('en-GB', {
+    day: '2-digit', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
 
-  document.getElementById('reportOutput').innerHTML = `
-    <div class="report-letterhead">
-      <div class="report-hotel-name">Aurum Hotel</div>
-      <div class="report-sub">Gym &amp; Fitness — Revenue Report</div>
-      <div class="report-meta">Period: ${rangeLabel} &nbsp;·&nbsp; Generated ${generatedOn}</div>
-    </div>
-    <div class="report-body">
+  document.getElementById('reportOutput').innerHTML =
+    '<div class="report-letterhead">' +
+      '<div class="report-hotel-name">Aurum Hotel</div>' +
+      '<div class="report-sub">Gym &amp; Fitness — Revenue Report</div>' +
+      '<div class="report-meta">Period: ' + _esc(rangeLabel) +
+        ' &nbsp;·&nbsp; Generated ' + _esc(generatedOn) + '</div>' +
+    '</div>' +
+    '<div class="report-body">' +
 
-      <div class="detail-grid">
-        <div class="detail-stat">
-          <div class="detail-stat-label">Revenue (New Sign-ups)</div>
-          <div class="detail-stat-val gold">${fmtN(totalRevenue)}</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">New Members</div>
-          <div class="detail-stat-val">${newMembers.length}</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">Check-ins in Period</div>
-          <div class="detail-stat-val">${ciInRange.length}</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">Active Members (as of today)</div>
-          <div class="detail-stat-val green">${activeAsOf}</div>
-        </div>
-      </div>
+      '<div class="detail-grid">' +
+        '<div class="detail-stat">' +
+          '<div class="detail-stat-label">Revenue (Payments Received)</div>' +
+          '<div class="detail-stat-val gold">' + fmtN(report.totalRevenue) + '</div>' +
+        '</div>' +
+        '<div class="detail-stat">' +
+          '<div class="detail-stat-label">New Members</div>' +
+          '<div class="detail-stat-val">' + report.newMembersCount + '</div>' +
+        '</div>' +
+        '<div class="detail-stat">' +
+          '<div class="detail-stat-label">Check-ins in Period</div>' +
+          '<div class="detail-stat-val">' + report.checkinsCount + '</div>' +
+        '</div>' +
+        '<div class="detail-stat">' +
+          '<div class="detail-stat-label">Active Members (as of today)</div>' +
+          '<div class="detail-stat-val green">' + report.activeMembers + '</div>' +
+        '</div>' +
+      '</div>' +
 
-      <div>
-        <div class="report-section-title">Revenue by Plan</div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Plan</th><th>New Sign-ups</th><th class="right">Price Each</th><th class="right">Subtotal</th></tr></thead>
-            <tbody>
-              ${planRows.length===0
-                ? '<tr><td colspan="4" class="empty-note">No new sign-ups in this period.</td></tr>'
-                : planRows.map(r=>`<tr><td>${planChipHtml(r.plan)}</td><td>${r.count}</td><td class="right">${fmtN(r.plan.price)}</td><td class="right">${fmtN(r.subtotal)}</td></tr>`).join('')}
-            </tbody>
-            ${planRows.length>0 ? `<tfoot><tr><td colspan="3">Total Revenue</td><td class="right">${fmtN(totalRevenue)}</td></tr></tfoot>` : ''}
-          </table>
-        </div>
-      </div>
+      '<div>' +
+        '<div class="report-section-title">Revenue by Plan</div>' +
+        '<div class="tbl-wrap"><table>' +
+          '<thead><tr><th>Plan</th><th>Payments</th><th class="right">Avg. Payment</th><th class="right">Subtotal</th></tr></thead>' +
+          '<tbody>' +
+            (planRows.length === 0
+              ? '<tr><td colspan="4" class="empty-note">No payments recorded in this period.</td></tr>'
+              : planRows.map(function (r) {
+                  var avg = r.count ? r.subtotal / r.count : 0;
+                  return '<tr>' +
+                    '<td>' + planChipHtml(r.plan) + '</td>' +
+                    '<td>' + r.count + '</td>' +
+                    '<td class="right">' + fmtN(avg) + '</td>' +
+                    '<td class="right">' + fmtN(r.subtotal) + '</td>' +
+                  '</tr>';
+                }).join('')) +
+          '</tbody>' +
+          (planRows.length > 0
+            ? '<tfoot><tr><td colspan="3">Total Revenue</td><td class="right">' +
+                fmtN(report.totalRevenue) + '</td></tr></tfoot>'
+            : '') +
+        '</table></div>' +
+      '</div>' +
 
-      <div>
-        <div class="report-section-title">New Members in Period</div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Member</th><th>Plan</th><th>Joined</th><th class="right">Amount</th></tr></thead>
-            <tbody>
-              ${newMembers.length===0
-                ? '<tr><td colspan="4" class="empty-note">No new members in this period.</td></tr>'
-                : newMembers.slice().sort((a,b)=>(a.joined||'').localeCompare(b.joined||'')).map(m=>{
-                    const plan=planById(m.planId);
-                    return `<tr><td>${_esc(m.name)}</td><td>${planChipHtml(plan)}</td><td>${fmtDate(m.joined)}</td><td class="right">${fmtN(plan.price)}</td></tr>`;
-                  }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      '<div>' +
+        '<div class="report-section-title">Payments in Period</div>' +
+        '<div class="tbl-wrap"><table>' +
+          '<thead><tr><th>Member</th><th>Plan</th><th>Date</th><th>Mode</th><th class="right">Amount</th></tr></thead>' +
+          '<tbody>' +
+            (payments.length === 0
+              ? '<tr><td colspan="5" class="empty-note">No payments recorded in this period.</td></tr>'
+              : payments.map(function (row) {
+                  return '<tr>' +
+                    '<td>' + _esc(row.member.name) + '</td>' +
+                    '<td>' + planChipHtml(row.plan) + '</td>' +
+                    '<td>' + fmtDate(row.payment.date) + '</td>' +
+                    '<td>' + modeChipHtml(row.payment.mode) + '</td>' +
+                    '<td class="right">' + fmtN(row.payment.amount) + '</td>' +
+                  '</tr>';
+                }).join('')) +
+          '</tbody>' +
+        '</table></div>' +
+      '</div>' +
 
-    </div>
-  `;
+    '</div>';
 
   document.getElementById('reportPanel').style.display = 'block';
-  document.getElementById('reportPanel').scrollIntoView({ behavior:'smooth', block:'start' });
-  setTimeout(()=>window.print(), 250);
+  document.getElementById('reportPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(function () { window.print(); }, 250);
 }
 
-function isoAgo(d){const x=new Date();x.setDate(x.getDate()-d);return x.toISOString().split('T')[0];}
-function isoIn(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOString().split('T')[0];}
-function isoAgoHours(h){const x=new Date();x.setHours(x.getHours()-h);return x.toISOString();}
+function showToast(msg, type) {
+  type = type || 'success';
+  var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#fff;border:1px solid #eef0f6;border-radius:10px;padding:11px 16px;font-size:13px;color:#1c2440;box-shadow:0 8px 28px rgba(15,20,40,0.18);z-index:999;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 40px);font-weight:600;border-left:3px solid ' +
+    (type === 'success' ? '#12b76a' : type === 'error' ? '#f04438' : '#2f6fed') + ';';
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 3200);
+}
 
-async function init(){
-  plans = await load(KEY_PLANS,[
-    {id:'pl01',name:'Basic',price:15000,durationDays:30,notes:'',color:'blue'},
-    {id:'pl02',name:'Premium',price:35000,durationDays:30,notes:'',color:'gold'},
-    {id:'pl03',name:'Day Pass',price:5000,durationDays:1,notes:'',color:'purple'},
-    {id:'pl04',name:'Annual',price:120000,durationDays:365,notes:'',color:'green'},
-    {id:'pl05',name:'Student',price:8000,durationDays:30,notes:'',color:'amber'},
-  ]);
-  members = await load(KEY_MEMBERS,[
-    {id:'gm01',name:'Chidi Nwankwo',planId:'pl02',room:'Room 204',phone:'',joined:isoAgo(120),expiry:isoIn(18),checkins:34,lastCheckin:isoAgoHours(5),status:'active'},
-    {id:'gm02',name:'Fatima Bello',planId:'pl01',room:'Room 118',phone:'',joined:isoAgo(60),expiry:isoIn(4),checkins:12,lastCheckin:isoAgoHours(30),status:'active'},
-    {id:'gm03',name:'Segun Johnson',planId:'pl03',room:'Walk-in',phone:'',joined:isoAgo(1),expiry:isoAgo(0),checkins:1,lastCheckin:isoAgoHours(1),status:'active'},
-    {id:'gm04',name:'Ada Williams',planId:'pl02',room:'Room 204 (Suite)',phone:'',joined:isoAgo(200),expiry:isoAgo(10),checkins:88,lastCheckin:isoAgo(10),status:'active'},
-    {id:'gm05',name:'Ibrahim Musa',planId:'pl01',room:'Staff',phone:'',joined:isoAgo(300),expiry:isoIn(90),checkins:150,lastCheckin:isoAgo(45),status:'frozen'},
-    {id:'gm06',name:'Ngozi Okafor',planId:'pl04',room:'Room 301',phone:'',joined:isoAgo(10),expiry:isoIn(50),checkins:6,lastCheckin:isoAgoHours(20),status:'active'},
-    {id:'gm07',name:'Emeka Obi',planId:'pl02',room:'Room 105',phone:'',joined:isoAgo(90),expiry:isoAgo(5),checkins:45,lastCheckin:isoAgo(6),status:'active'},
-  ]);
-  checkins = await load(KEY_CHECKINS,[
-    {id:'ci01',memberId:'gm03',memberName:'Segun Johnson',time:isoAgoHours(1)},
-    {id:'ci02',memberId:'gm01',memberName:'Chidi Nwankwo',time:isoAgoHours(5)},
-    {id:'ci03',memberId:'gm06',memberName:'Ngozi Okafor',time:isoAgoHours(20)},
-    {id:'ci04',memberId:'gm02',memberName:'Fatima Bello',time:isoAgoHours(30)},
-    {id:'ci05',memberId:'gm01',memberName:'Chidi Nwankwo',time:isoAgoHours(48)},
-  ]);
-  renderPills();
-  applyPreset('30d');
+async function init() {
+  if (!window.GymService) {
+    document.getElementById('previewLine').textContent = 'GymService not loaded. Check script order.';
+    return;
+  }
+  try {
+    var seed = window.GymSeed || {};
+    await GymService.loadAll({
+      members:  seed.DEMO_MEMBERS  || seed.members  || [],
+      plans:    seed.DEMO_PLANS    || seed.plans    || [],
+      checkins: seed.DEMO_CHECKINS || seed.checkins || [],
+      guests:   seed.DEMO_GUESTS   || seed.guests   || [],
+    });
+
+    session = (shell.getUser && shell.getUser()) || null;
+    applyPermissionUI();
+    renderPills();
+    applyPreset('30d');
+
+    GymService.onChange(function () {
+      updatePreview();
+    });
+
+    setTimeout(function () {
+      session = (shell.getUser && shell.getUser()) || session;
+      applyPermissionUI();
+    }, 400);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('previewLine').textContent = 'Could not load gym data.';
+    showToast('Failed to load gym data.', 'error');
+  }
 }
 init();
 </script>

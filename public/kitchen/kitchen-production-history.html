@@ -2,26 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>Production History | Grace Kitchen</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="color-scheme" content="light">
-<title>Production History | Aurum Kitchen</title>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-  /* This page owns layout + its own content only. Sidebar + topbar look/markup
-     live entirely in kitchen-shell.js and stay on the shared dark/blue theme.
-     The .content (and .modal-overlay, since the modal renders outside .content)
-     scopes below re-declare the SAME variable names with light values, so only
-     the main content area + its modals turn white — the sidebar never sees this. */
   *{ box-sizing:border-box; margin:0; padding:0; }
-  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
-  html, body{ height:100%; overflow-x:hidden; }
-  body{ font-family:'Outfit', system-ui, -apple-system, sans-serif; font-size:14px; min-height:100vh; transition:background .3s,color .3s; }
+  html{ height:auto; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
   .app{ display:block; }
   .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-  /* ── Light-theme variables, scoped to content + modal only ── */
   .content, .modal-overlay{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec;
@@ -36,116 +28,79 @@
     --purple:#8b5cf6; --purple-bg:#f4efff;
   }
   .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
-  @media (max-width:768px){ .content{ padding:16px; } }
-  @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:100px; }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
-  .kpi-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; margin-bottom:10px; flex-shrink:0; }
-  .kpi-icon-gold{ background:var(--gold-dim); color:var(--gold); }
-  .kpi-icon-blue{ background:var(--blue-bg); color:var(--blue); }
-  .kpi-icon-green{ background:var(--green-bg); color:var(--green); }
-  .kpi-icon-red{ background:var(--red-bg); color:var(--red); }
-  .kpi-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; font-weight:500; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:700; color:var(--text); line-height:1; }
-  .kpi-trend{ font-size:11px; color:var(--text3); margin-top:auto; }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
 
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
   .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
-  .toolbar-right{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
-  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:240px; flex:1; }
-  .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
-  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; font-family:inherit; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; font-family:inherit; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; font-family:inherit; }
   .btn-ghost:hover{ color:var(--gold); }
-  @media (max-width:900px){ .toolbar{ flex-direction:column; align-items:stretch; } .toolbar-left{ flex-direction:column; align-items:stretch; } .toolbar-right{ justify-content:stretch; } .toolbar-right .btn{ flex:1; justify-content:center; } .flt-group{ width:100%; } .search-box{ max-width:100%; } .filter-select{ width:100%; } }
 
-  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
-  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:600; color:var(--text); }
-  .tbl-wrap{ overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:640px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
-  tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
-  tbody tr:last-child{ border-bottom:none; }
-  tbody tr:hover{ background:var(--surface2); }
-  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
-  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
+  .table-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column; }
+  .table-head-bar{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+  .table-title{ font-size:13px; font-weight:800; color:var(--text); }
+  .table-wrap{ overflow-x:auto; width:100%; }
+  table.data-tbl{ width:100%; border-collapse:collapse; text-align:left; font-size:13px; }
+  table.data-tbl th{ background:var(--surface2); color:var(--text3); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; padding:10px 14px; border-bottom:1px solid var(--border); }
+  table.data-tbl td{ padding:12px 14px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:middle; cursor:pointer; }
+  table.data-tbl tr:last-child td{ border-bottom:none; }
+  table.data-tbl tr:hover td{ background:rgba(47,111,237,0.02); }
 
-  @media (max-width:880px){
-    .tbl-wrap{ overflow-x:visible; }
-    table{ min-width:0; width:100%; }
-    thead{ display:none; }
-    table, tbody, tr, td{ display:block; width:100%; }
-    tbody tr{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; margin:0 0 10px; padding:6px 14px; }
-    tbody tr:last-child{ margin-bottom:0; }
-    tbody td{ border:none; padding:8px 0; white-space:normal !important; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; text-align:right; }
-    tbody td:not(:last-child){ border-bottom:1px dashed var(--border); }
-    tbody td::before{ content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; flex-shrink:0; text-align:left; }
-    .empty-row{ display:block; } .empty-row td{ display:block; text-align:center; } .empty-row td::before{ content:none; }
-  }
+  .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:10px; font-weight:700; white-space:nowrap; }
+  .chip-sent{ background:var(--blue-bg); color:var(--blue); }
+  .chip-accepted, .chip-completed{ background:var(--green-bg); color:var(--green); }
+  .chip-rejected, .chip-voided{ background:var(--red-bg); color:var(--red); }
+  .chip-rts{ background:var(--purple-bg); color:var(--purple); }
+  .chip-coo{ background:var(--amber-bg); color:var(--amber); }
 
-  .chip{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-  .chip::before{ content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-  .chip-draft{ background:var(--surface3); color:var(--text3); } .chip-draft::before{ background:var(--text3); }
-  .chip-saved{ background:var(--amber-bg); color:var(--amber); } .chip-saved::before{ background:var(--amber); }
-  .chip-sent{ background:var(--blue-bg); color:var(--blue); } .chip-sent::before{ background:var(--blue); }
-  .chip-accepted{ background:var(--green-bg); color:var(--green); } .chip-accepted::before{ background:var(--green); }
-  .chip-rejected{ background:var(--red-bg); color:var(--red); } .chip-rejected::before{ background:var(--red); }
-  .chip-completed{ background:var(--purple-bg); color:var(--purple); } .chip-completed::before{ background:var(--purple); }
-  .chip-rts{ background:var(--blue-bg); color:var(--blue); } .chip-rts::before{ background:var(--blue); }
-  .chip-coo{ background:var(--amber-bg); color:var(--amber); } .chip-coo::before{ background:var(--amber); }
+  .pagin{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:8px; font-size:11.5px; color:var(--text2); }
+  .page-btns{ display:flex; align-items:center; gap:4px; }
+  .page-btn{ width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11.5px; font-weight:600; }
+  .page-btn.active{ background:var(--gold); border-color:var(--gold); color:#fff; font-weight:700; }
 
-  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
-  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; padding:0 7px; font-family:'Outfit',sans-serif; }
-  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
-  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
-
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; text-decoration:none; }
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(4px); z-index:300; align-items:center; justify-content:center; padding:20px 16px; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(520px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); position:relative; overflow:hidden; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal-title{ font-size:18px; font-weight:800; color:var(--text); margin-bottom:14px; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .detail-item{ display:flex; flex-direction:column; gap:2px; }
+  .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; }
+  .detail-value{ font-size:13px; font-weight:600; color:var(--text); }
+  .ing-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border); font-size:12.5px; }
+  .ing-row:last-child{ border-bottom:none; }
+  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; border:1px solid transparent; font-family:inherit; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-primary{ background:var(--gold); border-color:var(--gold); color:#fff; box-shadow:0 2px 10px var(--gold-dim); }
-  .btn-primary:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
-  .btn-sm{ padding:6px 12px; font-size:11.5px; }
-  .link-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold); font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; }
-  .link-chip:hover{ background:rgba(47,111,237,0.18); }
 
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,42,0.55); backdrop-filter:blur(5px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
-  .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 30px 80px rgba(15,34,55,0.25); animation:modalIn .25s cubic-bezier(.4,0,.2,1); margin:auto; }
-  @media (max-width:480px){ .modal{ padding:18px; border-radius:14px; } }
-  @keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:10px; }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
-  .modal-close:hover{ color:var(--text); }
-  .modal-footer{ display:flex; gap:10px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
-  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; margin-bottom:14px; }
-  @media (max-width:480px){ .detail-grid{ grid-template-columns:1fr; } }
-  .detail-item{ display:flex; flex-direction:column; gap:3px; }
-  .detail-item.span2{ grid-column:span 2; }
-  @media (max-width:480px){ .detail-item.span2{ grid-column:span 1; } }
-  .detail-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; }
-  .detail-value{ font-size:13.5px; color:var(--text); font-weight:500; }
-  .detail-value.muted{ color:var(--text3); font-weight:400; font-style:italic; }
-  .modal-sub-title{ font-size:9px; text-transform:uppercase; letter-spacing:2px; color:var(--gold); font-weight:600; margin:16px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--gold-border); }
-  .recipe-box{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
-  .ing-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
-  .ing-row:last-child{ border-bottom:none; }
-  .ing-name{ color:var(--text2); } .ing-qty{ color:var(--text); font-weight:600; }
-
-  ::-webkit-scrollbar{ width:6px; height:6px; }
-  ::-webkit-scrollbar-track{ background:transparent; }
-  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
-  @media print{ #kit-sidebar, #kit-topbar, .toolbar, .pagination, .no-print{ display:none !important; } .main{ margin-left:0 !important; } body{ background:#fff !important; color:#000 !important; } .panel{ box-shadow:none !important; border:1px solid #ccc !important; } }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
@@ -155,82 +110,110 @@
     <div id="topbarSlot"></div>
     <div class="content">
 
+      <!-- KPI CARDS -->
       <div class="kpi-row" id="kpiRow"></div>
 
-      <div class="toolbar no-print">
+      <!-- TOOLBAR -->
+      <div class="toolbar">
         <div class="toolbar-left">
-          <div class="flt-group" style="flex:1;min-width:180px;max-width:240px;">
-            <span class="flt-label">Search</span>
-            <div class="search-box"><span style="color:var(--text3);font-size:12px;">🔍</span><input type="text" id="fSearch" placeholder="Production #, meal…" oninput="page=1;render()"></div>
+          <div class="flt-group">
+            <div class="flt-label">Search Log</div>
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
+              <input type="text" id="fSearch" placeholder="Search dish, ID, or staff…">
+            </div>
           </div>
-          <div class="flt-group"><span class="flt-label">Status</span>
-            <select class="filter-select" id="fStatus" onchange="page=1;render()">
-              <option value="">All Statuses</option><option value="draft">Draft</option><option value="saved">Saved</option>
-              <option value="sent">Awaiting Approval</option><option value="accepted">Accepted</option>
-              <option value="rejected">Rejected</option><option value="completed">Completed</option>
+          <div class="flt-group">
+            <div class="flt-label">Status</div>
+            <select class="filter-select" id="fStatus">
+              <option value="">All Statuses</option>
+              <option value="sent">Awaiting Approval</option>
+              <option value="accepted">Accepted</option>
+              <option value="completed">Completed</option>
+              <option value="rejected">Rejected</option>
+              <option value="voided">Voided</option>
             </select>
           </div>
-          <div class="flt-group"><span class="flt-label">Type</span>
-            <select class="filter-select" id="fType" onchange="page=1;render()">
-              <option value="">All Types</option><option value="rts">Ready-to-Serve</option><option value="coo">Cook-on-Order</option>
+          <div class="flt-group">
+            <div class="flt-label">Type</div>
+            <select class="filter-select" id="fType">
+              <option value="">All Types</option>
+              <option value="rts">Ready-to-Serve</option>
+              <option value="coo">Cook-on-Order</option>
             </select>
           </div>
-          <button class="btn-ghost" onclick="clearFilters()">✕ Clear Filters</button>
-        </div>
-        <div class="toolbar-right">
-          <a class="btn btn-primary btn-sm" href="kitchen-production.html">+ New Production</a>
-          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+          <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-rotate"></i> Reset</button>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">All Productions</div>
-          <span style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
-          </span>
+      <!-- TABLE CARD -->
+      <div class="table-card">
+        <div class="table-head-bar">
+          <div class="table-title">Production History Log</div>
+          <div style="font-size:11.5px;color:var(--text3);font-weight:600;" id="tblCount">Loading…</div>
         </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>No.</th><th>Meals</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
-            <tbody id="tblBody"></tbody>
+        <div class="table-wrap">
+          <table class="data-tbl">
+            <thead>
+              <tr>
+                <th>Production No.</th>
+                <th>Meals / Dish</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Time / Date</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody">
+              <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text3);">Loading production history…</td></tr>
+            </tbody>
           </table>
         </div>
-        <div class="pagination"><span id="paginLabel">—</span><div class="page-btns" id="pageBtns"></div></div>
+        <div class="pagin">
+          <div id="paginLabel">Showing 0–0 of 0</div>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
       </div>
 
     </div>
   </div>
 </div>
 
+<!-- DETAIL MODAL -->
 <div class="modal-overlay" id="productionModal">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">🍲 <span id="pmTitle">Production Details</span></div>
-      <button class="modal-close" onclick="closeModal('productionModal')">✕</button>
-    </div>
+    <div class="modal-title" id="pmTitle">Production Details</div>
     <div class="detail-grid">
-      <div class="detail-item"><span class="detail-label">Production No.</span><span class="detail-value" id="pmNo">—</span></div>
-      <div class="detail-item"><span class="detail-label">Batch No.</span><span class="detail-value" id="pmBatch">—</span></div>
-      <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value" id="pmStatus">—</span></div>
-      <div class="detail-item"><span class="detail-label">Destination Type</span><span class="detail-value" id="pmType">—</span></div>
-      <div class="detail-item"><span class="detail-label">Prepared By</span><span class="detail-value" id="pmBy">—</span></div>
-      <div class="detail-item"><span class="detail-label">Time</span><span class="detail-value" id="pmTime">—</span></div>
-      <div class="detail-item span2"><span class="detail-label">Sent To / Linked Order</span><span class="detail-value" id="pmDest">—</span></div>
-      <div class="detail-item span2"><span class="detail-label">Remarks</span><span class="detail-value" id="pmRemarks">—</span></div>
+      <div class="detail-item"><div class="detail-label">Production No.</div><div class="detail-value" id="pmNo">—</div></div>
+      <div class="detail-item"><div class="detail-label">Batch No.</div><div class="detail-value" id="pmBatch">—</div></div>
+      <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value" id="pmStatus">—</div></div>
+      <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value" id="pmType">—</div></div>
+      <div class="detail-item"><div class="detail-label">Prepared By</div><div class="detail-value" id="pmBy">—</div></div>
+      <div class="detail-item"><div class="detail-label">Time</div><div class="detail-value" id="pmTime">—</div></div>
+      <div class="detail-item"><div class="detail-label">Destination</div><div class="detail-value" id="pmDest">—</div></div>
     </div>
-    <div class="modal-sub-title">Meals</div>
-    <div class="recipe-box" id="pmMeals"></div>
-    <div class="modal-sub-title">Ingredients Deducted</div>
-    <div class="recipe-box" id="pmDeductions"></div>
-    <div id="pmTransferWrap" style="margin-top:14px;display:none;">
-      <div class="modal-sub-title" style="margin-top:0;">Linked Transfer</div>
-      <span class="link-chip" id="pmTransferLink" onclick="jumpToTransfer()">🚚 View Transfer →</span>
+    <div class="detail-item" style="margin-bottom:12px;">
+      <div class="detail-label">Remarks</div>
+      <div class="detail-value" id="pmRemarks" style="font-weight:400;color:var(--text2);">—</div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('productionModal')">Close</button></div>
+    <div class="detail-item" style="margin-bottom:12px;">
+      <div class="detail-label">Meals Output</div>
+      <div id="pmMeals" style="margin-top:4px;"></div>
+    </div>
+    <div class="detail-item" style="margin-bottom:12px;">
+      <div class="detail-label">Ingredients Deducted</div>
+      <div id="pmDeductions" style="margin-top:4px;"></div>
+    </div>
+    <div id="pmTransferWrap" style="display:none;margin-top:10px;">
+      <a href="javascript:void(0)" id="pmTransferLink" onclick="jumpToTransfer()" style="color:var(--gold);font-weight:700;text-decoration:none;font-size:12.5px;">View Transfer →</a>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('productionModal')">Close</button>
+    </div>
   </div>
 </div>
 
+<script src="data/kitchen-seed.js"></script>
+<script src="services/kitchen-service.js"></script>
 <script src="../component/kitchen-shell.js"></script>
 <script>
 const shell = KitchenShell.attach({
@@ -238,59 +221,17 @@ const shell = KitchenShell.attach({
   topbarTarget:  '#topbarSlot',
   activeFile:    'kitchen-production-history.html',
   pageTitle:     'Production History',
-  pageSubtitle:  'Every production run — drafts, saved, awaiting approval, completed',
+  pageSubtitle:  'Historical log of all dishes produced in the Kitchen',
   apiMode:       'Demo',
-  user:          { name: 'Head Chef', initials: 'HC' },
 });
 
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
-  return fallback;
-}
-
-const KEY_PRODUCTIONS = 'kitchen-productions';
-
-/* Demo records match the ACTUAL shape saved by grace-kitchen-production.js:
-   meals[] and ingredients[] are arrays of {name, qty, unit} — not the old
-   flat meal/qty/unit/deductions[{ing,...}] shape, which is what was
-   producing "undefined" cells once a real production got saved. */
-const DEMO_PRODUCTIONS = [
-  { no:'PROD-00096', batchNo:'BATCH-00050', type:'rts', status:'sent', time:'10:30 AM', by:'Head Chef', remarks:'Lunch preparation',
-    destination:'Main Restaurant / POS', linkedOrder:'', transferNo:'KTN-00045',
-    meals:[ {name:'Fried Rice', qty:30, unit:'Plates'} ],
-    ingredients:[ {name:'Rice',qty:3.00,unit:'kg'}, {name:'Oil',qty:0.30,unit:'Ltr'}, {name:'Curry',qty:0.60,unit:'kg'}, {name:'Green Peas',qty:0.45,unit:'kg'}, {name:'Chicken',qty:1.50,unit:'kg'}, {name:'Seasoning',qty:0.09,unit:'kg'} ] },
-  { no:'PROD-00095', batchNo:'BATCH-00049', type:'rts', status:'accepted', time:'10:15 AM', by:'Head Chef', remarks:'',
-    destination:'Main Restaurant / POS', linkedOrder:'', transferNo:'KTN-00044',
-    meals:[ {name:'Jollof Rice', qty:20, unit:'Plates'} ],
-    ingredients:[ {name:'Rice',qty:2.00,unit:'kg'}, {name:'Oil',qty:0.24,unit:'Ltr'}, {name:'Tomato',qty:0.60,unit:'kg'}, {name:'Pepper',qty:0.30,unit:'kg'}, {name:'Chicken',qty:1.00,unit:'kg'}, {name:'Seasoning',qty:0.06,unit:'kg'} ] },
-  { no:'PROD-00094', batchNo:'BATCH-00048', type:'rts', status:'accepted', time:'10:00 AM', by:'Sous Chef', remarks:'',
-    destination:'Pool Bar', linkedOrder:'', transferNo:'KTN-00043',
-    meals:[ {name:'Egusi Soup', qty:15, unit:'Portions'} ],
-    ingredients:[ {name:'Egusi',qty:0.90,unit:'kg'}, {name:'Palm Oil',qty:0.30,unit:'Ltr'}, {name:'Spinach',qty:0.60,unit:'kg'}, {name:'Chicken',qty:0.60,unit:'kg'}, {name:'Seasoning',qty:0.045,unit:'kg'} ] },
-  { no:'PROD-00093', batchNo:'BATCH-00047', type:'coo', status:'completed', time:'09:45 AM', by:'Head Chef', remarks:'',
-    destination:'', linkedOrder:'ORD-1053', transferNo:'',
-    meals:[ {name:'Pepper Soup', qty:2, unit:'Portions'} ],
-    ingredients:[ {name:'Chicken',qty:0.16,unit:'kg'}, {name:'Pepper',qty:0.04,unit:'kg'}, {name:'Seasoning',qty:0.008,unit:'kg'}, {name:'Scent Leaf',qty:0.02,unit:'kg'} ] },
-  { no:'PROD-00092', batchNo:'BATCH-00046', type:'rts', status:'rejected', time:'09:30 AM', by:'Sous Chef', remarks:'',
-    destination:'Room Service', linkedOrder:'', transferNo:'KTN-00042',
-    meals:[ {name:'Moi Moi', qty:25, unit:'Pieces'} ],
-    ingredients:[ {name:'Beans Flour',qty:2.00,unit:'kg'}, {name:'Oil',qty:0.25,unit:'Ltr'}, {name:'Egg',qty:1.25,unit:'pcs'}, {name:'Seasoning',qty:0.05,unit:'kg'} ] },
-];
-
-let productions = [];
 let page = 1;
 const PAGE_SIZE = 10;
 let filtered = [];
-const STATUS_LBL = { draft:'Draft', saved:'Saved', sent:'Awaiting Approval', accepted:'Accepted', rejected:'Rejected', completed:'Completed' };
+const STATUS_LBL = { draft:'Draft', saved:'Saved', sent:'Awaiting Approval', accepted:'Accepted', rejected:'Rejected', completed:'Completed', voided:'Voided' };
 const TYPE_LBL = { rts:'Ready-to-Serve', coo:'Cook-on-Order' };
 function fmtQty(n){ return (Math.round((n||0)*100)/100).toString(); }
 
-// 'time' is stored as a 12-hour string ("10:30 AM") going forward, but this
-// defends the display against any older 24-hour ("14:30") values too.
 function formatTime12(t){
   if (!t) return '—';
   if (/am|pm/i.test(t)) return t.trim();
@@ -304,7 +245,7 @@ function formatTime12(t){
 }
 
 function mealSummary(p){
-  const meals = p.meals || [];
+  const meals = p.meals || (p.dish ? [{ name: p.dish, qty: p.outputQty, unit: p.outputUnit }] : []);
   if (!meals.length) return '—';
   const first = meals[0];
   const label = `${first.name} (${fmtQty(first.qty)} ${first.unit || ''})`.trim();
@@ -312,26 +253,43 @@ function mealSummary(p){
 }
 
 function renderKPIs(){
+  const productions = KitchenService.state.production || [];
   const total = productions.length;
   const awaiting = productions.filter(p=>p.status==='sent').length;
   const accepted = productions.filter(p=>p.status==='accepted' || p.status==='completed').length;
-  const rejected = productions.filter(p=>p.status==='rejected').length;
+  const rejected = productions.filter(p=>p.status==='rejected' || p.status==='voided').length;
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-icon kpi-icon-gold"><i class="fa-solid fa-layer-group"></i></div>
-      <div class="kpi-label">Total Productions</div><div class="kpi-value">${total}</div><div class="kpi-trend">All-time record</div>
+    <div class="kpi-card acc-blue">
+      <div class="kpi-top">
+        <div class="kpi-ic ic-blue"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="kpi-label">Total Productions</div>
+      </div>
+      <div class="kpi-value" style="color:var(--blue);">${total}</div>
+      <div class="kpi-trend neutral">All-time record</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-icon kpi-icon-blue"><i class="fa-solid fa-truck-fast"></i></div>
-      <div class="kpi-label">Awaiting Approval</div><div class="kpi-value" style="color:var(--blue);">${awaiting}</div><div class="kpi-trend">Sent, not yet accepted</div>
+    <div class="kpi-card acc-amber">
+      <div class="kpi-top">
+        <div class="kpi-ic ic-amber"><i class="fa-solid fa-truck-fast"></i></div>
+        <div class="kpi-label">Awaiting Approval</div>
+      </div>
+      <div class="kpi-value" style="color:var(--amber);">${awaiting}</div>
+      <div class="kpi-trend warn">${awaiting>0?'Sent, not yet accepted':'✓ All clear'}</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
-      <div class="kpi-label">Accepted / Completed</div><div class="kpi-value" style="color:var(--green);">${accepted}</div><div class="kpi-trend">Confirmed by destination</div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top">
+        <div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="kpi-label">Accepted / Completed</div>
+      </div>
+      <div class="kpi-value" style="color:var(--green);">${accepted}</div>
+      <div class="kpi-trend up">Confirmed & delivered</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-icon kpi-icon-red"><i class="fa-solid fa-circle-xmark"></i></div>
-      <div class="kpi-label">Rejected</div><div class="kpi-value" style="color:${rejected>0?'var(--red)':'var(--text)'};">${rejected}</div><div class="kpi-trend">${rejected>0?'Review needed':'None on record'}</div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top">
+        <div class="kpi-ic ic-red"><i class="fa-solid fa-circle-xmark"></i></div>
+        <div class="kpi-label">Rejected / Voided</div>
+      </div>
+      <div class="kpi-value" style="color:var(--red);">${rejected}</div>
+      <div class="kpi-trend ${rejected>0?'warn':'up'}">${rejected>0?'Review needed':'None on record'}</div>
     </div>`;
 }
 
@@ -339,84 +297,107 @@ function clearFilters(){
   document.getElementById('fSearch').value=''; document.getElementById('fStatus').value=''; document.getElementById('fType').value='';
   page=1; render();
 }
+
 function getFiltered(){
-  const q = document.getElementById('fSearch').value.toLowerCase();
+  const productions = KitchenService.state.production || [];
+  const q = document.getElementById('fSearch').value.toLowerCase().trim();
   const st = document.getElementById('fStatus').value;
   const ty = document.getElementById('fType').value;
   return productions.filter(p => {
-    const mq = !q || p.no.toLowerCase().includes(q) || (p.meals||[]).some(m => (m.name||'').toLowerCase().includes(q));
-    return mq && (!st||p.status===st) && (!ty||p.type===ty);
+    const idNo = (p.no || p.id || '').toLowerCase();
+    const dishName = (p.dish || '').toLowerCase();
+    const mealsArr = p.meals || [];
+    const mq = !q || idNo.includes(q) || dishName.includes(q) || mealsArr.some(m => (m.name||'').toLowerCase().includes(q));
+    const pType = p.type || 'rts';
+    return mq && (!st||p.status===st) && (!ty||pType===ty);
   });
 }
+
 function renderPagination(total){
   const totalPg = Math.max(1, Math.ceil(total/PAGE_SIZE));
   if (page>totalPg) page=totalPg;
   const from = total===0?0:(page-1)*PAGE_SIZE+1, to = Math.min(page*PAGE_SIZE,total);
   document.getElementById('paginLabel').textContent = total===0?'No records':`${from}–${to} of ${total}`;
   const wrap = document.getElementById('pageBtns'); wrap.innerHTML='';
-  const mk=(l,p,d,a)=>{ const b=document.createElement('button'); b.className='page-btn'+(a?' active':''); b.textContent=l; b.disabled=!!d; b.onclick=()=>{page=p;renderTable();}; return b; };
-  wrap.appendChild(mk('‹',page-1,page===1,false));
+  const mk=(l,p,d,a)=>{ const b=document.createElement('button'); b.className='page-btn'+(a?' active':''); b.innerHTML=l; b.disabled=!!d; b.onclick=()=>{page=p;renderTable();}; return b; };
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>',page-1,page===1,false));
   let start=Math.max(1,page-2), end=Math.min(totalPg,start+4); start=Math.max(1,end-4);
   for(let i=start;i<=end;i++) wrap.appendChild(mk(String(i),i,false,i===page));
-  wrap.appendChild(mk('›',page+1,page>=totalPg,false));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>',page+1,page>=totalPg,false));
 }
+
 function renderTable(){
   const rows = filtered;
   document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
   const start=(page-1)*PAGE_SIZE;
   const pageRows = rows.slice(start,start+PAGE_SIZE);
   document.getElementById('tblBody').innerHTML = pageRows.length===0
-    ? `<tr class="empty-row"><td colspan="5">No productions found</td></tr>`
-    : pageRows.map(p => `<tr onclick="openProductionModal('${p.no}')">
-        <td data-label="No." style="font-weight:600;">${p.no}</td>
-        <td data-label="Meals">${mealSummary(p)}</td>
-        <td data-label="Type"><span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type] || p.type}</span></td>
-        <td data-label="Status"><span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span></td>
-        <td data-label="Time">${formatTime12(p.time)}</td>
-      </tr>`).join('');
+    ? `<tr class="empty-row"><td colspan="5" style="text-align:center;padding:30px;color:var(--text3);">No production runs found.</td></tr>`
+    : pageRows.map(p => {
+        const pNo = p.no || p.id;
+        const pType = p.type || 'rts';
+        return `<tr onclick="openProductionModal('${pNo}')">
+          <td data-label="No." style="font-weight:700;color:var(--gold);">${pNo}</td>
+          <td data-label="Meals">${mealSummary(p)}</td>
+          <td data-label="Type"><span class="chip chip-${pType==='rts'?'rts':'coo'}">${TYPE_LBL[pType] || pType}</span></td>
+          <td data-label="Status"><span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span></td>
+          <td data-label="Time">${formatTime12(p.time || (p.date ? p.date.split(' ')[1] : ''))}</td>
+        </tr>`;
+      }).join('');
   renderPagination(rows.length);
 }
+
 function render(){ filtered = getFiltered(); renderKPIs(); renderTable(); }
 
 function openProductionModal(no){
-  const p = productions.find(x=>x.no===no); if (!p) return;
-  document.getElementById('pmTitle').textContent = `Production ${p.no}`;
-  document.getElementById('pmNo').textContent = p.no;
+  const productions = KitchenService.state.production || [];
+  const p = productions.find(x=>(x.no===no || x.id===no)); if (!p) return;
+  const pNo = p.no || p.id;
+  const pType = p.type || 'rts';
+  document.getElementById('pmTitle').textContent = `Production ${pNo}`;
+  document.getElementById('pmNo').textContent = pNo;
   document.getElementById('pmBatch').textContent = p.batchNo || '—';
   document.getElementById('pmStatus').innerHTML = `<span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span>`;
-  document.getElementById('pmType').innerHTML = `<span class="chip chip-${p.type==='rts'?'rts':'coo'}">${TYPE_LBL[p.type] || p.type}</span>`;
-  document.getElementById('pmBy').textContent = p.by || '—';
-  document.getElementById('pmTime').textContent = formatTime12(p.time);
+  document.getElementById('pmType').innerHTML = `<span class="chip chip-${pType==='rts'?'rts':'coo'}">${TYPE_LBL[pType] || pType}</span>`;
+  document.getElementById('pmBy').textContent = p.by || p.staff || 'Head Chef';
+  document.getElementById('pmTime').textContent = formatTime12(p.time || (p.date ? p.date.split(' ')[1] : ''));
 
   const dest = document.getElementById('pmDest');
-  if (p.type === 'rts') { dest.textContent = p.destination || '—'; dest.classList.toggle('muted', !p.destination); }
+  if (pType === 'rts') { dest.textContent = p.destination || 'Main Restaurant / POS'; dest.classList.toggle('muted', !p.destination); }
   else { dest.textContent = p.linkedOrder || 'Not applicable'; dest.classList.toggle('muted', !p.linkedOrder); }
 
   const rm = document.getElementById('pmRemarks');
-  if (p.remarks) { rm.textContent=p.remarks; rm.classList.remove('muted'); } else { rm.textContent='No remarks recorded.'; rm.classList.add('muted'); }
+  if (p.remarks || p.notes) { rm.textContent=p.remarks || p.notes; rm.classList.remove('muted'); } else { rm.textContent='No remarks recorded.'; rm.classList.add('muted'); }
 
-  const meals = p.meals || [];
+  const meals = p.meals || (p.dish ? [{ name: p.dish, qty: p.outputQty, unit: p.outputUnit }] : []);
   document.getElementById('pmMeals').innerHTML = meals.length===0
     ? `<div style="font-size:12px;color:var(--text3);">No meals recorded.</div>`
-    : meals.map(m => `<div class="ing-row"><span class="ing-name">${m.name}</span><span class="ing-qty">${fmtQty(m.qty)} ${m.unit||''}</span></div>`).join('');
+    : meals.map(m => `<div class="ing-row"><span>${m.name}</span><span style="font-weight:700;">${fmtQty(m.qty)} ${m.unit||''}</span></div>`).join('');
 
   const ded = p.ingredients || [];
   document.getElementById('pmDeductions').innerHTML = ded.length===0
-    ? `<div style="font-size:12px;color:var(--text3);">No inventory deduction recorded (draft or unmapped recipe).</div>`
-    : ded.map(d => `<div class="ing-row"><span class="ing-name">${d.name}</span><span class="ing-qty">−${fmtQty(d.qty)} ${d.unit||''}</span></div>`).join('');
+    ? `<div style="font-size:12px;color:var(--text3);">No inventory deduction recorded.</div>`
+    : ded.map(d => `<div class="ing-row"><span>${d.name}</span><span style="font-weight:700;color:var(--red);">−${fmtQty(d.qty)} ${d.unit||''}</span></div>`).join('');
 
   const xw = document.getElementById('pmTransferWrap');
   if (p.transferNo) { xw.style.display=''; document.getElementById('pmTransferLink').textContent = `🚚 View Transfer ${p.transferNo} →`; window._pmActiveTransfer = p.transferNo; }
   else xw.style.display='none';
   document.getElementById('productionModal').classList.add('show');
 }
+
 function jumpToTransfer(){ if (window._pmActiveTransfer) window.location.href = `kitchen-transfers.html?open=${window._pmActiveTransfer}`; }
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 document.getElementById('productionModal').addEventListener('click', function(e){ if (e.target===this) closeModal('productionModal'); });
 
+['fSearch','fStatus','fType'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener(id==='fSearch'?'input':'change', ()=>{ page=1; render(); });
+});
+
 async function init(){
-  productions = await loadShared(KEY_PRODUCTIONS, DEMO_PRODUCTIONS);
+  await KitchenService.loadAll();
   render();
+  KitchenService.onChange(render);
   const openNo = new URLSearchParams(location.search).get('open');
   if (openNo) openProductionModal(openNo);
 }

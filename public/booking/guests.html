@@ -16,7 +16,6 @@ body{
 .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
 @media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-/* ── Content area — permanent light palette, same as poolbar pages ── */
 .content{
   --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
   --border:#eef0f6; --border2:#dfe3ec;
@@ -35,7 +34,6 @@ body{
 @media (max-width:768px){ .content{ padding:16px 16px 24px; } }
 @media (max-width:480px){ .content{ padding:14px 12px 20px; } }
 
-/* ── KPI cards — identical to poolbar-sales / poolbar-reports ── */
 .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
 @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:420px){  .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -50,7 +48,6 @@ body{
 .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
 .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
 .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
-/* top accent border */
 .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
 .kpi-card.acc-green::before{  background:linear-gradient(90deg,var(--green),transparent); }
 .kpi-card.acc-blue::before{   background:linear-gradient(90deg,var(--blue),transparent); }
@@ -75,7 +72,6 @@ body{
 .kpi-trend.neutral{ color:var(--text3); }
 .kpi-trend.info{    color:var(--blue);  }
 
-/* ── Toolbar / filter bar — same as poolbar-sales ── */
 .toolbar{
   background:var(--surface); border:1px solid var(--border); border-radius:14px;
   box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0;
@@ -118,17 +114,15 @@ body{
   .filter-select{ width:100%; }
 }
 
-/* ── Panel ── */
 .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; flex-shrink:0; }
 .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
 .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
 .panel-count{ font-size:11.5px; color:var(--text3); font-weight:600; white-space:nowrap; }
 
-/* ── Table — identical structure to poolbar-sales ── */
 .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
 table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:860px; }
 thead th{
-  text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase;
+  text-align:left; padding:9px 12px; font-size:9px; text-transform:uppercase;
   letter-spacing:1.5px; color:var(--text3); font-weight:700;
   background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap;
 }
@@ -136,18 +130,16 @@ thead th.no-sort{ cursor:default; }
 tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
 tbody tr:last-child{ border-bottom:none; }
 tbody tr:hover{ background:var(--surface2); }
-tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; }
+tbody td{ padding:9px 12px; color:var(--text); vertical-align:middle; }
 tbody td.nowrap{ white-space:nowrap; }
 .empty-row td{ text-align:center; padding:32px; color:var(--text3); cursor:default; }
 .empty-row:hover td{ background:transparent; }
 
-/* guest name cell */
 .g-cell{ display:flex; align-items:center; gap:10px; }
 .g-avatar{ width:32px; height:32px; border-radius:50%; background:var(--gold-dim); border:1.5px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--gold); flex-shrink:0; }
 .g-name{ font-weight:700; font-size:12.5px; }
 .g-phone{ font-size:10.5px; color:var(--text3); margin-top:1px; }
 
-/* chips */
 .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
 .chip i{ font-size:6px; }
 .chip-vip{       background:var(--gold-dim);    color:var(--gold);   }
@@ -164,12 +156,10 @@ tbody td.nowrap{ white-space:nowrap; }
 .chip-checkout{   background:var(--red-bg);     color:var(--red);    }
 .chip-reserved{   background:var(--blue-bg);    color:var(--blue);   }
 
-/* action buttons */
 .act-btns{ display:flex; gap:5px; flex-wrap:nowrap; }
 .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; font-family:inherit; }
 .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
 
-/* mobile cards — same pattern as poolbar-sales */
 @media (max-width:880px){
   .tbl-wrap{ overflow-x:visible; }
   table{ min-width:0; width:100%; }
@@ -191,7 +181,6 @@ tbody td.nowrap{ white-space:nowrap; }
   tbody td::before{ padding-top:0; }
 }
 
-/* ── Pagination ── */
 .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
 .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
 .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; padding:0 7px; font-family:inherit; }
@@ -199,7 +188,6 @@ tbody td.nowrap{ white-space:nowrap; }
 .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
 .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-/* summary bar — same as poolbar-reports */
 .summary-bar{ display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface2); border-top:1px solid var(--border); }
 @media (max-width:560px){ .summary-bar{ grid-template-columns:1fr 1fr; } }
 .sb-item{ text-align:center; padding:12px; border-right:1px solid var(--border); }
@@ -208,15 +196,13 @@ tbody td.nowrap{ white-space:nowrap; }
 .sb-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:3px; font-weight:600; }
 .sb-val{ font-size:17px; font-weight:800; color:var(--text); }
 
-/* ── Modal — slide-up sheet (matches poolbar-reports modal) ── */
 .modal-overlay{ position:fixed; inset:0; background:rgba(10,15,30,.52); z-index:800; opacity:0; pointer-events:none; transition:opacity .22s; }
 .modal-overlay.open{ opacity:1; pointer-events:auto; }
 .modal-sheet{
-  position:fixed; bottom:0; left:0; right:0; max-height:88vh;
+  position:fixed; bottom:24px; left:50%; width:100%; max-width:900px; max-height:86vh;
   background:var(--surface,#fff); z-index:801; border-radius:20px 20px 0 0;
-  transform:translateY(100%); transition:transform .33s cubic-bezier(.4,0,.2,1);
+  transform:translateX(-50%) translateY(100%); transition:transform .33s cubic-bezier(.4,0,.2,1);
   overflow-y:auto; box-shadow:0 -12px 50px rgba(0,0,0,.2);
-  /* inherit content vars inside modal */
   --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
   --border:#eef0f6; --border2:#dfe3ec;
   --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
@@ -229,12 +215,11 @@ tbody td.nowrap{ white-space:nowrap; }
   --purple:#8b5cf6; --purple-bg:#f4efff;
   color:var(--text);
 }
-.modal-sheet.open{ transform:translateY(0); }
+.modal-sheet.open{ transform:translateX(-50%) translateY(0); }
 .modal-handle{ width:36px; height:4px; border-radius:3px; background:var(--border2); margin:10px auto 0; opacity:.45; }
 .modal-close-btn{ position:absolute; top:14px; right:18px; width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; }
 .modal-close-btn:hover{ border-color:var(--red); color:var(--red); }
 
-/* profile hero */
 .profile-hero{ display:flex; align-items:flex-start; gap:16px; padding:16px 22px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
 .profile-avatar{ width:52px; height:52px; border-radius:50%; background:var(--gold-dim); border:2px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:700; color:var(--gold); flex-shrink:0; }
 .profile-info{ flex:1; min-width:180px; }
@@ -243,14 +228,12 @@ tbody td.nowrap{ white-space:nowrap; }
 .profile-badges{ display:flex; gap:6px; flex-wrap:wrap; }
 .modal-vip-btn{ margin-left:auto; align-self:flex-start; flex-shrink:0; }
 
-/* stat grid inside modal */
 .modal-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; padding:14px 22px; border-bottom:1px solid var(--border); }
 @media (max-width:560px){ .modal-stats{ grid-template-columns:1fr 1fr; } }
 .mstat{ background:var(--surface2); border-radius:9px; padding:10px 12px; }
 .mstat-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); font-weight:700; margin-bottom:3px; }
 .mstat-val{ font-size:16px; font-weight:800; line-height:1.2; }
 
-/* sub-tabs */
 .subtab-row{ display:flex; gap:0; border-bottom:1px solid var(--border); padding:0 22px; overflow-x:auto; }
 .subtab{ background:none; border:none; border-bottom:2px solid transparent; padding:10px 0; margin-right:20px; font-family:inherit; font-size:12.5px; font-weight:500; color:var(--text3); cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:6px; }
 .subtab:hover{ color:var(--text2); }
@@ -260,7 +243,6 @@ tbody td.nowrap{ white-space:nowrap; }
 .subpane{ display:none; padding:16px 22px 28px; }
 .subpane.active{ display:block; }
 
-/* inner tables */
 .inner-tbl{ width:100%; border-collapse:collapse; font-size:12px; }
 .inner-tbl thead th{ text-align:left; padding:8px 10px; font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
 .inner-tbl thead th.r{ text-align:right; }
@@ -277,27 +259,7 @@ tbody td.nowrap{ white-space:nowrap; }
 .note-box{ background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:12px; font-size:12.5px; color:var(--text2); line-height:1.6; white-space:pre-wrap; min-height:60px; margin-bottom:10px; }
 .form-textarea{ width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:10px 12px; font-family:inherit; font-size:13px; color:var(--text); outline:none; resize:vertical; min-height:80px; }
 .form-textarea:focus{ border-color:var(--gold-border); }
-.form-input,.form-select{ background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:9px 12px; font-family:inherit; font-size:13px; color:var(--text); outline:none; width:100%; }
-.form-input:focus,.form-select:focus{ border-color:var(--gold-border); }
-.form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:11px; }
-.form-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
-.form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-@media (max-width:500px){ .form-grid{ grid-template-columns:1fr; } }
-.span2{ grid-column:span 2; }
-@media (max-width:500px){ .span2{ grid-column:span 1; } }
 
-/* sub pagination */
-.sub-pgn{ display:flex; align-items:center; justify-content:space-between; margin-top:12px; font-size:11px; color:var(--text3); flex-wrap:wrap; gap:8px; }
-
-/* small confirm modal */
-.mini-modal-overlay{ position:fixed; inset:0; background:rgba(10,15,30,.52); z-index:900; display:none; align-items:center; justify-content:center; padding:20px; }
-.mini-modal-overlay.open{ display:flex; }
-.mini-modal{ background:#fff; border:1px solid #eef0f6; border-radius:16px; padding:22px; width:min(420px,96vw); box-shadow:0 24px 60px rgba(15,34,55,.22); animation:fadeUp .22s ease; color:#1c2440; font-family:'Segoe UI',-apple-system,sans-serif; }
-.mini-modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-.mini-modal-title{ font-size:16px; font-weight:800; }
-.mini-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid #eef0f6; }
-
-/* toast */
 .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface,#fff); border:1px solid var(--border,#eef0f6); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text,#1c2440); box-shadow:var(--shadow-lg,0 8px 28px rgba(15,34,55,.15)); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:inherit; }
 .toast.success{ border-left:3px solid var(--green,#12b76a); }
 .toast.error{   border-left:3px solid var(--red,#f04438); }
@@ -311,7 +273,7 @@ tbody td.nowrap{ white-space:nowrap; }
 @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
 @media print{
-  #sidebarSlot,#topbarSlot,.toolbar,.act-btns,.pagination,.modal-overlay,.mini-modal-overlay{ display:none !important; }
+  #sidebarSlot,#topbarSlot,.toolbar,.act-btns,.pagination,.modal-overlay{ display:none !important; }
   .main{ margin-left:0 !important; }
   body{ background:#fff !important; color:#000 !important; }
   .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
@@ -321,6 +283,12 @@ tbody td.nowrap{ white-space:nowrap; }
   table,tbody,tr,td{ display:revert !important; }
   tbody td::before{ display:none !important; }
 }
+
+.modal-sheet:not(.open) {
+  display: none;
+}
+
+
 </style>
 </head>
 <body>
@@ -427,9 +395,9 @@ tbody td.nowrap{ white-space:nowrap; }
   <div class="modal-stats" id="pfStats"></div>
 
   <div class="subtab-row">
-    <button class="subtab active" onclick="switchSub('history',this)">Stay History <span class="tab-badge" id="tbHistCount">0</span></button>
-    <button class="subtab" onclick="switchSub('folio',this)">Room Charges / Folio <span class="tab-badge" id="tbFolioCount">0</span></button>
-    <button class="subtab" onclick="switchSub('notes',this)">Notes</button>
+    <button class="subtab active" data-sub="history" onclick="switchSub('history',this)">Stay History <span class="tab-badge" id="tbHistCount">0</span></button>
+    <button class="subtab" data-sub="folio" onclick="switchSub('folio',this)">Room Charges / Folio <span class="tab-badge" id="tbFolioCount">0</span></button>
+    <button class="subtab" data-sub="notes" onclick="switchSub('notes',this)">Notes</button>
   </div>
 
   <!-- Stay History -->
@@ -447,9 +415,8 @@ tbody td.nowrap{ white-space:nowrap; }
   <!-- Folio / Charges -->
   <div class="subpane" id="sub-folio">
     <div class="folio-toolbar">
-      <div class="folio-hint">Charges from <b>Restaurant, Bar &amp; Pool Bar</b> billed to this guest's room — settled at checkout.</div>
+      <div class="folio-hint">Charges from <b>Restaurant, Bar &amp; Pool Bar</b> billed to this guest's room. Click a row to view the full sale.</div>
       <div style="display:flex;gap:6px;">
-        <button class="btn btn-outline btn-sm" onclick="openAddCharge()"><i class="fa-solid fa-plus"></i> Add Charge</button>
         <button class="btn btn-success btn-sm" onclick="settleAll()"><i class="fa-solid fa-check"></i> Settle All</button>
       </div>
     </div>
@@ -457,6 +424,10 @@ tbody td.nowrap{ white-space:nowrap; }
       <thead><tr><th>Date</th><th>Source</th><th>Description</th><th>Room</th><th>By</th><th class="r">Amount (₦)</th><th>Status</th><th></th></tr></thead>
       <tbody id="pfChargeBody"></tbody>
     </table>
+    <div class="sub-pgn" style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:11px;color:var(--text3);flex-wrap:wrap;gap:8px;">
+      <span id="chargePaginLabel"></span>
+      <div class="page-btns" id="chargePageBtns"></div>
+    </div>
   </div>
 
   <!-- Notes -->
@@ -469,47 +440,14 @@ tbody td.nowrap{ white-space:nowrap; }
   </div>
 </div>
 
-<!-- ── Add Charge mini-modal ── -->
-<div class="mini-modal-overlay" id="addChargeModal">
-  <div class="mini-modal">
-    <div class="mini-modal-head">
-      <div class="mini-modal-title">Add Room Charge</div>
-      <button class="btn btn-outline btn-sm" onclick="closeMini()"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">Source</label>
-        <select class="form-select" id="acSource"><option>Restaurant</option><option>Bar</option><option>Pool Bar</option><option>Spa</option><option>Laundry</option><option>Other</option></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Room</label>
-        <input class="form-input" type="text" id="acRoom" placeholder="e.g. 204">
-      </div>
-      <div class="form-group span2">
-        <label class="form-label">Description</label>
-        <input class="form-input" type="text" id="acDesc" placeholder="e.g. Dinner for 2, 2x Heineken">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Amount (₦)</label>
-        <input class="form-input" type="number" id="acAmount" placeholder="0">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Date</label>
-        <input class="form-input" type="date" id="acDate">
-      </div>
-      <div class="form-group span2">
-        <label class="form-label">Charged By</label>
-        <input class="form-input" type="text" id="acStaff" placeholder="Staff name">
-      </div>
-    </div>
-    <div class="mini-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeMini()">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveCharge()"><i class="fa-solid fa-check"></i> Charge to Room</button>
-    </div>
-  </div>
-</div>
-
+<!-- ─── SCRIPTS ─── -->
+<script src="../services/permissions.js"></script>
+<script src="data/booking-demo-seed.js"></script>
+<script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
+<script src="../component/booking-modal.js"></script>
+<script src="../component/sales-detail.js"></script>
+
 <script>
 'use strict';
 
@@ -519,61 +457,15 @@ const shell = BookingShell.attach({
   activeFile:    'guests.html',
   pageTitle:     'Guest Profiles',
   pageSubtitle:  'Directory, folios & room charge management',
-  apiMode:       'Demo',
-  user:          { name: 'Booking Manager', initials: 'MG' },
 });
 
-/* ── Demo data ── */
-const TODAY = new Date().toISOString().split('T')[0];
-
-let GUESTS = [
-  { id:'g01', name:'Mr. Adeyemi, Tunde', phone:'+234 803 111 2233', email:'adeyemi.t@gmail.com', idType:'NIN', idNum:'12345678901', vip:false, notes:'',
-    stays:[{room:'101',type:'Standard',checkin:'2026-03-10',checkout:'2026-03-14',total:140000,paid:140000,status:'checkedin'}],
-    charges:[{ date:'2026-03-12', source:'Restaurant', desc:'1x Grilled Chicken, 1x Chapman', room:'101', amount:11000, by:'Tunde A.', status:'Pending' }]},
-  { id:'g02', name:'Mrs. Okafor, Ngozi', phone:'+234 806 222 4455', email:'ngozi.o@yahoo.com', idType:'Passport', idNum:'A12345678', vip:false, notes:'',
-    stays:[{room:'102',type:'Standard',checkin:'2026-03-12',checkout:'2026-03-13',total:35000,paid:35000,status:'checkout'}],
-    charges:[] },
-  { id:'g03', name:'Mr. Bello, Ibrahim', phone:'+234 701 333 6677', email:'', idType:'NIN', idNum:'98765432109', vip:false, notes:'Extra pillow requested.',
-    stays:[{room:'103',type:'Standard',checkin:'2026-03-13',checkout:'2026-03-16',total:94500,paid:50000,status:'reserved'}],
-    charges:[] },
-  { id:'g04', name:'Dr. Eze, Chukwuemeka', phone:'+234 802 444 8899', email:'ceze@hospital.ng', idType:'Passport', idNum:'B87654321', vip:false, notes:'',
-    stays:[{room:'201',type:'Deluxe',checkin:'2026-03-11',checkout:'2026-03-15',total:240000,paid:240000,status:'checkedin'}],
-    charges:[
-      { date:'2026-03-13', source:'Pool Bar', desc:'2x Hennessy VS, 2x Bottled Water', room:'201', amount:9000, by:'Amaka O.', status:'Pending' },
-      { date:'2026-03-14', source:'Restaurant', desc:'1x Pounded Yam & Egusi', room:'201', amount:7000, by:'Tunde A.', status:'Settled' }]},
-  { id:'g05', name:'Ms. Abubakar, Fatima', phone:'+234 805 555 0011', email:'fatima.a@gmail.com', idType:"Driver's Licence", idNum:'ABJ001234', vip:false, notes:'Honeymoon setup.',
-    stays:[{room:'202',type:'Deluxe',checkin:'2026-03-13',checkout:'2026-03-17',total:228000,paid:100000,status:'reserved'}],
-    charges:[{ date:'2026-03-13', source:'Pool Bar', desc:'2x Passion Fruit Daiquiri', room:'202', amount:12000, by:'Emeka S.', status:'Pending' }]},
-  { id:'g06', name:'Mr. Johnson, Segun', phone:'+234 708 666 2233', email:'', idType:'NIN', idNum:'55566677788', vip:false, notes:'',
-    stays:[{room:'203',type:'Deluxe',checkin:'2026-03-09',checkout:'2026-03-13',total:240000,paid:240000,status:'checkout'}],
-    charges:[{ date:'2026-03-10', source:'Bar', desc:'3x Heineken (Bottle)', room:'203', amount:4500, by:'Emeka S.', status:'Settled' }]},
-  { id:'g07', name:'Prof. Williams, Ada', phone:'+234 803 777 4455', email:'ada.williams@uni.edu.ng', idType:'NIN', idNum:'11122233344', vip:true, notes:'Vegetarian meals only. Prefers quiet rooms away from lift.',
-    stays:[
-      {room:'204',type:'Deluxe',checkin:'2026-03-12',checkout:'2026-03-18',total:306000,paid:200000,status:'checkedin'},
-      {room:'112',type:'Standard',checkin:'2025-11-02',checkout:'2025-11-05',total:105000,paid:105000,status:'checkout'}],
-    charges:[
-      { date:'2026-03-13', source:'Restaurant', desc:'2x Jollof Rice & Chicken, 1x Chocolate Fondant', room:'204', amount:14725, by:'Amaka O.', status:'Pending' },
-      { date:'2026-03-14', source:'Restaurant', desc:'1x Prawn Cocktail, 1x Espresso', room:'204', amount:8300, by:'Tunde A.', status:'Pending' },
-      { date:'2026-03-15', source:'Pool Bar', desc:'2x Freshly Squeezed OJ', room:'204', amount:4000, by:'Emeka S.', status:'Settled' }]},
-  { id:'g08', name:'Chief Dangote, Emeka', phone:'+234 801 888 6677', email:'emeka.d@corp.ng', idType:'Passport', idNum:'C11223344', vip:true, notes:'Long-standing VIP — always assign Suite 301. Complimentary fruit basket on arrival.',
-    stays:[
-      {room:'301',type:'Suite',checkin:'2026-03-10',checkout:'2026-03-15',total:600000,paid:600000,status:'checkedin'},
-      {room:'301',type:'Suite',checkin:'2025-12-20',checkout:'2025-12-27',total:840000,paid:840000,status:'checkout'},
-      {room:'301',type:'Suite',checkin:'2025-10-14',checkout:'2025-10-16',total:240000,paid:240000,status:'checkout'},
-      {room:'302',type:'Suite',checkin:'2025-08-01',checkout:'2025-08-05',total:480000,paid:480000,status:'checkout'},
-      {room:'301',type:'Suite',checkin:'2025-05-19',checkout:'2025-05-22',total:360000,paid:360000,status:'checkout'},
-      {room:'301',type:'Suite',checkin:'2025-02-10',checkout:'2025-02-13',total:360000,paid:360000,status:'checkout'},
-      {room:'301',type:'Suite',checkin:'2024-11-03',checkout:'2024-11-06',total:330000,paid:330000,status:'checkout'}],
-    charges:[
-      { date:'2026-03-13', source:'Bar', desc:"1x Moët & Chandon, 2x Martell VSOP (Shot)", room:'301', amount:64000, by:'Emeka S.', status:'Pending' },
-      { date:'2026-03-14', source:'Pool Bar', desc:'1x Moët & Chandon, 2x Pina Colada', room:'301', amount:60300, by:'Amaka O.', status:'Pending' },
-      { date:'2026-03-14', source:'Restaurant', desc:'1x Chef Special (Daily), 1x Asun (Goat Meat)', room:'301', amount:14500, by:'Tunde A.', status:'Pending' },
-      { date:'2025-12-22', source:'Bar', desc:'2x Hennessy VS (Shot)', room:'301', amount:8000, by:'Emeka S.', status:'Settled' }]},
-];
-
-/* ── State ── */
-let gPage = 1, pfStayPage = 1;
-const G_PER_PAGE = 8, STAY_PER_PAGE = 3;
+/* ── Global State ── */
+let bookingModal = null;
+let salesDetail = null;
+let guestsData = [];
+let bookingsData = [];
+let gPage = 1, pfStayPage = 1, pfChargePage = 1;
+const G_PER_PAGE = 8, STAY_PER_PAGE = 3, CHARGE_PER_PAGE = 3;
 let activeGuestId = null;
 let filteredGuests = [];
 
@@ -611,12 +503,18 @@ function buildPagination(btnId, labelId, page, total, size, cb){
   wrap.appendChild(mk('<i class="fa-solid fa-chevron-right" style="font-size:9px"></i>', page+1, page>=totalPages, false));
 }
 
+/* ── Parse Charge Items ── */
+function parseChargeItems(desc) {
+  if (!desc) return [];
+  return desc.split(',').map(s => s.trim()).filter(Boolean);
+}
+
 /* ── KPIs ── */
 function renderKPIs(){
-  const total = GUESTS.length;
-  const vip   = GUESTS.filter(g=>g.vip).length;
-  const ret   = GUESTS.filter(isReturning).length;
-  const outG  = GUESTS.filter(g=>guestOutstanding(g)>0);
+  const total = guestsData.length;
+  const vip   = guestsData.filter(g=>g.vip).length;
+  const ret   = guestsData.filter(isReturning).length;
+  const outG  = guestsData.filter(g=>guestOutstanding(g)>0);
   const outSum= outG.reduce((s,g)=>s+guestOutstanding(g),0);
 
   document.getElementById('kpiRow').innerHTML = `
@@ -653,7 +551,17 @@ function renderSummaryBar(rows){
   document.getElementById('sbOutstanding').textContent = fmtN(out);
 }
 
-/* ── Guest list ── */
+/* ── Data Loading & Guest list ── */
+async function loadGuestsData() {
+  try {
+    const data = await BookingData.getBookingData();
+    guestsData = data.guests || [];
+    bookingsData = data.bookings || [];
+  } catch (err) {
+    console.error('Failed to refresh guest data', err);
+  }
+}
+
 function clearFilters(){
   document.getElementById('gSearch').value = '';
   document.getElementById('gFilter').value = '';
@@ -667,7 +575,7 @@ function renderGuests(){
   const f    = document.getElementById('gFilter').value;
   const sort = document.getElementById('gSort').value;
 
-  filteredGuests = GUESTS.filter(g=>{
+  filteredGuests = guestsData.filter(g=>{
     const mq = !q || g.name.toLowerCase().includes(q) || g.phone.includes(q) || g.stays.some(s=>s.room.includes(q));
     let mf = true;
     if(f==='vip')       mf = g.vip;
@@ -739,7 +647,8 @@ function renderGuestsPage(){
 function openProfile(id){
   activeGuestId = id;
   pfStayPage = 1;
-  const g = GUESTS.find(x=>x.id===id); if(!g) return;
+  pfChargePage = 1;
+  const g = guestsData.find(x=>x.id===id); if(!g) return;
 
   document.getElementById('pfAvatar').textContent = initials(g.name);
   document.getElementById('pfName').textContent   = g.name;
@@ -770,7 +679,6 @@ function openProfile(id){
   document.getElementById('pfNoteView').textContent = g.notes || 'No notes on file yet.';
   document.getElementById('pfNoteEdit').value       = g.notes || '';
 
-  /* reset tabs */
   document.querySelectorAll('.subtab').forEach((b,i)=>b.classList.toggle('active',i===0));
   document.querySelectorAll('.subpane').forEach((p,i)=>p.classList.toggle('active',i===0));
 
@@ -786,7 +694,7 @@ function closeProfile(){
 
 document.getElementById('profileOv').addEventListener('click', closeProfile);
 document.getElementById('profileCloseBtn').addEventListener('click', closeProfile);
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeProfile(); closeMini(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeProfile(); } });
 
 function switchSub(name, btn){
   document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active'));
@@ -795,15 +703,21 @@ function switchSub(name, btn){
   document.getElementById('sub-'+name).classList.add('active');
 }
 
-function toggleVip(){
-  const g = GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+async function toggleVip(){
+  const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
   g.vip = !g.vip;
-  openProfile(g.id);
-  renderGuests();
-  showToast(g.vip ? g.name+' marked as VIP' : 'VIP status removed', g.vip?'success':'info');
+  try {
+    await BookingData.saveGuest({ id: g.id, vip: g.vip });
+    await loadGuestsData();
+    openProfile(g.id);
+    renderGuests();
+    showToast(g.vip ? g.name+' marked as VIP' : 'VIP status removed', g.vip?'success':'info');
+  } catch(err) {
+    showToast('Failed to update VIP status.', 'error');
+  }
 }
 
-/* ── Stay history (paginated) ── */
+/* ── Stay history ── */
 function renderStayHistory(g){
   const stays = [...g.stays].sort((a,b)=>new Date(b.checkin)-new Date(a.checkin));
   const total = stays.length;
@@ -825,72 +739,150 @@ function renderStayHistory(g){
   buildPagination('stayPageBtns','stayPaginLabel',pfStayPage,total,STAY_PER_PAGE,p=>{pfStayPage=p;renderStayHistory(g);});
 }
 
-/* ── Charges ── */
+/* ── Charges ──
+   Every row is clickable and opens the SalesDetail modal for that charge
+   (openSalesDetailForCharge). The "+N more" link inside the description
+   cell and the Settle button both stop propagation so they don't also
+   trigger the row's own click-to-open. */
 function renderCharges(g){
   const charges = [...g.charges].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  document.getElementById('pfChargeBody').innerHTML = charges.length===0
-    ? '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text3)">No charges yet. Bill Restaurant, Bar or Pool Bar orders to this guest\'s room.</td></tr>'
-    : charges.map((c,i)=>`<tr>
-        <td>${fmtDate(c.date)}</td>
-        <td><span class="chip ${SRC_CHIP[c.source]||'chip-other'}">${c.source}</span></td>
-        <td>${c.desc}</td>
-        <td>${c.room||'—'}</td>
-        <td>${c.by||'—'}</td>
-        <td class="r" style="font-weight:700;color:var(--gold)">${fmtN(c.amount)}</td>
-        <td><span class="chip chip-${c.status==='Settled'?'settled':'pending'}">${c.status}</span></td>
-        <td>${c.status==='Pending'?`<button class="act-btn" onclick="settleCharge(${g.charges.indexOf(c)})">Settle</button>`:''}</td>
-      </tr>`).join('');
+  const total = charges.length;
+  const start = (pfChargePage-1)*CHARGE_PER_PAGE;
+  const page  = charges.slice(start, start+CHARGE_PER_PAGE);
+
+  document.getElementById('pfChargeBody').innerHTML = page.length===0
+    ? '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text3)">No charges yet.</td></tr>'
+    : page.map((c,i)=>{
+        // Correct index for settle function
+        const realIndex = g.charges.indexOf(c);
+        const items = parseChargeItems(c.desc);
+        let descDisplay = c.desc;
+        let extraBtnHtml = '';
+        if (items.length > 2) {
+          descDisplay = items.slice(0, 2).join(', ');
+          extraBtnHtml = ` <button class="act-btn" onclick="event.stopPropagation();openSalesDetailForCharge('${activeGuestId}', ${realIndex})" style="padding:2px 8px;font-size:10px;">+${items.length - 2} more</button>`;
+        }
+        return `<tr style="cursor:pointer" onclick="openSalesDetailForCharge('${activeGuestId}', ${realIndex})">
+          <td>${fmtDate(c.date)}</td>
+          <td><span class="chip ${SRC_CHIP[c.source]||'chip-other'}">${c.source}</span></td>
+          <td style="font-weight:600;">${descDisplay} ${extraBtnHtml}</td>
+          <td>${c.room||'—'}</td>
+          <td>${c.by||'—'}</td>
+          <td class="r" style="font-weight:700;color:var(--gold)">${fmtN(c.amount)}</td>
+          <td><span class="chip chip-${c.status==='Settled'?'settled':'pending'}">${c.status}</span></td>
+          <td onclick="event.stopPropagation()">${c.status==='Pending'?`<button class="act-btn" onclick="settleCharge(${realIndex})">Settle</button>`:''}</td>
+        </tr>`;
+      }).join('');
+
+  buildPagination('chargePageBtns','chargePaginLabel',pfChargePage,total,CHARGE_PER_PAGE,p=>{pfChargePage=p;renderCharges(g);});
 }
 
+/* ── Settle opens the Booking Modal ── */
 function settleCharge(idx){
-  const g = GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
-  g.charges[idx].status='Settled';
-  renderCharges(g); openProfile(g.id); renderGuests();
-  showToast('Charge settled.','success');
+  const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
+  const c = g.charges[idx];
+  if(c.status !== 'Pending' || !c.room) {
+    showToast('Charge already settled or has no room attached.', 'info');
+    return;
+  }
+
+  const booking = bookingsData.find(b => b.room === c.room && b.guest === g.name);
+  if(!booking) {
+    showToast('Could not find an active booking for this charge.', 'error');
+    return;
+  }
+
+  closeProfile();
+  setTimeout(() => {
+    if(bookingModal) bookingModal.openEdit(booking);
+    showToast('Open the booking modal to settle this charge.', 'info');
+  }, 350);
 }
 
-function settleAll(){
-  const g = GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
-  const n = g.charges.filter(c=>c.status==='Pending').length;
-  if(!n){ showToast('No pending charges.','info'); return; }
-  g.charges.forEach(c=>c.status='Settled');
-  renderCharges(g); openProfile(g.id); renderGuests();
-  showToast(n+' charge'+(n!==1?'s':'')+' settled.','success');
+async function settleAll(){
+  const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
+  const pending = g.charges.filter(c=>c.status==='Pending');
+  if(!pending.length){ showToast('No pending charges.','info'); return; }
+
+  const firstCharge = pending[0];
+  if(firstCharge && firstCharge.room) {
+    const booking = bookingsData.find(b => b.room === firstCharge.room && b.guest === g.name);
+    if(booking) {
+      closeProfile();
+      setTimeout(() => {
+        if(bookingModal) bookingModal.openEdit(booking);
+        showToast('Open booking modal to settle all charges.', 'info');
+      }, 350);
+      return;
+    }
+  }
+  showToast('No active bookings found for these charges.', 'error');
+}
+
+/* ── Sales Detail Integration ──
+   Closing the guest profile sheet before opening Sales Detail avoids two
+   slide-up sheets stacked on top of each other. When Sales Detail closes
+   (close button OR clicking outside it — both go through SalesDetail's own
+   close(), which now fires options.onClose, wired below in init()) we
+   reopen this same guest's profile back on the Folio tab. */
+function openSalesDetailForCharge(guestId, idx){
+  const g = guestsData.find(x=>x.id===guestId); if(!g) return;
+  const c = g.charges[idx]; if(!c) return;
+  if(!salesDetail) return;
+
+  closeProfile();
+
+  // 1. Parse the description into individual items
+  const rawItems = parseChargeItems(c.desc);
+  const items = rawItems.map(itemStr => {
+    const match = itemStr.match(/^(\d+)x\s*(.+)$/i);
+    if (match) {
+      return { name: match[2].trim(), qty: parseInt(match[1], 10), price: 0 };
+    }
+    return { name: itemStr, qty: 1, price: 0 };
+  });
+
+  // 2. Format the Date
+  const formattedDate = c.date 
+    ? new Date(c.date).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+    : '—';
+
+  // 3. Construct the sale object for SalesDetail
+  const sale = {
+    id: 'Charge #' + (idx + 1),
+    dept: c.source || 'Room Charge',
+    table: c.room || '—',
+    staff: c.by || '—',
+    date: formattedDate,
+    method: 'Room Charge',
+    items: items,
+    discount: 0,
+    total: c.amount || 0,
+    status: c.status === 'Settled' ? 'completed' : 'pending',
+    voidReason: null,
+    notes: '',
+    roomNumber: c.room || '—',
+    guestName: g.name,
+    guestPhone: g.phone
+  };
+
+  // 4. Open SalesDetail (after the profile sheet's own close transition,
+  //    same 350ms convention already used by settleCharge/settleAll below)
+  setTimeout(() => { salesDetail.open(sale); }, 350);
 }
 
 /* ── Notes ── */
-function saveNotes(){
-  const g = GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
+async function saveNotes(){
+  const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
   g.notes = document.getElementById('pfNoteEdit').value.trim();
-  document.getElementById('pfNoteView').textContent = g.notes || 'No notes on file yet.';
-  showToast('Notes saved.','success');
-}
-
-/* ── Add Charge ── */
-function openAddCharge(){
-  const g = GUESTS.find(x=>x.id===activeGuestId);
-  document.getElementById('acSource').value = 'Restaurant';
-  document.getElementById('acRoom').value   = g ? (currentRoom(g)||'') : '';
-  document.getElementById('acDesc').value   = '';
-  document.getElementById('acAmount').value = '';
-  document.getElementById('acDate').value   = TODAY;
-  document.getElementById('acStaff').value  = 'Front Desk';
-  document.getElementById('addChargeModal').classList.add('open');
-}
-function closeMini(){ document.getElementById('addChargeModal').classList.remove('open'); }
-
-function saveCharge(){
-  const g = GUESTS.find(x=>x.id===activeGuestId); if(!g) return;
-  const desc   = document.getElementById('acDesc').value.trim();
-  const amount = parseFloat(document.getElementById('acAmount').value)||0;
-  const staff  = document.getElementById('acStaff').value.trim()||'Front Desk';
-  const room   = document.getElementById('acRoom').value.trim();
-  const date   = document.getElementById('acDate').value||TODAY;
-  if(!desc||!amount){ showToast('Description and amount are required.','error'); return; }
-  g.charges.unshift({ date, source:document.getElementById('acSource').value, desc, room, amount, by:staff, status:'Pending' });
-  closeMini();
-  renderCharges(g); openProfile(g.id); renderGuests();
-  showToast(fmtN(amount)+' charged to Room '+(room||'—')+' — pending until settled.','success');
+  try {
+    await BookingData.saveGuest({ id: g.id, notes: g.notes });
+    await loadGuestsData();
+    document.getElementById('pfNoteView').textContent = g.notes || 'No notes on file yet.';
+    showToast('Notes saved.','success');
+  } catch(err) {
+    showToast('Failed to save notes.', 'error');
+  }
 }
 
 /* ── Toast ── */
@@ -904,7 +896,42 @@ function showToast(msg, type='success'){
 }
 
 /* ── Init ── */
-renderGuests();
+async function init() {
+  try {
+    await loadGuestsData();
+    
+    // Initialize Booking Modal
+    bookingModal = BookingModal.create({
+      service: BookingData,
+      session: shell.getUser ? shell.getUser() : null,
+      onSaved: async (row) => {
+        await loadGuestsData();
+        renderGuests();
+      },
+      onDeleted: async (roomNum) => {
+        await loadGuestsData();
+        renderGuests();
+      },
+    });
+
+    // Initialize Sales Detail Component
+    salesDetail = SalesDetail.create({
+      // We don't need void/print actions for guest charges
+      onClose: () => {
+        if (!activeGuestId) return;
+        openProfile(activeGuestId);
+        const folioBtn = document.querySelector('.subtab[data-sub="folio"]');
+        if (folioBtn) switchSub('folio', folioBtn);
+      },
+    });
+
+    renderGuests();
+  } catch (err) {
+    console.error('[Guests] Failed to load bookings:', err);
+    renderGuests();
+  }
+}
+init();
 </script>
 </body>
 </html>

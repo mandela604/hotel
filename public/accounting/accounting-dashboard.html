@@ -125,6 +125,7 @@ body {
 .quick-icon{ width:28px; height:28px; border-radius:8px; background:var(--blue-bg); color:var(--blue); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; transition:all .2s; }
 .quick-btn:hover .quick-icon{ background:var(--gold); color:#fff; }
 .quick-label{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.quick-locked{ font-size:10px; color:var(--text3); font-style:italic; padding:12px 4px; }
 
 ::-webkit-scrollbar{ width:6px; height:6px; }
 ::-webkit-scrollbar-track{ background:transparent; }
@@ -150,7 +151,7 @@ body {
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title"><i class="fa-solid fa-sack-dollar"></i>Revenue Breakdown — Current Shift</div>
-            <button class="panel-action" onclick="location.href='accounting-reports.html'">Full Breakdown <i class="fa-solid fa-arrow-right"></i></button>
+            <button class="panel-action" id="grossBreakdownAction" onclick="location.href='accounting-reports.html'">Full Breakdown <i class="fa-solid fa-arrow-right"></i></button>
           </div>
           <div class="rev-total" id="grossTotal">₦0</div>
           <div class="rev-sub-label">Gross revenue across all departments, this shift</div>
@@ -160,7 +161,7 @@ body {
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title"><i class="fa-solid fa-scale-balanced"></i>Current Shift Net Revenue</div>
-            <button class="panel-action" onclick="location.href='accounting-reports.html'">Full Breakdown <i class="fa-solid fa-arrow-right"></i></button>
+            <button class="panel-action" id="netBreakdownAction" onclick="location.href='accounting-reports.html'">Full Breakdown <i class="fa-solid fa-arrow-right"></i></button>
           </div>
           <div class="net-total" id="netTotal">₦0</div>
           <div class="net-sub-label">Gross minus discounts &amp; comps, this shift</div>
@@ -179,12 +180,12 @@ body {
 
         <div class="panel">
           <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
-          <div class="quick-grid">
-            <a class="quick-btn" href="accounting-reconciliation.html" title="Reconcile Shift">
+          <div class="quick-grid" id="quickGrid">
+            <a class="quick-btn" id="reconcileQuickBtn" href="accounting-reconciliation.html" title="Reconcile Shift">
               <span class="quick-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
               <span class="quick-label">Reconcile Shift</span>
             </a>
-            <a class="quick-btn" href="accounting-reports.html" title="Revenue Breakdown">
+            <a class="quick-btn" id="revenueQuickBtn" href="accounting-reports.html" title="Revenue Breakdown">
               <span class="quick-icon"><i class="fa-solid fa-chart-column"></i></span>
               <span class="quick-label">Revenue Breakdown</span>
             </a>
@@ -192,7 +193,7 @@ body {
               <span class="quick-icon"><i class="fa-solid fa-receipt"></i></span>
               <span class="quick-label">All Transactions</span>
             </a>
-            <a class="quick-btn" href="accounting-reports.html" title="Reports">
+            <a class="quick-btn" id="reportsQuickBtn" href="accounting-reports.html" title="Reports">
               <span class="quick-icon"><i class="fa-solid fa-file-lines"></i></span>
               <span class="quick-label">Reports</span>
             </a>
@@ -212,9 +213,13 @@ body {
   </div>
 </div>
 
-<script src="../component/accounting-shell.js"></script>
+<script src="../services/permissions.js"></script>
 <script src="accounting-seed.js"></script>
+<script src="services/accounting-service.js"></script>
+<script src="../component/accounting-shell.js"></script>
 <script>
+'use strict';
+
 const shell = AccountingShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
@@ -226,18 +231,54 @@ const shell = AccountingShell.attach({
 });
 
 /* ═══════════════════════════════════════════
-   SHIFT-DAY LOGIC — identical to accounting-reconciliation.html /
-   accounting-transactions.html, so "shift" means the same 9AM→9AM
-   window everywhere on this platform.
+   PERMISSIONS — same wrapper pattern as booking-list.html: prefer
+   services/permissions.js (window.Permissions) when it's loaded,
+   fall back to a bare admin-only check if it somehow isn't.
+═══════════════════════════════════════════ */
+function P() { return window.Permissions || null; }
+function hasPermission(session, permission, module) {
+  const x = P();
+  if (x && x.hasPermission) return x.hasPermission(session, permission, module);
+  return !!(session && String(session.role).toLowerCase() === 'admin');
+}
+function canApprove(session, module) {
+  const x = P();
+  if (x && x.canApprove) return x.canApprove(session, module);
+  return hasPermission(session, 'canApprove', module);
+}
+
+let currentSession = null;
+
+/* Reconcile Shift needs canApprove on 'accounting'; Revenue Breakdown /
+   Reports need canViewReports — matches services/permissions.js's
+   accounting module (admin + manager + the 'accountant' staff privilege
+   all carry canApprove/canViewReports; a view-only staff privilege
+   without either just doesn't see these shortcuts). */
+function applyPermissionsUI(){
+  const canReconcile = canApprove(currentSession, 'accounting');
+  const canViewReports = hasPermission(currentSession, 'canViewReports', 'accounting');
+
+  const reconcileBtn = document.getElementById('reconcileQuickBtn');
+  const revenueBtn   = document.getElementById('revenueQuickBtn');
+  const reportsBtn   = document.getElementById('reportsQuickBtn');
+  const grossAction  = document.getElementById('grossBreakdownAction');
+  const netAction    = document.getElementById('netBreakdownAction');
+
+  if (reconcileBtn) reconcileBtn.style.display = canReconcile ? '' : 'none';
+  if (revenueBtn)   revenueBtn.style.display   = canViewReports ? '' : 'none';
+  if (reportsBtn)   reportsBtn.style.display   = canViewReports ? '' : 'none';
+  if (grossAction)  grossAction.style.display  = canViewReports ? '' : 'none';
+  if (netAction)    netAction.style.display    = canViewReports ? '' : 'none';
+}
+
+/* ═══════════════════════════════════════════
+   SHIFT-DAY LABEL — presentation only (turns a shift key into the
+   human-readable "9AM → 9AM" range shown in the banner). The actual
+   shift-key math (shiftKeyFor) and revenue math (buildTransactions,
+   computeShiftTotals) now live in services/accounting-service.js —
+   this page just asks AccountingData for numbers and renders them.
 ═══════════════════════════════════════════ */
 const SHIFT_START_HOUR = 9;
-function pad2(n){ return String(n).padStart(2,'0'); }
-function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-function shiftKeyFor(dt){
-  const d = new Date(dt);
-  if (d.getHours() < SHIFT_START_HOUR) d.setDate(d.getDate() - 1);
-  return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-}
 function shiftRangeLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
@@ -246,32 +287,16 @@ function shiftRangeLabel(key){
   const t = (dt) => dt.toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit',hour12:true});
   return `${start.toLocaleDateString('en-GB',opt)}, ${t(start)} → ${end.toLocaleDateString('en-GB',opt)}, ${t(end)}`;
 }
-function fmtTime(d){ return d ? d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—'; }
-function parseTxDate(str){
-  if (!str) return null;
-  const [datePart, timePart, ampm] = str.split(' ');
-  if (!datePart || !datePart.includes('/')) return null;
-  const [d,m,y] = datePart.split('/').map(n=>parseInt(n,10));
-  let hh=0, mm=0;
-  if (timePart) { const [h,mi]=timePart.split(':').map(n=>parseInt(n,10)); hh=h; mm=mi||0; }
-  if (ampm) { const u=ampm.toUpperCase(); if (u==='PM'&&hh<12) hh+=12; if (u==='AM'&&hh===12) hh=0; }
-  const fullYear = y<100 ? 2000+y : y;
-  return new Date(fullYear, m-1, d, hh, mm);
-}
 
-/* ═══════════════════════════════════════════
-   STORAGE
-═══════════════════════════════════════════ */
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
-  return fallback;
+/* "Current shift" is anchored to the most recent transaction actually
+   present in the data, not the real wall-clock date — the demo seed
+   generates its timestamps relative to "now" at load time (see
+   accounting-seed.js's hoursAgo()/at() helpers), so this stays correct
+   without needing special-casing here. */
+function currentShiftKey(transactions){
+  if (!transactions.length) return AccountingData.shiftKeyFor(new Date());
+  return AccountingData.shiftKeyFor(transactions[0].date); // already sorted newest-first
 }
-
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 
 /* First item name + "+N more" when a sale has multiple line items —
    same short-form used on accounting-transactions.html. */
@@ -284,61 +309,34 @@ function itemsSummary(items, nameKey){
   return extra > 0 ? `${name}${qty} +${extra} more` : `${name}${qty}`;
 }
 
-const DEPT_COLOR = { Rooms:'var(--purple)', Restaurant:'var(--amber)', 'Pool Bar':'var(--green)' };
 const DEPT_CHIP  = { Rooms:'chip-dept-rooms', Restaurant:'chip-dept-rest', 'Pool Bar':'chip-dept-pool' };
 const DEPT_ICON  = { Rooms:'fa-bed', Restaurant:'fa-utensils', 'Pool Bar':'fa-martini-glass-citrus' };
 
 /* ═══════════════════════════════════════════
-   NORMALIZE — { id, dept, desc, amount, method, date }
-═══════════════════════════════════════════ */
-function buildTransactions(roomTx, restSales, poolSales){
-  const out = [];
-  roomTx.forEach(r => out.push({ id:r.id, dept:'Rooms', desc:r.desc, amount:r.amount, method:r.method, date:parseTxDate(r.date) }));
-  restSales.filter(s=>s.status!=='voided').forEach(s => out.push({ id:s.id, dept:'Restaurant', desc:itemsSummary(s.items,'meal'), amount:s.total, method:s.method, date:parseTxDate(s.date) }));
-  poolSales.filter(s=>s.status!=='voided').forEach(s => out.push({ id:s.id, dept:'Pool Bar', desc: s.items ? itemsSummary(s.items,'name') : `${s.item} ×${s.qty}`, amount:s.total, method:s.method, date:parseTxDate(s.time || s.date) }));
-  return out.filter(t => t.date).sort((a,b) => b.date - a.date);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   THE FIX (kept from the previous rebuild): "current shift" is
-   anchored to the most recent transaction actually present in the
-   data, not the real wall-clock date — the demo data is dated
-   17/07/26, so filtering by shiftKeyFor(new Date()) against today's
-   real date matched nothing and left every panel empty.
-═══════════════════════════════════════════════════════════════ */
-function currentShiftKey(transactions){
-  if (!transactions.length) return shiftKeyFor(new Date());
-  return shiftKeyFor(transactions[0].date); // transactions is already sorted newest-first
-}
-
-/* ═══════════════════════════════════════════
    RENDER — KPIs
 ═══════════════════════════════════════════ */
-function renderKPIs(shiftTx, openShifts){
-  const gross = shiftTx.reduce((s,t)=>s+t.amount,0);
-  const rooms = shiftTx.filter(t=>t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
-  const restaurant = shiftTx.filter(t=>t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
-  const poolbar = shiftTx.filter(t=>t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
+function renderKPIs(shiftTotals, openShifts){
+  const shiftTx = shiftTotals.rows;
 
   document.getElementById('kpiRow').innerHTML = `
     <a class="kpi-card acc-blue" href="accounting-reports.html">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Current Shift Gross Revenue</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${fmtN(gross)}</div>
-      <div class="kpi-trend up">${shiftTx.length} transaction${shiftTx.length!==1?'s':''}</div>
+      <div class="kpi-value" style="color:var(--blue);">${AccountingData.fmtN(shiftTotals.gross)}</div>
+      <div class="kpi-trend up">${shiftTotals.count} transaction${shiftTotals.count!==1?'s':''}</div>
     </a>
     <a class="kpi-card acc-purple" href="accounting-transactions.html">
       <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-bed"></i></div><div class="kpi-label">Room Revenue</div></div>
-      <div class="kpi-value" style="color:var(--purple);">${fmtN(rooms)}</div>
+      <div class="kpi-value" style="color:var(--purple);">${AccountingData.fmtN(shiftTotals.rooms)}</div>
       <div class="kpi-trend neutral">${shiftTx.filter(t=>t.dept==='Rooms').length} bookings</div>
     </a>
     <a class="kpi-card acc-amber" href="accounting-transactions.html">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-utensils"></i></div><div class="kpi-label">Restaurant Revenue</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${fmtN(restaurant)}</div>
+      <div class="kpi-value" style="color:var(--amber);">${AccountingData.fmtN(shiftTotals.restaurant)}</div>
       <div class="kpi-trend neutral">${shiftTx.filter(t=>t.dept==='Restaurant').length} sales</div>
     </a>
     <a class="kpi-card acc-green" href="accounting-transactions.html">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-martini-glass-citrus"></i></div><div class="kpi-label">Pool Bar Revenue</div></div>
-      <div class="kpi-value" style="color:var(--green);">${fmtN(poolbar)}</div>
+      <div class="kpi-value" style="color:var(--green);">${AccountingData.fmtN(shiftTotals.poolbar)}</div>
       <div class="kpi-trend neutral">${shiftTx.filter(t=>t.dept==='Pool Bar').length} sales</div>
     </a>
     <a class="kpi-card acc-red" href="accounting-reconciliation.html">
@@ -352,27 +350,24 @@ function renderKPIs(shiftTx, openShifts){
 /* ═══════════════════════════════════════════
    RENDER — Revenue Breakdown (gross, by department)
 ═══════════════════════════════════════════ */
-function renderGrossBreakdown(shiftTx){
-  const rooms = shiftTx.filter(t=>t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
-  const restaurant = shiftTx.filter(t=>t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
-  const poolbar = shiftTx.filter(t=>t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
-  const gross = rooms + restaurant + poolbar;
+function renderGrossBreakdown(shiftTotals){
+  const { rooms, restaurant, poolbar, gross, rows } = shiftTotals;
   const max = Math.max(gross, 1);
 
-  document.getElementById('grossTotal').textContent = fmtN(gross);
-  document.getElementById('grossBars').innerHTML = shiftTx.length === 0
+  document.getElementById('grossTotal').textContent = AccountingData.fmtN(gross);
+  document.getElementById('grossBars').innerHTML = rows.length === 0
     ? `<div class="empty-note"><i class="fa-solid fa-inbox"></i>Nothing recorded for the current shift yet.</div>`
     : `
     <div class="bar-row">
-      <div class="bar-meta"><span class="bar-name"><i class="fa-solid fa-bed" style="color:var(--purple);margin-right:6px;font-size:11px;"></i>Rooms</span><span class="bar-count">${fmtN(rooms)}</span></div>
+      <div class="bar-meta"><span class="bar-name"><i class="fa-solid fa-bed" style="color:var(--purple);margin-right:6px;font-size:11px;"></i>Rooms</span><span class="bar-count">${AccountingData.fmtN(rooms)}</span></div>
       <div class="bar-track"><div class="bar-fill purple" style="width:${Math.round(rooms/max*100)}%"></div></div>
     </div>
     <div class="bar-row">
-      <div class="bar-meta"><span class="bar-name"><i class="fa-solid fa-utensils" style="color:var(--amber);margin-right:6px;font-size:11px;"></i>Restaurant / Bar</span><span class="bar-count">${fmtN(restaurant)}</span></div>
+      <div class="bar-meta"><span class="bar-name"><i class="fa-solid fa-utensils" style="color:var(--amber);margin-right:6px;font-size:11px;"></i>Restaurant / Bar</span><span class="bar-count">${AccountingData.fmtN(restaurant)}</span></div>
       <div class="bar-track"><div class="bar-fill amber" style="width:${Math.round(restaurant/max*100)}%"></div></div>
     </div>
     <div class="bar-row">
-      <div class="bar-meta"><span class="bar-name"><i class="fa-solid fa-martini-glass-citrus" style="color:var(--green);margin-right:6px;font-size:11px;"></i>Pool Bar</span><span class="bar-count">${fmtN(poolbar)}</span></div>
+      <div class="bar-meta"><span class="bar-name"><i class="fa-solid fa-martini-glass-citrus" style="color:var(--green);margin-right:6px;font-size:11px;"></i>Pool Bar</span><span class="bar-count">${AccountingData.fmtN(poolbar)}</span></div>
       <div class="bar-track"><div class="bar-fill green" style="width:${Math.round(poolbar/max*100)}%"></div></div>
     </div>`;
 }
@@ -380,29 +375,27 @@ function renderGrossBreakdown(shiftTx){
 /* ═══════════════════════════════════════════
    RENDER — Net Revenue (gross minus comps/discounts)
 ═══════════════════════════════════════════ */
-function renderNetRevenue(shiftTx){
-  const gross = shiftTx.reduce((s,t)=>s+t.amount,0);
-  const comps = shiftTx.filter(t=>t.method==='Complimentary').reduce((s,t)=>s+t.amount,0);
-  const net = gross - comps;
+function renderNetRevenue(shiftTotals){
+  const { gross, discounts, net, rows } = shiftTotals;
 
-  document.getElementById('netTotal').textContent = fmtN(net);
-  document.getElementById('netBreakdown').innerHTML = shiftTx.length === 0
+  document.getElementById('netTotal').textContent = AccountingData.fmtN(net);
+  document.getElementById('netBreakdown').innerHTML = rows.length === 0
     ? `<div class="empty-note"><i class="fa-solid fa-inbox"></i>Nothing recorded for the current shift yet.</div>`
     : `
     <div class="net-line">
       <span class="net-dot" style="background:var(--blue)"></span>
       <span class="net-label">Gross Revenue</span>
-      <span class="net-val">${fmtN(gross)}</span>
+      <span class="net-val">${AccountingData.fmtN(gross)}</span>
     </div>
     <div class="net-line">
       <span class="net-dot" style="background:var(--red)"></span>
       <span class="net-label">Discounts &amp; Comps</span>
-      <span class="net-val" style="color:var(--red);">−${fmtN(comps)}</span>
+      <span class="net-val" style="color:var(--red);">−${AccountingData.fmtN(discounts)}</span>
     </div>
     <div class="net-line total">
       <span class="net-dot" style="background:var(--green)"></span>
       <span class="net-label">Net Revenue</span>
-      <span class="net-val" style="color:var(--green);font-size:14px;">${fmtN(net)}</span>
+      <span class="net-val" style="color:var(--green);font-size:14px;">${AccountingData.fmtN(net)}</span>
     </div>`;
 }
 
@@ -416,35 +409,45 @@ function renderRecentTx(allTx){
     : recent.map(t => `
       <a class="list-row" href="accounting-transactions.html">
         <span class="chip ${DEPT_CHIP[t.dept]||''}"><i class="fa-solid ${DEPT_ICON[t.dept]||'fa-circle'}"></i>${t.dept}</span>
-        <div class="list-body"><div class="list-name">${t.id} — ${t.desc}</div><div class="list-meta">${t.method} · ${fmtTime(t.date)}</div></div>
-        <span class="list-amount">${fmtN(t.amount)}</span>
+        <div class="list-body"><div class="list-name">${t.id} — ${t.desc}</div><div class="list-meta">${t.method} · ${AccountingData.fmtTime(t.date)}</div></div>
+        <span class="list-amount">${AccountingData.fmtN(t.amount)}</span>
       </a>`).join('');
 }
 
 /* ═══════════════════════════════════════════
-   INIT
+   INIT — everything comes from AccountingData.getAccountingData(),
+   which itself seeds shared storage from AccountingSeed the first
+   time it's called. No local storage shim, buildTransactions(), or
+   shiftKeyFor() on this page anymore — those live in
+   services/accounting-service.js now, same as BookingData owns that
+   logic on the booking pages.
 ═══════════════════════════════════════════ */
 async function init(){
-  const { DEMO_ROOM_TX, DEMO_RESTAURANT_SALES, DEMO_POOLBAR_SALES } = AccountingSeed;
+  if (!window.AccountingData) {
+    document.getElementById('recentTx').innerHTML = `<div class="empty-note"><i class="fa-solid fa-triangle-exclamation"></i>AccountingData not loaded. Check script order.</div>`;
+    return;
+  }
 
-  const [roomTx, restSales, poolSales, shifts] = await Promise.all([
-    loadShared('accounting-room-tx', DEMO_ROOM_TX),
-    loadShared('restaurant-sales', DEMO_RESTAURANT_SALES),
-    loadShared('poolbar-sales', DEMO_POOLBAR_SALES),
-    loadShared('accounting-shifts', []),
-  ]);
+  try {
+    const { roomTx, restSales, poolSales, shifts, session } = await AccountingData.getAccountingData();
+    currentSession = session;
+    applyPermissionsUI();
 
-  const allTx = buildTransactions(roomTx, restSales, poolSales);
-  const shiftKey = currentShiftKey(allTx);
-  const shiftTx = allTx.filter(t => shiftKeyFor(t.date) === shiftKey);
-  const openShifts = shifts.filter(s => s.status === 'open').length;
+    const allTx = AccountingData.buildTransactions(roomTx, restSales, poolSales);
+    const shiftKey = currentShiftKey(allTx);
+    const shiftTotals = AccountingData.computeShiftTotals(allTx, shiftKey);
+    const openShifts = shifts.filter(s => s.status === 'open').length;
 
-  document.getElementById('shiftBannerLabel').textContent = shiftRangeLabel(shiftKey);
+    document.getElementById('shiftBannerLabel').textContent = shiftRangeLabel(shiftKey);
 
-  renderKPIs(shiftTx, openShifts);
-  renderGrossBreakdown(shiftTx);
-  renderNetRevenue(shiftTx);
-  renderRecentTx(allTx);
+    renderKPIs(shiftTotals, openShifts);
+    renderGrossBreakdown(shiftTotals);
+    renderNetRevenue(shiftTotals);
+    renderRecentTx(allTx);
+  } catch (err) {
+    console.error('[Accounting Dashboard] Failed to load:', err);
+    document.getElementById('recentTx').innerHTML = `<div class="empty-note"><i class="fa-solid fa-triangle-exclamation"></i>${err.message || "Couldn't load accounting data."}</div>`;
+  }
 }
 init();
 </script>

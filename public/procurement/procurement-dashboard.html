@@ -142,9 +142,9 @@
             <div class="panel-title">Quick Actions</div>
           </div>
           <div class="quick-list">
-            <a class="quick-btn" href="new-requisition.html"><span class="quick-ic ic-blue"><i class="fa-solid fa-pen-to-square"></i></span>New Request</a>
-            <a class="quick-btn" href="pending-approvals.html"><span class="quick-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></span>Pending Approvals</a>
-            <a class="quick-btn" href="requisition-history.html"><span class="quick-ic ic-purple"><i class="fa-solid fa-chart-column"></i></span>Requisition History</a>
+            <a class="quick-btn" href="po-form.html"><span class="quick-ic ic-blue"><i class="fa-solid fa-pen-to-square"></i></span>New Request</a>
+            <a class="quick-btn" href="requisition-history.html"><span class="quick-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></span>Review &amp; Approve</a>
+            <a class="quick-btn" href="po-history.html"><span class="quick-ic ic-purple"><i class="fa-solid fa-chart-column"></i></span>PO History</a>
           </div>
         </div>
       </div>
@@ -152,60 +152,53 @@
   </div>
 </div>
 
+<!-- LOAD ORDER: seed, then service, then shell — matches the Kitchen pattern
+     and the real module layout (data/ + services/ one level up, shared
+     with the rest of the app; procurement-shell.js stays alongside the
+     pages themselves). -->
+<script src="data/procurement-seed.js"></script>
+<script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
-<script src="procurement-api.js"></script>
-<script src="procurement-modals.js"></script>
 <script>
-const shell = ProcurementShell.attach({
-  sidebarTarget: '#sidebarSlot',
-  topbarTarget:  '#topbarSlot',
-  activeFile:    'dashboard.html',
-  pageTitle:     'Dashboard',
-  pageSubtitle:  'Procurement overview',
-  apiMode:       ProcurementAPI.CONFIG.USE_PROD ? 'Live' : 'Demo',
-  user:          { name: 'Procurement Officer', initials: 'PO' },
-});
-
 /* ═══════════════════════════════════════════
-   KPI CARDS — same markup/CSS pattern as the Restaurant pages:
-   kpi-top (colored fa-icon box + label), kpi-value, kpi-trend, plus
-   the top accent border (acc-green / acc-blue / acc-red / acc-purple / acc-amber).
+   Initialization & Rendering — same shape as kitchen-dashboard.html:
+   svc.loadAll() populates svc.state, paint() reads only from svc.state,
+   svc.onChange(paint) keeps the page live after any mutation made
+   elsewhere (approve/reject/create PO/new PR), no matter which page did it.
 ═══════════════════════════════════════════ */
+const svc = window.ProcurementService;
+let shell = null;
+
 function renderKpis(){
-  const prs = ProcurementAPI.DEMO_PR;
-  const pending = prs.filter(p=>p.approvalStage==='pending' || p.approvalStage==='accountant' || p.approvalStage==='gm' || p.approvalStage==='md').length;
-  const monthPrefix = new Date().toISOString().slice(0,7);
-  const approvedThisMonth = prs.filter(p=>(p.approvalStage==='approved'||p.approvalStage==='fulfilled') && p.date.startsWith(monthPrefix)).length;
-  const spendThisMonth = prs.filter(p=>(p.approvalStage==='approved'||p.approvalStage==='fulfilled') && p.date.startsWith(monthPrefix)).reduce((s,p)=>s+p.totalAmount,0);
-  const needsMD = prs.filter(p=>p.needsMDApproval && p.approvalStage!=='approved' && p.approvalStage!=='fulfilled' && p.approvalStage!=='rejected').length;
+  const kpis = svc.dashboardKPIs();
 
   document.getElementById('kpiRow').innerHTML = `
-    <a class="kpi-card acc-amber" href="pending-approvals.html">
+    <a class="kpi-card acc-amber" href="requisition-history.html">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending Approval</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${pending}</div>
-      <div class="kpi-trend ${pending>0?'warn':'up'}">${pending>0?'Needs review':'All clear'}</div>
+      <div class="kpi-value" style="color:var(--amber);">${kpis.pending}</div>
+      <div class="kpi-trend ${kpis.pending>0?'warn':'up'}">${kpis.pending>0?'Needs review':'All clear'}</div>
     </a>
-    <a class="kpi-card acc-green" href="requisition-history.html">
+    <a class="kpi-card acc-green" href="po-history.html">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Approved This Month</div></div>
-      <div class="kpi-value" style="color:var(--green);">${approvedThisMonth}</div>
+      <div class="kpi-value" style="color:var(--green);">${kpis.approvedThisMonth}</div>
       <div class="kpi-trend up">Requests cleared</div>
     </a>
-    <a class="kpi-card acc-blue" href="requisition-history.html">
+    <a class="kpi-card acc-blue" href="po-history.html">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Spend This Month</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${fmtN(spendThisMonth)}</div>
+      <div class="kpi-value" style="color:var(--blue);">${svc.fmtN(kpis.spendThisMonth)}</div>
       <div class="kpi-trend info">Approved + fulfilled</div>
     </a>
-    <a class="kpi-card acc-purple" href="pending-approvals.html">
+    <a class="kpi-card acc-purple" href="requisition-history.html">
       <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-star"></i></div><div class="kpi-label">Needs MD Approval</div></div>
-      <div class="kpi-value" style="color:var(--purple);">${needsMD}</div>
+      <div class="kpi-value" style="color:var(--purple);">${kpis.needsMD}</div>
       <div class="kpi-trend neutral">Above ₦100k</div>
     </a>`;
 
-  shell.setPendingBadge(pending);
+  shell.setPendingBadge(kpis.pending);
 }
 
 function renderApprovalPipeline(){
-  const prs = ProcurementAPI.DEMO_PR;
+  const counts = svc.approvalPipelineCounts();
   const stages = [
     { key: 'pending',    label: 'Pending',    icon: 'fa-hourglass-half', cls: 'ic-amber',  color: 'var(--amber)' },
     { key: 'accountant', label: 'Accountant', icon: 'fa-calculator',     cls: 'ic-blue',   color: 'var(--blue)' },
@@ -215,28 +208,51 @@ function renderApprovalPipeline(){
   ];
 
   const el = document.getElementById('approvalPipeline');
-  el.innerHTML = stages.length === 0
-    ? `<div class="empty-note">No requisitions in the pipeline.</div>`
-    : stages.map(stage => {
-      const count = prs.filter(p => p.approvalStage === stage.key).length;
-      return `
-        <a class="list-row" href="pending-approvals.html">
-          <div class="kpi-ic ${stage.cls}"><i class="fa-solid ${stage.icon}"></i></div>
-          <div class="list-body">
-            <div class="list-name">${stage.label}</div>
-            <div class="list-meta">${count} request${count!==1?'s':''}</div>
-          </div>
-          <div class="list-count" style="color:${stage.color};">${count}</div>
-        </a>`;
-    }).join('');
+  el.innerHTML = stages.map(stage => {
+    const count = counts[stage.key] || 0;
+    return `
+      <a class="list-row" href="requisition-history.html">
+        <div class="kpi-ic ${stage.cls}"><i class="fa-solid ${stage.icon}"></i></div>
+        <div class="list-body">
+          <div class="list-name">${stage.label}</div>
+          <div class="list-meta">${count} request${count!==1?'s':''}</div>
+        </div>
+        <div class="list-count" style="color:${stage.color};">${count}</div>
+      </a>`;
+  }).join('');
 }
 
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function paint(){
+  if (!svc || !svc.state.ready) return;
+  renderKpis();
+  renderApprovalPipeline();
+}
 
-// Init
-renderKpis();
-renderApprovalPipeline();
+async function init(){
+  shell = ProcurementShell.attach({
+    sidebarTarget: '#sidebarSlot',
+    topbarTarget:  '#topbarSlot',
+    activeFile:    'procurement-dashboard.html',
+    pageTitle:     'Dashboard',
+    pageSubtitle:  'Procurement overview',
+    apiMode:       svc && svc.CONFIG.USE_PROD ? 'Live' : 'Demo',
+    user:          { name: 'Procurement Officer', initials: 'PO' },
+  });
+
+  if (!svc) {
+    console.error('ProcurementService not found!');
+    return;
+  }
+
+  await svc.loadAll();
+  paint();
+
+  // Keep the dashboard live: an approval, rejection, PO creation, or new
+  // PR made from ANY procurement page fires this, not just this one.
+  svc.onChange(paint);
+}
+
+window.addEventListener('load', init);
 </script>
 </body>
 </html>

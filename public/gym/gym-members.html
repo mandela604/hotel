@@ -16,9 +16,6 @@
 
   .content{
     padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px;
-    /* ── Light-theme override, scoped to content + modals only ──
-       matches gym-dashboard.html / booking-list.html: sidebar/topbar
-       stay on gym-shell.js's own theme, only this area turns white/blue. ── */
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
     --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
@@ -33,36 +30,95 @@
   }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  .section-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-  .section-title{ font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:500; }
-  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; justify-content:space-between; }
-  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; }
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
+
+  /* ═══ KPI ROW ═══ */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:14px 14px 12px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s;
+    text-decoration:none; display:flex; flex-direction:column; animation:fadeUp .4s ease both; color:inherit;
+  }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+  @media (max-width:420px){ .kpi-value{ font-size:18px; } }
+  .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.bad{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+
+  /* ═══ Toolbar ═══ */
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-btns{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
+  .btn-ghost:hover{ color:var(--gold); }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
   .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
   .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:12.5px; cursor:pointer; outline:none; max-width:160px; }
   .filter-select:focus{ border-color:var(--gold-border); }
+
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.active{ background:var(--green-bg); border-color:rgba(18,183,106,.4); color:var(--green); }
+  .status-pill.on.expiring{ background:var(--amber-bg); border-color:rgba(247,144,9,.4); color:var(--amber); }
+  .status-pill.on.expired{ background:var(--red-bg); border-color:rgba(240,68,56,.4); color:var(--red); }
+  .status-pill.on.frozen{ background:var(--blue-bg); border-color:rgba(47,111,237,.4); color:var(--blue); }
+
   .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
   .btn-primary{ background:var(--gold); color:#fff; font-weight:600; }
   .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
-  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
-  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:11.5px; cursor:pointer; padding:8px 6px; }
-  .btn-ghost:hover{ color:var(--gold); }
 
-  /* ═══ Panel / table (list view — replaces the old card grid) ═══ */
+  @media (max-width:700px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select{ width:100%; max-width:none; }
+    .toolbar-btns{ width:100%; }
+    .toolbar-btns .btn{ flex:1; justify-content:center; }
+  }
+
+  /* ═══ Panel / table ═══ */
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .tbl-wrap{ overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:720px; }
   thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
   thead th.center{ text-align:center; }
+  thead th.right{ text-align:right; }
   tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
   tbody tr:last-child{ border-bottom:none; }
   tbody tr:hover{ background:var(--surface2); }
   tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
   tbody td.center{ text-align:center; }
+  tbody td.right{ text-align:right; }
   .empty-row td{ text-align:center; padding:40px; color:var(--text3); white-space:normal; }
   .mem-name{ font-weight:600; }
   .mem-avatar{ width:28px; height:28px; border-radius:50%; background:var(--gold-dim); border:1.5px solid var(--gold-border); display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--gold); margin-right:9px; flex-shrink:0; }
@@ -77,6 +133,8 @@
   .chip-frozen{ background:var(--blue-bg); color:var(--blue); } .chip-frozen::before{ background:var(--blue); }
   .plan-chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .plan-dot{ width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .bal-owing{ color:var(--red); font-weight:700; }
+  .bal-clear{ color:var(--green); font-weight:600; }
 
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
@@ -86,49 +144,24 @@
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
   .empty-note{ font-size:12.5px; color:var(--text3); padding:40px; text-align:center; }
 
-  /* ═══ Modal ═══ */
-  .modal-overlay{
-    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto;
-    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
-    --border:#eef0f6; --border2:#dfe3ec; --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
-    --input-bg:#f4f6fb; --modal-bg:#ffffff;
-    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
-    --green:#12b76a; --green-bg:#e9f9f0;
-    --red:#f04438; --red-bg:#feecec;
-    --amber:#f79009; --amber-bg:#fff4e5;
-    --blue:#2f6fed; --blue-bg:#eaf1ff;
-    --purple:#8b5cf6; --purple-bg:#f4efff;
-    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
-  }
-  .modal-overlay.show{ display:flex; }
-  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(640px,96vw); box-shadow:0 32px 80px rgba(15,34,55,0.25); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
-  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
-  .modal-sm{ width:min(420px,96vw); }
-  @keyframes modalIn{ from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .modal-title{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:19px; font-weight:700; color:var(--text); }
-  .modal-close{ background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
-  .modal-close:hover{ color:var(--text); }
-  .detail-head{ display:flex; align-items:center; gap:14px; margin-bottom:18px; }
-  .detail-avatar{ width:54px; height:54px; border-radius:50%; background:var(--gold-dim); border:2px solid var(--gold-border); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:var(--gold); flex-shrink:0; }
-  .detail-name{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:21px; font-weight:700; color:var(--text); line-height:1.2; }
-  .detail-subline{ display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap; }
-  .detail-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
-  @media (max-width:480px){ .detail-grid{ grid-template-columns:1fr 1fr; } }
-  .detail-stat{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
-  .detail-stat-label{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:600; margin-bottom:4px; }
-  .detail-stat-val{ font-size:12.5px; color:var(--text); font-weight:600; line-height:1.4; }
-  .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); flex-wrap:wrap; }
   .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:12.5px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-weight:600; }
   .toast.success{ border-left:3px solid #12b76a; }
   .toast.error{ border-left:3px solid #f04438; }
+  .toast.info{ border-left:3px solid #2f6fed; }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   ::-webkit-scrollbar{ width:6px; height:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-  /* ═══ Mobile: table restyles into stacked rows like booking-list ═══ */
+  @media print{
+    #sidebarSlot, #topbarSlot, .toolbar, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
+
   @media (max-width:720px){
     .tbl-wrap{ overflow-x:visible; }
     table{ min-width:0; }
@@ -150,26 +183,57 @@
   <div class="main">
     <div id="topbarSlot"></div>
     <div class="content">
-      <div class="section-header">
-        <div class="section-title">All Gym Members</div>
-        <button class="btn btn-primary btn-sm" onclick="location.href='gym-dashboard.html'"><i class="fa-solid fa-plus"></i> New Member</button>
+
+      <!-- ═══ Gym Overview ═══ -->
+      <div>
+        <div class="section-title">Gym Overview</div>
+        <div class="kpi-row" id="kpiRow"></div>
       </div>
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
-            <input type="text" id="fSearch" placeholder="Search members…" oninput="gPage=1;renderMembers()">
+
+      <!-- ═══ Filter toolbar ═══ -->
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill active" data-status="active"><span class="pdot" style="background:var(--green)"></span>Active</div>
+                <div class="status-pill expiring" data-status="expiring"><span class="pdot" style="background:var(--amber)"></span>Expiring</div>
+                <div class="status-pill expired" data-status="expired"><span class="pdot" style="background:var(--red)"></span>Expired</div>
+                <div class="status-pill frozen" data-status="frozen"><span class="pdot" style="background:var(--blue)"></span>Inactive</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
+                <input type="text" id="fSearch" placeholder="Name, room, phone…" oninput="gPage=1;renderMembers()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Plan</span>
+              <select class="filter-select" id="fPlan" onchange="gPage=1;renderMembers()">
+                <option value="">All Plans</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort" onchange="gPage=1;renderMembers()">
+                <option value="name_asc">Name (A → Z)</option>
+                <option value="expiry_asc">Expiry (Soonest)</option>
+                <option value="joined_desc">Joined (Newest)</option>
+                <option value="balance_desc">Balance (Highest)</option>
+              </select>
+            </div>
+            <button type="button" class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
-          <select class="filter-select" id="fFilter" onchange="gPage=1;renderMembers()">
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="expiring">Expiring</option>
-            <option value="expired">Expired</option>
-            <option value="frozen">Inactive</option>
-          </select>
+          <div class="toolbar-btns">
+            <button type="button" class="btn btn-primary btn-sm" id="btnNewMember"><i class="fa-solid fa-plus"></i> New Member</button>
+          </div>
         </div>
-        <span style="font-size:11.5px;color:var(--text3);" id="memCount">—</span>
       </div>
+
       <div class="panel">
         <div class="tbl-wrap">
           <table>
@@ -180,7 +244,7 @@
                 <th>Room / Contact</th>
                 <th>Joined</th>
                 <th>Expiry</th>
-                <th class="center">Check-ins</th>
+                <th class="right">Balance</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -196,135 +260,277 @@
   </div>
 </div>
 
-<!-- MEMBER PROFILE (DETAIL) MODAL -->
-<div class="modal-overlay" id="detailModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Member Profile</div>
-      <button class="modal-close" onclick="closeModal('detailModal')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div id="detailBody"></div>
-  </div>
-</div>
-
+<!-- ─── SCRIPTS ─── -->
+<script src="../services/permissions.js"></script>
+<script src="data/gym-seed.js"></script>
+<script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
+<script src="../component/gym-member-modal.js"></script>
+<script src="../component/gym-profile-modal.js"></script>
 <script>
+'use strict';
+
+/* ═══════════════════════════════════════════
+   Shell
+═══════════════════════════════════════════ */
 const shell = GymShell.attach({
   sidebarTarget: '#sidebarSlot', topbarTarget: '#topbarSlot',
   activeFile: 'gym-members.html', pageTitle: 'Members', pageSubtitle: 'All gym members at a glance',
-  apiMode: 'Demo', user: { name: 'Gym Attendant', initials: 'GA' },
 });
 document.documentElement.classList.add('gym-ready');
 
-const storage = window.storage || { async get(k,s){const v=localStorage.getItem(k);return v==null?null:{key:k,value:v,shared:s};}, async set(k,v,s){localStorage.setItem(k,v);return{key:k,value:v,shared:s};}, async delete(k){localStorage.removeItem(k);return{key:k,deleted:true};}, async list(p){const keys=Object.keys(localStorage).filter(k=>!p||k.startsWith(p));return{keys,prefix:p};} };
-const KEY_MEMBERS='gym-members', KEY_PLANS='gym-plans', KEY_CHECKINS='gym-checkins';
-async function load(k,f){ try{const r=await storage.get(k,true);if(r&&r.value){const p=JSON.parse(r.value);if(Array.isArray(p))return p;}}catch(e){} return f;}
-async function save(k,v){ try{await storage.set(k,JSON.stringify(v),true);}catch(e){console.warn(e);} }
+/* ═══════════════════════════════════════════
+   Call-and-render only: all data comes from GymService. Row click
+   opens GymProfileModal (check-in history, check-in/renew/delete);
+   its Edit button hands off to GymMemberModal (plan/payments/room
+   charge). Both components only ever call GymService.* — this page
+   never touches storage, BookingData, or GymService.state directly.
+═══════════════════════════════════════════ */
+let members = [], plans = [], checkins = [];
+let gPage = 1, gFilter = '';
+const PAGE = 12;
 
-let members=[], plans=[], checkins=[], gPage=1, gFilter='', detailMemberId=null;
-const PAGE=12;
-const COLOR_TOKENS={gold:{bg:'var(--gold-dim)',fg:'var(--gold-light)',dot:'var(--gold)'},blue:{bg:'var(--blue-bg)',fg:'var(--blue)',dot:'var(--blue)'},purple:{bg:'var(--purple-bg)',fg:'var(--purple)',dot:'var(--purple)'},green:{bg:'var(--green-bg)',fg:'var(--green)',dot:'var(--green)'},amber:{bg:'var(--amber-bg)',fg:'var(--amber)',dot:'var(--amber)'}};
-function _esc(s){return(s==null?'':String(s)).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');}
-function fmtN(n){return'₦'+Math.round(n||0).toLocaleString('en-NG');}
-function fmtDate(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
-function initials(n){return(n||'').split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
-function daysUntil(s){if(!s)return null;const d=new Date(s+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
+const computeStatus = GymService.computeStatus;
+const fmtN = GymService.fmtN;
+const fmtDate = GymService.fmtDate;
+const initials = GymService.initials;
 
-/* Status logic matches gym-dashboard.html: a plan is mandatory on every
-   member, so "no plan" can't legitimately occur — treat any legacy record
-   without one as expired rather than silently active. Four statuses only:
-   active, expiring, expired, frozen (displayed as "Inactive"). */
-function computeStatus(m){
-  if(!m.planId) return 'expired';
-  if(m.status==='frozen') return 'frozen';
-  const days=daysUntil(m.expiry);
-  if(days===null) return 'active';
-  if(days<0) return 'expired';
-  if(days<=7) return 'expiring';
-  return 'active';
+// Balance falls back to totalDue - amountPaid if GymService doesn't
+// (yet) expose calcBal() — keeps this page working either way.
+function memberBalance(m) {
+  if (typeof GymService.calcBal === 'function') return GymService.calcBal(m);
+  return Math.max(0, (m.totalDue || 0) - (m.amountPaid || 0));
 }
-const STATUS_LABEL={active:'Active',expiring:'Expiring',expired:'Expired',frozen:'Inactive'};
-const STATUS_CHIP={active:'chip-active',expiring:'chip-expiring',expired:'chip-expired',frozen:'chip-frozen'};
-function planById(id){return plans.find(p=>p.id===id)||{id:null,name:'No Plan',price:0,durationDays:0,notes:'',color:'blue'};}
-function planChipHtml(plan){const c=COLOR_TOKENS[plan.color]||COLOR_TOKENS.blue;return'<span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(plan.name)+'</span>';}
 
-function renderMembers(){
-  const q=document.getElementById('fSearch').value.toLowerCase();
-  gFilter=document.getElementById('fFilter').value;
-  let rows=members.map(m=>({...m,_s:computeStatus(m)})).filter(m=>{
-    const mq=!q||m.name.toLowerCase().includes(q)||(m.room||'').toLowerCase().includes(q);
-    const ms=!gFilter||m._s===gFilter;
-    return mq&&ms;
+const COLOR_TOKENS = {
+  gold:   { bg:'var(--gold-dim)',  fg:'var(--gold-light)', dot:'var(--gold)' },
+  blue:   { bg:'var(--blue-bg)',   fg:'var(--blue)',       dot:'var(--blue)' },
+  purple: { bg:'var(--purple-bg)', fg:'var(--purple)',     dot:'var(--purple)' },
+  green:  { bg:'var(--green-bg)',  fg:'var(--green)',      dot:'var(--green)' },
+  amber:  { bg:'var(--amber-bg)',  fg:'var(--amber)',      dot:'var(--amber)' },
+};
+const STATUS_LABEL = { active:'Active', expiring:'Expiring', expired:'Expired', frozen:'Inactive' };
+const STATUS_CHIP  = { active:'chip-active', expiring:'chip-expiring', expired:'chip-expired', frozen:'chip-frozen' };
+
+function _esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function planById(id){ return (GymService.findPlan(id)) || { id:null, name:'No Plan', price:0, durationDays:0, notes:'', color:'blue' }; }
+function planChipHtml(plan){
+  const c = COLOR_TOKENS[plan.color] || COLOR_TOKENS.blue;
+  return '<span class="plan-chip" style="background:'+c.bg+';color:'+c.fg+';"><span class="plan-dot" style="background:'+c.dot+';"></span>'+_esc(plan.name)+'</span>';
+}
+
+/* ═══════════════════════════════════════════
+   Session / permissions
+═══════════════════════════════════════════ */
+let session = null;
+function canCreateGymMember(s){
+  if (!s) return true;
+  if (window.Permissions && typeof Permissions.hasPermission === 'function') {
+    return Permissions.hasPermission(s, 'canCreate', 'gym');
+  }
+  return true;
+}
+
+function showToast(msg,t){
+  const icon = t === 'success' ? 'fa-circle-check' : t === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const d=document.createElement('div');
+  d.className='toast '+(t||'success');
+  d.innerHTML='<i class="fa-solid '+icon+'"></i> '+msg;
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),3200);
+}
+
+/* ═══════════════════════════════════════════
+   Registration / edit — GymMemberModal handles New, Edit, payments
+   ledger, and Room Charge entirely through GymService.
+═══════════════════════════════════════════ */
+const memberModal = GymMemberModal.create({
+  service: GymService,
+  onSaved: function () { refreshMembers(); profileModal.refresh(); },
+  onDeleted: function () { refreshMembers(); },
+});
+
+/* ═══════════════════════════════════════════
+   Profile — GymProfileModal is what a row click opens: check-in
+   history, Check-in/Renew, and an Edit button that hands off to
+   GymMemberModal for plan/payment changes.
+═══════════════════════════════════════════ */
+const profileModal = GymProfileModal.create({
+  service: GymService,
+  onEdit: function (member) { memberModal.openEdit(member); },
+  onDeleted: function () { refreshMembers(); },
+  onSaved: function () { refreshMembers(); },
+});
+
+function openNewMember(){
+  if (!canCreateGymMember(session)) {
+    showToast("You don't have permission to add or edit members.", 'error');
+    return;
+  }
+  memberModal.openNew();
+}
+document.getElementById('btnNewMember').addEventListener('click', openNewMember);
+
+/* ═══════════════════════════════════════════
+   KPI row — recomputed from whatever the Search box and Plan filter
+   currently narrow the list down to (base), NOT the status pill, so
+   clicking a KPI card to jump to a status still shows a meaningful
+   breakdown instead of zeroing out the other three cards.
+═══════════════════════════════════════════ */
+function renderKPIs(base) {
+  const withStatus = base.map(m => ({ _s: computeStatus(m), m }));
+  const active   = withStatus.filter(x => x._s === 'active').length;
+  const expiring = withStatus.filter(x => x._s === 'expiring').length;
+  const expired  = withStatus.filter(x => x._s === 'expired').length;
+  const revenue  = withStatus.filter(x => x._s === 'active' || x._s === 'expiring')
+    .reduce((sum, x) => sum + (planById(x.m.planId).price || 0), 0);
+
+  document.getElementById('kpiRow').innerHTML =
+    '<a class="kpi-card acc-green" href="#" onclick="event.preventDefault();setStatus(\'active\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-users"></i></div><div class="kpi-label">Active Members</div></div>' +
+      '<div class="kpi-value" style="color:var(--green);">' + active + '</div>' +
+      '<div class="kpi-trend up">' + base.length + ' shown</div>' +
+    '</a>' +
+    '<a class="kpi-card acc-amber" href="#" onclick="event.preventDefault();setStatus(\'expiring\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-clock"></i></div><div class="kpi-label">Expiring Within 7 Days</div></div>' +
+      '<div class="kpi-value" style="color:var(--amber);">' + expiring + '</div>' +
+      '<div class="kpi-trend ' + (expiring > 0 ? 'warn' : 'up') + '">' + (expiring > 0 ? 'Needs renewal outreach' : 'None due') + '</div>' +
+    '</a>' +
+    '<a class="kpi-card acc-red" href="#" onclick="event.preventDefault();setStatus(\'expired\')">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-user-slash"></i></div><div class="kpi-label">Expired Memberships</div></div>' +
+      '<div class="kpi-value" style="color:var(--red);">' + expired + '</div>' +
+      '<div class="kpi-trend ' + (expired > 0 ? 'bad' : 'up') + '">' + (expired > 0 ? 'Access should be blocked' : 'All current') + '</div>' +
+    '</a>' +
+    '<div class="kpi-card acc-purple" style="cursor:default;">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-chart-line"></i></div><div class="kpi-label">Est. Monthly Revenue</div></div>' +
+      '<div class="kpi-value" style="color:var(--purple);">' + fmtN(revenue) + '</div>' +
+      '<div class="kpi-trend neutral">Across ' + base.length + ' filtered member' + (base.length !== 1 ? 's' : '') + '</div>' +
+    '</div>';
+}
+
+/* ═══════════════════════════════════════════
+   Status pills + plan filter + sort
+═══════════════════════════════════════════ */
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(p => {
+    p.addEventListener('click', () => setStatus(p.dataset.status));
   });
-  rows.sort((a,b)=>(b.joined||'').localeCompare(a.joined||''));
-  document.getElementById('memCount').textContent=rows.length+' member'+(rows.length!==1?'s':'');
-  const start=(gPage-1)*PAGE,pageRows=rows.slice(start,start+PAGE);
-  const body=document.getElementById('memBody');
-  body.innerHTML = pageRows.length===0
+}
+function setStatus(s){
+  gFilter = s;
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  const target = document.querySelector('.status-pill[data-status="' + s + '"]');
+  if (target) target.classList.add('on');
+  gPage = 1;
+  renderMembers();
+}
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fPlan').value = '';
+  document.getElementById('fSort').value = 'name_asc';
+  gFilter = '';
+  document.querySelectorAll('.status-pill').forEach(x => x.classList.remove('on'));
+  document.querySelector('.status-pill.all').classList.add('on');
+  gPage = 1;
+  renderMembers();
+}
+function populatePlanFilter(){
+  const sel = document.getElementById('fPlan');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Plans</option>' + plans.map(p => '<option value="' + p.id + '">' + _esc(p.name) + '</option>').join('');
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+/* ═══════════════════════════════════════════
+   Member list rendering
+   `base` = search + plan filter only (feeds the KPI row).
+   `rows` = base + status pill + sort (feeds the table).
+═══════════════════════════════════════════ */
+function renderMembers(){
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const planFilter = document.getElementById('fPlan').value;
+  const sort = document.getElementById('fSort').value;
+
+  const base = members.map(m => ({...m, _s: computeStatus(m)})).filter(m => {
+    const mq = !q || m.name.toLowerCase().includes(q) || (m.room||'').toLowerCase().includes(q) || (m.phone||'').toLowerCase().includes(q);
+    const mp = !planFilter || m.planId === planFilter;
+    return mq && mp;
+  });
+
+  let rows = gFilter ? base.filter(m => m._s === gFilter) : base.slice();
+
+  if (sort === 'name_asc') rows.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sort === 'expiry_asc') rows.sort((a,b) => (a.expiry||'').localeCompare(b.expiry||''));
+  else if (sort === 'joined_desc') rows.sort((a,b) => (b.joined||'').localeCompare(a.joined||''));
+  else if (sort === 'balance_desc') rows.sort((a,b) => memberBalance(b) - memberBalance(a));
+
+  const start = (gPage-1)*PAGE, pageRows = rows.slice(start, start+PAGE);
+  const body = document.getElementById('memBody');
+  body.innerHTML = pageRows.length === 0
     ? '<tr class="empty-row"><td colspan="7">No members found.</td></tr>'
-    : pageRows.map(m=>{
-        const plan=planById(m.planId); const s=m._s;
-        return '<tr onclick="openDetail(\''+m.id+'\')">'
+    : pageRows.map(m => {
+        const plan = planById(m.planId); const s = m._s;
+        const bal = memberBalance(m);
+        const balHtml = bal > 0
+          ? '<span class="bal-owing">'+fmtN(bal)+'</span>'
+          : '<span class="bal-clear">Paid up</span>';
+        return '<tr onclick="profileModal.open(\''+m.id+'\')">'
           +'<td class="mcard-head" data-label="Member"><div class="mem-cell"><span class="mem-avatar">'+initials(m.name)+'</span><span class="mem-name">'+_esc(m.name)+'</span></div></td>'
           +'<td data-label="Plan">'+(!m.planId?'<span style="color:var(--text3);font-size:11px;">— Not set</span>':planChipHtml(plan))+'</td>'
           +'<td data-label="Room / Contact">'+_esc(m.room||'—')+(m.phone?'<div class="mem-sub">'+_esc(m.phone)+'</div>':'')+'</td>'
           +'<td data-label="Joined">'+fmtDate(m.joined)+'</td>'
           +'<td data-label="Expiry">'+fmtDate(m.expiry)+'</td>'
-          +'<td class="center" data-label="Check-ins">'+(m.checkins||0)+'</td>'
+          +'<td class="right" data-label="Balance">'+balHtml+'</td>'
           +'<td data-label="Status"><span class="chip '+STATUS_CHIP[s]+'">'+STATUS_LABEL[s]+'</span></td>'
           +'</tr>';
       }).join('');
-  const tp=Math.max(1,Math.ceil(rows.length/PAGE));if(gPage>tp)gPage=tp;
-  const from=rows.length===0?0:(gPage-1)*PAGE+1,to=Math.min(gPage*PAGE,rows.length);
-  document.getElementById('gPaginLabel').textContent=rows.length===0?'No records':from+'\u2013'+to+' of '+rows.length;
-  const w=document.getElementById('gPageBtns');w.innerHTML='';
-  const mk=(l,p,d,ac)=>{const b=document.createElement('button');b.className='page-btn'+(ac?' active':'');b.textContent=l;b.disabled=!!d;b.onclick=()=>{gPage=p;renderMembers();};return b;};
-  w.appendChild(mk('\u2039',gPage-1,gPage===1));let s2=Math.max(1,gPage-2),e2=Math.min(tp,s2+4);s2=Math.max(1,e2-4);
-  for(let i=s2;i<=e2;i++)w.appendChild(mk(String(i),i,false,i===gPage));
-  w.appendChild(mk('\u203a',gPage+1,gPage>=tp));
-}
-function openDetail(id){detailMemberId=id;renderDetail();document.getElementById('detailModal').classList.add('show');}
-function renderDetail(){
-  const m=members.find(x=>x.id===detailMemberId);if(!m)return;
-  const plan=planById(m.planId);const s=computeStatus(m);
-  document.getElementById('detailBody').innerHTML='<div class="detail-head"><span class="detail-avatar">'+initials(m.name)+'</span><div><div class="detail-name">'+_esc(m.name)+'</div><div class="detail-subline"><span class="chip '+STATUS_CHIP[s]+'">'+STATUS_LABEL[s]+'</span>'+(m.planId?planChipHtml(plan):'<span style="color:var(--text3);font-size:11px;margin-left:6px;">Not set</span>')+'</div></div></div>'+
-    '<div class="detail-grid"><div class="detail-stat"><div class="detail-stat-label">Room / Contact</div><div class="detail-stat-val">'+_esc(m.room||'\u2014')+'<br>'+_esc(m.phone||'')+'</div></div><div class="detail-stat"><div class="detail-stat-label">Joined</div><div class="detail-stat-val">'+fmtDate(m.joined)+'</div></div><div class="detail-stat"><div class="detail-stat-label">Expiry</div><div class="detail-stat-val">'+fmtDate(m.expiry)+'</div></div><div class="detail-stat"><div class="detail-stat-label">Check-ins</div><div class="detail-stat-val">'+(m.checkins||0)+'</div></div><div class="detail-stat"><div class="detail-stat-label">Last Visit</div><div class="detail-stat-val">'+(m.lastCheckin?new Date(m.lastCheckin).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Never')+'</div></div><div class="detail-stat"><div class="detail-stat-label">Status</div><div class="detail-stat-val">'+STATUS_LABEL[s]+'</div></div></div>'+
-    '<div class="modal-footer"><button class="btn btn-outline btn-sm" onclick="closeModal(\'detailModal\')">Close</button><button class="btn btn-primary btn-sm" onclick="location.href=\'gym-dashboard.html\'"><i class="fa-solid fa-pen"></i> Edit on Dashboard</button></div>';
-  document.getElementById('detailBody').innerHTML+=m.notes?'<div style="margin-top:10px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);font-weight:700;margin-bottom:6px;">Notes</div><div style="font-size:12px;color:var(--text2);">'+_esc(m.notes)+'</div></div>':'';
-}
-function closeModal(id){document.getElementById(id).classList.remove('show');}
-function showToast(msg,t){const d=document.createElement('div');d.className='toast '+(t||'success');d.textContent=(t==='success'?'\u2713 ':'\u2715 ')+msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
-document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeModal('detailModal');});
 
-function isoAgo(d){const x=new Date();x.setDate(x.getDate()-d);return x.toISOString().split('T')[0];}
-function isoIn(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOString().split('T')[0];}
-function isoAgoHours(h){const x=new Date();x.setHours(x.getHours()-h);return x.toISOString();}
+  const tp = Math.max(1, Math.ceil(rows.length/PAGE)); if (gPage>tp) gPage = tp;
+  const from = rows.length===0?0:(gPage-1)*PAGE+1, to = Math.min(gPage*PAGE, rows.length);
+  document.getElementById('gPaginLabel').textContent = rows.length===0?'No records':from+'\u2013'+to+' of '+rows.length;
+  const w = document.getElementById('gPageBtns'); w.innerHTML='';
+  const mk = (l,p,d,ac) => { const b=document.createElement('button'); b.type='button'; b.className='page-btn'+(ac?' active':''); b.textContent=l; b.disabled=!!d; b.onclick=()=>{gPage=p;renderMembers();}; return b; };
+  w.appendChild(mk('\u2039', gPage-1, gPage===1)); let s2=Math.max(1,gPage-2), e2=Math.min(tp,s2+4); s2=Math.max(1,e2-4);
+  for (let i=s2;i<=e2;i++) w.appendChild(mk(String(i), i, false, i===gPage));
+  w.appendChild(mk('\u203a', gPage+1, gPage>=tp));
 
-async function init(){
-  plans=await load(KEY_PLANS,[
-    {id:'pl01',name:'Basic',price:15000,durationDays:30,notes:'Full gym floor access. Locker included.',color:'blue'},
-    {id:'pl02',name:'Premium',price:35000,durationDays:30,notes:'Everything in Basic, plus classes, sauna & PT consult.',color:'gold'},
-    {id:'pl03',name:'Day Pass',price:5000,durationDays:1,notes:'Single-day access for hotel guests.',color:'purple'},
-    {id:'pl04',name:'Annual',price:120000,durationDays:365,notes:'Full year unlimited access. Best value.',color:'green'},
-    {id:'pl05',name:'Student',price:8000,durationDays:30,notes:'Discounted plan for students with valid ID.',color:'amber'},
-  ]);
-  members=await load(KEY_MEMBERS,[
-    {id:'gm01',name:'Chidi Nwankwo',planId:'pl02',room:'Room 204',phone:'+234 801 234 5671',joined:isoAgo(120),expiry:isoIn(18),checkins:34,lastCheckin:isoAgoHours(5),status:'active',notes:'',amountPaid:35000,totalDue:35000},
-    {id:'gm02',name:'Fatima Bello',planId:'pl01',room:'Room 118',phone:'+234 802 345 6782',joined:isoAgo(60),expiry:isoIn(4),checkins:12,lastCheckin:isoAgoHours(30),status:'active',notes:'',amountPaid:15000,totalDue:15000},
-    {id:'gm03',name:'Segun Johnson',planId:'pl03',room:'Walk-in',phone:'+234 803 456 7893',joined:isoAgo(1),expiry:isoAgo(0),checkins:1,lastCheckin:isoAgoHours(1),status:'active',notes:'',amountPaid:5000,totalDue:5000},
-    {id:'gm04',name:'Ada Williams',planId:'pl02',room:'Room 204 (Suite)',phone:'+234 804 567 8904',joined:isoAgo(200),expiry:isoAgo(10),checkins:88,lastCheckin:isoAgo(10),status:'active',notes:'VIP guest',amountPaid:20000,totalDue:35000},
-    {id:'gm05',name:'Ibrahim Musa',planId:'pl01',room:'Staff',phone:'+234 805 678 9015',joined:isoAgo(300),expiry:isoIn(90),checkins:150,lastCheckin:isoAgo(45),status:'frozen',notes:'On medical leave',amountPaid:15000,totalDue:15000},
-    {id:'gm06',name:'Ngozi Okafor',planId:'pl04',room:'Room 301',phone:'+234 806 789 0126',joined:isoAgo(10),expiry:isoIn(50),checkins:6,lastCheckin:isoAgoHours(20),status:'active',notes:'',amountPaid:60000,totalDue:120000},
-    {id:'gm07',name:'Emeka Obi',planId:'pl02',room:'Room 105',phone:'+234 807 890 1234',joined:isoAgo(90),expiry:isoAgo(5),checkins:45,lastCheckin:isoAgo(6),status:'active',notes:'Expired plan',amountPaid:0,totalDue:35000},
-  ]);
-  checkins=await load(KEY_CHECKINS,[
-    {id:'ci01',memberId:'gm01',memberName:'Chidi Nwankwo',time:isoAgoHours(1)},
-    {id:'ci02',memberId:'gm02',memberName:'Fatima Bello',time:isoAgoHours(5)},
-    {id:'ci03',memberId:'gm06',memberName:'Ngozi Okafor',time:isoAgoHours(20)},
-    {id:'ci04',memberId:'gm03',memberName:'Segun Johnson',time:isoAgoHours(30)},
-    {id:'ci05',memberId:'gm01',memberName:'Chidi Nwankwo',time:isoAgoHours(48)},
-  ]);
+  renderKPIs(base);
+}
+
+async function refreshMembers(){
+  const s = GymService.state;
+  members  = s.members  || [];
+  plans    = s.plans    || [];
+  checkins = s.checkins || [];
+  populatePlanFilter();
   renderMembers();
+}
+
+/* ═══════════════════════════════════════════
+   Init
+═══════════════════════════════════════════ */
+async function init(){
+  if (!window.GymService) {
+    document.getElementById('memBody').innerHTML = '<tr class="empty-row"><td colspan="7">GymService not loaded. Check script order.</td></tr>';
+    return;
+  }
+  session = (shell.getUser && shell.getUser()) || { name: 'Gym Attendant', initials: 'GA', role: 'staff', privilege: 'gym_attendant' };
+  memberModal.setSession(session);
+  profileModal.setSession(session);
+  if (!canCreateGymMember(session)) {
+    const btn = document.getElementById('btnNewMember');
+    if (btn) btn.style.display = 'none';
+  }
+  bindStatusPills();
+  try {
+    await GymService.loadAll(GymSeed);
+    await refreshMembers();
+    GymService.onChange(function(){ refreshMembers(); profileModal.refresh(); });
+  } catch (err) {
+    console.error(err);
+    document.getElementById('memBody').innerHTML = '<tr class="empty-row"><td colspan="7">Could not load gym data.</td></tr>';
+    showToast('Failed to load gym data.', 'error');
+  }
 }
 init();
 </script>
