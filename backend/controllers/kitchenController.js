@@ -1,138 +1,125 @@
-const KitchenInventory = require('../database/models/KitchenInventory');
-const KitchenProduction = require('../database/models/KitchenProduction');
-const KitchenTransfer = require('../database/models/KitchenTransfer');
-const Transfer = require('../database/models/Transfer');
+const KitchenStock = require('../models/KitchenStock');
+const Production = require('../models/Production');
+const Transfer = require('../models/Transfer');
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
 
-/* ── INVENTORY ── */
+/* ── STOCK ── */
 
-// GET /api/kitchen/inventory
-exports.listInventory = asyncHandler(async (req, res) => {
-  const { q, lowStock } = req.query;
+exports.listStock = asyncHandler(async (req, res) => {
   const filter = {};
-  if (q) filter.name = new RegExp(q, 'i');
-  if (lowStock === 'true') {
-    filter.$expr = { $lte: ['$qty', '$reorder'] };
-  }
-  const items = await KitchenInventory.find(filter).sort({ name: 1 });
+  if (req.query.category) filter.category = req.query.category;
+  const items = await KitchenStock.find(filter).sort({ name: 1 });
   res.json(items);
 });
 
-// POST /api/kitchen/inventory
-exports.createInventoryItem = asyncHandler(async (req, res) => {
-  const { name, unit, qty, reorder, costPerUnit, supplier } = req.body;
+exports.createStock = asyncHandler(async (req, res) => {
+  const { name } = req.body;
   if (!name) throw new ApiError(400, 'name is required');
-
-  const exists = await KitchenInventory.findOne({ name: name.trim() });
-  if (exists) throw new ApiError(409, `Inventory item "${name}" already exists`);
-
-  const item = await KitchenInventory.create({
-    name: name.trim(),
-    unit: unit || 'kg',
-    qty: Number(qty) || 0,
-    reorder: Number(reorder) || 0,
-    costPerUnit: Number(costPerUnit) || 0,
-    supplier: supplier || '',
-  });
-
+  const item = await KitchenStock.create(req.body);
   res.status(201).json(item);
 });
 
-// PUT /api/kitchen/inventory/:id
-exports.updateInventoryItem = asyncHandler(async (req, res) => {
-  const item = await KitchenInventory.findOne({ id: req.params.id });
-  if (!item) throw new ApiError(404, 'Inventory item not found');
-
-  const { name, unit, qty, reorder, costPerUnit, supplier } = req.body;
-  if (name !== undefined) item.name = name;
-  if (unit !== undefined) item.unit = unit;
-  if (qty !== undefined) item.qty = Number(qty);
-  if (reorder !== undefined) item.reorder = Number(reorder);
-  if (costPerUnit !== undefined) item.costPerUnit = Number(costPerUnit);
-  if (supplier !== undefined) item.supplier = supplier;
-
-  await item.save();
+exports.updateStock = asyncHandler(async (req, res) => {
+  const item = await KitchenStock.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  if (!item) throw new ApiError(404, 'Kitchen stock item not found');
   res.json(item);
 });
 
-// DELETE /api/kitchen/inventory/:id
-exports.deleteInventoryItem = asyncHandler(async (req, res) => {
-  const item = await KitchenInventory.findOne({ id: req.params.id });
-  if (!item) throw new ApiError(404, 'Inventory item not found');
-  await item.deleteOne();
+exports.deleteStock = asyncHandler(async (req, res) => {
+  const item = await KitchenStock.findByIdAndDelete(req.params.id);
+  if (!item) throw new ApiError(404, 'Kitchen stock item not found');
   res.json({ ok: true });
 });
 
 /* ── PRODUCTION ── */
 
-// GET /api/kitchen/production
 exports.listProduction = asyncHandler(async (req, res) => {
-  const productions = await KitchenProduction.find().sort({ date: -1 });
+  const productions = await Production.find().sort({ date: -1 });
   res.json(productions);
 });
 
-// POST /api/kitchen/production
 exports.createProduction = asyncHandler(async (req, res) => {
-  const { items, qty, unit, department, chef, date, time, status } = req.body;
-  const now = new Date();
-
-  const prod = await KitchenProduction.create({
-    items: items || [],
-    qty: Number(qty) || 0,
-    unit: unit || 'plates',
-    department: department || 'Main Kitchen',
-    chef: chef || '',
-    date: date ? new Date(date) : now,
-    time: time || now.toTimeString().split(' ')[0],
-    status: status || 'planned',
-  });
-
-  res.status(201).json(prod);
-});
-
-// PATCH /api/kitchen/production/:id/status
-exports.updateProductionStatus = asyncHandler(async (req, res) => {
-  const prod = await KitchenProduction.findOne({ id: req.params.id });
-  if (!prod) throw new ApiError(404, 'Production order not found');
-
-  const { status } = req.body;
-  if (!['planned', 'in_progress', 'completed', 'cancelled'].includes(status)) {
-    throw new ApiError(400, 'Invalid status');
+  const { ingredients } = req.body;
+  if (!ingredients || !ingredients.length) {
+    throw new ApiError(400, 'At least one ingredient is required');
   }
 
-  prod.status = status;
-  await prod.save();
-  res.json(prod);
+  for (const ing of ingredients) {
+    const stock = await KitchenStock.findOne({ name: ing.name });
+    if (!stock) throw new ApiError(404, `Kitchen stock "${ing.name}" not found`);
+    if (stock.qty < ing.qty) {
+      throw new ApiError(400, `Insufficient stock for "${ing.name}" (available: ${stock.qty})`);
+    }
+  }
+
+  for (const ing of ingredients) {
+    await KitchenStock.findOneAndUpdate({ name: ing.name }, { $inc: { qty: -ing.qty } });
+  }
+
+  const production = await Production.create({
+    ...req.body,
+    productionNo: 'PROD-' + String(Date.now()).slice(-6),
+    status: 'completed',
+  });
+
+  res.status(201).json(production);
+});
+
+exports.voidProduction = asyncHandler(async (req, res) => {
+  const production = await Production.findById(req.params.id);
+  if (!production) throw new ApiError(404, 'Production not found');
+  if (production.status === 'voided') throw new ApiError(400, 'Production already voided');
+
+  for (const ing of (production.ingredients || [])) {
+    await KitchenStock.findOneAndUpdate({ name: ing.name }, { $inc: { qty: ing.qty } });
+  }
+
+  production.status = 'voided';
+  production.voidReason = req.body.voidReason || '';
+  production.voidDate = new Date();
+  production.voidedBy = req.body.voidedBy || '';
+  await production.save();
+
+  res.json(production);
 });
 
 /* ── TRANSFERS ── */
 
-// GET /api/kitchen/transfers
 exports.listTransfers = asyncHandler(async (req, res) => {
-  const transfers = await Transfer.find({ fromDept: 'Kitchen' }).sort({ date: -1 });
+  const transfers = await Transfer.find().sort({ dateSent: -1 });
   res.json(transfers);
 });
 
-// POST /api/kitchen/transfers
 exports.createTransfer = asyncHandler(async (req, res) => {
-  const { fromLocation, toLocation, meal, qty, unit, sender } = req.body;
-  if (!meal || !qty) throw new ApiError(400, 'meal and qty are required for transfer');
-
-  const count = await Transfer.countDocuments();
-  const no = `KT-${String(count + 1040)}`;
-
   const transfer = await Transfer.create({
-    no,
-    fromDept: fromLocation || 'Kitchen',
-    toDept: toLocation || 'Restaurant',
-    meal,
-    qty: Number(qty),
-    unit: unit || 'plates',
-    sender: sender || 'Head Chef',
-    status: 'pending',
-    date: new Date(),
+    ...req.body,
+    transferNo: 'TRF-' + String(Date.now()).slice(-6),
+    status: 'sent',
   });
-
   res.status(201).json(transfer);
+});
+
+exports.updateTransfer = asyncHandler(async (req, res) => {
+  const transfer = await Transfer.findById(req.params.id);
+  if (!transfer) throw new ApiError(404, 'Transfer not found');
+
+  const { status } = req.body;
+  const allowed = ['accepted', 'rejected', 'cancelled'];
+  if (!allowed.includes(status)) {
+    throw new ApiError(400, `Status must be one of: ${allowed.join(', ')}`);
+  }
+
+  if (status === 'accepted') {
+    transfer.receivedBy = req.body.receivedBy || '';
+    transfer.dateReceived = new Date();
+  } else if (status === 'rejected') {
+    transfer.rejectReason = req.body.rejectReason || '';
+  } else if (status === 'cancelled') {
+    transfer.cancelReason = req.body.cancelReason || '';
+  }
+
+  transfer.status = status;
+  await transfer.save();
+  res.json(transfer);
 });

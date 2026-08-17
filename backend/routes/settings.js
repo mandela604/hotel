@@ -1,7 +1,7 @@
 const router = require('express').Router();
-const ctrl = require('../controllers/settingsController');
+const { get, update } = require('../controllers/settingsController');
 
-router.get('/', ctrl.getSettings);
-router.put('/', ctrl.updateSettings);
+router.get('/', get);
+router.put('/', update);
 
 module.exports = router;

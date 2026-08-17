@@ -1,19 +1,17 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/kitchenController');
 
-/* Inventory */
-router.get('/inventory', ctrl.listInventory);
-router.post('/inventory', ctrl.createInventoryItem);
-router.put('/inventory/:id', ctrl.updateInventoryItem);
-router.delete('/inventory/:id', ctrl.deleteInventoryItem);
+router.get('/stock', ctrl.listStock);
+router.post('/stock', ctrl.createStock);
+router.put('/stock/:id', ctrl.updateStock);
+router.delete('/stock/:id', ctrl.deleteStock);
 
-/* Production */
 router.get('/production', ctrl.listProduction);
 router.post('/production', ctrl.createProduction);
-router.patch('/production/:id/status', ctrl.updateProductionStatus);
+router.post('/production/:id/void', ctrl.voidProduction);
 
-/* Transfers */
 router.get('/transfers', ctrl.listTransfers);
 router.post('/transfers', ctrl.createTransfer);
+router.put('/transfers/:id', ctrl.updateTransfer);
 
 module.exports = router;

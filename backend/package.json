@@ -1,23 +1,23 @@
 {
-  "name": "grace-hotel-backend",
+  "name": "aurum-hotel-backend",
   "version": "1.0.0",
-  "description": "Grace Hotel Management Suite — Express.js + MongoDB Backend",
+  "description": "Aurum Hotel Management Suite — Express.js + MongoDB Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed": "node database/seed.js"
+    "seed": "node seed.js"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "cors": "^2.8.5",
-    "mongoose": "^8.7.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "uuid": "^10.0.0",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
     "express-rate-limit": "^7.4.0",
-    "dotenv": "^16.4.5"
+    "express-validator": "^7.2.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.7.0",
+    "morgan": "^1.10.0"
   }
 }

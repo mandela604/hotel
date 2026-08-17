@@ -1,50 +1,19 @@
-class ApiError extends Error {
-  constructor(statusCode, message, details) {
-    super(message);
-    this.statusCode = statusCode;
-    this.details = details;
-  }
-}
-
-function notFound(req, res, next) {
-  next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`));
-}
-
-// eslint-disable-next-line no-unused-vars
-function errorHandler(err, req, res, next) {
-  let statusCode = err.statusCode || 500;
-  let message = err.message || 'Internal server error';
-  let details = err.details;
-
-  // Mongoose validation error
+function errorHandler(err, req, res, _next) {
+  console.error('[error]', err.message);
   if (err.name === 'ValidationError') {
-    statusCode = 400;
-    message = 'Validation failed';
-    details = Object.values(err.errors).map((e) => e.message);
+    return res.status(400).json({ error: 'Validation failed', details: err.message });
   }
-
-  // Mongoose bad ObjectId
   if (err.name === 'CastError') {
-    statusCode = 400;
-    message = `Invalid ${err.path}: ${err.value}`;
+    return res.status(400).json({ error: 'Invalid ID format' });
   }
-
-  // Mongo duplicate key
   if (err.code === 11000) {
-    statusCode = 409;
-    const field = Object.keys(err.keyValue || {})[0];
-    message = field ? `${field} '${err.keyValue[field]}' already exists` : 'Duplicate key error';
+    return res.status(409).json({ error: 'Duplicate value', field: Object.keys(err.keyPattern) });
   }
-
-  if (statusCode >= 500) {
-    console.error(err);
-  }
-
-  res.status(statusCode).json({
-    error: true,
-    message,
-    ...(details ? { details } : {}),
-  });
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 }
 
-module.exports = { ApiError, notFound, errorHandler };
+function notFound(req, res) {
+  res.status(404).json({ error: `Not found: ${req.originalUrl}` });
+}
+
+module.exports = { errorHandler, notFound };

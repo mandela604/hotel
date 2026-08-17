@@ -1,12 +1,21 @@
 const router = require('express').Router();
-const ctrl = require('../controllers/bookingController');
+const {
+  listRooms,
+  getRoom,
+  updateRoom,
+  listBookings,
+  getBooking,
+  createBooking,
+  updateBooking,
+  checkout,
+} = require('../controllers/bookingController');
 
-router.get('/', ctrl.listBookings);
-router.post('/sync', ctrl.syncBookings);
-router.post('/', ctrl.createBooking);
-router.get('/:id', ctrl.getBooking);
-router.put('/:id', ctrl.updateBooking);
-router.patch('/:id/status', ctrl.setStatus);
-router.delete('/:id', ctrl.cancelBooking);
+router.get('/', listRooms);
+router.get('/list', listBookings);
+router.post('/list', createBooking);
+router.put('/list/:id', updateBooking);
+router.post('/list/:id/checkout', checkout);
+router.get('/:id', getRoom);
+router.put('/:id', updateRoom);
 
 module.exports = router;

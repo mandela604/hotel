@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/staffController');
 
-router.get('/', ctrl.listStaff);
-router.get('/:id', ctrl.getStaff);
-router.post('/', ctrl.createStaff);
-router.put('/:id', ctrl.updateStaff);
-router.delete('/:id', ctrl.deleteStaff);
+router.get('/',          ctrl.list);
+router.post('/',         ctrl.create);
+router.put('/:id',       ctrl.update);
+router.delete('/:id',    ctrl.remove);
+router.put('/:id/permissions', ctrl.updatePermissions);
 
 module.exports = router;

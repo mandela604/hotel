@@ -154,14 +154,7 @@
               <label class="form-label">Department <span id="deptLockNote" style="display:none;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);">🔒 locked</span></label>
               <select class="form-select" id="fDept">
                 <option value="">Select department…</option>
-                <option>Housekeeping</option>
-                <option>Kitchen</option>
-                <option>Restaurant</option>
-                <option>Front Desk</option>
-                <option>Maintenance</option>
-                <option>Pool &amp; Bar</option>
-                <option>Admin</option>
-                <option>IT</option>
+                <option>Store</option>
               </select>
             </div>
             <div class="form-group">
@@ -173,7 +166,9 @@
             </div>
             <div class="form-group">
               <label class="form-label">Supplier (optional)</label>
-              <input class="form-input" type="text" id="fSupplier" placeholder="e.g. Zenith Supplies Ltd.">
+              <select class="form-select" id="fSupplier">
+                <option value="">Select supplier…</option>
+              </select>
             </div>
             <div class="form-group">
               <label class="form-label">Requested By <span id="byLockNote" style="display:none;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);">🔒 locked</span></label>
@@ -271,6 +266,8 @@ const EDIT_ID = new URLSearchParams(location.search).get('id');
 const EDIT_MODE = !!EDIT_ID;
 let editingPR = null; // populated in init() when EDIT_MODE
 
+const session = ProcurementService.resolveSession();
+
 const shell = ProcurementShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
@@ -278,7 +275,7 @@ const shell = ProcurementShell.attach({
   pageTitle:     EDIT_MODE ? 'Edit Purchase Order' : 'New Purchase Order',
   pageSubtitle:  EDIT_MODE ? 'Update an existing purchase order' : 'Create and track purchase orders',
   apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
-  user:          { name: 'Procurement Officer', initials: 'PO' },
+  user:          { name: session.name, initials: session.initials },
 });
 
 /* This page is call-and-render only — every bit of business logic (PR/PO
@@ -287,7 +284,7 @@ const shell = ProcurementShell.attach({
    just gathers what's on screen and hands it to
    ProcurementService.createPurchaseOrder() / .updatePurchaseOrder(). */
 
-function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+const fmtN = ProcurementService.fmtN;
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function showToast(msg, type='success'){
@@ -337,6 +334,20 @@ function showItemSuggestions(query){
 }
 function hideItemSuggestions(){
   document.getElementById('itemSuggestDropdown').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════
+   SUPPLIER OPTIONS — always sourced through
+   ProcurementService.getSuppliers(), which branches on
+   CONFIG.USE_PROD internally. Never read DEMO_SUPPLIERS
+   directly here.
+═══════════════════════════════════════════════ */
+async function loadSupplierOptions(selected){
+  const sel = document.getElementById('fSupplier');
+  const cur = selected != null ? selected : sel.value;
+  const suppliers = await ProcurementService.getSuppliers();
+  sel.innerHTML = '<option value="">Select supplier…</option>' +
+    suppliers.map(sp => `<option value="${escapeHtml(sp.name)}"${sp.name===cur?' selected':''}>${escapeHtml(sp.name)}</option>`).join('');
 }
 
 /* ═══════════════════════════════════════════════
@@ -542,11 +553,11 @@ function applyEditModeChrome(){
    editingPR.items (qty/price or qty/cost, either
    shape — the service normalizes this on save).
 ═══════════════════════════════════════════════ */
-function populateFromPR(pr){
+async function populateFromPR(pr){
   lockDeptField(pr.dept || '');
   lockRequestedByField(pr.by || '');
   document.getElementById('fPriority').value = pr.priority || 'Normal';
-  document.getElementById('fSupplier').value = pr.supplier || '';
+  await loadSupplierOptions(pr.supplier || '');
   document.getElementById('fNotes').value = pr.notes || '';
 
   items = (pr.items || []).map(it => {
@@ -563,11 +574,11 @@ function populateFromPR(pr){
    just navigates back without saving (see the
    cancelFormBtn handler below).
 ═══════════════════════════════════════════════ */
-function resetForm(){
+async function resetForm(){
   document.getElementById('fDept').value = '';
   document.getElementById('fPriority').value = 'Normal';
-  document.getElementById('fSupplier').value = '';
-  document.getElementById('fRequestedBy').value = (shell.getUser && shell.getUser().name) || '';
+  await loadSupplierOptions('');
+  document.getElementById('fRequestedBy').value = (shell.getUser && shell.getUser().name) || session.name;
   document.getElementById('fNotes').value = '';
   document.getElementById('entryName').value = '';
   document.getElementById('entryQty').value = 1;
@@ -604,27 +615,27 @@ async function handleSubmit(){
   createBtn.disabled = true;
 
   try {
-    const session = ProcurementService.resolveSession();
+    const activeSession = ProcurementService.resolveSession();
 
     if (EDIT_MODE){
-      const pr = await ProcurementService.updatePurchaseOrder(EDIT_ID, basePayload, session);
+      const pr = await ProcurementService.updatePurchaseOrder(EDIT_ID, basePayload, activeSession);
       showToast(`${pr.poNo || pr.prNo} updated.`, 'success');
       window.location.href = 'po-history.html';
       return;
     }
 
     const payload = Object.assign({}, basePayload, {
-      by: document.getElementById('fRequestedBy').value.trim() || 'Procurement Officer',
+      by: document.getElementById('fRequestedBy').value.trim() || activeSession.name,
       date: new Date().toISOString().slice(0,10),
     });
-    const pr = await ProcurementService.createPurchaseOrder(payload, session);
+    const pr = await ProcurementService.createPurchaseOrder(payload, activeSession);
     showToast(`${pr.poNo} created and marked Pending.`, 'success');
 
     if (shell.setPendingBadge){
       const allPRs = await ProcurementService.getPRs();
       shell.setPendingBadge(allPRs.filter(p=>['pending','accountant','gm','md'].includes(p.approvalStage)).length);
     }
-    resetForm();
+    await resetForm();
   } catch (err) {
     showToast(err.message || 'Failed to save purchase order.', 'error');
   } finally {
@@ -649,12 +660,12 @@ document.addEventListener('click', e => {
     if (e.key === 'Enter'){ e.preventDefault(); addItemFromEntry(); }
   });
 });
-document.getElementById('cancelFormBtn').addEventListener('click', () => {
+document.getElementById('cancelFormBtn').addEventListener('click', async () => {
   if (EDIT_MODE){
     window.location.href = 'po-history.html';
     return;
   }
-  resetForm();
+  await resetForm();
   showToast('Form cleared.', 'info');
 });
 document.getElementById('createBtn').addEventListener('click', handleSubmit);
@@ -674,9 +685,9 @@ async function init(){
       return;
     }
     applyEditModeChrome();
-    populateFromPR(editingPR);
+    await populateFromPR(editingPR);
   } else {
-    resetForm();
+    await resetForm();
   }
 }
 init();
