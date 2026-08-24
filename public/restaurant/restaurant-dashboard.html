@@ -174,7 +174,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Pending Transfers from Kitchen</div>
-            <button type="button" class="panel-action" onclick="location.href='restaurant-transfers.html'"><i class="fa-solid fa-arrow-right"></i> Review All</button>
+            <button type="button" class="panel-action" onclick="location.href='restaurant-transfer-history.html'"><i class="fa-solid fa-arrow-right"></i> Review All</button>
           </div>
           <div id="pendingXfer"></div>
         </div>
@@ -227,7 +227,7 @@ function renderKPIs(kpis, stockLen) {
   var salesN   = kpis.todaySalesCount || 0;
 
   document.getElementById('kpiRow').innerHTML =
-    '<a class="kpi-card acc-blue" href="restaurant-transfers.html">' +
+    '<a class="kpi-card acc-blue" href="restaurant-transfer-history.html">' +
       '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Pending Transfers</div></div>' +
       '<div class="kpi-value" style="color:var(--blue);">' + pending + '</div>' +
       '<div class="kpi-trend ' + (pending > 0 ? 'warn' : 'up') + '">' + (pending > 0 ? 'Awaiting review' : 'All clear') + '</div>' +
@@ -303,7 +303,7 @@ function renderPendingTransfers(pending) {
         var meta = t.meal
           ? (t.qty + ' ' + (t.unit || '') + ' · from ' + (t.from || 'Kitchen') + ' · ' + (t.date || ''))
           : (((t.items && t.items.length) || 0) + ' lines · from ' + (t.from || 'Store') + ' · ' + (t.date || ''));
-        return '<a class="list-row" href="restaurant-transfers.html">' +
+        return '<a class="list-row" href="restaurant-transfer-history.html">' +
           '<span class="list-dot" style="background:var(--blue)"></span>' +
           '<div class="list-body"><div class="list-name">' + label + '</div><div class="list-meta">' + meta + '</div></div>' +
           '<span class="chip chip-sent"><i class="fa-solid fa-circle"></i>Sent</span></a>';

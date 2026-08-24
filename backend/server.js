@@ -26,8 +26,13 @@ app.get('/api/health', (req, res) => res.json({ ok: true, service: 'aurum-hotel'
 app.use('/api/auth', require('./routes/auth'));
 
 app.use('/api/dashboard', auth, require('./routes/dashboard'));
-app.use('/api/rooms', auth, require('./routes/bookings'));
-app.use('/api/bookings', auth, require('./routes/bookings'));
+// FIX: was mounted 3x at /api/rooms, /api/bookings, /api/guests — none of
+// which match booking-service.js's CONFIG.API_BASE ('/api/booking',
+// singular). Every prod-mode booking call 404'd. routes/bookings.js
+// already defines its own /rooms, /bookings/:room, /guests/:id paths
+// internally, so it needs exactly ONE mount point, matching every other
+// module's single-mount convention (kitchen, restaurant, gym, poolbar).
+app.use('/api/booking', auth, require('./routes/bookings'));
 app.use('/api/restaurant', auth, require('./routes/restaurant'));
 app.use('/api/poolbar', auth, require('./routes/poolbar'));
 app.use('/api/kitchen', auth, require('./routes/kitchen'));
@@ -38,7 +43,6 @@ app.use('/api/procurement', auth, require('./routes/procurement'));
 app.use('/api/accounting', auth, require('./routes/accounting'));
 app.use('/api/activity', auth, require('./routes/activity'));
 app.use('/api/settings', auth, require('./routes/settings'));
-app.use('/api/guests', auth, require('./routes/bookings'));
 
 app.use(notFound);
 app.use(errorHandler);

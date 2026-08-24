@@ -4,10 +4,15 @@
 
    Session rules:
      USE_DEMO true  → always DEMO_USER
-     USE_DEMO false → GET /api/auth/session
+     USE_DEMO false → GET /api/auth/session (Bearer token)
                       success → real user
                       failure → redirect to LOGIN_URL (no demo fallback)
    Pages read session only via shell.getUser().
+
+   AUTH: matches middleware/auth.js exactly — Bearer JWT in the
+   Authorization header, read from the SAME localStorage key
+   poolbar-service.js's apiFetch() already uses ('gh_token', falling
+   back to 'token'). No cookies anywhere in this flow.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -130,7 +135,7 @@
   .pbs-topright{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
   .pbs-date{ font-size:12px; color:#9aa1b3; display:none; font-weight:600; }
   @media (min-width:640px){ .pbs-date{ display:block; } }
-  .pbs-apibadge{ display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  .pbs-apibadge{ display:none; align-items:center; gap:5px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
     padding:3px 8px; border-radius:20px; background:rgba(247,144,9,0.12); color:#f79009; border:1px solid rgba(247,144,9,.2); white-space:nowrap; }
   .pbs-apibadge.live{ background:rgba(18,183,106,0.12); color:#12b76a; border-color:rgba(18,183,106,.3); }
   .pbs-apibadge .dot{ width:5px; height:5px; border-radius:50%; background:currentColor; animation:pbs-blink 2s infinite; }
@@ -162,10 +167,19 @@
   // ── CONFIG — the only place to change Demo↔Live ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
+    USE_DEMO: false,
     LOGIN_URL: '../login.html',
     DEMO_USER: { name: 'Pool Bar Manager', initials: 'PB', role: 'manager', privilege: 'pool_bar_staff' },
   };
+
+  // Same token lookup as poolbar-service.js's apiFetch() — keeping this
+  // in one place would be even better (a shared auth.js helper), but at
+  // minimum both files now read the SAME keys in the SAME order.
+  function getAuthToken() {
+    try {
+      return localStorage.getItem('gh_token') || localStorage.getItem('token') || '';
+    } catch (e) { return ''; }
+  }
 
   function goLogin(reason) {
     console.warn('[PoolBarShell] Auth failed — redirecting to login:', reason || '');
@@ -176,18 +190,26 @@
 
   /**
    * Demo  → DEMO_USER
-   * Live  → real user from API
-   * Live fail → redirect (never returns demo)
+   * Live  → real user from API, authenticated the SAME way as every
+   *         other API call in this module: Authorization: Bearer <token>,
+   *         matching middleware/auth.js exactly. No cookies.
+   * Live fail (no token, 401/403, bad response) → redirect (never
+   * returns demo).
    */
   async function fetchSession() {
     if (CONFIG.USE_DEMO) {
       return CONFIG.DEMO_USER;
     }
 
+    const token = getAuthToken();
+    if (!token) {
+      goLogin('no auth token in localStorage');
+      return null;
+    }
+
     try {
       const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
-        credentials: 'include',
-        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+        headers: { Authorization: 'Bearer ' + token },
       });
       if (res.status === 401 || res.status === 403) {
         goLogin('HTTP ' + res.status);
@@ -195,15 +217,17 @@
       }
       if (!res.ok) throw new Error('Session API returned ' + res.status);
       const data = await res.json();
-      if (!data || !data.role) {
+      const user = (data && data.data) ? data.data : data; // tolerate {success,data:{...}} or a bare user object
+      if (!user || !user.role) {
         goLogin('missing role');
         return null;
       }
       return {
-        name: data.name,
-        initials: data.initials,
-        role: data.role,
-        privilege: data.privilege || null,
+        name: user.name,
+        initials: user.initials,
+        role: user.role,
+        privilege: user.privilege || null,
+        permissions: user.permissions || null,
       };
     } catch (err) {
       goLogin(err && err.message);

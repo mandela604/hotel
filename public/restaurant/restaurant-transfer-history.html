@@ -10,7 +10,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
-  /* Content stays light regardless of shell theme (same pattern as Sales). */
   .content, .modal-overlay, .toast{
     --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
     --border:#eef0f6; --border2:#dfe3ec;
@@ -37,7 +36,6 @@
   .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  /* KPI cards */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -64,7 +62,6 @@
   .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
-  /* Pagination */
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
   .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:inherit; padding:0 7px; }
@@ -72,7 +69,6 @@
   .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  /* Toolbar */
   .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
   .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; width:100%; }
   .toolbar-row.top{ justify-content:space-between; align-items:flex-end; }
@@ -128,7 +124,6 @@
     .toolbar-top-actions .btn{ flex:1; justify-content:center; }
   }
 
-  /* Panel / table */
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
   .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
@@ -154,9 +149,9 @@
   .chip-rejected{ background:var(--red-bg); color:var(--red); }
   .chip-kitchen{ background:var(--blue-bg); color:var(--blue); }
   .chip-store{ background:var(--purple-bg); color:var(--purple); }
-  /* StoreService requisition statuses (Pending | Partial | Full | Rejected) —
-     used only in the Recently Submitted panel below, separate from the
-     Accepted/Rejected transfer statuses above. */
+  /* Requisitions raised BY Restaurant itself (routed to Store) — distinct
+     from transfers "Kitchen"/"Store" sent TO Restaurant. */
+  .chip-restaurant{ background:var(--amber-bg); color:var(--amber); }
   .chip-partial{ background:var(--blue-bg); color:var(--blue); }
   .chip-full{ background:var(--green-bg); color:var(--green); }
 
@@ -173,7 +168,6 @@
   .btn-ghost{ background:none; border:none; color:var(--text3); font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
   .btn-ghost:hover{ color:var(--gold); }
 
-  /* Request form modal — host stays light; re-theme GraceHotelRequestForm vars */
   #reqModal.modal-overlay{ z-index:320; }
   #reqModal .modal{ width:min(920px,96vw); max-height:min(92vh,900px); overflow-y:auto; padding:20px 22px 22px; }
   #reqModal .modal::before{ background:var(--gold); }
@@ -190,8 +184,6 @@
   #reqFormHost .ghrf-card{ box-shadow:var(--shadow); }
   #reqFormHost .ghrf-btn-submit{ color:#fff; }
 
-  /* Recently Submitted — built here, not by the component (its own docs
-     say that list was intentionally removed from GraceHotelRequestForm). */
   .req-recent{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
   .req-recent-title{ font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:800; margin-bottom:8px; }
   .req-recent-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); font-size:12px; }
@@ -207,7 +199,6 @@
   .act-btn.reject{ border-color:rgba(240,68,56,0.35); color:var(--red); background:var(--red-bg); font-weight:700; }
   .act-btn.reject:hover{ border-color:var(--red); background:rgba(240,68,56,0.2); color:var(--red); }
 
-  /* Modal */
   .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(10,15,30,.52); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
   .modal-overlay.show{ display:flex; }
   .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(560px,96vw); box-shadow:0 32px 80px rgba(15,34,55,.22); animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; position:relative; overflow:hidden; }
@@ -223,6 +214,14 @@
   .modal-title.reject-title{ color:var(--red); }
   .modal-close{ background:var(--surface2); border:1px solid var(--border); color:var(--text2); width:30px; height:30px; border-radius:8px; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .15s; }
   .modal-close:hover{ border-color:var(--red); color:var(--red); }
+
+  /* Wide modal shell for the requisition approval component (mirrors
+     poolbar-requisition-history.html's pattern). */
+  .modal-wide{ width:min(1180px, 96vw); margin:auto; }
+  .modal-close-row{ display:flex; justify-content:flex-end; margin-bottom:8px; }
+  .modal-close-btn{ background:#fff; border:1px solid #eef0f6; color:#6b7280; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .modal-close-btn:hover{ border-color:rgba(47,111,237,0.25); color:#2f6fed; }
+
   .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-bottom:16px; }
   @media (max-width:460px){ .detail-grid{ grid-template-columns:1fr; } }
   .detail-item{ display:flex; flex-direction:column; gap:3px; }
@@ -252,7 +251,6 @@
   .val-note{ font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.5; }
   .val-note strong{ color:var(--text); }
 
-  /* Toast */
   .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:var(--shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); }
   .toast.success{ border-left:3px solid var(--green); }
   .toast.error{ border-left:3px solid var(--red); }
@@ -328,6 +326,7 @@
                 <option value="">All</option>
                 <option value="Kitchen">Kitchen</option>
                 <option value="Store">Store</option>
+                <option value="Restaurant">Restaurant (Self)</option>
               </select>
             </div>
             <div class="flt-group">
@@ -419,7 +418,7 @@
   </div>
 </div>
 
-<!-- DETAIL MODAL -->
+<!-- TRANSFER DETAIL MODAL (Store/Kitchen -> Restaurant pushes only) -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal">
     <div class="modal-header">
@@ -438,6 +437,18 @@
       <button class="btn btn-danger btn-sm" id="dRejectBtn" style="display:none;"><i class="fa-solid fa-ban"></i> Reject</button>
       <button class="btn btn-success btn-sm" id="dAcceptBtn" style="display:none;"><i class="fa-solid fa-check"></i> Accept</button>
     </div>
+  </div>
+</div>
+
+<!-- REQUISITION DETAIL MODAL (GraceHotelStoreApproval, viewerRole:'requester')
+     — used for requisitions Restaurant raised itself (routed to Store),
+     same pattern as poolbar-requisition-history.html. -->
+<div class="modal-overlay" id="reqDetailModal">
+  <div class="modal-wide">
+    <div class="modal-close-row">
+      <button class="modal-close-btn" onclick="closeModal('reqDetailModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="reqDetailContainer" style="background:#fff;border:1px solid #eef0f6;border-radius:14px;box-shadow:0 8px 40px rgba(15,34,55,0.10);overflow:hidden;padding:16px 20px;"></div>
   </div>
 </div>
 
@@ -489,7 +500,10 @@
 <script src="services/restaurant-service.js"></script>
 <script src="../store/data/store-seed.js"></script>
 <script src="../store/services/store-service.js"></script>
+<script src="../kitchen/services/kitchen-service.js"></script>
+<script src="../kitchen/data/kitchen-seed.js"></script>
 <script src="../component/restaurant-shell.js"></script>
+<script src="../component/grace-store-approval.js"></script>
 <script src="../component/grace-request-form.js"></script>
 <script>
 /**
@@ -497,9 +511,16 @@
  * Call + render page: all data & mutations go through RestaurantService.
  * Session + Permissions gate Accept / Reject (same pattern as Sales void).
  *
- * New Requisition form (GraceHotelRequestForm) requires StoreService —
- * see ../store/services/store-service.js — for numbering and persistence.
- * Loaded alongside RestaurantService above.
+ * REQUISITIONS (Restaurant -> Store, raised via "New Requisition"/
+ * GraceHotelRequestForm, section:'restaurant') now appear IN THE MAIN
+ * TABLE alongside transfers (Kitchen/Store -> Restaurant pushes), merged
+ * via getAllRecords(). Clicking a requisition row opens
+ * GraceHotelStoreApproval with viewerRole:'requester' (Accept Delivery /
+ * Report Issue), same pattern as poolbar-requisition-history.html.
+ * Clicking a transfer row keeps the existing plain detail modal +
+ * Accept/Reject flow (RestaurantService.acceptTransfer/rejectTransfer) —
+ * those are Store/Kitchen pushing stock in without a requisition, a
+ * different shape entirely from a StoreService requisition record.
  */
 const shell = RestaurantShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -549,11 +570,9 @@ function waitForSession(maxMs) {
   });
 }
 
-
 function canAcceptFromSession(s) {
   if (!s) return false;
   if (window.Permissions && typeof Permissions.hasPermission === 'function') {
-    // Role-level canApprove (admin/manager) or module override
     if (Permissions.hasPermission(s, 'canApprove', 'restaurant')) return true;
     if (Permissions.hasPermission(s, 'canApprove', null)) return true;
   }
@@ -566,7 +585,6 @@ function canRejectFromSession(s) {
   if (window.Permissions && typeof Permissions.hasPermission === 'function') {
     if (Permissions.hasPermission(s, 'canReject', 'restaurant')) return true;
     if (Permissions.hasPermission(s, 'canReject', null)) return true;
-    // Fall back to canApprove for roles that only declare canApprove
     if (Permissions.hasPermission(s, 'canApprove', 'restaurant')) return true;
     if (Permissions.hasPermission(s, 'canApprove', null)) return true;
   }
@@ -574,7 +592,7 @@ function canRejectFromSession(s) {
   return role === 'admin' || role === 'manager';
 }
 
-/* ── Page state (UI only — data lives in RestaurantService) ─ */
+/* ── Page state (UI only — data lives in RestaurantService / StoreService) ─ */
 const CFG = { PAGE_SIZE: 8 };
 let page = 1;
 let statusFilter = '';
@@ -587,8 +605,11 @@ let fp = null;
 let activeNo = null;
 
 const RS = window.RestaurantService;
+const REQ_DEPT_LABEL = 'Restaurant / Bar'; // must match GraceHotelRequestForm's SECTION_META.restaurant.deptLabel
 
 /* ── Helpers ───────────────────────────────────────────── */
+function isRequisition(t) { return t._kind === 'requisition'; }
+
 function itemsQty(t) {
   return (t.items || []).reduce((sum, i) => sum + (i.qty || 0), 0);
 }
@@ -599,6 +620,7 @@ function itemsSummary(t) {
   return names.slice(0, 2).join(', ') + ' <span class="more">+' + (names.length - 2) + ' more</span>';
 }
 function sourceChip(t) {
+  if (isRequisition(t)) return { cls: 'chip-restaurant', label: 'Restaurant' };
   const src = (t.source || '').toString().toLowerCase();
   if (src === 'store') return { cls: 'chip-store', label: 'Store' };
   return { cls: 'chip-kitchen', label: 'Kitchen' };
@@ -610,8 +632,43 @@ function normalizeSource(t) {
   return s || 'Store';
 }
 
+function rowFrom(t) { return isRequisition(t) ? '—' : (t.from || '—'); }
+function rowSentBy(t) { return isRequisition(t) ? (t.by || '—') : (t.sentBy || '—'); }
+function rowDateSent(t) { return isRequisition(t) ? (t.dateRaisedDisplay || t.dateRaised || '—') : (t.date || '—'); }
+function rowActionDate(t) { return isRequisition(t) ? '—' : (t.actionDate || '—'); }
+function rowHandledBy(t) { return isRequisition(t) ? '—' : (t.status === 'accepted' ? (t.receivedBy || '—') : '—'); }
+
+/* Requisition statuses (Pending/Partial/Full/Completed/Disputed/Rejected)
+ * bucketed into the same three status-pill filters transfers use. */
+function requisitionBucket(status) {
+  if (status === 'Pending' || status === 'Partial') return 'pending';
+  if (status === 'Full' || status === 'Completed') return 'accepted';
+  if (status === 'Rejected' || status === 'Disputed') return 'rejected';
+  return 'pending';
+}
+function statusBucket(t) {
+  return isRequisition(t) ? requisitionBucket(t.status) : t.status;
+}
+function statusChipInfo(t) {
+  if (!isRequisition(t)) {
+    const label = t.status === 'pending' ? 'Pending' : t.status === 'accepted' ? 'Accepted' : 'Rejected';
+    return { cls: 'chip-' + t.status, label };
+  }
+  switch (t.status) {
+    case 'Pending':   return { cls: 'chip-pending',  label: 'Pending' };
+    case 'Partial':   return { cls: 'chip-partial',  label: 'Partially Issued' };
+    case 'Full':      return { cls: 'chip-full',     label: 'Issued — Awaiting You' };
+    case 'Completed': return { cls: 'chip-accepted', label: 'Completed' };
+    case 'Disputed':  return { cls: 'chip-rejected', label: 'Disputed' };
+    case 'Rejected':  return { cls: 'chip-rejected', label: 'Rejected' };
+    default:          return { cls: '', label: t.status || '—' };
+  }
+}
+
+/* Merges Restaurant's own pending/history transfers (Kitchen/Store ->
+ * Restaurant pushes) with every StoreService requisition Restaurant has
+ * raised itself (Restaurant -> Store), at any status. */
 function getAllRecords() {
-  // Service keeps pending + history separate; merge for the table.
   const pending = (RS.state.pending || []).map((t) =>
     Object.assign({}, t, {
       status: 'pending',
@@ -619,12 +676,19 @@ function getAllRecords() {
       actionRemarks: '',
       actionDate: '',
       source: normalizeSource(t),
+      _kind: 'transfer',
     })
   );
   const history = (RS.state.history || []).map((h) =>
-    Object.assign({}, h, { source: normalizeSource(h) })
+    Object.assign({}, h, { source: normalizeSource(h), _kind: 'transfer' })
   );
-  return pending.concat(history);
+  let requisitions = [];
+  if (window.StoreService && typeof StoreService.getRequisitions === 'function') {
+    requisitions = StoreService.getRequisitions({ mode: 'store_issue' })
+      .filter((r) => r.dept === REQ_DEPT_LABEL)
+      .map((r) => Object.assign({}, r, { _kind: 'requisition' }));
+  }
+  return pending.concat(history, requisitions);
 }
 
 /* ── Date range ────────────────────────────────────────── */
@@ -752,14 +816,16 @@ function getFiltered() {
       (t.no || '').toLowerCase().includes(q) ||
       (t.batchNo || '').toLowerCase().includes(q) ||
       (t.sentBy || '').toLowerCase().includes(q) ||
+      (t.by || '').toLowerCase().includes(q) ||
       (t.receivedBy || '').toLowerCase().includes(q) ||
       (t.items || []).some((i) => (i.name || '').toLowerCase().includes(q));
     const mItem = !item || (t.items || []).some((i) => i.name === item);
-    const mSource = !source || normalizeSource(t) === source;
-    const mStatus = !statusFilter || t.status === statusFilter;
+    const mSource = !source || (isRequisition(t) ? source === 'Restaurant' : normalizeSource(t) === source);
+    const mStatus = !statusFilter || statusBucket(t) === statusFilter;
     let mDate = true;
     if (rangeStart && rangeEnd) {
-      const td = RS.dateOnly(RS.parseStamp(t.date));
+      const rawDate = isRequisition(t) ? (t.dateRaised || t.dateRaisedDisplay) : t.date;
+      const td = RS.dateOnly(RS.parseStamp(rawDate) || (rawDate ? new Date(rawDate) : null));
       if (!td || td < rangeStart || td > rangeEnd) mDate = false;
     }
     return mq && mItem && mSource && mStatus && mDate;
@@ -767,8 +833,13 @@ function getFiltered() {
 
   rows = rows.sort((a, b) => {
     let cmp = 0;
-    if (sortKey === 'date') cmp = (RS.parseStamp(a.date) || 0) - (RS.parseStamp(b.date) || 0);
-    else if (sortKey === 'qty') cmp = itemsQty(a) - itemsQty(b);
+    if (sortKey === 'date') {
+      const da = isRequisition(a) ? (a.dateRaised || a.dateRaisedDisplay) : a.date;
+      const db = isRequisition(b) ? (b.dateRaised || b.dateRaisedDisplay) : b.date;
+      const ta = (RS.parseStamp(da) || (da ? new Date(da) : null) || 0);
+      const tb = (RS.parseStamp(db) || (db ? new Date(db) : null) || 0);
+      cmp = (ta.getTime ? ta.getTime() : ta) - (tb.getTime ? tb.getTime() : tb);
+    } else if (sortKey === 'qty') cmp = itemsQty(a) - itemsQty(b);
     else if (sortKey === 'no') cmp = (a.no || '').localeCompare(b.no || '');
     return sortDir === 'desc' ? -cmp : cmp;
   });
@@ -912,7 +983,9 @@ function renderTable() {
       : pageRows
           .map((t) => {
             const src = sourceChip(t);
-            const showActions = t.status === 'pending' && (canAccept || canReject);
+            const st = statusChipInfo(t);
+            const isReq = isRequisition(t);
+            const showTransferActions = !isReq && t.status === 'pending' && (canAccept || canReject);
             return `
       <tr onclick="openDetail('${t.no}')">
         <td style="font-weight:700;">${t.no}${
@@ -922,20 +995,20 @@ function renderTable() {
             }</td>
         <td><span class="chip ${src.cls}"><i class="fa-solid fa-circle"></i>${src.label}</span></td>
         <td class="items-summary">${itemsSummary(t)}</td>
-        <td>${t.from || '—'}</td>
-        <td>${t.sentBy || '—'}</td>
-        <td>${t.date || '—'}</td>
-        <td class="${t.status === 'pending' ? 'muted' : ''}">${t.actionDate || '—'}</td>
-        <td class="${t.status !== 'accepted' ? 'muted' : ''}">${
-              t.status === 'accepted' ? t.receivedBy || '—' : '—'
-            }</td>
-        <td><span class="chip chip-${t.status}"><i class="fa-solid fa-circle"></i>${
-              t.status === 'pending' ? 'Pending' : t.status === 'accepted' ? 'Accepted' : 'Rejected'
-            }</span></td>
+        <td>${rowFrom(t)}</td>
+        <td>${rowSentBy(t)}</td>
+        <td>${rowDateSent(t)}</td>
+        <td class="${isReq || t.status === 'pending' ? 'muted' : ''}">${rowActionDate(t)}</td>
+        <td class="${!isReq && t.status === 'accepted' ? '' : 'muted'}">${rowHandledBy(t)}</td>
+        <td><span class="chip ${st.cls}"><i class="fa-solid fa-circle"></i>${st.label}</span></td>
         <td class="no-print" onclick="event.stopPropagation()">
           ${
-            showActions
+            isReq
               ? `<div class="act-btns">
+            <button class="act-btn" onclick="openDetail('${t.no}')"><i class="fa-solid fa-eye"></i> View</button>
+          </div>`
+              : showTransferActions
+                ? `<div class="act-btns">
             <button class="act-btn" onclick="openDetail('${t.no}')"><i class="fa-solid fa-eye"></i> View</button>
             ${
               canAccept
@@ -948,7 +1021,7 @@ function renderTable() {
                 : ''
             }
           </div>`
-              : `<div class="act-btns">
+                : `<div class="act-btns">
             <button class="act-btn" onclick="openDetail('${t.no}')"><i class="fa-solid fa-eye"></i> View</button>
           </div>`
           }
@@ -968,7 +1041,6 @@ function render() {
   renderActiveChips();
   renderTable();
 
-  // Keep shell badges in sync with TOTAL pending (not filtered view)
   const pendingN = (RS.state.pending || []).length;
   if (shell.setPendingBadge) shell.setPendingBadge(pendingN);
   if (shell.setNotifBadge) shell.setNotifBadge(pendingN);
@@ -990,11 +1062,17 @@ function bindHeaderSort() {
   });
 }
 
-/* ── Detail modal ──────────────────────────────────────── */
+/* ── Detail — branches by kind ─────────────────────────── */
 function openDetail(no) {
   activeNo = no;
   const t = getAllRecords().find((x) => x.no === no);
   if (!t) return;
+
+  if (isRequisition(t)) {
+    openRequisitionDetail(no);
+    return;
+  }
+
   const src = sourceChip(t);
 
   const modalEl = document.querySelector('#detailModal .modal');
@@ -1065,22 +1143,76 @@ function openDetail(no) {
   document.getElementById('detailModal').classList.add('show');
 }
 
-/* ── Accept / Reject (service mutations) ───────────────── */
+/* ── Requisition detail — GraceHotelStoreApproval, viewerRole:'requester' ── */
+let reqDetailWidget = null;
+function openRequisitionDetail(no) {
+  const container = document.getElementById('reqDetailContainer');
+  container.innerHTML = '';
+  if (reqDetailWidget) { try { reqDetailWidget.destroy(); } catch (e) {} reqDetailWidget = null; }
+
+  if (!window.GraceHotelStoreApproval || !window.StoreService) {
+    container.innerHTML = '<div style="padding:24px;color:var(--text3);text-align:center;">Approval component or Store service unavailable.</div>';
+    document.getElementById('reqDetailModal').classList.add('show');
+    return;
+  }
+
+  reqDetailWidget = GraceHotelStoreApproval.attach('#reqDetailContainer', {
+    reqNo: no,
+    storeService: window.StoreService,
+    viewerRole: 'requester',
+    showBackButton: false,
+    onConfirm: function () {
+      showToast(no + ' marked Completed.', 'success');
+      render();
+    },
+    onDispute: function () {
+      showToast(no + ' marked Disputed.', 'error');
+      render();
+    },
+  });
+  document.getElementById('reqDetailModal').classList.add('show');
+}
+
+/* ── Accept / Reject (transfer mutations only) ─────────── */
 function openAccept(no) {
   if (!canAccept) {
     showToast("You don't have permission to accept transfers.", 'error');
     return;
   }
   activeNo = no;
-  const t = (RS.state.pending || []).find((x) => x.no === no);
+
+  // First, try RestaurantService pending (Store/Kitchen pushes)
+  let t = (RS.state.pending || []).find((x) => x.no === no);
+
+  // If not found, check kitchen transfers (from KitchenService)
+  if (!t && window.KitchenService) {
+    const kt = (KitchenService.state.transfers || []).find(x => x.transferNo === no);
+    if (kt && kt.status === 'sent') {
+      t = {
+        ...kt,
+        no: kt.transferNo,
+        items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }],
+        status: 'pending',
+        from: 'Kitchen',
+        sentBy: kt.sentBy,
+        date: kt.dateSent,
+        source: 'Kitchen',
+        _kind: 'transfer',
+        _isKitchen: true,  // flag to handle accept differently
+      };
+    }
+  }
+
   if (!t) return;
-  document.getElementById('acName').textContent =
-    t.no + (t.batchNo ? ' — ' + t.batchNo : '');
+
+  // populate modal...
+  document.getElementById('acName').textContent = t.no + (t.batchNo ? ' — ' + t.batchNo : '');
   document.getElementById('acQty').textContent = String((t.items || []).length);
   document.getElementById('acReceivedBy').value = (session && session.name) || '';
   document.getElementById('acRemarks').value = '';
   document.getElementById('acceptModal').classList.add('show');
 }
+
 
 async function confirmAccept() {
   if (!canAccept) {
@@ -1103,7 +1235,6 @@ async function confirmAccept() {
       t.no + ' accepted — ' + (t.items || []).length + ' item line(s) added to stock.',
       'success'
     );
-    // onChange listener will re-render; call render as safety net
     render();
   } catch (e) {
     showToast(e.message || 'Accept failed.', 'error');
@@ -1148,30 +1279,10 @@ async function confirmReject() {
 }
 
 /* ── New Requisition (GraceHotelRequestForm) ─────────────
- * This wires up against the ACTUAL component in
- * ../component/grace-request-form.js — attach() only accepts:
- *   section, currentUser, service, storeService, departments,
- *   catalog, getCatalog, defaultMode, onSubmit, onModeChange.
- * There is no pageSize / showRecent / fulfillCenters / onOpenRequest
- * option on that component — those did nothing and are gone.
- *
- * `section: 'restaurant'` locks routing (always → Store), "Requested By"
+ * section:'restaurant' locks routing (always → Store), "Requested By"
  * (read-only, from currentUser), and Department (always "Restaurant / Bar").
  * The item catalog comes from Restaurant's own stock via `service: RS`.
- * StoreService owns requisition numbering + persistence — this page never
- * touches req:<NO> / req-index itself.
- *
- * The component copies `currentUser` into an internal object at attach()
- * time and exposes no way to update it afterwards (no setCurrentUser,
- * and reset() re-reads that same internal copy — not a fresh session).
- * So each time the modal opens we destroy the previous instance and
- * re-attach with the current session's name, rather than trying to
- * mutate anything after the fact.
- *
- * The component also intentionally does NOT render a "Recently
- * Submitted" list any more (see its own header docs) — that panel
- * below (#reqRecentList) is built here instead, reading directly from
- * StoreService.getRequisitions({ mode: 'store_issue' }).
+ * StoreService owns requisition numbering + persistence.
  * ─────────────────────────────────────────────────────── */
 let reqForm = null;
 let canRaiseReq = false;
@@ -1197,13 +1308,13 @@ function buildRequestForm() {
     return null;
   }
   return GraceHotelRequestForm.attach('#reqFormHost', {
-    section: 'restaurant',              // fixed routing: Restaurant -> Store
-    service: RS,                        // Restaurant's own stock -> item catalog
-    storeService: window.StoreService,  // owns numbering + persistence
+    section: 'restaurant',
+    service: RS,
+    storeService: window.StoreService,
     currentUser: { name: (session && session.name) || '' },
     onSubmit: function () {
       renderRecentRequests();
-      render(); // refresh badges that depend on RestaurantService state
+      render();
     },
   });
 }
@@ -1213,9 +1324,6 @@ function openRequestForm() {
     showToast("You don't have permission to raise requisitions.", 'error');
     return;
   }
-  // Rebuild every time the modal opens so "Requested By" reflects the
-  // current session — see the note above on why this isn't a simple
-  // form.reset() call.
   if (reqForm) {
     reqForm.destroy();
     reqForm = null;
@@ -1237,7 +1345,7 @@ function renderRecentRequests() {
     return;
   }
   const rows = StoreService.getRequisitions({ mode: 'store_issue' })
-    .filter((r) => r.dept === 'Restaurant / Bar')
+    .filter((r) => r.dept === REQ_DEPT_LABEL)
     .slice(0, 5);
   if (!rows.length) {
     el.innerHTML = '<div class="req-recent-empty">No requisitions submitted yet.</div>';
@@ -1262,7 +1370,7 @@ function renderRecentRequests() {
 function closeModal(id) {
   document.getElementById(id).classList.remove('show');
 }
-['detailModal', 'acceptModal', 'rejectModal', 'reqModal'].forEach((id) => {
+['detailModal', 'reqDetailModal', 'acceptModal', 'rejectModal', 'reqModal'].forEach((id) => {
   document.getElementById(id).addEventListener('click', function (e) {
     if (e.target === this) closeModal(id);
   });
@@ -1293,14 +1401,51 @@ function printPage() {
   window.print();
 }
 
+function getAllRecords() {
+  const pending = (RS.state.pending || []).map(t => ({ ...t, _kind: 'transfer' }));
+  const history = (RS.state.history || []).map(h => ({ ...h, _kind: 'transfer' }));
+  
+  let kitchenTransfers = [];
+  if (window.KitchenService && KitchenService.state.transfers) {
+    kitchenTransfers = KitchenService.state.transfers
+      .filter(t => t.status === 'sent') // only pending
+      .map(t => ({
+        ...t,
+        no: t.transferNo,
+        items: [{ name: t.meal, qty: t.quantity, unit: t.unit }],
+        status: 'pending',
+        from: 'Kitchen',
+        sentBy: t.sentBy,
+        date: t.dateSent,
+        source: 'Kitchen',
+        _kind: 'transfer'
+      }));
+  }
+
+  let requisitions = [];
+  if (window.StoreService) {
+    requisitions = StoreService.getRequisitions({ mode: 'store_issue' })
+      .filter(r => r.dept === 'Restaurant / Bar')
+      .map(r => ({ ...r, _kind: 'requisition' }));
+  }
+
+  return [...pending, ...history, ...kitchenTransfers, ...requisitions];
+}
 /* ── Init (call service, then render) ──────────────────── */
 async function init() {
+  if (window.KitchenService) {
+  try {
+    await KitchenService.loadAll();
+    KitchenService.onChange(render); // optional, keeps UI fresh
+  } catch (e) {
+    console.warn('KitchenService load failed', e);
+  }
+}
   session = await waitForSession(800);
   canAccept = canAcceptFromSession(session);
   canReject = canRejectFromSession(session);
   canRaiseReq = canRaiseFromSession(session);
 
-  // Hide New Requisition when user cannot create
   const btnReq = document.getElementById('btnNewReq');
   if (btnReq && !canRaiseReq) btnReq.style.display = 'none';
 
@@ -1313,7 +1458,6 @@ async function init() {
   bindStatusPills();
   bindHeaderSort();
 
-  // Subscribe to service changes (accept/reject/load from other tabs)
   RS.onChange(function () {
     render();
   });
@@ -1325,14 +1469,12 @@ async function init() {
     showToast('Could not load transfer data.', 'error');
   }
 
-  // StoreService backs the New Requisition form (numbering, persistence).
-  // Load it alongside RestaurantService so it's ready the moment the
-  // modal opens, not lazily on first click.
   if (window.StoreService) {
     try {
       await StoreService.loadAll();
-      StoreService.onChange(function (state, reason) {
-        if (reason === 'requisition:submit') renderRecentRequests();
+      StoreService.onChange(function () {
+        renderRecentRequests();
+        render();
       });
     } catch (e) {
       console.warn('[TransferHistory] StoreService.loadAll failed:', e);
@@ -1341,7 +1483,6 @@ async function init() {
     console.warn('[TransferHistory] StoreService script not found — New Requisition will be unavailable.');
   }
 
-  // loadAll already emits 'load' → onChange → render; render() as safety net
   render();
 }
 init();

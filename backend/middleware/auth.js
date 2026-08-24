@@ -4,18 +4,21 @@ const User = require('../models/User');
 async function auth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
+    return res.status(401).json({ success: false, error: 'Authorization token required' });
   }
 
   try {
     const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET || 'aurum_hotel_jwt_secret_key_2026';
+    const decoded = jwt.verify(token, secret);
     const user = await User.findById(decoded.id).select('-password');
-    if (!user) return res.status(401).json({ error: 'User not found' });
+    if (!user || user.status === 'inactive') {
+      return res.status(401).json({ success: false, error: 'Account inactive or session invalid' });
+    }
     req.user = user;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'Invalid or expired token' });
+    res.status(401).json({ success: false, error: 'Invalid or expired authentication token' });
   }
 }
 

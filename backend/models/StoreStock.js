@@ -1,0 +1,17 @@
+const mongoose = require('mongoose');
+
+const storeStockSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 120 },
+    cat: { type: String, required: true, trim: true, maxlength: 60, default: 'Other' },
+    unit: { type: String, required: true, trim: true, maxlength: 40, default: 'unit' },
+    qty: { type: Number, required: true, default: 0, min: 0 },
+    cost: { type: Number, required: true, default: 0, min: 0 },
+    min: { type: Number, required: true, default: 0, min: 0 },
+  },
+  { timestamps: true }
+);
+
+storeStockSchema.index({ name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } });
+
+module.exports = mongoose.model('StoreStock', storeStockSchema);

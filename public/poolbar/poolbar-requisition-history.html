@@ -4,13 +4,12 @@
 <meta charset="UTF-8">
 <title>Requisition History | Grace Pool Bar</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
   :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
   html, body{ height:100%; overflow:hidden; }
-  body{ font-family:'Outfit',sans-serif; font-size:14px; transition:background .3s,color .3s; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:14px; transition:background .3s,color .3s; }
   .app{ display:flex; height:100vh; overflow:hidden; }
   .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
   @media (max-width:768px){ .main{ margin-left:0 !important; } }
@@ -28,13 +27,18 @@
     --blue:#2f6fed; --blue-bg:#eaf1ff;
     --purple:#8b5cf6; --purple-bg:#f4efff;
   }
+  /* Content now scrolls as a whole (matches the Stock page pattern):
+     overflow-y:auto on .content itself, .panel is a normal block that
+     grows to its natural height instead of being pinned to flex:1 with
+     its own internal scroll container. The table's sticky header still
+     works because .content is the nearest scrolling ancestor. */
   .content{
     flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0;
     background:var(--bg); color:var(--text);
   }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; flex-shrink:0; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden;
@@ -47,6 +51,7 @@
   .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
   .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
   .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
   .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
   .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
   .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
@@ -56,41 +61,45 @@
   .ic-purple{ background:var(--purple-bg); color:var(--purple); }
   .ic-red{ background:var(--red-bg); color:var(--red); }
   .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
-  .kpi-value{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--text); line-height:1; margin:4px 0 6px; }
-  @media (max-width:420px){ .kpi-value{ font-size:21px; } }
+  .kpi-value{ font-size:24px; font-weight:800; color:var(--text); line-height:1; margin:4px 0 6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:19px; } }
   .kpi-trend{ font-size:11px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 
-  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; flex-shrink:0; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
-  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:'Outfit',sans-serif; padding:0 7px; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:inherit; padding:0 7px; }
   .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
-  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
   .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
   .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
   .toolbar-row.top{ justify-content:space-between; }
   .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
   .toolbar-top-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
   .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:600; padding-left:2px; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
   .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
   .search-box:focus-within{ border-color:var(--gold-border); }
-  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; width:100%; }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:13px; width:100%; }
   .search-box input::placeholder{ color:var(--text3); }
-  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:'Outfit',sans-serif; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:inherit; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
   .filter-select:focus{ border-color:var(--gold-border); }
   .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
   .status-pill:hover{ border-color:var(--gold-border); }
   .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
   .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-  .status-pill.on.completed{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
-  .status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
-  .status-pill.on.transfer{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
+  .status-pill.on.Pending{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
+  .status-pill.on.Partial{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
+  .status-pill.on.Full{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.Completed{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.Disputed{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
+  .status-pill.on.Rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
+  .status-pill.on.Transfer{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
   .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
-  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:'Outfit',sans-serif; font-size:11.5px; font-weight:600; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
   .btn-ghost:hover{ color:var(--gold); }
 
   @media (max-width:700px){
@@ -104,12 +113,16 @@
     .toolbar-top-actions .btn{ flex:1; justify-content:center; }
   }
 
-  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  /* Panel is now a normal block (flex-shrink:0) that grows to its
+     natural (full table) height — no more internal flex:1 scroll
+     container. .content scrolls the whole page instead, same as the
+     Stock page's #tableSlot pattern. */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; flex-shrink:0; }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
-  .panel-title{ font-size:13px; font-weight:700; color:var(--text); }
-  .tbl-wrap{ overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
-  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:600; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; position:sticky; top:0; z-index:2; }
   thead th[data-sortkey]:hover{ color:var(--gold); }
   thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
   thead th.no-sort{ cursor:default; }
@@ -124,23 +137,25 @@
 
   .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
   .chip i{ font-size:6px; }
-  .chip-completed, .chip-full{ background:var(--green-bg); color:var(--green); }
-  .chip-rejected{ background:var(--red-bg); color:var(--red); }
+  .chip-completed, .chip-issued{ background:var(--green-bg); color:var(--green); }
+  .chip-rejected, .chip-disputed{ background:var(--red-bg); color:var(--red); }
   .chip-transfer{ background:var(--blue-bg); color:var(--blue); }
   .chip-partial{ background:var(--blue-bg); color:var(--blue); }
   .chip-pending{ background:var(--amber-bg); color:var(--amber); }
   .chip-urgent{ background:var(--red-bg); color:var(--red); }
   .chip-normal{ background:var(--blue-bg); color:var(--blue); }
-  .chip-req{ background:var(--purple-bg); color:var(--purple); }
-  .chip-store{ background:var(--amber-bg); color:var(--amber); }
+  /* Source chips now answer "who did this come from" directly:
+     Store (pushed to Pool Bar) or Pool Bar (raised by Pool Bar itself). */
+  .chip-src-store{ background:var(--amber-bg); color:var(--amber); }
+  .chip-src-poolbar{ background:var(--purple-bg); color:var(--purple); }
 
-  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn-order{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
+  .btn-order{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:700; }
   .btn-order:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
-  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
 
   .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,34,55,0.45); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
@@ -183,7 +198,7 @@
   .xfer-meta{ font-size:12px; color:#9aa1b3; margin-top:4px; }
   .xfer-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
   @media (max-width:600px){ .xfer-grid{ grid-template-columns:1fr 1fr; } }
-  .xfer-field label{ display:block; font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:#9aa1b3; font-weight:600; margin-bottom:3px; }
+  .xfer-field label{ display:block; font-size:9.5px; text-transform:uppercase; letter-spacing:1px; color:#9aa1b3; font-weight:700; margin-bottom:3px; }
   .xfer-field div{ font-size:13px; color:#1c2440; font-weight:500; }
   .xfer-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
   .xfer-table th{ text-align:left; padding:8px 10px; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#9aa1b3; background:#f4f6fb; border-bottom:1px solid #eef0f6; }
@@ -205,6 +220,7 @@
     #pbs-sidebar, #pbs-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
     .main{ margin-left:0 !important; }
     body{ background:#fff !important; color:#000 !important; }
+    .content{ overflow:visible !important; height:auto !important; }
     .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
     .tbl-wrap{ overflow:visible !important; }
   }
@@ -224,9 +240,13 @@
               <span class="flt-label">Status / Type</span>
               <div class="status-pills" id="statusPills">
                 <div class="status-pill on all" data-status="">All</div>
-                <div class="status-pill completed" data-status="Completed"><span class="pdot" style="background:var(--green)"></span>Completed</div>
-                <div class="status-pill rejected" data-status="Rejected"><span class="pdot" style="background:var(--red)"></span>Rejected</div>
-                <div class="status-pill transfer" data-status="Transfer"><span class="pdot" style="background:var(--blue)"></span>Store Transfer</div>
+                <div class="status-pill" data-status="Pending"><span class="pdot" style="background:var(--amber)"></span>Pending</div>
+                <div class="status-pill" data-status="Partial"><span class="pdot" style="background:var(--blue)"></span>Partial</div>
+                <div class="status-pill" data-status="Full"><span class="pdot" style="background:var(--green)"></span>Issued</div>
+                <div class="status-pill" data-status="Completed"><span class="pdot" style="background:var(--green)"></span>Completed</div>
+                <div class="status-pill" data-status="Disputed"><span class="pdot" style="background:var(--red)"></span>Disputed</div>
+                <div class="status-pill" data-status="Rejected"><span class="pdot" style="background:var(--red)"></span>Rejected</div>
+                <div class="status-pill" data-status="Transfer"><span class="pdot" style="background:var(--blue)"></span>Store Transfer</div>
               </div>
             </div>
             <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
@@ -240,8 +260,8 @@
               <span class="flt-label">Source</span>
               <select class="filter-select" id="fSource">
                 <option value="">All sources</option>
-                <option value="requisition">Pool Bar Requisition</option>
-                <option value="store_push">Store Transfer</option>
+                <option value="requisition">Pool Bar</option>
+                <option value="store_push">Store</option>
               </select>
             </div>
             <div class="flt-group">
@@ -268,7 +288,7 @@
       </div>
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">History — Requisitions &amp; Store Transfers</div>
+          <div class="panel-title">History — Requisitions to Store &amp; Store Transfers In</div>
           <span class="toolbar-count" id="tblCount">—</span>
         </div>
         <div class="tbl-wrap">
@@ -338,26 +358,37 @@
  * Pure DOM-wiring page. It does NOT touch window.storage/localStorage,
  * does NOT keep its own seed data, and does NOT compute history rows,
  * filter them, sort them, or work out KPI totals itself — all of that
- * now comes straight from PoolBarService:
+ * comes straight from PoolBarService:
  *
  *   - PBS.getDepartmentHistory(dept) -> merges Pool Bar's own store
- *     transfers with StoreService requisitions addressed to Pool Bar
- *     (status Full/Rejected). This page never touches PBS.state
- *     .transfers or SS.getRequisitions() to build the table itself.
+ *     transfers (Store -> Pool Bar, no requisition involved) with EVERY
+ *     StoreService requisition Pool Bar has raised (Pool Bar -> Store),
+ *     at any status — Pending/Partial included, not just resolved ones.
  *   - PBS.filterHistory(rows, filters) -> search/status/priority/source.
  *   - PBS.sortHistory(rows, sortKey, sortDir) -> date/items sorting.
- *   - PBS.getHistoryKPIs(rows) -> completed/rejected/transfers/totalUnits.
+ *   - PBS.getHistoryKPIs(rows) -> pending/completed/rejected/transfers/units.
  *   - PBS.getHistoryStatusDisplay(kind, status) -> {label, cls} for the
- *     status chip — the page only decides which CSS class renders,
- *     never what a given status *means*.
+ *     status chip.
  *   - GraceHotelRequestForm -> the "New Requisition" modal, attached
  *     with section:'poolbar' so routing/department/catalog are all
  *     locked/derived by the component + PoolBarService.
- *   - GraceHotelStoreApproval -> renders requisition detail unchanged.
+ *   - GraceHotelStoreApproval -> the detail view, attached with
+ *     viewerRole:'requester' since Pool Bar is reviewing what Store
+ *     sent back, not approving/issuing it.
  *
- * Anything left on this page (which pill/column is active, table
- * pagination) is pure UI state — it's never written back anywhere
- * except through the services above.
+ * TABLE LAYOUT: matches the Stock page — .content is the single scroll
+ * container for the whole page (KPIs, toolbar, and table all scroll
+ * together), and .panel/.tbl-wrap render at their natural height rather
+ * than being pinned to a fixed viewport slice with their own internal
+ * scrollbar. The table header stays sticky (position:sticky; top:0)
+ * relative to .content as you scroll. Rows beyond the current page are
+ * still paginated (PAGE_SIZE below).
+ *
+ * SOURCE COLUMN: answers "did this come from Store, or did Pool Bar
+ * raise it itself" directly — chip reads "Store" (a transfer Store
+ * pushed to Pool Bar without being asked) or "Pool Bar" (a requisition
+ * Pool Bar raised itself, routed to Store) — not the generic
+ * "Requisition" / "Store Transfer" labels used before.
  */
 
 const shell = PoolBarShell.attach({
@@ -365,7 +396,7 @@ const shell = PoolBarShell.attach({
   topbarTarget:  '#topbarSlot',
   activeFile:    'poolbar-requisition-history.html',
   pageTitle:     'Requisition History',
-  pageSubtitle:  'Completed / rejected requisitions and Store transfers into Pool Bar',
+  pageSubtitle:  'Requisitions sent to Store and Store transfers into Pool Bar',
 });
 
 const PBS = window.PoolBarService;
@@ -412,13 +443,16 @@ function isTransfer(r) { return r._kind === 'transfer'; }
 
 /* ── Presentational-only mapping: which chip class / label to show.
  * Status meaning comes from PBS.getHistoryStatusDisplay(); source
- * labelling (Requisition vs Store Transfer) is pure page-level chip
- * styling with no business rule behind it, so it stays here. */
+ * labelling is pure page-level chip styling with no business rule
+ * behind it, so it stays here — but it now says WHO raised/sent the
+ * item (Store vs Pool Bar), which is the actually useful answer. */
 function displayStatus(r) {
   return PBS.getHistoryStatusDisplay(r._kind, r.status);
 }
 function displaySource(r) {
-  return isTransfer(r) ? { label: 'Store Transfer', cls: 'chip-store' } : { label: 'Requisition', cls: 'chip-req' };
+  return isTransfer(r)
+    ? { label: 'Store', cls: 'chip-src-store' }
+    : { label: 'Pool Bar', cls: 'chip-src-poolbar' };
 }
 function rowByLine(r) {
   return isTransfer(r) ? ((r.sentBy || 'Store') + ' · ' + (r.from || 'Central Store')) : (r.by || '—');
@@ -441,16 +475,21 @@ function itemsSummary(r) {
 /* ── Page state (UI only) ─────────────────────────────────────────── */
 let page = 1, statusFilter = '', sortKey = 'date', sortDir = 'desc';
 let _filteredCache = [];
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 20;
 
 function renderKPIs(rows) {
   const k = PBS.getHistoryKPIs(rows);
 
   document.getElementById('kpiRow').innerHTML =
+    '<div class="kpi-card acc-amber">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending / In Progress</div></div>' +
+      '<div class="kpi-value" style="color:var(--amber);">' + k.pending + '</div>' +
+      '<div class="kpi-trend ' + (k.pending > 0 ? 'warn' : 'up') + '">' + (k.pending > 0 ? 'Awaiting Store' : 'None in progress') + '</div>' +
+    '</div>' +
     '<div class="kpi-card acc-green">' +
-      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></div><div class="kpi-label">Completed Requisitions</div></div>' +
+      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></div><div class="kpi-label">Completed</div></div>' +
       '<div class="kpi-value" style="color:var(--green);">' + k.completed + '</div>' +
-      '<div class="kpi-trend up">Pool Bar requested · Store issued</div>' +
+      '<div class="kpi-trend up">' + k.totalUnits + ' units received</div>' +
     '</div>' +
     '<div class="kpi-card acc-blue">' +
       '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck"></i></div><div class="kpi-label">Store Transfers</div></div>' +
@@ -458,14 +497,9 @@ function renderKPIs(rows) {
       '<div class="kpi-trend info">Store sent without requisition</div>' +
     '</div>' +
     '<div class="kpi-card acc-red">' +
-      '<div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected Requisitions</div></div>' +
+      '<div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected / Disputed</div></div>' +
       '<div class="kpi-value" style="color:var(--red);">' + k.rejected + '</div>' +
-      '<div class="kpi-trend ' + (k.rejected > 0 ? 'warn' : 'up') + '">' + (k.rejected > 0 ? 'Sent back by Store' : 'None on record') + '</div>' +
-    '</div>' +
-    '<div class="kpi-card acc-purple">' +
-      '<div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Units Received</div></div>' +
-      '<div class="kpi-value" style="color:var(--gold);">' + k.totalUnits + '</div>' +
-      '<div class="kpi-trend neutral">From completed + transfers</div>' +
+      '<div class="kpi-trend ' + (k.rejected > 0 ? 'warn' : 'up') + '">' + (k.rejected > 0 ? 'Needs your attention' : 'None on record') + '</div>' +
     '</div>';
 }
 
@@ -540,7 +574,7 @@ function renderTable() {
     : pageRows.map(function (r) {
         const st = displayStatus(r), src = displaySource(r);
         return '<tr data-no="' + r.no + '">' +
-          '<td style="font-weight:600;">' + r.no + '</td>' +
+          '<td style="font-weight:700;">' + r.no + '</td>' +
           '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + src.label + '</span></td>' +
           '<td>' + rowByLine(r) + '</td>' +
           '<td class="items-summary">' + itemsSummary(r) + '</td>' +
@@ -561,8 +595,10 @@ function render() {
   renderTable();
 }
 
-/* ── Detail modal — requisitions use the existing GraceHotelStoreApproval
- * component unchanged; transfers get a plain read-out of service data. */
+/* ── Detail modal — requisitions use GraceHotelStoreApproval as the
+ * REQUESTER, since Pool Bar raised these and is reviewing what Store
+ * sent back (Accept Delivery / Report Issue), not approving/issuing
+ * them. Transfers get a plain read-out. ── */
 let detailWidget = null;
 function openDetail(no) {
   const row = getAllRows().find(function (r) { return r.no === no; });
@@ -588,9 +624,23 @@ function openDetail(no) {
   } else {
     detailWidget = GraceHotelStoreApproval.attach('#detailContainer', {
       reqNo: no,
-      storage: PBS.storage,
+      storeService: SS,
+      viewerRole: 'requester',    // Pool Bar is reviewing/accepting delivery, not approving/issuing it
       showBackButton: false,
-      preparedBy: 'Central Store Keeper',
+      onConfirm: async function (req) {
+        // Accepting delivery only flips the requisition's status in
+        // StoreService — it never touches Pool Bar's own stock. Without
+        // this call, an "accepted" item (e.g. Heineken) stays at 0 on
+        // hand here even though Store shows it as issued.
+        try {
+          await PBS.receiveRequisition(req);
+          showToast('Delivery accepted — stock updated.', 'success');
+        } catch (err) {
+          showToast((err && err.message) || 'Accepted, but stock could not be updated automatically.', 'error');
+        }
+        render();
+      },
+      onDispute: function () { render(); },
     });
   }
   document.getElementById('detailModal').classList.add('show');

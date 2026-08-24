@@ -2,41 +2,6 @@
  * services/store-service.js — Shared data + business logic for the Store module
  * Depends on: data/store-seed.js (window.StoreSeed)
  * Optional: services/permissions.js (window.Permissions)
- *
- * Owns:
- *   - Requisitions (both 'store_issue' and 'purchase' modes share one
- *     numbering scheme + record shape, keyed req:<NO>, indexed by req-index)
- *   - Stock-on-hand (store-stock) — deducted when a store_issue requisition
- *     is approved/issued, and managed directly on stock.html (add/edit/
- *     delete item master entries, categories)
- *   - The item catalog used by the New Request item picker
- *   - The low/out-of-stock threshold rule (stockLevel) and its display
- *     chip class/label — the SAME single source of truth every page
- *     (stock.html, store-dashboard.html, …) must use, mirroring how
- *     PoolBarService exports stockLevel/LEVEL_CHIP/LEVEL_LABEL. Pages
- *     should never redefine this rule locally — that's how a stray
- *     `s.reorder` (stock items only ever have `.min`) went unnoticed on
- *     store-dashboard.html.
- *
- * Pages (requisition-form.html, store.html, stock.html, store-dashboard.html,
- * and any future Procurement pages) call StoreService.* and only render —
- * they never touch the underlying storage keys (`req:<NO>`, `req-index`,
- * `counter:<PREFIX>`, `store-stock`) directly. When this goes live against
- * a real API, this file is the only thing that changes.
- *
- * Stock item shape (normalized on load — see ensureStockShape):
- *   { id, name, cat, unit, qty, cost, min }
- * `data/store-seed.js` only supplies { name, unit, qty, cost, min } —
- * `id` and `cat` are backfilled here so every page sees a consistent shape.
- * `min` is the reorder threshold — there is no `.reorder` field anywhere
- * in this module; stockLevel() below is the only place that rule lives.
- *
- * mode on a requisition:
- *   'store_issue' -> fulfilled from Central Store stock, shown on store.html
- *   'purchase'    -> routed to Procurement. StoreService still owns the
- *                    record + numbering so both flows share one requisition
- *                    ledger, but does not implement a PO/approval workflow
- *                    beyond storing status — that's Procurement's module.
  */
 (function (global) {
   'use strict';
@@ -72,8 +37,6 @@
     return saveSharedRaw(key, JSON.stringify(value));
   }
 
-  // Department -> requisition-number prefix. Purchase mode always uses PR
-  // regardless of department (matches the original New Request behaviour).
   const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Bar: 'BREQ', 'Front Desk': 'FREQ', Maintenance: 'MREQ', Store: 'PR' };
 
   function fmtN(n) { return '₦' + Math.round(n || 0).toLocaleString('en-NG'); }
@@ -89,9 +52,6 @@
   }
   function genStockId() { return 's' + Date.now() + Math.floor(Math.random() * 1000); }
 
-  // ── Stock threshold rule — the ONLY place "low" / "out" is decided.
-  // Stock items only ever have `.min` (reorder threshold); there is no
-  // `.reorder` field anywhere in this module.
   function stockLevel(s) {
     const qty = Number(s && s.qty) || 0;
     const min = Number(s && s.min) || 0;
@@ -103,10 +63,10 @@
   const LEVEL_LABEL = { ok: 'In Stock', low: 'Low Stock', out: 'Out of Stock' };
 
   const state = {
-    requests: [],   // all requisitions, newest first
-    stock: [],      // [{ id, name, cat, unit, qty, cost, min }]
-    categories: [], // string[]
-    catalog: [],    // [{ name, unit }] — item picker source
+    requests: [],
+    stock: [],
+    categories: [],
+    catalog: [],
     ready: false,
   };
 
@@ -118,16 +78,11 @@
     const s = global.StoreSeed || {};
     return {
       stock: s.DEMO_STOCK || [],
-      catalog: s.DEMO_CATALOG || null, // null => derive from stock
+      catalog: s.DEMO_CATALOG || null,
       requests: s.DEMO_REQUESTS || [],
     };
   }
 
-  /**
-   * Backfills id/cat on stock rows loaded from either the seed (which only
-   * has name/unit/qty/cost/min) or older persisted data. Non-destructive —
-   * only fills fields that are missing, everything else passes through.
-   */
   function ensureStockShape(rows) {
     return (rows || []).map(function (s) {
       return Object.assign({
@@ -143,17 +98,28 @@
     return Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
   }
 
+  /**
+   * Rebuilds the item-picker catalog straight from current stock. Called
+   * on load AND after every stock mutation (add/edit/delete) so a brand
+   * new or renamed item is immediately searchable on the requisition form
+   * without needing a page reload.
+   */
+  function rebuildCatalog() {
+    const s = seed();
+    state.catalog = (s.catalog && s.catalog.length)
+      ? s.catalog
+      : state.stock.map(function (i) { return { name: i.name, unit: i.unit }; });
+  }
+
   async function loadAll() {
     const s = seed();
 
-    // Stock: shared + persisted, seeded on first run only.
     let stock = await loadSharedJSON(KEYS.STOCK, null);
     let needsSave = false;
     if (!Array.isArray(stock) || !stock.length) {
       stock = ensureStockShape(s.stock);
       needsSave = true;
     } else if (stock.some(function (i) { return !i.id; })) {
-      // Older persisted data saved before id/cat existed — backfill once.
       stock = ensureStockShape(stock);
       needsSave = true;
     }
@@ -161,12 +127,8 @@
     if (needsSave) await saveSharedJSON(KEYS.STOCK, state.stock);
 
     state.categories = deriveCategories(state.stock);
-    state.catalog = (s.catalog && s.catalog.length)
-      ? s.catalog
-      : state.stock.map(function (i) { return { name: i.name, unit: i.unit }; });
+    rebuildCatalog();
 
-    // Requisitions: read the shared index, hydrate each req:<no> record.
-    // First run only: seed from DEMO_REQUESTS so pages aren't empty.
     let idx = await loadSharedJSON(KEYS.REQ_INDEX, null);
     if (!Array.isArray(idx)) idx = [];
 
@@ -194,10 +156,33 @@
     await saveSharedJSON(KEYS.STOCK, state.stock);
   }
 
-  // ── Stock / catalog lookups ─────────────────────
+  /**
+   * Resolves a requisition line's item name to a Store stock record.
+   * Requesting departments (Pool Bar, Restaurant, Kitchen, ...) don't
+   * always spell an item exactly the way Store's central stock does
+   * ("Bottled Water" on a requisition vs "Bottled Water 1.5L" in Store's
+   * stock list) — a strict-equality match silently treated that as "not
+   * found" and stockQtyFor() returned 0 even when Store actually had the
+   * item. This now falls back through three passes before giving up:
+   *   1. Exact match (case-insensitive) — unchanged, still tried first.
+   *   2. The requisition's item name appears inside a stock item's name
+   *      (e.g. "Bottled Water" -> "Bottled Water 1.5L").
+   *   3. A stock item's name appears inside the requisition's item name
+   *      (covers the reverse phrasing).
+   */
   function findStock(name) {
-    const n = (name || '').trim().toLowerCase();
-    return state.stock.find(function (i) { return (i.name || '').toLowerCase() === n; }) || null;
+    const n = (name || '').trim();
+    if (!n) return null;
+    const nLower = n.toLowerCase();
+
+    let found = state.stock.find(function (i) { return (i.name || '').toLowerCase() === nLower; });
+    if (found) return found;
+
+    found = state.stock.find(function (i) { return (i.name || '').toLowerCase().includes(nLower); });
+    if (found) return found;
+
+    found = state.stock.find(function (i) { return nLower.includes((i.name || '').toLowerCase()); });
+    return found || null;
   }
   function findStockById(id) {
     return state.stock.find(function (i) { return i.id === id; }) || null;
@@ -210,15 +195,10 @@
     const n = (name || '').trim().toLowerCase();
     return state.catalog.find(function (c) { return (c.name || '').toLowerCase() === n; }) || null;
   }
-  /** How much of a requested qty can be suggested for issue right now. */
   function suggestIssueQty(name, requestedQty) {
     return Math.min(requestedQty || 0, stockQtyFor(name));
   }
 
-  /**
-   * Add a new item master entry. qty/cost start at 0 — they're only
-   * populated once Procurement/Goods Receipt sends stock in.
-   */
   async function addStockItem({ name, cat, unit, min = 0 }) {
     const n = (name || '').trim();
     if (!n) throw new Error('Item name is required.');
@@ -230,11 +210,11 @@
     state.stock.push(entry);
     await persistStock();
     state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
     emitChange('stock:add');
     return entry;
   }
 
-  /** Edit item master fields. qty/cost are intentionally NOT editable here — those move via requisitions/goods receipt. */
   async function editStockItem(id, updates) {
     const i = findStockById(id);
     if (!i) throw new Error('Stock item not found.');
@@ -242,6 +222,7 @@
     Object.assign(i, safe);
     await persistStock();
     state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
     emitChange('stock:edit');
     return i;
   }
@@ -250,10 +231,10 @@
     state.stock = state.stock.filter(function (i) { return i.id !== id; });
     await persistStock();
     state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
     emitChange('stock:delete');
   }
 
-  // ── Categories ─────────────────────────────────
   function getCategories() {
     return state.categories.slice();
   }
@@ -277,7 +258,6 @@
     emitChange('category:delete');
   }
 
-  // ── Numbering ───────────────────────────────────
   function prefixForDept(dept, mode) {
     if (mode === 'purchase') return 'PR';
     return DEPT_PREFIX[dept] || 'REQ';
@@ -297,7 +277,6 @@
     return prefix + '-2025-' + String(n).padStart(5, '0');
   }
 
-  // ── Requisitions ────────────────────────────────
   function findReq(no) {
     return state.requests.find(function (r) { return r.no === no; }) || null;
   }
@@ -307,9 +286,6 @@
   }
   function getRequisition(no) { return findReq(no); }
 
-  // Single definition of "pending" (Pending or Partial) — dashboard,
-  // approval queue, and the nav badge should all call this rather than
-  // re-deriving the same status check against state.requests themselves.
   function getPendingRequisitions(opts) {
     return getRequisitions(opts).filter(function (r) {
       return r.status === 'Pending' || r.status === 'Partial';
@@ -319,11 +295,6 @@
     return getPendingRequisitions({ mode: mode }).length;
   }
 
-  /**
-   * Submit a new requisition (store_issue or purchase). Assigns the number,
-   * persists the record + shared index, updates in-memory state, and
-   * notifies listeners. Returns the saved requisition.
-   */
   async function submitRequisition(opts) {
     opts = opts || {};
     const mode = opts.mode === 'purchase' ? 'purchase' : 'store_issue';
@@ -367,12 +338,46 @@
   }
 
   /**
-   * Approve & issue items against a Store-issue requisition.
-   * `issuedQtyByItem` is a map of item name -> issued quantity (as entered
-   * by staff on store.html). Clamps each to [0, requested, stock on hand],
-   * deducts stock for what's actually issued, and recomputes status
-   * (Pending / Partial / Full).
+   * Edit an existing purchase-mode (mode:'purchase') requisition — used
+   * by the shared purchase-request form when it's opened as
+   * store-purchase-request.html?no=<no>. Only purchase-mode requests are
+   * editable here (store_issue requests go through approveAndIssue's
+   * separate lifecycle instead), and only before Procurement has picked
+   * it up: once ProcurementService.importStoreRequest() has stamped
+   * `procurementPrId` onto the record, it belongs to Procurement's own
+   * copy from then on and editing here would silently drift out of sync
+   * with what Procurement is actually pricing/approving.
    */
+  async function updatePurchaseRequest(no, updates) {
+    const req = findReq(no);
+    if (!req) throw new Error(`Request ${no} not found.`);
+    if (req.mode !== 'purchase') throw new Error('Only purchase requests can be edited here.');
+    if (req.procurementPrId) throw new Error('This request has already been sent to Procurement and can no longer be edited here.');
+
+    const validItems = (updates.items || []).filter(function (i) {
+      return i.name && i.name.trim() && (parseFloat(i.qty) || 0) > 0;
+    });
+    if (!validItems.length) throw new Error('Add at least one item with a name and quantity.');
+
+    Object.assign(req, {
+      dept: updates.dept || req.dept,
+      needed: updates.needed || req.needed,
+      priority: updates.priority || req.priority,
+      remark: updates.remark != null ? updates.remark.trim() : req.remark,
+      supplier: updates.supplier != null ? updates.supplier.trim() : req.supplier,
+      items: validItems.map(function (i) {
+        return {
+          name: i.name.trim(), unit: i.unit || 'unit', qty: parseFloat(i.qty) || 0,
+          cost: parseFloat(i.cost) || 0, remark: i.remark || '', issuedQty: 0,
+        };
+      }),
+    });
+
+    await saveSharedJSON('req:' + no, req);
+    emitChange('requisition:update');
+    return req;
+  }
+
   async function approveAndIssue(no, issuedQtyByItem) {
     const req = findReq(no);
     if (!req) throw new Error('Requisition ' + no + ' not found.');
@@ -390,9 +395,6 @@
       return Object.assign({}, it, { issuedQty: issued });
     });
 
-    // Deduct stock for what's actually issued this time vs. what was
-    // already deducted previously (so re-approving a partial doesn't
-    // double-deduct).
     nextItems.forEach(function (it, i) {
       const prevIssued = req.items[i].issuedQty || 0;
       const delta = it.issuedQty - prevIssued;
@@ -421,6 +423,31 @@
     return req;
   }
 
+  async function confirmReceipt(no) {
+    const req = findReq(no);
+    if (!req) throw new Error('Requisition ' + no + ' not found.');
+    if (req.status !== 'Full' && req.status !== 'Partial') {
+      throw new Error('Only a Full or Partial requisition can be confirmed received.');
+    }
+    req.status = 'Completed';
+    await saveSharedJSON('req:' + no, req);
+    emitChange('requisition:confirm');
+    return req;
+  }
+
+  async function rejectDelivery(no, reason) {
+    const req = findReq(no);
+    if (!req) throw new Error('Requisition ' + no + ' not found.');
+    if (req.status !== 'Full' && req.status !== 'Partial') {
+      throw new Error('Only a Full or Partial requisition can be disputed.');
+    }
+    req.status = 'Disputed';
+    req.disputeReason = (reason || '').trim();
+    await saveSharedJSON('req:' + no, req);
+    emitChange('requisition:dispute');
+    return req;
+  }
+
   global.StoreService = {
     KEYS, DEPT_PREFIX,
     state, onChange, loadAll,
@@ -430,7 +457,7 @@
     addStockItem, editStockItem, deleteStockItem,
     getCategories, renameCategory, deleteCategory,
     prefixForDept, peekNextNumber, nextNumber,
-    submitRequisition, approveAndIssue, rejectRequisition,
+    submitRequisition, updatePurchaseRequest, approveAndIssue, rejectRequisition, confirmReceipt, rejectDelivery,
     getRequisitions, getRequisition, getPendingRequisitions, pendingCount,
   };
 })(window);

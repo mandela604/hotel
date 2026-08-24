@@ -55,9 +55,9 @@
   .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); }
 
-  .row{ display:grid; grid-template-columns:1.3fr .7fr; gap:14px; }
+  .row{ display:grid; grid-template-columns:1.3fr .7fr; gap:14px; align-items:stretch; }
   @media (max-width:900px){ .row{ grid-template-columns:1fr; } }
-  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); min-width:0; }
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); min-width:0; display:flex; flex-direction:column; }
   @media (max-width:420px){ .panel{ padding:14px; } }
   .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
   .panel-title{ font-size:12.5px; font-weight:800; color:var(--text); }
@@ -198,13 +198,18 @@ const shell = PoolBarShell.attach({
 });
 
 /**
- * Call-and-render only. Every value/label/color/threshold below comes
- * straight from PoolBarService — no locally recomputed revenue grouping,
- * no hand-typed payment-method colors ('Cash'/'POS'/'Transfer'), no
- * inline stock-level filtering, no hardcoded 'voided' string, no
- * hand-typed OUT/LOW short labels. If PoolBarService fails to load or a
- * session can't be resolved, init() surfaces that clearly instead of the
- * page quietly computing its own version of the rules.
+ * Call-and-render only. Every value/label/color/threshold/row-count
+ * below comes straight from PoolBarService — no locally recomputed
+ * revenue grouping, no hand-typed payment-method colors ('Cash'/'POS'/
+ * 'Transfer'), no inline stock-level filtering, no hardcoded 'voided'
+ * string, no hand-typed OUT/LOW short labels, and no hardcoded
+ * .slice(0, N) panel caps. Panel row-counts come from
+ * svc.getStockSnapshot() / getLowStockSnapshot() / getPendingSnapshot() /
+ * getRecentSalesSnapshot(), each already capped per
+ * svc.getDashboardDisplayLimits() — so swapping the service for a live
+ * one never requires touching this file. If PoolBarService fails to
+ * load or a session can't be resolved, init() surfaces that clearly
+ * instead of the page quietly computing its own version of the rules.
  */
 const svc = PoolBarService;
 const { fmtN, stockLevel, LEVEL_CHIP, LEVEL_LABEL } = svc;
@@ -276,8 +281,13 @@ function renderRevenue() {
       </div>`).join('');
 }
 
+/**
+ * svc.getStockSnapshot() returns state.stock already capped to
+ * svc.getDashboardDisplayLimits().stock (default 5) — this page never
+ * decides the row count itself.
+ */
 function renderStockSnapshot() {
-  const stock = svc.state.stock;
+  const stock = svc.getStockSnapshot();
   const el = document.getElementById('stockSnap');
   el.innerHTML = stock.length === 0
     ? `<div class="empty-note">No items in Pool Bar Stock yet.</div>`
@@ -292,8 +302,12 @@ function renderStockSnapshot() {
       }).join('');
 }
 
+/**
+ * svc.getPendingSnapshot() returns state.pending already capped to
+ * svc.getDashboardDisplayLimits().pending (default 3).
+ */
 function renderPendingRequisitions() {
-  const pending = svc.state.pending;
+  const pending = svc.getPendingSnapshot();
   const el = document.getElementById('pendingReq');
   el.innerHTML = pending.length === 0
     ? `<div class="empty-note">No requisitions awaiting review.</div>`
@@ -306,12 +320,13 @@ function renderPendingRequisitions() {
 }
 
 /**
- * svc.getLowStockItems() owns "what counts as low/out"; svc.
- * getLevelLabelsShort() owns the OUT/LOW short-form chip text — neither
- * is re-derived or hand-typed on this page.
+ * svc.getLowStockSnapshot() owns both "what counts as low/out" AND the
+ * row cap (svc.getDashboardDisplayLimits().lowStock, default 3);
+ * svc.getLevelLabelsShort() owns the OUT/LOW short-form chip text —
+ * none of this is re-derived or hand-typed on this page.
  */
 function renderLowStock() {
-  const alerts = svc.getLowStockItems();
+  const alerts = svc.getLowStockSnapshot();
   const shortLabels = svc.getLevelLabelsShort();
   const el = document.getElementById('lowStock');
   el.innerHTML = alerts.length === 0
@@ -328,6 +343,9 @@ function renderLowStock() {
 }
 
 /**
+ * svc.getRecentSalesSnapshot() returns state.sales already capped to
+ * svc.getDashboardDisplayLimits().recentSales (default 3) — sized to
+ * match the Quick Actions panel it sits beside in the same grid row.
  * svc.getStatusConstants().SALE_VOIDED and svc.getEmptyValuePlaceholder()
  * are always present on the service — called directly, no
  * `svc.foo ? svc.foo() : 'literal'` fallback duplicating the service's
@@ -336,7 +354,7 @@ function renderLowStock() {
 function renderRecentSales() {
   const voidedStatus = svc.getStatusConstants().SALE_VOIDED;
   const emptyValue = svc.getEmptyValuePlaceholder();
-  const sales = svc.state.sales.slice(0, 6);
+  const sales = svc.getRecentSalesSnapshot();
   const el = document.getElementById('recentSales');
   el.innerHTML = sales.length === 0
     ? `<div class="empty-note">No sales recorded yet today.</div>`

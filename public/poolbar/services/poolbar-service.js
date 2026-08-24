@@ -1,68 +1,104 @@
 /**
- * services/poolbar-service.js — Shared data + business logic for the Pool Bar module
- * Depends on: data/poolbar-seed.js (window.PoolBarSeed), optionally services/permissions.js (window.Permissions)
- * Optional: BookingData (booking-service.js) — posts Room Charge sales to guest folio via addRoomCharge,
- *           and is the source of truth for in-house guests (see getInHouseGuests below).
- * Load order: poolbar-seed.js, THEN this file, then the page's own <script>.
+ * services/poolbar-service.js — Production Pool Bar service.
+ * Talks to the real backend (routes/poolbarRoutes.js + controllers/poolbarController.js)
+ * over HTTP instead of window.storage/localStorage. Every page keeps calling
+ * the exact same PoolBarService.* functions as before — only what happens
+ * INSIDE them changed (fetch() + JWT instead of shared-storage JSON blobs).
  *
- * Formal service restored. OrdersWorkspace: pass service: PoolBarService.
- * Optional roomNumber/guestName/guestPhone on recordSale/openTab/payOrder.
+ * ── CONFIG ────────────────────────────────────────────────────────────
+ * API base path:   PoolBarSeed.API_BASE            (default '/api/poolbar')
+ * Auth token:      window.Auth.getToken()          if present, else
+ *                  localStorage 'gh_token' / 'token'
+ * All requests send `Authorization: Bearer <token>` — matches middleware/auth.js.
  *
- * PAYMENT METHODS — single source of truth is data/poolbar-seed.js
- * (PoolBarSeed.PAYMENT_METHODS). Exposed here as both `paymentMethods`
- * (a plain property) and `getPaymentMethods()` (a function) so
- * OrdersWorkspace's resolvePaymentMethodsFromService() picks it up
- * automatically — pages no longer pass their own paymentMethods list.
+ * ── WHAT CHANGED FROM THE DEMO VERSION ──────────────────────────────────
+ * - state.stock / state.sales / state.orders / state.requisitions /
+ *   state.movements are now hydrated from the API on loadAll(), not seeded
+ *   from data/poolbar-seed.js + localStorage.
+ * - Every mutation (add/edit/delete stock, deduct, sale, void, open/pay/
+ *   cancel order, submit requisition) is a real HTTP call; state is only
+ *   updated from what the server actually persisted (the response body),
+ *   never optimistically assumed.
+ * - The old "pending store transfers" accept/reject flow (state.pending,
+ *   acceptRequisition/rejectRequisition/logRequisitionRaised) had no
+ *   backend endpoint and is removed — Store→PoolBar stock now only moves
+ *   through the real requisition lifecycle (submitRequisition +
+ *   receiveRequisition, see below).
+ * - Category management (addCategory/renameCategory/deleteCategory) has
+ *   no dedicated backend collection for Pool Bar (unlike Procurement's
+ *   ProcurementCategory) — categories are still derived from
+ *   PoolbarStock.category values. "Extra" categories a manager pre-creates
+ *   before any item uses them are now session-only (in-memory), since
+ *   there's nowhere on the server to persist a category with zero items.
+ * - receiveRequisition() credits Pool Bar's own stock via
+ *   PUT /stock/:id (or POST /stock if the item doesn't exist yet) since
+ *   there's no dedicated "receive" endpoint. Already-received lines are
+ *   tracked in memory for this session to avoid double-crediting a repeat
+ *   click; that tracking does not survive a page reload — if that matters,
+ *   add a real POST /requisitions/:no/receive endpoint server-side instead.
  *
- * WHY getInHouseGuests() LIVES HERE, NOT ON THE PAGE
- * ───────────────────────────────────────────────────
- * Pages (poolbar-orders.html etc.) should never reach into window.BookingData
- * directly — that couples every page to today's demo data source. Instead
- * they call PoolBarService.getInHouseGuests(), which owns the "how/where do
- * we get in-house guests" decision. When this module goes live against a
- * real API, only this one function changes — no page touches BookingData
- * again. It throws (never silently falls back to fake data) so the caller
- * can decide how to surface the failure to the user.
- *
- * SALES PAGE BUSINESS LOGIC — filterShiftSales / getShiftKpiSummary /
- * buildSaleDetailShape / normalizeSaleForTable / getShiftLabel /
- * getShiftNoteText / getShiftTableTitle / getPrintSummary all moved here
- * from poolbar-sales.html so that page is pure call-and-render.
- *
- * STOCK PAGE BUSINESS LOGIC — filterStock / listStockCategoriesInUse /
- * parseReceivedDate / getStockCategories / getStockUnits / getDeductReasons
- * moved here from poolbar-stock.html so that page is pure call-and-render.
- *
- * CATEGORY MANAGEMENT — addCategory / renameCategory / deleteCategory /
- * listManagedCategories / categoryItemCount / getFallbackCategoryName.
- * Categories are just a field on stock items here (no separate category
- * record like StoreService's item master), so a category with zero items
- * has nowhere to live unless something persists it. state.extraCategories
- * is that "nowhere" — loaded/saved via the exact same loadShared/
- * saveShared + persist() pattern as stock/sales/orders/etc., so it
- * survives reloads and behaves like every other piece of state here.
- * Pages call these three functions and only render — they never touch
- * state.extraCategories or loop stock items themselves.
- *
- * DASHBOARD REVENUE DISPLAY — getRevenueMethodOrder / getRevenueMethodColorClass /
- * getRevenueBreakdown / getLevelLabelsShort / getTodaysCompletedSales moved
- * here from poolbar-dashboard.html so that page never hardcodes a payment-
- * method display order/color map or a short-form level label set.
+ * Everything else — KPI math, filters, formatting, permission checks,
+ * shift-report helpers, sale-detail shaping — is pure computation over
+ * state and is unchanged.
  */
 (function (global) {
   'use strict';
 
-  // Captured synchronously while this file is executing as a plain
-  // <script src> tag — used to resolve where booking-demo-seed.js and
-  // booking-service.js live relative to THIS file, not relative to
-  // whatever page happens to load it.
-  var OWN_SCRIPT_SRC = (document.currentScript && document.currentScript.src) || '';
+  /* ── API config ─────────────────────────────────────────────────── */
+  function getApiBase() {
+    const s = global.PoolBarSeed || {};
+    return s.API_BASE || '/api/poolbar';
+  }
+  function getAuthToken() {
+    if (global.Auth && typeof global.Auth.getToken === 'function') {
+      try { return global.Auth.getToken() || ''; } catch (e) { /* fall through */ }
+    }
+    try {
+      return localStorage.getItem('gh_token') || localStorage.getItem('token') || '';
+    } catch (e) { return ''; }
+  }
 
+  async function apiFetch(path, options) {
+    options = options || {};
+    const token = getAuthToken();
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+    if (token) headers.Authorization = 'Bearer ' + token;
+
+    let res;
+    try {
+      res = await fetch(getApiBase() + path, Object.assign({}, options, { headers }));
+    } catch (networkErr) {
+      const err = new Error('Network error contacting server: ' + networkErr.message);
+      err.code = 'NETWORK_ERROR';
+      throw err;
+    }
+
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* no/invalid JSON body */ }
+
+    if (!res.ok || (body && body.success === false)) {
+      const msg = (body && body.error) || ('Request failed (' + res.status + ')');
+      const err = new Error(msg);
+      err.statusCode = res.status;
+      err.field = body && body.field;
+      throw err;
+    }
+    return body || { success: true };
+  }
+  function apiGet(path) { return apiFetch(path, { method: 'GET' }); }
+  function apiPost(path, data) { return apiFetch(path, { method: 'POST', body: JSON.stringify(data || {}) }); }
+  function apiPut(path, data) { return apiFetch(path, { method: 'PUT', body: JSON.stringify(data || {}) }); }
+  function apiDelete(path) { return apiFetch(path, { method: 'DELETE' }); }
+
+  /* ── Booking module (Room Charge folio posting) — unchanged from the
+   *    demo version; dynamically loads BookingData if it's not already
+   *    on the page, same as before. Orthogonal to the API-ification
+   *    above. ── */
+  var OWN_SCRIPT_SRC = (document.currentScript && document.currentScript.src) || '';
   function resolveRelative(rel) {
     if (!OWN_SCRIPT_SRC) return rel;
     try { return new URL(rel, OWN_SCRIPT_SRC).href; } catch (e) { return rel; }
   }
-
   function loadScriptTag(url) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
@@ -72,61 +108,25 @@
       document.head.appendChild(s);
     });
   }
-
   var bookingDataLoadPromise = null;
   function ensureBookingData() {
     if (global.BookingData && typeof global.BookingData.getBookingData === 'function') {
       return Promise.resolve(global.BookingData);
     }
     if (bookingDataLoadPromise) return bookingDataLoadPromise;
-
     bookingDataLoadPromise = (async function () {
       const paths = (global.PoolBarSeed && global.PoolBarSeed.BOOKING_MODULE_PATHS) || {};
-      if (!global.BookingDemoSeed && paths.demoSeed) {
-        await loadScriptTag(resolveRelative(paths.demoSeed));
-      }
-      if (!global.BookingData && paths.service) {
-        await loadScriptTag(resolveRelative(paths.service));
-      }
+      if (!global.BookingDemoSeed && paths.demoSeed) await loadScriptTag(resolveRelative(paths.demoSeed));
+      if (!global.BookingData && paths.service) await loadScriptTag(resolveRelative(paths.service));
       if (!global.BookingData || typeof global.BookingData.getBookingData !== 'function') {
-        throw new Error('BookingData failed to initialize after dynamic load. Provide PoolBarSeed.BOOKING_MODULE_PATHS or preload window.BookingData yourself.');
+        throw new Error('BookingData failed to initialize. Provide PoolBarSeed.BOOKING_MODULE_PATHS or preload window.BookingData yourself.');
       }
       return global.BookingData;
     })();
-
     return bookingDataLoadPromise;
   }
 
-  const KEYS = {
-    STOCK: 'poolbar-stock',
-    SALES: 'poolbar-sales',
-    ORDERS: 'poolbar-orders',
-    PENDING: 'poolbar-pending-requisitions',
-    MOVEMENTS: 'poolbar-movements',
-    TRANSFERS: 'poolbar-store-transfers',
-    TRANSFER_COUNT: 'poolbar-store-transfers-count',
-    EXTRA_CATEGORIES: 'poolbar-extra-categories',
-  };
-
-  const storage = global.storage || {
-    async get(key, shared) { const v = localStorage.getItem(key); return v == null ? null : { key, value: v, shared }; },
-    async set(key, value, shared) { localStorage.setItem(key, value); return { key, value, shared }; },
-    async delete(key, shared) { localStorage.removeItem(key); return { key, deleted: true, shared }; },
-    async list(prefix, shared) { const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return { keys, prefix, shared }; },
-  };
-
-  async function loadShared(key, fallback) {
-    try {
-      const r = await storage.get(key, true);
-      if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
-    } catch (e) { /* first run */ }
-    return fallback;
-  }
-  async function saveShared(key, value) {
-    try { await storage.set(key, JSON.stringify(value), true); return true; }
-    catch (e) { console.warn('[PoolBarService] sync failed:', key, e); return false; }
-  }
-
+  /* ── Formatting / small helpers ─────────────────────────────────── */
   function pad2(n) { return String(n).padStart(2, '0'); }
   function getCurrencyConfig() {
     const s = global.PoolBarSeed || {};
@@ -149,6 +149,12 @@
 
   function parseStamp(str) {
     if (!str) return null;
+    // Accept ISO dates straight from Mongo (createdAt/date) as well as the
+    // dd/mm/yy hh:mm AM/PM stamp format used by demo data.
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    }
     const parts = str.split(' ');
     const [d, m, y] = parts[0].split('/').map(n => parseInt(n, 10));
     let hh = 0, mm = 0;
@@ -172,10 +178,6 @@
   }
   const LEVEL_LABEL = new Proxy({}, { get: (_, key) => getLevelLabels()[key] });
 
-  // Short-form level labels (e.g. compact "OUT"/"LOW" chips) — separate
-  // from LEVEL_LABEL because the short and full forms are allowed to
-  // differ. Overridable via PoolBarSeed.STOCK_LEVEL_LABELS_SHORT; the
-  // object below is only the named default.
   const DEFAULT_LEVEL_LABELS_SHORT = { ok: 'OK', low: 'LOW', out: 'OUT' };
   function getLevelLabelsShort() {
     const s = global.PoolBarSeed || {};
@@ -187,23 +189,10 @@
     const s = global.PoolBarSeed || {};
     return Object.assign({}, DEFAULT_ID_PREFIXES, s.ID_PREFIXES || {});
   }
-  function nextSaleId(sales) {
-    const prefix = getIdPrefixes().sale;
-    let max = 1000;
-    (sales || []).forEach(s => { const n = parseInt((s.id || '').replace(prefix, ''), 10); if (!isNaN(n) && n > max) max = n; });
-    return prefix + (max + 1);
-  }
-  function nextOrderId(orders) {
-    const prefix = getIdPrefixes().order;
-    let max = 0;
-    (orders || []).forEach(o => { const n = parseInt((o.id || '').replace(prefix, ''), 10); if (!isNaN(n) && n > max) max = n; });
-    return prefix + String(max + 1).padStart(3, '0');
-  }
 
   const state = {
-    stock: [], sales: [], orders: [], pending: [], movements: [], transfers: [],
-    extraCategories: [],
-    transfersToday: 0,
+    stock: [], sales: [], orders: [], requisitions: [], movements: [],
+    extraCategories: [], // session-only, see file header
     ready: false,
   };
 
@@ -211,38 +200,22 @@
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(fn => { try { fn(state, reason); } catch (e) { console.warn('[PoolBarService] listener error', e); } }); }
 
-  function seed() {
-    const s = global.PoolBarSeed || {};
-    return {
-      stock: s.DEMO_STOCK || [],
-      sales: s.DEMO_SALES || [],
-      orders: s.DEMO_ORDERS || [],
-      pending: s.DEMO_PENDING || [],
-      movements: s.DEMO_MOVEMENTS || [],
-      transfers: s.DEMO_STORE_TRANSFERS || [],
-    };
-  }
-
   function getPaymentMethods() {
     const s = global.PoolBarSeed || {};
     return Array.isArray(s.PAYMENT_METHODS) ? s.PAYMENT_METHODS : [];
   }
-
   function getRoomChargeMethodName() {
     const s = global.PoolBarSeed || {};
     return s.ROOM_CHARGE_METHOD || null;
   }
-
   function getStatusOptions() {
     const s = global.PoolBarSeed || {};
     return Array.isArray(s.ORDER_STATUS_OPTIONS) ? s.ORDER_STATUS_OPTIONS : [];
   }
-
   function getCompletedSaleStatus() {
     const s = global.PoolBarSeed || {};
-    return s.COMPLETED_SALE_STATUS || null;
+    return s.COMPLETED_SALE_STATUS || 'completed';
   }
-
   const DEFAULT_STATUS = {
     SALE_COMPLETED: 'completed', SALE_VOIDED: 'voided',
     ORDER_OPEN: 'open', ORDER_SERVED: 'served', ORDER_PAID: 'paid', ORDER_CANCELLED: 'cancelled',
@@ -251,36 +224,27 @@
     const s = global.PoolBarSeed || {};
     return Object.assign({}, DEFAULT_STATUS, s.STATUS_VALUES || {});
   }
-
   function getModuleName() {
     const s = global.PoolBarSeed || {};
     return s.MODULE_NAME || 'Pool Bar';
   }
-
   function getDepartmentName() {
     const s = global.PoolBarSeed || {};
     return s.DEPARTMENT_NAME || s.MODULE_NAME || 'Pool Bar';
   }
-
   function isMoneyReceived(method) {
     const s = global.PoolBarSeed || {};
-    const list = Array.isArray(s.MONEY_RECEIVED_METHODS) ? s.MONEY_RECEIVED_METHODS : [];
+    const list = Array.isArray(s.MONEY_RECEIVED_METHODS) ? s.MONEY_RECEIVED_METHODS : ['Cash', 'POS', 'Transfer'];
     return list.indexOf((method || '').trim()) !== -1;
   }
-
   function getDefaultPageSize() {
     const s = global.PoolBarSeed || {};
-    return (typeof s.DEFAULT_PAGE_SIZE === 'number' && s.DEFAULT_PAGE_SIZE > 0)
-      ? s.DEFAULT_PAGE_SIZE
-      : 8;
+    return (typeof s.DEFAULT_PAGE_SIZE === 'number' && s.DEFAULT_PAGE_SIZE > 0) ? s.DEFAULT_PAGE_SIZE : 8;
   }
-
   function getOrderPageLink() {
     const s = global.PoolBarSeed || {};
     return s.ORDER_PAGE_LINK || 'poolbar-orders.html';
   }
-
-  // ── Stock form pick-lists (config from seed; empty = no options, not a demo fallback)
   function getStockCategories() {
     const s = global.PoolBarSeed || {};
     return Array.isArray(s.STOCK_CATEGORIES) ? s.STOCK_CATEGORIES : [];
@@ -293,188 +257,130 @@
     const s = global.PoolBarSeed || {};
     return Array.isArray(s.DEDUCT_REASONS) ? s.DEDUCT_REASONS : [];
   }
-
   function getEmptyValuePlaceholder() {
     const s = global.PoolBarSeed || {};
     return s.EMPTY_VALUE_PLACEHOLDER || '—';
   }
 
-  // ── Dashboard "Revenue Breakdown" display — which payment methods
-  // appear first and what accent color each gets. Sourced from
-  // PoolBarSeed.REVENUE_METHOD_ORDER / REVENUE_METHOD_COLORS; the arrays/
-  // object below are only the named defaults (unchanged from the previous
-  // hardcoded values on the dashboard page).
   const DEFAULT_REVENUE_METHOD_ORDER = ['Cash', 'Room Charge', 'POS', 'Transfer', 'Complimentary', 'Other'];
-  const DEFAULT_REVENUE_METHOD_COLORS = {
-    Cash: '', 'Room Charge': 'blue', POS: 'blue', Transfer: 'purple', Complimentary: 'purple',
-  };
+  const DEFAULT_REVENUE_METHOD_COLORS = { Cash: '', 'Room Charge': 'blue', POS: 'blue', Transfer: 'purple', Complimentary: 'purple' };
   function getRevenueMethodOrder() {
     const s = global.PoolBarSeed || {};
-    return Array.isArray(s.REVENUE_METHOD_ORDER) && s.REVENUE_METHOD_ORDER.length
-      ? s.REVENUE_METHOD_ORDER
-      : DEFAULT_REVENUE_METHOD_ORDER;
+    return Array.isArray(s.REVENUE_METHOD_ORDER) && s.REVENUE_METHOD_ORDER.length ? s.REVENUE_METHOD_ORDER : DEFAULT_REVENUE_METHOD_ORDER;
   }
   function getRevenueMethodColorClass(method) {
     const s = global.PoolBarSeed || {};
     const map = Object.assign({}, DEFAULT_REVENUE_METHOD_COLORS, s.REVENUE_METHOD_COLORS || {});
     return map[method] || '';
   }
-  /**
-   * Group + order a set of sales by payment method for the dashboard's
-   * Revenue Breakdown bars. Moves the "which methods, in what order, with
-   * what color" decision off the page entirely — the page only renders
-   * whatever entries come back.
-   * Returns [{ method, amount, colorClass }, ...]
-   */
   function getRevenueBreakdown(sales) {
     const byMethod = {};
-    (sales || []).forEach(function (s) {
-      const m = s.method || 'Other';
-      byMethod[m] = (byMethod[m] || 0) + (s.total || 0);
-    });
+    (sales || []).forEach(function (s) { const m = s.method || 'Other'; byMethod[m] = (byMethod[m] || 0) + (s.total || 0); });
     const order = getRevenueMethodOrder();
-    const entries = order
-      .filter(function (k) { return byMethod[k]; })
+    const entries = order.filter(function (k) { return byMethod[k]; })
       .map(function (k) { return { method: k, amount: byMethod[k], colorClass: getRevenueMethodColorClass(k) }; });
     Object.keys(byMethod).forEach(function (k) {
-      if (order.indexOf(k) === -1) {
-        entries.push({ method: k, amount: byMethod[k], colorClass: getRevenueMethodColorClass(k) });
-      }
+      if (order.indexOf(k) === -1) entries.push({ method: k, amount: byMethod[k], colorClass: getRevenueMethodColorClass(k) });
     });
     return entries;
   }
-
-  /**
-   * Today's completed (non-voided) sales — the exact rule the dashboard's
-   * revenue panel needs, moved off the page. Expressed once here so
-   * "today" and "completed" are never re-typed on a page.
-   */
   function getTodaysCompletedSales() {
     const today = todayDDMMYY();
     const completedStatus = getStatusConstants().SALE_COMPLETED;
     return (state.sales || []).filter(function (s) {
-      return s.status === completedStatus && (s.date || '').startsWith(today);
+      const d = s.date ? new Date(s.date) : null;
+      const dStr = d ? `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)}` : (s.dateDisplay || '');
+      return s.status === completedStatus && dStr === today;
     });
   }
 
-  // Single source of truth for "what category does a deleted/reassigned
-  // stock item fall back to" — used by both acceptRequisition() (when
-  // auto-creating a stock row for an unknown item) and deleteCategory()
-  // below, so there is exactly one default category name in this file.
+  const DEFAULT_DASHBOARD_DISPLAY_LIMITS = { stock: 5, lowStock: 3, pending: 3, recentSales: 3 };
+  function getDashboardDisplayLimits() {
+    const s = global.PoolBarSeed || {};
+    return Object.assign({}, DEFAULT_DASHBOARD_DISPLAY_LIMITS, s.DASHBOARD_DISPLAY_LIMITS || {});
+  }
+  function getStockSnapshot() { return (state.stock || []).slice(0, getDashboardDisplayLimits().stock); }
+  function getLowStockSnapshot() { return getLowStockItems().slice(0, getDashboardDisplayLimits().lowStock); }
+  function getPendingSnapshot() {
+    const pendingStatuses = ['Pending', 'Partial'];
+    return (state.requisitions || []).filter(r => pendingStatuses.includes(r.status)).slice(0, getDashboardDisplayLimits().pending);
+  }
+  function getRecentSalesSnapshot() { return (state.sales || []).slice(0, getDashboardDisplayLimits().recentSales); }
+
   const DEFAULT_FALLBACK_CATEGORY = 'Uncategorized';
   function getFallbackCategoryName() {
     const s = global.PoolBarSeed || {};
     return s.FALLBACK_CATEGORY || DEFAULT_FALLBACK_CATEGORY;
   }
 
-  /**
-   * Parse a "received" date string (DD/MM/YY) to a timestamp for sorting.
-   * Returns 0 for empty / placeholder / unparseable values.
-   */
   function parseReceivedDate(s) {
     const empty = getEmptyValuePlaceholder();
     if (!s || s === empty) return 0;
     const parts = String(s).split('/');
     if (parts.length < 3) return 0;
-    const d = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10);
-    const y = parseInt(parts[2], 10);
+    const d = parseInt(parts[0], 10), m = parseInt(parts[1], 10), y = parseInt(parts[2], 10);
     if (isNaN(d) || isNaN(m) || isNaN(y)) return 0;
     return new Date(2000 + y, m - 1, d).getTime();
   }
 
-  /**
-   * Categories that currently appear on at least one stock item.
-   * Used by the toolbar category filter (distinct from the configured
-   * pick-list used in the Add/Edit form, and distinct from
-   * listManagedCategories() below which also includes empty categories).
-   */
   function listStockCategoriesInUse() {
     const cats = new Set();
-    (state.stock || []).forEach(function (i) {
-      if (i.category) cats.add(i.category);
-    });
+    (state.stock || []).forEach(function (i) { if (i.category) cats.add(i.category); });
     return [...cats].sort();
   }
-
-  /**
-   * Every category the Category Manager should show: ones currently in
-   * use on stock, plus ones created via addCategory() that have no items
-   * yet. This is the ONE list a page needs for that modal.
-   */
   function listManagedCategories() {
     const set = new Set([...listStockCategoriesInUse(), ...(state.extraCategories || [])]);
     return [...set].filter(Boolean).sort();
   }
-
-  /** How many stock items currently use this category. */
   function categoryItemCount(name) {
     return (state.stock || []).filter(function (i) { return i.category === name; }).length;
   }
-
-  /**
-   * Create a category with no items yet. Throws on empty name or a
-   * case-insensitive duplicate against listManagedCategories(). Persisted
-   * in state.extraCategories the same way stock/sales/etc. are persisted.
-   */
+  // Session-only — see file header. Persists nothing server-side.
   async function addCategory(name) {
     const n = (name || '').trim();
     if (!n) throw new Error('Category name is required.');
-    if (listManagedCategories().some(function (c) { return c.toLowerCase() === n.toLowerCase(); })) {
+    if (listManagedCategories().some(c => c.toLowerCase() === n.toLowerCase())) {
       throw new Error(`Category "${n}" already exists.`);
     }
     state.extraCategories.push(n);
-    await persist(['extraCategories']);
     emitChange('category:add');
     return n;
   }
-
-  /**
-   * Rename a category: updates every stock item that used the old name,
-   * and keeps state.extraCategories in sync (whether the category had
-   * items, was empty, or — belt and suspenders — wasn't tracked as
-   * "extra" at all, e.g. legacy data). Throws on empty name or a
-   * case-insensitive duplicate against another existing category.
-   */
   async function renameCategory(oldName, newName) {
     const n = (newName || '').trim();
     if (!n) throw new Error('Category name is required.');
     if (n.toLowerCase() !== (oldName || '').toLowerCase() &&
-        listManagedCategories().some(function (c) { return c.toLowerCase() === n.toLowerCase(); })) {
+        listManagedCategories().some(c => c.toLowerCase() === n.toLowerCase())) {
       throw new Error(`Category "${n}" already exists.`);
     }
-    let affected = 0;
-    state.stock.forEach(function (i) { if (i.category === oldName) { i.category = n; affected++; } });
+    // Persist the rename onto every stock item currently using it — this
+    // part IS real (goes through the API), only the "not-yet-used" extra
+    // category bookkeeping is session-only.
+    const affected = state.stock.filter(i => i.category === oldName);
+    for (const item of affected) {
+      const idForApi = item.id || item._id;
+      const res = await apiPut('/stock/' + idForApi, { category: n });
+      Object.assign(item, res.data);
+    }
     const idx = state.extraCategories.indexOf(oldName);
     if (idx > -1) state.extraCategories[idx] = n;
-    else if (affected === 0) state.extraCategories.push(n);
-    await persist(['stock', 'extraCategories']);
+    else if (affected.length === 0) state.extraCategories.push(n);
     emitChange('category:rename');
     return n;
   }
-
-  /**
-   * Delete a category: every stock item using it is reassigned to
-   * opts.reassignTo (default getFallbackCategoryName()), and it's
-   * removed from state.extraCategories if present.
-   */
   async function deleteCategory(name, opts) {
     opts = opts || {};
     const reassignTo = opts.reassignTo || getFallbackCategoryName();
-    state.stock.forEach(function (i) { if (i.category === name) i.category = reassignTo; });
-    state.extraCategories = state.extraCategories.filter(function (c) { return c !== name; });
-    await persist(['stock', 'extraCategories']);
+    const affected = state.stock.filter(i => i.category === name);
+    for (const item of affected) {
+      const idForApi = item.id || item._id;
+      const res = await apiPut('/stock/' + idForApi, { category: reassignTo });
+      Object.assign(item, res.data);
+    }
+    state.extraCategories = state.extraCategories.filter(c => c !== name);
     emitChange('category:delete');
   }
 
-  /**
-   * Filter + sort stock for the stock page table.
-   * filterState: { search, level, category, sort }
-   *   search   — free text (name or batch)
-   *   level    — '' | 'ok' | 'low' | 'out'
-   *   category — exact category or ''
-   *   sort     — 'name_asc' | 'qty_asc' | 'qty_desc' | 'received_desc'
-   */
   function filterStock(filterState) {
     filterState = filterState || {};
     const q = (filterState.search || '').trim().toLowerCase();
@@ -483,51 +389,34 @@
     const sort = filterState.sort || 'name_asc';
 
     let rows = (state.stock || []).filter(function (i) {
-      const mq = !q
-        || (i.name || '').toLowerCase().indexOf(q) !== -1
-        || (i.batch || '').toLowerCase().indexOf(q) !== -1;
+      const mq = !q || (i.name || '').toLowerCase().indexOf(q) !== -1 || (i.batch || '').toLowerCase().indexOf(q) !== -1;
       const ml = !level || stockLevel(i) === level;
       const mc = !cat || i.category === cat;
       return mq && ml && mc;
     });
 
-    if (sort === 'name_asc') {
-      rows.sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
-    } else if (sort === 'qty_asc') {
-      rows.sort(function (a, b) { return (a.qty || 0) - (b.qty || 0); });
-    } else if (sort === 'qty_desc') {
-      rows.sort(function (a, b) { return (b.qty || 0) - (a.qty || 0); });
-    } else if (sort === 'received_desc') {
-      rows.sort(function (a, b) { return parseReceivedDate(b.received) - parseReceivedDate(a.received); });
-    }
+    if (sort === 'name_asc') rows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    else if (sort === 'qty_asc') rows.sort((a, b) => (a.qty || 0) - (b.qty || 0));
+    else if (sort === 'qty_desc') rows.sort((a, b) => (b.qty || 0) - (a.qty || 0));
+    else if (sort === 'received_desc') rows.sort((a, b) => parseReceivedDate(b.received) - parseReceivedDate(a.received));
     return rows;
   }
 
+  /* ── Load everything from the real API ──────────────────────────── */
   async function loadAll() {
-    const s = seed();
-    const [stock, sales, orders, pending, movements, transfers, transferCountRec, extraCategories] = await Promise.all([
-      loadShared(KEYS.STOCK, s.stock),
-      loadShared(KEYS.SALES, s.sales),
-      loadShared(KEYS.ORDERS, s.orders),
-      loadShared(KEYS.PENDING, s.pending),
-      loadShared(KEYS.MOVEMENTS, s.movements),
-      loadShared(KEYS.TRANSFERS, s.transfers),
-      loadShared(KEYS.TRANSFER_COUNT, []),
-      loadShared(KEYS.EXTRA_CATEGORIES, []),
+    const [stockRes, salesRes, ordersRes, reqRes, movRes] = await Promise.all([
+      apiGet('/stock'),
+      apiGet('/sales'),
+      apiGet('/orders'),
+      apiGet('/requisitions'),
+      apiGet('/movements'),
     ]);
-    state.stock = stock; state.sales = sales; state.orders = orders;
-    state.pending = pending; state.movements = movements; state.transfers = transfers;
-    state.extraCategories = extraCategories;
-    const today = todayDDMMYY();
-    state.transfersToday = (transferCountRec[0] && transferCountRec[0].date === today) ? transferCountRec[0].count : 0;
+    state.stock = stockRes.data || [];
+    state.sales = salesRes.data || [];
+    state.orders = ordersRes.data || [];
+    state.requisitions = reqRes.data || [];
+    state.movements = movRes.data || [];
     state.ready = true;
-
-    await Promise.all([
-      saveShared(KEYS.STOCK, state.stock), saveShared(KEYS.SALES, state.sales),
-      saveShared(KEYS.ORDERS, state.orders), saveShared(KEYS.PENDING, state.pending),
-      saveShared(KEYS.MOVEMENTS, state.movements), saveShared(KEYS.TRANSFERS, state.transfers),
-      saveShared(KEYS.EXTRA_CATEGORIES, state.extraCategories),
-    ]);
 
     ensureBookingData().catch(function (e) {
       console.warn('[PoolBarService] BookingData not available:', e.message);
@@ -537,42 +426,24 @@
     return state;
   }
 
-  async function persist(keys) {
-    const map = {
-      stock: KEYS.STOCK, sales: KEYS.SALES, orders: KEYS.ORDERS,
-      pending: KEYS.PENDING, movements: KEYS.MOVEMENTS, transfers: KEYS.TRANSFERS,
-      extraCategories: KEYS.EXTRA_CATEGORIES,
-    };
-    const list = keys && keys.length ? keys : Object.keys(map);
-    await Promise.all(list.map(k => saveShared(map[k], state[k])));
-  }
-
   function findStock(name) { return state.stock.find(i => i.name === name); }
+  function findStockRecordId(item) { return item.id || item._id; }
 
   async function postToGuestFolio(sale) {
     if (!sale || sale.method !== getRoomChargeMethodName()) return;
     if (!sale.roomNumber) return;
     let bookingData;
-    try {
-      bookingData = await ensureBookingData();
-    } catch (e) {
-      console.warn('[PoolBarService] BookingData unavailable — folio not updated:', e.message);
-      return;
-    }
+    try { bookingData = await ensureBookingData(); }
+    catch (e) { console.warn('[PoolBarService] BookingData unavailable — folio not updated:', e.message); return; }
     if (typeof bookingData.addRoomCharge !== 'function') {
       console.warn('[PoolBarService] BookingData.addRoomCharge unavailable — folio not updated.');
       return;
     }
-    const desc = (sale.items || []).map(function (i) {
-      return (i.qty || 1) + 'x ' + (i.name || '');
-    }).join(', ') || sale.id;
+    const desc = (sale.items || []).map(i => (i.qty || 1) + 'x ' + (i.name || '')).join(', ') || sale.id;
     const guestKey = sale.guestName || sale.roomNumber;
     try {
       await bookingData.addRoomCharge(guestKey, {
-        source: getModuleName(),
-        desc: desc,
-        room: sale.roomNumber,
-        amount: sale.total,
+        source: getModuleName(), desc, room: sale.roomNumber, amount: sale.total,
         by: sale.staff || getModuleName(),
       });
     } catch (e) {
@@ -582,108 +453,124 @@
 
   async function getInHouseGuests() {
     let bookingData;
-    try {
-      bookingData = await ensureBookingData();
-    } catch (e) {
+    try { bookingData = await ensureBookingData(); }
+    catch (e) {
       const err = new Error('BookingData could not be loaded automatically: ' + e.message);
       err.code = 'BOOKING_DATA_UNAVAILABLE';
       throw err;
     }
     const data = await bookingData.getBookingData();
     const bookings = (data && data.bookings) || [];
-    return bookings
-      .filter(function (b) { return b.status === 'checkedin' && b.guest; })
-      .map(function (b) {
-        return {
-          room: String(b.room || ''),
-          name: b.guest || '',
-          phone: b.phone || '',
-          status: 'In-House',
-        };
-      });
+    return bookings.filter(b => b.status === 'checkedin' && b.guest).map(b => ({
+      room: String(b.room || ''), name: b.guest || '', phone: b.phone || '', status: 'In-House',
+    }));
   }
 
+  /* ── Stock CRUD (real API) ───────────────────────────────────────── */
   async function addStockItem({ name, category, unit, min = 0, price = 0, desc = '' }) {
     if (!name || !name.trim()) throw new Error('Item name is required.');
     if (findStock(name)) throw new Error(`"${name}" is already tracked — edit it instead.`);
-    const emptyValue = getEmptyValuePlaceholder();
-    const entry = { name: name.trim(), category, unit, qty: 0, min, price, batch: emptyValue, received: emptyValue, desc };
-    state.stock.push(entry);
-    await persist(['stock']);
+    const res = await apiPost('/stock', { name, category, unit, min, price, desc });
+    state.stock.push(res.data);
     emitChange('stock:add');
-    return entry;
+    return res.data;
   }
 
-  async function editStockItem(name, updates) {
-    const i = findStock(name);
-    if (!i) throw new Error(`"${name}" not found in stock.`);
-    const { qty, batch, received, ...safeUpdates } = updates;
-    Object.assign(i, safeUpdates);
-    await persist(['stock']);
+  async function editStockItem(nameOrId, updates) {
+    const item = typeof nameOrId === 'string'
+      ? (findStock(nameOrId) || state.stock.find(i => i.id === nameOrId || i._id === nameOrId))
+      : nameOrId;
+    if (!item) throw new Error(`"${nameOrId}" not found in stock.`);
+    const { qty, batch, received, ...safeUpdates } = updates || {};
+    const res = await apiPut('/stock/' + findStockRecordId(item), safeUpdates);
+    Object.assign(item, res.data);
     emitChange('stock:edit');
-    return i;
+    return item;
   }
 
-  async function deleteStockItem(name) {
-    state.stock = state.stock.filter(i => i.name !== name);
-    await persist(['stock']);
+  async function deleteStockItem(nameOrId) {
+    const item = typeof nameOrId === 'string'
+      ? (findStock(nameOrId) || state.stock.find(i => i.id === nameOrId || i._id === nameOrId))
+      : nameOrId;
+    if (!item) return;
+    await apiDelete('/stock/' + findStockRecordId(item));
+    state.stock = state.stock.filter(i => i !== item);
     emitChange('stock:delete');
   }
 
   async function deductStock(name, qty, reason, notes) {
-    const i = findStock(name);
-    if (!i) throw new Error(`"${name}" not found in stock.`);
-    if (qty < 1) throw new Error('Enter a valid quantity.');
-    if (qty > i.qty) throw new Error(`Cannot deduct more than the ${i.qty} ${i.unit} on hand.`);
-    i.qty -= qty;
-    state.movements.unshift({ date: nowStamp(), item: i.name, qtyIn: 0, qtyOut: qty, balance: i.qty, reason: notes ? `${reason} — ${notes}` : reason });
-    await persist(['stock', 'movements']);
+    if (!qty || qty < 1) throw new Error('Enter a valid quantity.');
+    const res = await apiPost('/stock/deduct', { name, qty, reason, notes });
+    const item = findStock(name);
+    if (item) Object.assign(item, res.data);
     emitChange('stock:deduct');
-    return i;
+    return item || res.data;
   }
 
-  function restoreStock(name, qty, reason) {
+  /**
+   * Client-side stock restore used only as a local mirror right after a
+   * void/cancel API call already told us the new server-side qty — never
+   * called on its own to mutate the server. See voidSale() below, which
+   * uses the qty the server actually returned instead of guessing.
+   */
+  function restoreStockLocal(name, qty) {
     const i = findStock(name);
     if (!i) return null;
     i.qty += qty;
-    state.movements.unshift({ date: nowStamp(), item: i.name, qtyIn: qty, qtyOut: 0, balance: i.qty, reason });
     return i;
   }
 
-  async function acceptRequisition(reqNo) {
-    const idx = state.pending.findIndex(p => p.no === reqNo);
-    if (idx === -1) throw new Error(`Requisition ${reqNo} not found.`);
-    const p = state.pending[idx];
-    let item = findStock(p.item);
-    if (!item) {
-      item = { name: p.item, category: getFallbackCategoryName(), unit: p.unit, qty: 0, min: 0, price: 0, batch: p.no, received: todayDDMMYY(), desc: '' };
-      state.stock.push(item);
+  /* ── Requisitions (Pool Bar → Store) ─────────────────────────────── */
+  async function submitRequisition({ items, requester, dept, priority, remark, neededBy }) {
+    const res = await apiPost('/requisitions', {
+      items, requester, dept: dept || getDepartmentName(), priority, remark, neededBy,
+    });
+    state.requisitions.unshift(res.data);
+    emitChange('requisition:submit');
+    return res.data;
+  }
+
+  // In-memory only — see file header. Prevents double-crediting stock if
+  // the same requisition's "Accept Delivery" is triggered twice in one
+  // session; does not survive a reload.
+  const _receivedReqLinesThisSession = {};
+
+  /**
+   * Credits Pool Bar's own stock with whatever Store issued on a
+   * requisition, via PUT /stock/:id (or POST /stock for a brand-new
+   * item) since there's no dedicated "receive" endpoint yet.
+   */
+  async function receiveRequisition(req) {
+    if (!req || !Array.isArray(req.items)) throw new Error('Invalid requisition — nothing to receive.');
+    const reqNo = req.no || req.requisitionNo;
+    let receivedAny = false;
+
+    for (const it of req.items) {
+      const issued = Number(it.issuedQty) || 0;
+      const already = (_receivedReqLinesThisSession[reqNo] && _receivedReqLinesThisSession[reqNo][it.name]) || 0;
+      const delta = issued - already;
+      if (delta <= 0) continue;
+      receivedAny = true;
+
+      const existing = findStock(it.name);
+      if (existing) {
+        const res = await apiPut('/stock/' + findStockRecordId(existing), { qty: (existing.qty || 0) + delta });
+        Object.assign(existing, res.data);
+      } else {
+        const res = await apiPost('/stock', {
+          name: it.name, category: getFallbackCategoryName(), unit: it.unit || 'unit',
+          min: 0, price: Number(it.cost) || 0, qty: delta,
+        });
+        state.stock.push(res.data);
+      }
+
+      _receivedReqLinesThisSession[reqNo] = _receivedReqLinesThisSession[reqNo] || {};
+      _receivedReqLinesThisSession[reqNo][it.name] = issued;
     }
-    item.qty += p.qty;
-    item.batch = p.no;
-    item.received = todayDDMMYY();
-    state.movements.unshift({ date: nowStamp(), item: item.name, qtyIn: p.qty, qtyOut: 0, balance: item.qty, reason: `Requisition Received (${p.no})` });
-    state.pending.splice(idx, 1);
-    await persist(['stock', 'movements', 'pending']);
-    emitChange('requisition:accept');
-    return item;
-  }
 
-  async function rejectRequisition(reqNo) {
-    const idx = state.pending.findIndex(p => p.no === reqNo);
-    if (idx === -1) throw new Error(`Requisition ${reqNo} not found.`);
-    const [removed] = state.pending.splice(idx, 1);
-    await persist(['pending']);
-    emitChange('requisition:reject');
-    return removed;
-  }
-
-  async function logRequisitionRaised() {
-    const today = todayDDMMYY();
-    state.transfersToday += 1;
-    await saveShared(KEYS.TRANSFER_COUNT, [{ date: today, count: state.transfersToday }]);
-    emitChange('requisition:raised');
-    return state.transfersToday;
+    if (!receivedAny) return null;
+    emitChange('requisition:received');
+    return req;
   }
 
   function cartTotals(cart, discountPct) {
@@ -692,123 +579,81 @@
     return { subtotal, total };
   }
 
+  /* ── Sales (real API) ────────────────────────────────────────────── */
   async function recordSale({ items, discount = 0, method, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null }) {
     if (!items || !items.length) throw new Error('Add at least one item.');
-    if (!table) throw new Error('Please enter a table or seat.');
     if (!staff) throw new Error('Please enter the staff name.');
     const cleanItems = items.map(c => ({ name: c.key || c.name, qty: c.qty, price: c.price }));
-    const { subtotal, total } = cartTotals(cleanItems, discount);
-    const stamp = nowStamp();
     const roomChargeMethod = getRoomChargeMethodName();
-    if (roomNumber && roomChargeMethod) method = roomChargeMethod;
-    const sale = {
-      id: nextSaleId(state.sales), items: cleanItems, subtotal, discount, total,
-      method, staff, table, notes, date: stamp, status: getStatusConstants().SALE_COMPLETED, source: 'quick',
-      roomNumber: roomNumber || null, guestName: guestName || null, guestPhone: guestPhone || null,
-    };
-    sale.items.forEach(c => {
-      const inv = findStock(c.name);
-      if (inv) {
-        inv.qty = Math.max(0, inv.qty - c.qty);
-        state.movements.unshift({ date: stamp, item: c.name, qtyIn: 0, qtyOut: c.qty, balance: inv.qty, reason: `Sale (${sale.id})` });
-      }
+    const effectiveMethod = (roomNumber && roomChargeMethod) ? roomChargeMethod : method;
+
+    const res = await apiPost('/sales', {
+      items: cleanItems, discount, method: effectiveMethod, staff, table, notes,
+      roomNumber, guestName, guestPhone,
     });
-    state.sales.unshift(sale);
-    await persist(['sales', 'stock', 'movements']);
-    await postToGuestFolio(sale);
+    state.sales.unshift(res.data);
     emitChange('sale:record');
-    return sale;
-  }
-
-  async function openTab({ items, discount = 0, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null }) {
-    if (!items || !items.length) throw new Error('Add at least one item.');
-    if (!table) throw new Error('Please enter a table or seat.');
-    if (!staff) throw new Error('Please enter the staff name.');
-    const cleanItems = items.map(c => ({ name: c.key || c.name, qty: c.qty, price: c.price }));
-    const { subtotal, total } = cartTotals(cleanItems, discount);
-    const order = {
-      id: nextOrderId(state.orders), items: cleanItems, subtotal, discount, total,
-      staff, table, notes, date: nowStamp(), status: getStatusConstants().ORDER_OPEN, source: 'tab',
-      roomNumber: roomNumber || null, guestName: guestName || null, guestPhone: guestPhone || null,
-    };
-    state.orders.unshift(order);
-    await persist(['orders']);
-    emitChange('order:open');
-    return order;
-  }
-
-  async function markServed(orderId) {
-    const o = state.orders.find(x => x.id === orderId);
-    if (!o) throw new Error(`Order ${orderId} not found.`);
-    o.status = getStatusConstants().ORDER_SERVED;
-    await persist(['orders']);
-    emitChange('order:served');
-    return o;
-  }
-
-  async function payOrder(orderId, methodOrOpts) {
-    const o = state.orders.find(x => x.id === orderId);
-    if (!o) throw new Error(`Order ${orderId} not found.`);
-    let method = 'Cash';
-    let roomNumber = o.roomNumber || null;
-    let guestName = o.guestName || null;
-    let guestPhone = o.guestPhone || null;
-    if (methodOrOpts && typeof methodOrOpts === 'object') {
-      method = methodOrOpts.method || method;
-      if (methodOrOpts.roomNumber != null) roomNumber = methodOrOpts.roomNumber;
-      if (methodOrOpts.guestName != null) guestName = methodOrOpts.guestName;
-      if (methodOrOpts.guestPhone != null) guestPhone = methodOrOpts.guestPhone;
-    } else if (typeof methodOrOpts === 'string') {
-      method = methodOrOpts;
-    }
-    const payRoomChargeMethod = getRoomChargeMethodName();
-    if (roomNumber && payRoomChargeMethod) method = payRoomChargeMethod;
-    const stamp = nowStamp();
-    const sale = {
-      id: nextSaleId(state.sales), items: o.items, subtotal: o.subtotal, discount: o.discount,
-      total: o.total, method, staff: o.staff, table: o.table, notes: o.notes,
-      date: stamp, status: getStatusConstants().SALE_COMPLETED, source: 'tab',
-      roomNumber: roomNumber || null, guestName: guestName || null, guestPhone: guestPhone || null,
-    };
-    o.items.forEach(item => {
-      const inv = findStock(item.name);
-      if (inv) {
-        inv.qty = Math.max(0, inv.qty - item.qty);
-        state.movements.unshift({ date: stamp, item: item.name, qtyIn: 0, qtyOut: item.qty, balance: inv.qty, reason: `Tab Payment (${o.id})` });
-      }
-    });
-    state.sales.unshift(sale);
-    o.status = getStatusConstants().ORDER_PAID; o.payMethod = method; o.paidSaleId = sale.id;
-    o.roomNumber = roomNumber; o.guestName = guestName; o.guestPhone = guestPhone;
-    await persist(['sales', 'stock', 'movements', 'orders']);
-    await postToGuestFolio(sale);
-    emitChange('order:paid');
-    return { order: o, sale };
-  }
-
-  async function cancelOrder(orderId) {
-    const o = state.orders.find(x => x.id === orderId);
-    if (!o) throw new Error(`Order ${orderId} not found.`);
-    o.status = getStatusConstants().ORDER_CANCELLED;
-    await persist(['orders']);
-    emitChange('order:cancelled');
-    return o;
+    await postToGuestFolio(res.data);
+    return res.data;
   }
 
   async function voidSale(saleId, reason, voidedBy) {
-    const s = state.sales.find(x => x.id === saleId);
-    if (!s) throw new Error(`Sale ${saleId} not found.`);
-    if (s.status === getStatusConstants().SALE_VOIDED) return s;
-    const stamp = nowStamp();
-    s.items.forEach(item => restoreStock(item.name, item.qty, `Voided Sale (${s.id})`));
-    s.status = getStatusConstants().SALE_VOIDED; s.voidReason = reason; s.voidDate = stamp; s.voidedBy = voidedBy;
-    await persist(['sales', 'stock', 'movements']);
+    const res = await apiPost('/sales/' + saleId + '/void', { reason });
+    const idx = state.sales.findIndex(s => s.id === saleId || s._id === saleId);
+    if (idx > -1) state.sales[idx] = res.data;
+    else state.sales.unshift(res.data);
     emitChange('sale:void');
-    return s;
+    return res.data;
   }
 
+  /* ── Orders / Tabs (real API) ─────────────────────────────────────── */
+  async function openTab({ items, discount = 0, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null }) {
+    if (!items || !items.length) throw new Error('Add at least one item.');
+    if (!staff) throw new Error('Please enter the staff name.');
+    const cleanItems = items.map(c => ({ name: c.key || c.name, qty: c.qty, price: c.price }));
+    const res = await apiPost('/orders', { items: cleanItems, discount, staff, table, notes, roomNumber, guestName, guestPhone });
+    state.orders.unshift(res.data);
+    emitChange('order:open');
+    return res.data;
+  }
+
+  async function updateOrder(orderId, updates) {
+    const res = await apiPut('/orders/' + orderId, updates);
+    const idx = state.orders.findIndex(o => o.id === orderId || o._id === orderId);
+    if (idx > -1) state.orders[idx] = res.data;
+    emitChange('order:update');
+    return res.data;
+  }
+
+  async function markServed(orderId) {
+    const res = await updateOrder(orderId, { status: 'served' });
+    emitChange('order:served');
+    return res;
+  }
+
+  async function payOrder(orderId, methodOrOpts) {
+    const body = (methodOrOpts && typeof methodOrOpts === 'object') ? methodOrOpts : { method: methodOrOpts };
+    const res = await apiPost('/orders/' + orderId + '/pay', body);
+    const idx = state.orders.findIndex(o => o.id === orderId || o._id === orderId);
+    if (idx > -1) state.orders[idx] = res.data.order;
+    state.sales.unshift(res.data.sale);
+    emitChange('order:paid');
+    await postToGuestFolio(res.data.sale);
+    return res.data;
+  }
+
+  async function cancelOrder(orderId, reason) {
+    const res = await apiPost('/orders/' + orderId + '/cancel', { reason });
+    const idx = state.orders.findIndex(o => o.id === orderId || o._id === orderId);
+    if (idx > -1) state.orders[idx] = res.data;
+    emitChange('order:cancelled');
+    return res.data;
+  }
+
+  /* ── KPIs ─────────────────────────────────────────────────────────── */
   function dashboardKPIs() {
-    const pendingN = state.pending.length;
+    const pendingStatuses = ['Pending', 'Partial'];
+    const pendingN = (state.requisitions || []).filter(r => pendingStatuses.includes(r.status)).length;
     const lowStock = state.stock.filter(i => stockLevel(i) !== 'ok').length;
     const todaySales = getTodaysCompletedSales();
     const todayRevenue = todaySales.reduce((s, x) => s + x.total, 0);
@@ -821,7 +666,7 @@
     const completed = rows.filter(s => s.status === getStatusConstants().SALE_COMPLETED);
     const voided = rows.filter(s => s.status === getStatusConstants().SALE_VOIDED);
     const revenue = completed.reduce((s, x) => s + x.total, 0);
-    const units = completed.reduce((s, x) => s + x.items.reduce((a, i) => a + i.qty, 0), 0);
+    const units = completed.reduce((s, x) => s + (x.items || []).reduce((a, i) => a + i.qty, 0), 0);
     return { total: rows.length, completed: completed.length, voided: voided.length, revenue, units };
   }
 
@@ -835,8 +680,12 @@
 
   function ordersKPIs() {
     const todayStr = todayDDMMYY();
-    const completedToday = state.sales.filter(s => s.status === getStatusConstants().SALE_COMPLETED && (s.date || '').startsWith(todayStr));
-    const rejectedToday = state.orders.filter(o => o.status === getStatusConstants().ORDER_CANCELLED && (o.date || '').startsWith(todayStr));
+    const isToday = (d) => {
+      const dt = d ? new Date(d) : null;
+      return dt && `${pad2(dt.getDate())}/${pad2(dt.getMonth() + 1)}/${String(dt.getFullYear()).slice(-2)}` === todayStr;
+    };
+    const completedToday = state.sales.filter(s => s.status === getStatusConstants().SALE_COMPLETED && isToday(s.date));
+    const rejectedToday = state.orders.filter(o => o.status === getStatusConstants().ORDER_CANCELLED && isToday(o.date));
     const unitsOnHand = state.stock.reduce((s, i) => s + i.qty, 0);
     const st = getStatusConstants();
     const active = state.orders.filter(o => o.status === st.ORDER_OPEN || o.status === st.ORDER_SERVED).length;
@@ -844,10 +693,8 @@
     return {
       completedToday: completedToday.length,
       completedTodayRevenue: completedToday.reduce((s, x) => s + x.total, 0),
-      transfersToday: state.transfersToday,
       rejectedToday: rejectedToday.length,
-      unitsOnHand,
-      unitsSoldToday,
+      unitsOnHand, unitsSoldToday,
       itemCount: state.stock.length,
       activeOrders: active,
     };
@@ -880,11 +727,14 @@
 
   function getShiftSales(session) {
     const today = todayDDMMYY();
+    const isToday = (d) => {
+      const dt = d ? new Date(d) : null;
+      return dt && `${pad2(dt.getDate())}/${pad2(dt.getMonth() + 1)}/${String(dt.getFullYear()).slice(-2)}` === today;
+    };
     const me = ((session && session.name) || '').toLowerCase();
     const allStaff = isManagerLike(session);
-
-    return (state.sales || []).filter(function (s) {
-      if (!(s.date || '').startsWith(today)) return false;
+    return (state.sales || []).filter(s => {
+      if (!isToday(s.date)) return false;
       if (!allStaff) {
         if (!me) return false;
         if ((s.staff || '').toLowerCase() !== me) return false;
@@ -893,15 +743,9 @@
     });
   }
 
-  // ── Page-level business logic, moved off poolbar-sales.html so the
-  // page is pure call-and-render. Filtering, KPI math, row/detail
-  // shaping, and shift copy all live here — the page only wires DOM
-  // and passes user input through.
   function normalizeSaleForTable(s) {
     return Object.assign({}, s, {
-      items: (s.items || []).map(function (i) {
-        return { name: i.name || '—', qty: i.qty || 0, price: i.price || 0 };
-      }),
+      items: (s.items || []).map(i => ({ name: i.name || '—', qty: i.qty || 0, price: i.price || 0 })),
     });
   }
 
@@ -909,52 +753,42 @@
     return {
       id: s.id, dept: getDepartmentName(), table: s.table, staff: s.staff,
       date: s.date, method: s.method,
-      items: (s.items || []).map(function (i) {
-        return { name: i.name || '—', qty: i.qty || 0, price: i.price || 0 };
-      }),
+      items: (s.items || []).map(i => ({ name: i.name || '—', qty: i.qty || 0, price: i.price || 0 })),
       discount: (s.subtotal || 0) * (s.discount || 0) / 100,
       total: s.total, status: s.status, voidReason: s.voidReason, notes: s.notes,
       roomNumber: s.roomNumber || null, guestName: s.guestName || null, guestPhone: s.guestPhone || null,
     };
   }
 
-  function saleItemsQty(s) {
-    return (s.items || []).reduce(function (sum, i) { return sum + (i.qty || 0); }, 0);
-  }
+  function saleItemsQty(s) { return (s.items || []).reduce((sum, i) => sum + (i.qty || 0), 0); }
 
-  /** Filters this session's shift sales by status/payment/search — the exact rules poolbar-sales.html used to run inline. */
   function filterShiftSales(session, filterState) {
     filterState = filterState || {};
     const q = (filterState.search || '').trim().toLowerCase();
-    return getShiftSales(session).filter(function (s) {
+    return getShiftSales(session).filter(s => {
       if (filterState.status && s.status !== filterState.status) return false;
       if (filterState.payment && s.method !== filterState.payment) return false;
       if (q) {
         const items = s.items || [];
-        const mq = (s.id || '').toLowerCase().indexOf(q) !== -1
-          || (s.staff || '').toLowerCase().indexOf(q) !== -1
-          || (s.table || '').toLowerCase().indexOf(q) !== -1
-          || items.some(function (i) { return (i.name || '').toLowerCase().indexOf(q) !== -1; });
+        const mq = (s.id || '').toLowerCase().includes(q)
+          || (s.staff || '').toLowerCase().includes(q)
+          || (s.table || '').toLowerCase().includes(q)
+          || items.some(i => (i.name || '').toLowerCase().includes(q));
         if (!mq) return false;
       }
       return true;
     });
   }
 
-  /** Revenue / money-received / units math for a set of sale rows (already filtered). */
   function getShiftKpiSummary(rows) {
     rows = rows || [];
     const st = getStatusConstants();
-    const completed = rows.filter(function (s) { return s.status === st.SALE_COMPLETED; });
-    const voided = rows.filter(function (s) { return s.status === st.SALE_VOIDED; });
-    const revenue = completed.reduce(function (sum, s) { return sum + (s.total || 0); }, 0);
-    const units = completed.reduce(function (sum, s) { return sum + saleItemsQty(s); }, 0);
-    const moneyReceived = completed
-      .filter(function (s) { return isMoneyReceived(s.method); })
-      .reduce(function (sum, s) { return sum + (s.total || 0); }, 0);
-    const notReceivedTotal = completed
-      .filter(function (s) { return s.method && !isMoneyReceived(s.method); })
-      .reduce(function (sum, s) { return sum + (s.total || 0); }, 0);
+    const completed = rows.filter(s => s.status === st.SALE_COMPLETED);
+    const voided = rows.filter(s => s.status === st.SALE_VOIDED);
+    const revenue = completed.reduce((sum, s) => sum + (s.total || 0), 0);
+    const units = completed.reduce((sum, s) => sum + saleItemsQty(s), 0);
+    const moneyReceived = completed.filter(s => isMoneyReceived(s.method)).reduce((sum, s) => sum + (s.total || 0), 0);
+    const notReceivedTotal = completed.filter(s => s.method && !isMoneyReceived(s.method)).reduce((sum, s) => sum + (s.total || 0), 0);
     return { total: rows.length, completed: completed.length, voided: voided.length, revenue, units, moneyReceived, notReceivedTotal };
   }
 
@@ -973,224 +807,138 @@
       ' · ' + (isManagerLike(session) ? 'All staff today' : ((session && session.name) || ''));
   }
 
-
   function getSaleStatusOptions() {
-  const seed = global.PoolBarSeed || {};
-  if (Array.isArray(seed.SALE_STATUS_OPTIONS) && seed.SALE_STATUS_OPTIONS.length) {
-    return seed.SALE_STATUS_OPTIONS;
+    const seed = global.PoolBarSeed || {};
+    if (Array.isArray(seed.SALE_STATUS_OPTIONS) && seed.SALE_STATUS_OPTIONS.length) return seed.SALE_STATUS_OPTIONS;
+    const st = getStatusConstants();
+    const defaults = [
+      { value: st.SALE_COMPLETED, label: 'Completed', color: 'var(--green)', colorBg: 'var(--green-bg)' },
+      { value: st.SALE_VOIDED, label: 'Voided', color: 'var(--red)', colorBg: 'var(--red-bg)' },
+    ];
+    const knownValues = new Set(defaults.map(d => d.value));
+    const existing = (state.sales || []).map(s => s.status).filter(Boolean).filter(v => !knownValues.has(v));
+    existing.forEach(v => defaults.push({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1), color: 'var(--text2)', colorBg: 'var(--surface3)' }));
+    return defaults;
   }
-  const st = getStatusConstants();
-  const defaults = [
-    { value: st.SALE_COMPLETED, label: 'Completed', color: 'var(--green)', colorBg: 'var(--green-bg)' },
-    { value: st.SALE_VOIDED,    label: 'Voided',    color: 'var(--red)',   colorBg: 'var(--red-bg)' },
-  ];
-  // add any other status that might appear (e.g., from future extensions)
-  const knownValues = new Set(defaults.map(d => d.value));
-  const existing = (state.sales || [])
-    .map(s => s.status)
-    .filter(Boolean)
-    .filter(v => !knownValues.has(v));
-  existing.forEach(v => {
-    defaults.push({
-      value: v,
-      label: v.charAt(0).toUpperCase() + v.slice(1),
-      color: 'var(--text2)',
-      colorBg: 'var(--surface3)',
-    });
-  });
-  return defaults;
-}
 
-function filterSales(filterState) {
-  filterState = filterState || {};
-  const q = (filterState.search || '').trim().toLowerCase();
-  const pay = filterState.payment || '';
-  const status = filterState.status || '';
-  const staff = filterState.staff || '';
-  const bounds = filterState.dateRange || { start: null, end: null };
+  function filterSales(filterState) {
+    filterState = filterState || {};
+    const q = (filterState.search || '').trim().toLowerCase();
+    const pay = filterState.payment || '';
+    const status = filterState.status || '';
+    const staff = filterState.staff || '';
+    const bounds = filterState.dateRange || { start: null, end: null };
 
-  return (state.sales || []).filter(function (s) {
-    if (status && s.status !== status) return false;
-    if (pay && s.method !== pay) return false;
-    if (staff && (s.staff || '') !== staff) return false;
-    if (q) {
-      const hit = (s.id || '').toLowerCase().includes(q)
-        || (s.staff || '').toLowerCase().includes(q)
-        || (s.table || '').toLowerCase().includes(q)
-        || (s.items || []).some(function (i) { return (i.name || '').toLowerCase().includes(q); });
-      if (!hit) return false;
-    }
-    if (bounds.start && bounds.end) {
-      const sd = dateOnly(parseStamp(s.date));
-      if (!sd || sd < bounds.start || sd > bounds.end) return false;
-    }
-    return true;
-  });
-}
-
-function getReportTitle(periodLabel) {
-  if (!periodLabel || periodLabel === 'All time') return 'Full Report';
-  return 'Report: ' + periodLabel;
-}
-
-
-// ── Requisition history business logic (merged transfers + Store requisitions)
-
-/**
- * Returns all history rows for a department:
- * - Pool Bar's own store transfers (PBS.state.transfers)
- * - StoreService requisitions for that department with status 'Full' or 'Rejected'
- * Each row gets a _kind: 'transfer' or 'requisition'
- */
-function getDepartmentHistory(dept) {
-  const transfers = (state.transfers || []).map(function (t) {
-    return Object.assign({}, t, { _kind: 'transfer' });
-  });
-  let reqs = [];
-  if (global.StoreService && typeof global.StoreService.getRequisitions === 'function') {
-    reqs = global.StoreService.getRequisitions({ mode: 'store_issue' })
-      .filter(function (r) { return r.dept === dept && (r.status === 'Full' || r.status === 'Rejected'); })
-      .map(function (r) { return Object.assign({}, r, { _kind: 'requisition' }); });
-  }
-  return transfers.concat(reqs);
-}
-
-/**
- * Filter rows by:
- *   - search (free text against no., item name, by/from)
- *   - status (string: 'Completed', 'Rejected', 'Transfer')
- *   - priority (string: 'Urgent' | 'Normal' | '')
- *   - source (string: 'requisition' | 'store_push' | '')
- */
-function filterHistory(rows, filters) {
-  filters = filters || {};
-  const q = (filters.search || '').trim().toLowerCase();
-  const status = filters.status || '';
-  const priority = filters.priority || '';
-  const source = filters.source || '';
-
-  return rows.filter(function (r) {
-    const isReq = r._kind === 'requisition';
-    const isTrans = r._kind === 'transfer';
-
-    // Search match
-    if (q) {
-      const by = (isReq ? (r.by || '') : (r.sentBy || r.from || '')).toLowerCase();
-      const itemNames = (r.items || []).map(function (i) { return (i.name || '').toLowerCase(); }).join(' ');
-      const no = (r.no || '').toLowerCase();
-      if (!no.includes(q) && !by.includes(q) && !itemNames.includes(q)) return false;
-    }
-
-    // Status filter
-    if (status) {
-      if (status === 'Completed' && !(isReq && r.status === 'Full')) return false;
-      if (status === 'Rejected' && !(isReq && r.status === 'Rejected')) return false;
-      if (status === 'Transfer' && !isTrans) return false;
-    }
-
-    // Priority filter
-    if (priority) {
-      const p = r.priority || 'Normal';
-      if (p !== priority) return false;
-    }
-
-    // Source filter
-    if (source) {
-      if (source === 'requisition' && !isReq) return false;
-      if (source === 'store_push' && !isTrans) return false;
-    }
-
-    return true;
-  });
-}
-
-/**
- * Sort rows by date or item count.
- * sortKey: 'date' or 'items'
- * sortDir: 'asc' or 'desc' (default 'desc')
- */
-function sortHistory(rows, sortKey, sortDir) {
-  sortKey = sortKey || 'date';
-  sortDir = sortDir || 'desc';
-  var sorted = rows.slice();
-  sorted.sort(function (a, b) {
-    var cmp = 0;
-    if (sortKey === 'date') {
-      var da = (a.dateRaised || a.date || '');
-      var db = (b.dateRaised || b.date || '');
-      var ta = Date.parse(da) || 0;
-      var tb = Date.parse(db) || 0;
-      cmp = ta - tb;
-    } else if (sortKey === 'items') {
-      cmp = (a.items || []).length - (b.items || []).length;
-    }
-    return sortDir === 'desc' ? -cmp : cmp;
-  });
-  return sorted;
-}
-
-/**
- * Compute KPIs for a history row set:
- *   completed: number of requisitions with status 'Full'
- *   rejected: number of requisitions with status 'Rejected'
- *   transfers: number of store transfers
- *   totalUnits: sum of issuedQty (or qty) across completed + transfers
- */
-function getHistoryKPIs(rows) {
-  var completed = 0, rejected = 0, transfers = 0, totalUnits = 0;
-  rows.forEach(function (r) {
-    if (r._kind === 'transfer') {
-      transfers++;
-      (r.items || []).forEach(function (i) {
-        totalUnits += parseFloat(i.issuedQty != null ? i.issuedQty : i.qty) || 0;
-      });
-    } else if (r._kind === 'requisition') {
-      if (r.status === 'Full') {
-        completed++;
-        (r.items || []).forEach(function (i) {
-          totalUnits += parseFloat(i.issuedQty != null ? i.issuedQty : i.qty) || 0;
-        });
-      } else if (r.status === 'Rejected') {
-        rejected++;
+    return (state.sales || []).filter(s => {
+      if (status && s.status !== status) return false;
+      if (pay && s.method !== pay) return false;
+      if (staff && (s.staff || '') !== staff) return false;
+      if (q) {
+        const hit = (s.id || '').toLowerCase().includes(q)
+          || (s.staff || '').toLowerCase().includes(q)
+          || (s.table || '').toLowerCase().includes(q)
+          || (s.items || []).some(i => (i.name || '').toLowerCase().includes(q));
+        if (!hit) return false;
       }
-    }
-  });
-  return { completed, rejected, transfers, totalUnits };
-}
-
-/**
- * Return display label and CSS class for a history row's status.
- * kind: 'requisition' or 'transfer'
- * status: the raw status string
- */
-function getHistoryStatusDisplay(kind, status) {
-  if (kind === 'transfer') {
-    return { label: status || 'Store Transfer', cls: 'chip-transfer' };
+      if (bounds.start && bounds.end) {
+        const sd = dateOnly(parseStamp(s.date));
+        if (!sd || sd < bounds.start || sd > bounds.end) return false;
+      }
+      return true;
+    });
   }
-  if (status === 'Full') return { label: 'Completed', cls: 'chip-completed' };
-  if (status === 'Rejected') return { label: 'Rejected', cls: 'chip-rejected' };
-  return { label: status || '—', cls: '' };
-}
 
+  function getReportTitle(periodLabel) {
+    if (!periodLabel || periodLabel === 'All time') return 'Full Report';
+    return 'Report: ' + periodLabel;
+  }
 
-function getLowStockItems() {
-  return state.stock.filter(i => stockLevel(i) !== 'ok');
-}
+  /* ── Requisition history (Pool Bar → Store) ──────────────────────────
+   * Sourced entirely from state.requisitions (the real API) now — the
+   * old demo merged in a separate "Store push transfer" list that had no
+   * backend model wired up for Pool Bar; that concept is gone until a
+   * real transfers endpoint exists. */
+  function getDepartmentHistory(dept) {
+    return (state.requisitions || [])
+      .filter(r => !dept || r.dept === dept)
+      .map(r => Object.assign({}, r, { _kind: 'requisition' }));
+  }
+
+  function filterHistory(rows, filters) {
+    filters = filters || {};
+    const q = (filters.search || '').trim().toLowerCase();
+    const status = filters.status || '';
+    const priority = filters.priority || '';
+
+    return rows.filter(r => {
+      if (q) {
+        const by = (r.requester || r.by || '').toLowerCase();
+        const itemNames = (r.items || []).map(i => (i.name || '').toLowerCase()).join(' ');
+        const no = (r.no || r.requisitionNo || '').toLowerCase();
+        if (!no.includes(q) && !by.includes(q) && !itemNames.includes(q)) return false;
+      }
+      if (status && r.status !== status) return false;
+      if (priority && (r.priority || 'Normal') !== priority) return false;
+      return true;
+    });
+  }
+
+  function sortHistory(rows, sortKey, sortDir) {
+    sortKey = sortKey || 'date'; sortDir = sortDir || 'desc';
+    const sorted = rows.slice();
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'date') {
+        const ta = Date.parse(a.dateRaised || a.date || '') || 0;
+        const tb = Date.parse(b.dateRaised || b.date || '') || 0;
+        cmp = ta - tb;
+      } else if (sortKey === 'items') {
+        cmp = (a.items || []).length - (b.items || []).length;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+    return sorted;
+  }
+
+  function getHistoryKPIs(rows) {
+    let pending = 0, completed = 0, rejected = 0, totalUnits = 0;
+    rows.forEach(r => {
+      if (r.status === 'Full' || r.status === 'Completed') {
+        completed++;
+        (r.items || []).forEach(i => { totalUnits += parseFloat(i.issuedQty != null ? i.issuedQty : i.qty) || 0; });
+      } else if (r.status === 'Rejected' || r.status === 'Disputed') {
+        rejected++;
+      } else {
+        pending++;
+      }
+    });
+    return { pending, completed, rejected, transfers: 0, totalUnits };
+  }
+
+  function getHistoryStatusDisplay(kind, status) {
+    switch (status) {
+      case 'Pending':   return { label: 'Pending', cls: 'chip-pending' };
+      case 'Partial':   return { label: 'Partially Issued', cls: 'chip-partial' };
+      case 'Full':      return { label: 'Issued — Awaiting You', cls: 'chip-issued' };
+      case 'Completed': return { label: 'Completed', cls: 'chip-completed' };
+      case 'Disputed':  return { label: 'Disputed', cls: 'chip-disputed' };
+      case 'Rejected':  return { label: 'Rejected', cls: 'chip-rejected' };
+      default:          return { label: status || '—', cls: '' };
+    }
+  }
+
+  function getLowStockItems() { return state.stock.filter(i => stockLevel(i) !== 'ok'); }
 
   global.PoolBarService = {
-    KEYS,
-    storage, loadShared, saveShared,
     fmtN, nowStamp, fmtStamp, parseStamp, dateOnly, todayDDMMYY,
     stockLevel, LEVEL_CHIP, LEVEL_LABEL,
-    nextSaleId, nextOrderId,
     state,
     onChange,
     loadAll,
-    persist,
     findStock,
-    addStockItem, editStockItem, deleteStockItem, deductStock, restoreStock,
-    acceptRequisition, rejectRequisition, logRequisitionRaised,
-    recordSale, openTab, markServed, payOrder, cancelOrder, voidSale,
+    addStockItem, editStockItem, deleteStockItem, deductStock,
+    submitRequisition, receiveRequisition,
+    recordSale, openTab, markServed, updateOrder, payOrder, cancelOrder, voidSale,
     cartTotals,
     dashboardKPIs, salesKPIs, stockKPIs, ordersKPIs,
     can, canVoidSale, canDiscount,
@@ -1198,7 +946,6 @@ function getLowStockItems() {
     getShiftSales, isManagerLike,
     postToGuestFolio,
     getInHouseGuests,
-    paymentMethods: getPaymentMethods(),
     getPaymentMethods,
     getRoomChargeMethodName,
     getStatusOptions,
@@ -1218,21 +965,23 @@ function getLowStockItems() {
     getRevenueMethodColorClass,
     getRevenueBreakdown,
     getTodaysCompletedSales,
-    // Stock form pick-lists + stock-page filter/sort (call-and-render)
+    getDashboardDisplayLimits,
+    getStockSnapshot,
+    getLowStockSnapshot,
+    getPendingSnapshot,
+    getRecentSalesSnapshot,
     getStockCategories,
     getStockUnits,
     getDeductReasons,
     listStockCategoriesInUse,
     parseReceivedDate,
     filterStock,
-    // Category management — service does all the work; pages only render.
     listManagedCategories,
     categoryItemCount,
     addCategory,
     renameCategory,
     deleteCategory,
     getFallbackCategoryName,
-    // Sales-page business logic (already moved)
     normalizeSaleForTable,
     buildSaleDetailShape,
     filterShiftSales,

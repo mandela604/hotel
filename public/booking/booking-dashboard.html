@@ -169,6 +169,9 @@ body {
   </div>
 </div>
 
+<script src="../services/permissions.js"></script>
+<script src="data/booking-demo-seed.js"></script>
+<script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════════════
@@ -180,82 +183,31 @@ const shell = BookingShell.attach({
   activeFile:    'booking-dashboard.html',
   pageTitle:     'Dashboard',
   pageSubtitle:  'Booking operations overview',
-  apiMode:       'Demo',
-  user:          { name: 'Booking Manager', initials: 'MG' },
 });
 
 /* ═══════════════════════════════════════════════
-   Storage shim — same 4-method contract used across every module
-   (Store's req:/req-index keys, Pool Bar's poolbar-* keys). Booking
-   uses 'booking-rooms' and 'booking-bookings' as its shared keys, so
-   booking-rooms.html / booking-list.html / booking-reports.html all
-   read and write the exact same two records.
+   Data — same BookingData.getBookingData() every other booking page
+   uses. This used to be a private localStorage shim with its own
+   hardcoded seed, completely bypassed services/booking-service.js —
+   meaning flipping BookingData.CONFIG.USE_PROD to true would light up
+   every other page but leave this dashboard stuck showing fake local
+   data forever. Now it reads through the same service, so demo mode
+   and production mode both "just work" here too.
 ═══════════════════════════════════════════════ */
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-  async delete(key, shared){ localStorage.removeItem(key); return {key, deleted:true, shared}; },
-  async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
-};
-
-const KEY_ROOMS    = 'booking-rooms';
-const KEY_BOOKINGS = 'booking-bookings';
-
-/* Seed data — identical shape/values to the original single-page
-   booking.html, so switching over doesn't reset anyone's demo state. */
-const DEMO_ROOMS = [
-  {num:'101',type:'Standard',   rate:35000},{num:'102',type:'Standard',   rate:35000},
-  {num:'103',type:'Standard',   rate:35000},{num:'104',type:'Standard',   rate:35000},
-  {num:'105',type:'Standard',   rate:35000},{num:'106',type:'Standard',   rate:35000},
-  {num:'201',type:'Deluxe',     rate:60000},{num:'202',type:'Deluxe',     rate:60000},
-  {num:'203',type:'Deluxe',     rate:60000},{num:'204',type:'Deluxe',     rate:60000},
-  {num:'301',type:'Suite',      rate:120000},{num:'302',type:'Suite',     rate:120000},
-  {num:'303',type:'Suite',      rate:120000},
-  {num:'401',type:'Conference', rate:200000},{num:'402',type:'Conference',rate:200000},
-];
-
-const DEMO_BOOKINGS = [
-  {room:'101',type:'Standard',  guest:'Mr. Adeyemi, Tunde',    phone:'+234 803 111 2233',email:'adeyemi.t@gmail.com',   idType:'NIN',             idNum:'12345678901', checkin:'2026-03-10',checkout:'2026-03-14',rate:35000, discount:0,  paid:140000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:''},
-  {room:'102',type:'Standard',  guest:'Mrs. Okafor, Ngozi',    phone:'+234 806 222 4455',email:'ngozi.o@yahoo.com',      idType:'Passport',         idNum:'A12345678',   checkin:'2026-03-12',checkout:'2026-03-13',rate:35000, discount:0,  paid:35000, payMethod:'Cash',                   payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkout',   notes:''},
-  {room:'103',type:'Standard',  guest:'Mr. Bello, Ibrahim',    phone:'+234 701 333 6677',email:'',                       idType:'NIN',             idNum:'98765432109', checkin:'2026-03-13',checkout:'2026-03-16',rate:35000, discount:10, paid:50000, payMethod:'POS',                    payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:1,status:'reserved',   notes:'Extra pillow'},
-  {room:'104',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'105',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'Plumbing repair'},
-  {room:'106',type:'Standard',  guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:35000, discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'201',type:'Deluxe',    guest:'Dr. Eze, Chukwuemeka',  phone:'+234 802 444 8899',email:'ceze@hospital.ng',       idType:'Passport',         idNum:'B87654321',   checkin:'2026-03-11',checkout:'2026-03-15',rate:60000, discount:0,  paid:240000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'202',type:'Deluxe',    guest:'Ms. Abubakar, Fatima',  phone:'+234 805 555 0011',email:'fatima.a@gmail.com',     idType:"Driver's Licence", idNum:'ABJ001234',   checkin:'2026-03-13',checkout:'2026-03-17',rate:60000, discount:5,  paid:100000,payMethod:'Split – Cash + Transfer',payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'reserved',   notes:'Honeymoon setup'},
-  {room:'203',type:'Deluxe',    guest:'Mr. Johnson, Segun',    phone:'+234 708 666 2233',email:'',                       idType:'NIN',             idNum:'55566677788', checkin:'2026-03-09',checkout:'2026-03-13',rate:60000, discount:0,  paid:240000,payMethod:'POS',                    payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:2,status:'checkout',   notes:''},
-  {room:'204',type:'Deluxe',    guest:'Prof. Williams, Ada',   phone:'+234 803 777 4455',email:'ada.williams@uni.edu.ng',idType:'NIN',             idNum:'11122233344', checkin:'2026-03-12',checkout:'2026-03-18',rate:60000, discount:15, paid:200000,payMethod:'Transfer',              payStatus:'Deposit Paid',recordedBy:'Emeka S.',  adults:1,children:0,status:'checkedin',  notes:'Vegetarian meals'},
-  {room:'301',type:'Suite',     guest:'Chief Dangote, Emeka',  phone:'+234 801 888 6677',email:'emeka.d@corp.ng',        idType:'Passport',         idNum:'C11223344',   checkin:'2026-03-10',checkout:'2026-03-15',rate:120000,discount:0,  paid:600000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Amaka O.',  adults:2,children:0,status:'checkedin',  notes:''},
-  {room:'302',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-  {room:'303',type:'Suite',     guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:120000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'maintenance',notes:'AC repair in progress'},
-  {room:'401',type:'Conference',guest:'Zenith Bank Ltd.',       phone:'+234 700 999 8877',email:'events@zenithbank.com',  idType:"Voter's Card",     idNum:'ZB00001',     checkin:'2026-03-13',checkout:'2026-03-13',rate:200000,discount:0,  paid:200000,payMethod:'Transfer',              payStatus:'Fully Paid',  recordedBy:'Emeka S.',  adults:40,children:0,status:'checkedin',  notes:'Projector & PA system'},
-  {room:'402',type:'Conference',guest:'',phone:'',email:'',idType:'NIN',idNum:'',checkin:'',checkout:'',rate:200000,discount:0,paid:0,payMethod:'Cash',payStatus:'Pending',recordedBy:'',adults:1,children:0,status:'vacant',   notes:''},
-];
-
-async function loadShared(key, fallback) {
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed) && parsed.length) return parsed; }
-  } catch (e) {}
-  return fallback;
-}
-async function saveShared(key, value) {
-  try { await storage.set(key, JSON.stringify(value), true); } catch (e) { console.warn('[sync]', key, e); }
-}
-
 let allRooms = [];
 let bookings = [];
 
 const TODAY = new Date().toISOString().split('T')[0];
 
 /* ═══════════════════════════════════════════════
-   HELPERS (same math as the original single-page version)
+   HELPERS — delegate to BookingData's math so figures
+   never drift from what booking-rooms/list/reports show.
 ═══════════════════════════════════════════════ */
-function nights(ci, co) { if (!ci || !co) return 0; const n = (new Date(co) - new Date(ci)) / 86400000; return n > 0 ? n : 0; }
+function nights(ci, co) { return BookingData.nights(ci, co); }
 function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
-function calcTotal(b) { const n = nights(b.checkin, b.checkout) || 1; return b.rate * n * (1 - (b.discount || 0) / 100); }
-function calcBal(b) { return Math.max(0, calcTotal(b) - (b.paid || 0)); }
+function calcTotal(b) { return BookingData.calcTotal(b); }
+function calcBal(b) { return BookingData.calcBal(b); }
 function getRoomStatus(num) {
   const b = bookings.find(r => r.room === num);
   if (!b || !b.status) return 'available';
@@ -369,11 +321,13 @@ function renderOverview() {
    INIT
 ═══════════════════════════════════════════════ */
 async function init() {
-  allRooms = await loadShared(KEY_ROOMS, DEMO_ROOMS);
-  bookings = await loadShared(KEY_BOOKINGS, DEMO_BOOKINGS);
-  // Persist the seed on first run so booking-rooms.html / booking-list.html
-  // / booking-reports.html see the exact same records immediately.
-  await Promise.all([ saveShared(KEY_ROOMS, allRooms), saveShared(KEY_BOOKINGS, bookings) ]);
+  if (!window.BookingData) {
+    console.error('[BookingDashboard] BookingData not loaded. Check script order.');
+    return;
+  }
+  const data = await BookingData.getBookingData();
+  allRooms = data.rooms || [];
+  bookings = data.bookings || [];
   renderOverview();
 }
 init();

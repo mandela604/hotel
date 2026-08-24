@@ -58,41 +58,6 @@ body{
 .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); }
 .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
 #filterSlot, #tableSlot{ flex-shrink:0; min-width:0; }
-.modal-overlay{ position:fixed; inset:0; background:rgba(10,15,30,.52); z-index:800; opacity:0; pointer-events:none; transition:opacity .22s; }
-.modal-overlay.open{ opacity:1; pointer-events:auto; }
-.modal-sheet{
-  position:fixed; bottom:0; left:0; right:0; max-height:86vh;
-  background:var(--surface); z-index:801; border-radius:20px 20px 0 0;
-  transform:translateY(100%); transition:transform .32s cubic-bezier(.4,0,.2,1);
-  overflow-y:auto; box-shadow:0 -8px 40px rgba(15,34,55,.16);
-}
-.modal-sheet.open{ transform:translateY(0); }
-.modal-handle{ width:36px; height:4px; border-radius:3px; background:var(--border2); margin:10px auto 0; opacity:.5; }
-.modal-head{ display:flex; align-items:flex-start; justify-content:space-between; padding:16px 22px 12px; border-bottom:1px solid var(--border); gap:12px; }
-.modal-sale-id{ font-size:18px; font-weight:800; }
-.modal-sale-date{ font-size:11.5px; color:var(--text3); font-weight:600; }
-.modal-close-btn{ width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.modal-body{ padding:18px 22px 28px; display:flex; flex-direction:column; gap:16px; }
-.modal-meta-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-@media (max-width:560px){ .modal-meta-row{ grid-template-columns:1fr 1fr; } }
-.modal-meta-item{ background:var(--surface2); border-radius:10px; padding:11px 13px; }
-.mm-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); font-weight:700; margin-bottom:3px; }
-.mm-val{ font-size:13px; font-weight:700; }
-.modal-section-lbl{ font-size:9px; text-transform:uppercase; letter-spacing:.1em; color:var(--text3); font-weight:700; margin-bottom:8px; }
-.modal-items-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
-.modal-items-table th{ text-align:left; font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); font-weight:700; padding:7px 10px; background:var(--surface2); }
-.modal-items-table th.r, .modal-items-table td.r{ text-align:right; }
-.modal-items-table td{ padding:9px 10px; border-bottom:1px solid var(--border); }
-.modal-totals{ background:var(--surface2); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:7px; }
-.total-row{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--text2); }
-.total-row.net{ font-size:15px; font-weight:800; color:var(--text); border-top:1px solid var(--border); padding-top:8px; }
-.void-info{ background:var(--red-bg); border:1px solid rgba(240,68,56,.25); border-radius:10px; padding:11px 14px; font-size:12px; color:var(--red); line-height:1.5; }
-.chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
-.chip i{ font-size:6px; }
-/* Chip color is set inline per-row from the sale status's configured
-   color (see statusColorFor()/statusLabelFor()) — no status name
-   (completed/voided/…) is baked into the stylesheet. */
-.chip{ background:var(--dyn-color-bg, var(--surface3)); color:var(--dyn-color, var(--text2)); }
 .restricted-panel{
   background:var(--surface); border:1px solid var(--border); border-radius:14px;
   box-shadow:var(--shadow); padding:48px 24px; text-align:center; color:var(--text3);
@@ -107,7 +72,7 @@ body{
 .fatal-panel b{ color:var(--red); }
 @media print{
   #pbs-sidebar, #pbs-topbar, #filterSlot, .no-print,
-  .modal-overlay, .modal-sheet, .st-pagin{ display:none !important; }
+  .sd-overlay, .st-pagin{ display:none !important; }
   .main{ margin-left:0 !important; }
   html, body{ height:auto; overflow:visible; }
   .app{ display:block; height:auto; }
@@ -147,34 +112,12 @@ body{
     </div>
   </div>
 </div>
-<div class="modal-overlay" id="modalOv"></div>
-<div class="modal-sheet" id="modalSheet">
-  <div class="modal-handle"></div>
-  <div class="modal-head">
-    <div>
-      <div class="modal-sale-id" id="mdId">—</div>
-      <div class="modal-sale-date" id="mdDate">—</div>
-    </div>
-    <button class="modal-close-btn" id="modalCloseBtn" type="button"><i class="fa-solid fa-xmark"></i></button>
-  </div>
-  <div class="modal-body">
-    <div class="modal-meta-row" id="mdMeta"></div>
-    <div>
-      <div class="modal-section-lbl">Items Ordered</div>
-      <table class="modal-items-table">
-        <thead><tr><th>Item</th><th>Qty</th><th class="r">Unit Price</th><th class="r">Line Total</th></tr></thead>
-        <tbody id="mdItems"></tbody>
-      </table>
-    </div>
-    <div class="modal-totals" id="mdTotals"></div>
-    <div id="mdVoidInfo" style="display:none"></div>
-  </div>
-</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../services/permissions.js"></script>
 <script src="data/poolbar-seed.js"></script>
 <script src="services/poolbar-service.js"></script>
 <script src="../component/poolbar-shell.js"></script>
+<script src="../component/sales-detail.js"></script>
 <script src="../component/sales-filter-bar.js"></script>
 <script src="../component/sales-table.js"></script>
 <script>
@@ -214,26 +157,9 @@ function showFatal(message) {
 }
 let filterBar = null;
 let salesTable = null;
+let salesDetail = null;
 function itemsQty(s) {
   return (s.items || []).reduce((sum, i) => sum + (i.qty || 0), 0);
-}
-// Sale-status display — driven entirely by svc.getSaleStatusOptions().
-function statusOptionFor(status) {
-  const opts = svc.getSaleStatusOptions ? svc.getSaleStatusOptions() : [];
-  return opts.find(o => o.value === status) || null;
-}
-function statusLabelFor(status) {
-  const opt = statusOptionFor(status);
-  if (opt && opt.label) return opt.label;
-  if (!status) return emptyValue;
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-function statusColorFor(status) {
-  const opt = statusOptionFor(status);
-  return {
-    color: (opt && opt.color) || 'var(--text2)',
-    colorBg: (opt && opt.colorBg) || 'var(--surface3)',
-  };
 }
 /**
  * KPI cards mirror poolbar-sales.html layout:
@@ -307,53 +233,9 @@ function applyFilters(state) {
 function openSaleModal(saleOrId) {
   const id = typeof saleOrId === 'string' ? saleOrId : (saleOrId && saleOrId.id);
   const s = svc.state.sales.find(x => x.id === id);
-  if (!s) return;
-
-  const detail = svc.buildSaleDetailShape(s);
-
-  document.getElementById('mdId').textContent = detail.id;
-  document.getElementById('mdDate').textContent = detail.date || emptyValue;
-  const statusColors = statusColorFor(detail.status);
-  document.getElementById('mdMeta').innerHTML = [
-    { l: 'Staff', v: detail.staff || emptyValue },
-    { l: 'Location', v: detail.table || emptyValue },
-    { l: 'Payment', v: detail.method || emptyValue },
-    { l: 'Discount', v: detail.discount > 0 ? '−' + fmtN(detail.discount) : emptyValue },
-    { l: 'Status', v: '<span class="chip" style="--dyn-color:' + statusColors.color + ';--dyn-color-bg:' + statusColors.colorBg + ';"><i class="fa-solid fa-circle"></i>' + statusLabelFor(detail.status) + '</span>' },
-    { l: 'Notes', v: detail.notes || emptyValue },
-  ].map(m => '<div class="modal-meta-item"><div class="mm-lbl">' + m.l + '</div><div class="mm-val">' + m.v + '</div></div>').join('');
-
-  document.getElementById('mdItems').innerHTML = (detail.items || []).map(item => {
-    const lineTotal = item.qty * item.price;
-    return '<tr><td>' + item.name + '</td><td>' + item.qty + '</td><td class="r">' + fmtN(item.price) + '</td><td class="r">' + fmtN(lineTotal) + '</td></tr>';
-  }).join('');
-
-  const subtotal = (detail.items || []).reduce((n, i) => n + (i.qty || 0) * (i.price || 0), 0);
-  document.getElementById('mdTotals').innerHTML =
-    '<div class="total-row"><span>Subtotal</span><span>' + fmtN(subtotal) + '</span></div>' +
-    (detail.discount > 0 ? '<div class="total-row"><span>Discount</span><span>−' + fmtN(detail.discount) + '</span></div>' : '') +
-    '<div class="total-row net"><span>Net Total</span><span>' + fmtN(detail.total) + '</span></div>';
-
-  const vi = document.getElementById('mdVoidInfo');
-  if (detail.status === voidedStatus && detail.voidReason) {
-    vi.style.display = 'block';
-    vi.innerHTML = '<div class="void-info"><strong><i class="fa-solid fa-ban"></i> Voided</strong> Reason: ' + detail.voidReason +
-      (s.voidedBy ? '<br>By: ' + (s.voidedBy || emptyValue) + ' · ' + (s.voidDate || '') : '') +
-      '</div>';
-  } else {
-    vi.style.display = 'none';
-  }
-  document.getElementById('modalOv').classList.add('open');
-  document.getElementById('modalSheet').classList.add('open');
-  document.getElementById('modalSheet').scrollTop = 0;
+  if (!s || !salesDetail) return;
+  salesDetail.open(svc.buildSaleDetailShape(s));
 }
-function closeModal() {
-  document.getElementById('modalOv').classList.remove('open');
-  document.getElementById('modalSheet').classList.remove('open');
-}
-document.getElementById('modalOv').addEventListener('click', closeModal);
-document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 function printReport() {
   window.print();
 }
@@ -415,6 +297,7 @@ async function init() {
     applyPermissionGate();
     if (!canViewReports) return;
     await svc.loadAll();
+    salesDetail = SalesDetail.create({ theme: 'light' });
     mountTable();
     mountFilterBar();
     applyFilters(filterBar.getState());

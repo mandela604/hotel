@@ -1,112 +1,544 @@
-const MenuItem = require('../models/MenuItem');
-const Sale = require('../models/Sale');
-const KitchenStock = require('../models/KitchenStock');
-const asyncHandler = require('../middleware/asyncHandler');
+const { v4: uuidv4 } = require('uuid');
+const PoolbarStock   = require('../models/PoolbarStock');
+const Sale           = require('../models/Sale');
+const PoolbarOrder   = require('../models/PoolbarOrder');
+const PoolbarMovement = require('../models/PoolbarMovement');
+const Requisition    = require('../models/Requisition');
+const Booking        = require('../models/Booking');
+const asyncHandler   = require('../middleware/asyncHandler');
 
-// @desc    Get all menu items where department='poolbar'
-// @route   GET /api/poolbar/menu
-exports.listMenu = asyncHandler(async (req, res) => {
-  const items = await MenuItem.find({ department: 'poolbar' });
-  res.json(items);
-});
+/* ── helpers ────────────────────────────────── */
 
-// @desc    Create a menu item
-// @route   POST /api/poolbar/menu
-exports.createMenu = asyncHandler(async (req, res) => {
-  const item = await MenuItem.create({ ...req.body, department: 'poolbar' });
-  res.status(201).json(item);
-});
+function todayDDMMYY() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+}
 
-// @desc    Update a menu item by id
-// @route   PUT /api/poolbar/menu/:id
-exports.updateMenu = asyncHandler(async (req, res) => {
-  const item = await MenuItem.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-  if (!item) {
-    return res.status(404).json({ message: 'Menu item not found' });
+function stockLevel(i) {
+  return i.qty <= 0 ? 'out' : (i.qty <= i.min ? 'low' : 'ok');
+}
+
+async function nextId(prefix, Model) {
+  const count = await Model.countDocuments();
+  return `${prefix}-${String(count + 1001).padStart(6, '0')}`;
+}
+
+async function logMovement(item, qtyIn, qtyOut, balance, reason) {
+  return PoolbarMovement.create({ item, qtyIn, qtyOut, balance, reason });
+}
+
+/**
+ * Validates that every sold item with a matching stock record has enough
+ * on hand. Throws (never partially deducts) if anything is short. Items
+ * with no matching stock record (e.g. a misc/service line) are skipped.
+ * Returns the resolved { stockItem, qty } pairs so the caller can deduct
+ * them in a second pass, after validation has fully passed.
+ */
+async function resolveStockForItems(items) {
+  const resolved = [];
+  for (const it of items) {
+    const q = Number(it.qty);
+    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    if (!stockItem) continue;
+    if (stockItem.qty < q) {
+      const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${q}`);
+      err.statusCode = 400;
+      throw err;
+    }
+    resolved.push({ stockItem, qty: q });
   }
-  res.json(item);
-});
+  return resolved;
+}
 
-// @desc    Delete a menu item by id
-// @route   DELETE /api/poolbar/menu/:id
-exports.deleteMenu = asyncHandler(async (req, res) => {
-  const item = await MenuItem.findByIdAndDelete(req.params.id);
-  if (!item) {
-    return res.status(404).json({ message: 'Menu item not found' });
+async function deductResolvedStock(resolved, reason) {
+  for (const r of resolved) {
+    r.stockItem.qty -= r.qty;
+    await r.stockItem.save();
+    await logMovement(r.stockItem.name, 0, r.qty, r.stockItem.qty, reason);
   }
-  res.json({ message: 'Menu item removed' });
-});
+}
 
-// @desc    Get all sales where department='poolbar'
-// @route   GET /api/poolbar/sales
-exports.listSales = asyncHandler(async (req, res) => {
-  const sales = await Sale.find({ department: 'poolbar' }).sort({ createdAt: -1 });
-  res.json(sales);
-});
+/* ═══════════════════════════════════════════════
+   1. STOCK CRUD
+   ═══════════════════════════════════════════════ */
 
-// @desc    Create a sale
-// @route   POST /api/poolbar/sales
-exports.createSale = asyncHandler(async (req, res) => {
-  const saleData = {
-    ...req.body,
-    id: 'PBS-' + Date.now(),
-    department: 'poolbar',
-  };
-  const sale = await Sale.create(saleData);
-  res.status(201).json(sale);
-});
-
-// @desc    Void a sale by id
-// @route   POST /api/poolbar/sales/:id/void
-exports.voidSale = asyncHandler(async (req, res) => {
-  const sale = await Sale.findOne({ id: req.params.id });
-  if (!sale) {
-    return res.status(404).json({ message: 'Sale not found' });
-  }
-  sale.status = 'voided';
-  sale.voidReason = req.body.voidReason;
-  sale.voidedBy = req.body.voidedBy;
-  sale.voidDate = req.body.voidDate || new Date();
-  await sale.save();
-  res.json(sale);
-});
-
-// @desc    Get all KitchenStock items (pool bar stock)
-// @route   GET /api/poolbar/stock
 exports.listStock = asyncHandler(async (req, res) => {
-  const stock = await KitchenStock.find();
-  res.json(stock);
+  const { search, category, level } = req.query;
+  const filter = {};
+  if (category) filter.category = category;
+  if (search) {
+    filter.$or = [
+      { name: new RegExp(search, 'i') },
+      { batch: new RegExp(search, 'i') },
+    ];
+  }
+
+  let list = await PoolbarStock.find(filter).sort({ name: 1 });
+  if (level) list = list.filter(i => stockLevel(i) === level);
+
+  res.json({ success: true, count: list.length, data: list });
 });
 
-// @desc    Create a KitchenStock item
-// @route   POST /api/poolbar/stock
-exports.createStock = asyncHandler(async (req, res) => {
-  const item = await KitchenStock.create(req.body);
-  res.status(201).json(item);
-});
+exports.addStock = asyncHandler(async (req, res) => {
+  const { name, category, cat, unit, qty, min, price, cost, batch, received, desc } = req.body;
 
-// @desc    Update a KitchenStock item by id
-// @route   PUT /api/poolbar/stock/:id
-exports.updateStock = asyncHandler(async (req, res) => {
-  const item = await KitchenStock.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
+  const existing = await PoolbarStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  if (existing) {
+    return res.status(409).json({ success: false, error: `"${name}" is already tracked in Pool Bar inventory` });
+  }
+
+  const item = await PoolbarStock.create({
+    id: uuidv4(),
+    name: name.trim(),
+    category: category || cat || 'Beverages',
+    cat: cat || category || 'Beverages',
+    unit: unit || 'bottle',
+    qty: Number(qty) || 0,
+    min: Number(min) || 10,
+    price: Number(price != null ? price : cost) || 0,
+    cost: Number(cost != null ? cost : price) || 0,
+    batch: batch || '—',
+    received: received || todayDDMMYY(),
+    desc: desc || '',
   });
-  if (!item) {
-    return res.status(404).json({ message: 'Stock item not found' });
-  }
-  res.json(item);
+
+  res.status(201).json({ success: true, data: item });
 });
 
-// @desc    Delete a KitchenStock item by id
-// @route   DELETE /api/poolbar/stock/:id
-exports.deleteStock = asyncHandler(async (req, res) => {
-  const item = await KitchenStock.findByIdAndDelete(req.params.id);
-  if (!item) {
-    return res.status(404).json({ message: 'Stock item not found' });
+exports.updateStock = asyncHandler(async (req, res) => {
+  const item = await PoolbarStock.findOne({ id: req.params.id });
+  if (!item) return res.status(404).json({ success: false, error: 'Stock item not found' });
+
+  const { name, category, cat, unit, min, price, cost, desc, qty, batch } = req.body;
+  if (name) item.name = name.trim();
+  if (category || cat) {
+    item.category = category || cat;
+    item.cat = cat || category;
   }
-  res.json({ message: 'Stock item removed' });
+  if (unit) item.unit = unit;
+  if (min !== undefined) item.min = Number(min);
+  if (price !== undefined || cost !== undefined) {
+    const val = Number(price != null ? price : cost);
+    item.price = val;
+    item.cost = val;
+  }
+  if (desc !== undefined) item.desc = desc;
+  if (qty !== undefined) item.qty = Number(qty);
+  if (batch !== undefined) item.batch = batch;
+
+  await item.save();
+  res.json({ success: true, data: item });
+});
+
+exports.deleteStock = asyncHandler(async (req, res) => {
+  const item = await PoolbarStock.findOneAndDelete({ id: req.params.id });
+  if (!item) return res.status(404).json({ success: false, error: 'Stock item not found' });
+  res.json({ success: true, message: `Pool Bar item "${item.name}" deleted` });
+});
+
+exports.deductStock = asyncHandler(async (req, res) => {
+  const { name, qty, reason, notes } = req.body;
+
+  const item = await PoolbarStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  if (!item) return res.status(404).json({ success: false, error: `"${name}" not found in Pool Bar stock` });
+  if (item.qty < Number(qty)) {
+    return res.status(400).json({ success: false, error: `Cannot deduct ${qty} ${item.unit}. Only ${item.qty} on hand.` });
+  }
+
+  item.qty -= Number(qty);
+  await item.save();
+
+  const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
+  await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
+
+  res.json({ success: true, data: item });
+});
+
+/* ═══════════════════════════════════════════════
+   2. SALES
+   ═══════════════════════════════════════════════ */
+
+exports.listSales = asyncHandler(async (req, res) => {
+  const { status, method, from, to } = req.query;
+  const filter = { source: 'Poolbar' };
+  if (status) filter.status = status;
+  if (method) filter.method = method;
+  if (from || to) {
+    filter.date = {};
+    if (from) filter.date.$gte = new Date(from);
+    if (to) filter.date.$lte = new Date(to + 'T23:59:59.999Z');
+  }
+
+  const sales = await Sale.find(filter).sort({ date: -1 });
+  res.json({ success: true, count: sales.length, data: sales });
+});
+
+exports.createSale = asyncHandler(async (req, res) => {
+  const { items, discount, method, staff, table, notes, roomNumber, guestName, guestPhone } = req.body;
+
+  // Validate stock is sufficient BEFORE any writes — the whole sale is
+  // rejected (nothing partially deducts) if anything is short.
+  const resolved = await resolveStockForItems(items);
+
+  const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
+  const total = subtotal * (1 - (Number(discount) || 0) / 100);
+  const saleId = await nextId('PBS', Sale);
+
+  await deductResolvedStock(resolved, `Sale (${saleId})`);
+
+  /* Room Charge → attach to active booking folio */
+  const effectiveMethod = (roomNumber && method === 'Room Charge') ? 'Room Charge' : (method || 'Cash');
+  if (effectiveMethod === 'Room Charge' && roomNumber) {
+    const booking = await Booking.findOne({ room: roomNumber.trim(), status: 'checkedin' });
+    if (booking) {
+      booking.payments.push({
+        id: uuidv4(),
+        amount: total,
+        mode: 'Room Charge (Pool Bar)',
+        date: todayDDMMYY(),
+        by: staff || (req.user ? req.user.name : 'Barman'),
+        ts: Date.now(),
+      });
+      booking.paid = (booking.paid || 0) + total;
+      await booking.save();
+    }
+  }
+
+  const sale = await Sale.create({
+    id: saleId,
+    source: 'Poolbar',
+    department: 'poolbar',
+    items: items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) })),
+    subtotal,
+    discount: Number(discount) || 0,
+    total,
+    method: effectiveMethod,
+    staff: staff || (req.user ? req.user.name : ''),
+    table: table || '',
+    notes: notes || '',
+    date: new Date(),
+    status: 'completed',
+    roomNumber: roomNumber || null,
+    guestName: guestName || null,
+    guestPhone: guestPhone || null,
+  });
+
+  res.status(201).json({ success: true, data: sale });
+});
+
+exports.voidSale = asyncHandler(async (req, res) => {
+  // Looked up by the app-level `id` (e.g. "PBS-001042"), never Mongo's
+  // `_id` — the frontend only ever knows this id.
+  const sale = await Sale.findOne({ id: req.params.id, source: 'Poolbar' });
+  if (!sale) return res.status(404).json({ success: false, error: 'Sale record not found' });
+  if (sale.status === 'voided') return res.status(400).json({ success: false, error: 'Sale is already voided' });
+
+  /* restore stock + log movements */
+  for (const it of (sale.items || [])) {
+    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    if (stockItem) {
+      stockItem.qty += Number(it.qty) || 0;
+      await stockItem.save();
+      await logMovement(stockItem.name, Number(it.qty) || 0, 0, stockItem.qty, `Voided Sale (${sale.id})`);
+    }
+  }
+
+  sale.status = 'voided';
+  sale.voidReason = req.body.reason || 'Voided by manager';
+  sale.voidedBy = req.user ? req.user.name : '';
+  sale.voidDate = new Date();
+  await sale.save();
+
+  res.json({ success: true, data: sale });
+});
+
+/* ═══════════════════════════════════════════════
+   3. ORDERS / TABS
+   ═══════════════════════════════════════════════ */
+
+exports.listOrders = asyncHandler(async (req, res) => {
+  const { status } = req.query;
+  const filter = {};
+  if (status) filter.status = status;
+
+  const orders = await PoolbarOrder.find(filter).sort({ date: -1 });
+  res.json({ success: true, count: orders.length, data: orders });
+});
+
+exports.openTab = asyncHandler(async (req, res) => {
+  const { items, discount, staff, table, notes, roomNumber, guestName, guestPhone } = req.body;
+
+  const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
+  const total = subtotal * (1 - (Number(discount) || 0) / 100);
+  const orderId = await nextId('PB-ORD', PoolbarOrder);
+
+  const order = await PoolbarOrder.create({
+    id: orderId,
+    items: items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) })),
+    subtotal,
+    discount: Number(discount) || 0,
+    total,
+    staff: staff || (req.user ? req.user.name : ''),
+    table: table || '',
+    notes: notes || '',
+    date: new Date(),
+    status: 'open',
+    source: 'tab',
+    roomNumber: roomNumber || null,
+    guestName: guestName || null,
+    guestPhone: guestPhone || null,
+  });
+
+  res.status(201).json({ success: true, data: order });
+});
+
+/**
+ * Lets an OPEN tab's items/notes/table/discount be edited before it's
+ * paid or cancelled — restored from Version A, since Version B had no
+ * equivalent and tabs need to be correctable before checkout.
+ */
+exports.updateOrder = asyncHandler(async (req, res) => {
+  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status !== 'open') {
+    return res.status(400).json({ success: false, error: 'Only an open order can be edited' });
+  }
+
+  const { items, notes, table, discount } = req.body;
+  if (items !== undefined) {
+    order.items = items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) }));
+    order.subtotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);
+  }
+  if (discount !== undefined) order.discount = Number(discount);
+  order.total = order.subtotal * (1 - (Number(order.discount) || 0) / 100);
+
+  if (notes !== undefined) order.notes = notes;
+  if (table !== undefined) order.table = table;
+
+  await order.save();
+  res.json({ success: true, data: order });
+});
+
+exports.markServed = asyncHandler(async (req, res) => {
+  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status !== 'open') {
+    return res.status(400).json({ success: false, error: `Cannot mark "${order.status}" order as served` });
+  }
+
+  order.status = 'served';
+  await order.save();
+  res.json({ success: true, data: order });
+});
+
+exports.payOrder = asyncHandler(async (req, res) => {
+  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order is already paid' });
+  if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
+
+  const { method, roomNumber, guestName, guestPhone } = req.body;
+  const payMethod = method || 'Cash';
+  const effectiveRoom = roomNumber || order.roomNumber || null;
+  const effectiveGuest = guestName || order.guestName || null;
+  const effectivePhone = guestPhone || order.guestPhone || null;
+
+  // Validate stock is sufficient BEFORE any writes.
+  const resolved = await resolveStockForItems(order.items);
+
+  const saleId = await nextId('PBS', Sale);
+  await deductResolvedStock(resolved, `Tab Payment (${order.id})`);
+
+  /* Room Charge → attach to active booking folio */
+  const effectiveMethod = (effectiveRoom && payMethod === 'Room Charge') ? 'Room Charge' : payMethod;
+  if (effectiveMethod === 'Room Charge' && effectiveRoom) {
+    const booking = await Booking.findOne({ room: effectiveRoom.trim(), status: 'checkedin' });
+    if (booking) {
+      booking.payments.push({
+        id: uuidv4(),
+        amount: order.total,
+        mode: 'Room Charge (Pool Bar)',
+        date: todayDDMMYY(),
+        by: order.staff || (req.user ? req.user.name : 'Barman'),
+        ts: Date.now(),
+      });
+      booking.paid = (booking.paid || 0) + order.total;
+      await booking.save();
+    }
+  }
+
+  /* create linked sale */
+  const sale = await Sale.create({
+    id: saleId,
+    source: 'Poolbar',
+    department: 'poolbar',
+    items: order.items.map(it => ({ name: it.name, qty: Number(it.qty), price: Number(it.price) })),
+    subtotal: order.subtotal,
+    discount: order.discount,
+    total: order.total,
+    method: effectiveMethod,
+    staff: order.staff,
+    table: order.table,
+    notes: order.notes,
+    date: new Date(),
+    status: 'completed',
+    roomNumber: effectiveRoom,
+    guestName: effectiveGuest,
+    guestPhone: effectivePhone,
+  });
+
+  /* update order */
+  order.status = 'paid';
+  order.payMethod = effectiveMethod;
+  order.paidSaleId = saleId;
+  if (effectiveRoom) order.roomNumber = effectiveRoom;
+  if (effectiveGuest) order.guestName = effectiveGuest;
+  if (effectivePhone) order.guestPhone = effectivePhone;
+  await order.save();
+
+  res.json({ success: true, data: { order, sale } });
+});
+
+exports.cancelOrder = asyncHandler(async (req, res) => {
+  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status === 'paid') {
+    return res.status(400).json({ success: false, error: 'Cannot cancel a paid order' });
+  }
+  if (order.status === 'cancelled') {
+    return res.status(400).json({ success: false, error: 'Order is already cancelled' });
+  }
+
+  const { reason } = req.body;
+  order.status = 'cancelled';
+  order.notes = reason ? `${order.notes ? order.notes + ' — ' : ''}Cancelled: ${reason}` : order.notes;
+  await order.save();
+
+  res.json({ success: true, data: order });
+});
+
+/* ═══════════════════════════════════════════════
+   4. REQUISITIONS
+   ═══════════════════════════════════════════════ */
+
+exports.listRequisitions = asyncHandler(async (req, res) => {
+  const list = await Requisition.find({ dept: /pool/i }).sort({ createdAt: -1 });
+  res.json({ success: true, count: list.length, data: list });
+});
+
+exports.createRequisition = asyncHandler(async (req, res) => {
+  const { requester, dept, priority, remark, neededBy, items } = req.body;
+
+  const count = await Requisition.countDocuments();
+  const requisitionNo = `REQ-${String(count + 1).padStart(5, '0')}`;
+
+  const reqDoc = await Requisition.create({
+    id: uuidv4(),
+    requisitionNo,
+    mode: 'store_issue',
+    requester: requester || (req.user ? req.user.name : 'Pool Bar Supervisor'),
+    dept: dept || 'Pool Bar',
+    priority: priority || 'Normal',
+    remark: remark || '',
+    neededBy: neededBy || '',
+    items: items.map(i => ({
+      name: i.name,
+      unit: i.unit || 'bottles',
+      qty: Number(i.qty) || 0,
+      cost: Number(i.cost) || 0,
+      remark: i.remark || '',
+      issuedQty: 0,
+    })),
+    status: 'Pending',
+  });
+
+  res.status(201).json({ success: true, data: reqDoc });
+});
+
+exports.receiveRequisition = asyncHandler(async (req, res) => {
+  const reqDoc = await Requisition.findOne({ id: req.params.id });
+  if (!reqDoc) return res.status(404).json({ success: false, error: 'Requisition not found' });
+
+  /* credit issued items to stock + log movements */
+  for (const it of (reqDoc.items || [])) {
+    const addQty = Number(it.issuedQty || it.qty) || 0;
+    if (addQty <= 0) continue;
+
+    let stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    if (stockItem) {
+      stockItem.qty += addQty;
+      await stockItem.save();
+    } else {
+      stockItem = await PoolbarStock.create({
+        id: uuidv4(),
+        name: it.name.trim(),
+        category: 'Beverages',
+        unit: it.unit || 'bottle',
+        qty: addQty,
+        min: 10,
+        price: Number(it.cost) || 0,
+        cost: Number(it.cost) || 0,
+      });
+    }
+    await logMovement(stockItem.name, addQty, 0, stockItem.qty, `Requisition Received (${reqDoc.requisitionNo})`);
+  }
+
+  reqDoc.status = 'Full';
+  await reqDoc.save();
+
+  res.json({ success: true, data: reqDoc });
+});
+
+/* ═══════════════════════════════════════════════
+   5. MOVEMENTS
+   ═══════════════════════════════════════════════ */
+
+exports.listMovements = asyncHandler(async (req, res) => {
+  const { item, from, to } = req.query;
+  const filter = {};
+  if (item) filter.item = new RegExp(item, 'i');
+  if (from || to) {
+    filter.date = {};
+    if (from) filter.date.$gte = new Date(from);
+    if (to) filter.date.$lte = new Date(to + 'T23:59:59.999Z');
+  }
+
+  const list = await PoolbarMovement.find(filter).sort({ date: -1 });
+  res.json({ success: true, count: list.length, data: list });
+});
+
+/* ═══════════════════════════════════════════════
+   6. DASHBOARD
+   ═══════════════════════════════════════════════ */
+
+exports.getDashboard = asyncHandler(async (req, res) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [stockList, salesToday, pendingReqs, activeOrders] = await Promise.all([
+    PoolbarStock.find(),
+    Sale.find({ source: 'Poolbar', status: 'completed', date: { $gte: today } }),
+    Requisition.countDocuments({ dept: /pool/i, status: 'Pending' }),
+    PoolbarOrder.countDocuments({ status: { $in: ['open', 'served'] } }),
+  ]);
+
+  const salesCount = salesToday.length;
+  const totalRevenue = salesToday.reduce((sum, s) => sum + (s.total || 0), 0);
+  const lowStockCount = stockList.filter(i => stockLevel(i) === 'low').length;
+  const outOfStockCount = stockList.filter(i => stockLevel(i) === 'out').length;
+  const unitsOnHand = stockList.reduce((sum, i) => sum + i.qty, 0);
+
+  res.json({
+    success: true,
+    data: {
+      salesTodayCount: salesCount,
+      totalRevenueToday: totalRevenue,
+      lowStockCount,
+      outOfStockCount,
+      totalStockItems: stockList.length,
+      unitsOnHand,
+      pendingRequisitions: pendingReqs,
+      activeOrders,
+    },
+  });
 });

@@ -573,9 +573,10 @@
       inv.qty += item.qty;
       inv.batch = t.batchNo || inv.batch;
       inv.received = todayDDMMYY();
+      const sourceLabel = normalizeSource(t) === 'Kitchen' ? 'Kitchen' : 'Store';
       state.movements.unshift({
         date: stamp, item: inv.name, qtyIn: item.qty, qtyOut: 0, balance: inv.qty,
-        reason: `Store Transfer (${t.no})`,
+        reason: `${sourceLabel} Transfer (${t.no})`,
       });
     });
 
@@ -588,6 +589,20 @@
     state.pending.splice(idx, 1);
     state.history.unshift(done);
     await persist(['stock', 'movements', 'pending', 'history']);
+
+    // Bridge back: update kitchen-transfers status if this came from Kitchen
+    if (normalizeSource(t) === 'Kitchen') {
+      try {
+        const kKey = 'kitchen-transfers';
+        let kTransfers = [];
+        const raw = await storage.get(kKey, true);
+        if (raw && raw.value) { const p = JSON.parse(raw.value); if (Array.isArray(p)) kTransfers = p; }
+        const kt = kTransfers.find((x) => x.transferNo === no || x.transferNo === t.no);
+        if (kt) { kt.status = 'accepted'; kt.receivedBy = receivedBy.trim(); kt.dateReceived = stamp; }
+        await saveShared(kKey, kTransfers);
+      } catch (e) { console.warn('[RestaurantService] Failed to sync accept to kitchen:', e); }
+    }
+
     emitChange('transfer:accept');
     return done;
   }
@@ -607,6 +622,20 @@
     state.pending.splice(idx, 1);
     state.history.unshift(done);
     await persist(['pending', 'history']);
+
+    // Bridge back: update kitchen-transfers status if this came from Kitchen
+    if (normalizeSource(t) === 'Kitchen') {
+      try {
+        const kKey = 'kitchen-transfers';
+        let kTransfers = [];
+        const raw = await storage.get(kKey, true);
+        if (raw && raw.value) { const p = JSON.parse(raw.value); if (Array.isArray(p)) kTransfers = p; }
+        const kt = kTransfers.find((x) => x.transferNo === no || x.transferNo === t.no);
+        if (kt) { kt.status = 'rejected'; kt.rejectReason = reason.trim(); kt.dateReceived = stamp; }
+        await saveShared(kKey, kTransfers);
+      } catch (e) { console.warn('[RestaurantService] Failed to sync reject to kitchen:', e); }
+    }
+
     emitChange('transfer:reject');
     return done;
   }

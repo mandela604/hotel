@@ -1,147 +1,373 @@
 const MenuItem = require('../models/MenuItem');
-const Table = require('../models/Table');
+const RestaurantStock = require('../models/RestaurantStock'); // NOTE: model not yet supplied — created, see models/RestaurantStock.js
+const RestaurantMovement = require('../models/RestaurantMovement'); // NOTE: model not yet supplied — created, see models/RestaurantMovement.js
 const Sale = require('../models/Sale');
-const KitchenStock = require('../models/KitchenStock');
 const Transfer = require('../models/Transfer');
+const Requisition = require('../models/Requisition');
+const Guest = require('../models/Guest');
+const Activity = require('../models/Activity');
 const asyncHandler = require('../middleware/asyncHandler');
 
-// @desc    Get all menu items where department='restaurant'
-// @route   GET /api/restaurant/menu
+const DEPT = 'restaurant';
+const DESTINATION = 'Main Restaurant / POS';
+
+function todayDDMMYY() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+}
+function nowStamp() {
+  const d = new Date();
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${todayDDMMYY()} ${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`;
+}
+async function logActivity(color, text, href) {
+  try {
+    await Activity.create({ dept: 'Restaurant', color, text, time: nowStamp(), href: href || '#' });
+  } catch (e) { /* activity log is best-effort, never block the request on it */ }
+}
+
+/* ═══════════════════════════════════════════════
+   Menu — exact REST parity with restaurant-menu.html's
+   apiFetch calls: GET/POST /menu, PUT/PATCH/DELETE /menu/:id
+═══════════════════════════════════════════════ */
 exports.listMenu = asyncHandler(async (req, res) => {
-  const items = await MenuItem.find({ department: 'restaurant' });
-  res.json(items);
+  const items = await MenuItem.find({ department: DEPT }).sort({ category: 1, name: 1 });
+  res.json({ success: true, count: items.length, data: items });
 });
 
-// @desc    Create a menu item
-// @route   POST /api/restaurant/menu
-exports.createMenu = asyncHandler(async (req, res) => {
-  const item = await MenuItem.create(req.body);
-  res.status(201).json(item);
-});
+exports.addMenuItem = asyncHandler(async (req, res) => {
+  const { name, price, category, type, avail } = req.body;
 
-// @desc    Update a menu item by id
-// @route   PUT /api/restaurant/menu/:id
-exports.updateMenu = asyncHandler(async (req, res) => {
-  const item = await MenuItem.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
+  const existing = await MenuItem.findOne({ name: new RegExp(`^${name.trim()}$`, 'i'), department: DEPT });
+  if (existing) {
+    return res.status(409).json({ success: false, error: `"${name}" is already on the menu` });
+  }
+
+  const item = await MenuItem.create({
+    name: name.trim(),
+    price: Number(price),
+    category: category || 'Main',
+    department: DEPT,
+    available: avail !== undefined ? avail : true,
   });
-  if (!item) {
-    return res.status(404).json({ message: 'Menu item not found' });
+
+  await logActivity('gold', `Menu item "${item.name}" added`, 'restaurant-menu.html');
+  res.status(201).json({ success: true, data: item });
+});
+
+exports.updateMenuItem = asyncHandler(async (req, res) => {
+  const item = await MenuItem.findOne({ _id: req.params.id, department: DEPT });
+  if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
+
+  const { name, price, category, avail } = req.body;
+  if (name !== undefined) item.name = name.trim();
+  if (price !== undefined) item.price = Number(price);
+  if (category !== undefined) item.category = category;
+  if (avail !== undefined) item.available = avail;
+
+  await item.save();
+  res.json({ success: true, data: item });
+});
+
+// PATCH is used by the frontend specifically for the Mark Available /
+// Mark Sold Out toggle ({ avail }), but accepts any partial field.
+exports.patchMenuItem = exports.updateMenuItem;
+
+exports.deleteMenuItem = asyncHandler(async (req, res) => {
+  const item = await MenuItem.findOneAndDelete({ _id: req.params.id, department: DEPT });
+  if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
+  res.json({ success: true, message: `"${item.name}" removed from the menu` });
+});
+
+/* ═══════════════════════════════════════════════
+   Stock (restaurant inventory — independent of Kitchen)
+   Looked up by name, not _id — matches
+   RestaurantService.findStock/editStockItem/deleteStockItem(name).
+═══════════════════════════════════════════════ */
+exports.listStock = asyncHandler(async (req, res) => {
+  const list = await RestaurantStock.find().sort({ name: 1 });
+  res.json({ success: true, count: list.length, data: list });
+});
+
+exports.addStockItem = asyncHandler(async (req, res) => {
+  const { name, category, unit, min, price, desc } = req.body;
+
+  const existing = await RestaurantStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  if (existing) {
+    return res.status(409).json({ success: false, error: `"${name}" is already tracked` });
   }
-  res.json(item);
-});
 
-// @desc    Delete a menu item by id
-// @route   DELETE /api/restaurant/menu/:id
-exports.deleteMenu = asyncHandler(async (req, res) => {
-  const item = await MenuItem.findByIdAndDelete(req.params.id);
-  if (!item) {
-    return res.status(404).json({ message: 'Menu item not found' });
-  }
-  res.json({ message: 'Menu item removed' });
-});
-
-// @desc    Get all tables
-// @route   GET /api/restaurant/tables
-exports.listTables = asyncHandler(async (req, res) => {
-  const tables = await Table.find();
-  res.json(tables);
-});
-
-// @desc    Update a table by id
-// @route   PUT /api/restaurant/tables/:id
-exports.updateTable = asyncHandler(async (req, res) => {
-  const table = await Table.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
+  const item = await RestaurantStock.create({
+    name: name.trim(),
+    category: category || 'Uncategorized',
+    unit: unit || 'portion',
+    qty: 0, // qty is only ever moved by transfers/sales, never set at creation
+    min: Number(min) || 0,
+    price: Number(price) || 0,
+    desc: desc || '',
   });
-  if (!table) {
-    return res.status(404).json({ message: 'Table not found' });
-  }
-  res.json(table);
+
+  res.status(201).json({ success: true, data: item });
 });
 
-// @desc    Get all sales where department='restaurant' with optional date filter
-// @route   GET /api/restaurant/sales
+// name is looked up case-insensitively, exactly like Kitchen's stock lookups.
+exports.editStockItem = asyncHandler(async (req, res) => {
+  const item = await RestaurantStock.findOne({ name: new RegExp(`^${req.params.name.trim()}$`, 'i') });
+  if (!item) return res.status(404).json({ success: false, error: `"${req.params.name}" not found in inventory` });
+
+  const { category, unit, min, price, desc } = req.body;
+  if (category !== undefined) item.category = category;
+  if (unit !== undefined) item.unit = unit;
+  if (min !== undefined) item.min = Number(min);
+  if (price !== undefined) item.price = Number(price);
+  if (desc !== undefined) item.desc = desc;
+
+  await item.save();
+  res.json({ success: true, data: item });
+});
+
+exports.deleteStockItem = asyncHandler(async (req, res) => {
+  const item = await RestaurantStock.findOneAndDelete({ name: new RegExp(`^${req.params.name.trim()}$`, 'i') });
+  if (!item) return res.status(404).json({ success: false, error: `"${req.params.name}" not found in inventory` });
+  res.json({ success: true, message: `"${item.name}" removed from inventory` });
+});
+
+exports.listMovements = asyncHandler(async (req, res) => {
+  const list = await RestaurantMovement.find().sort({ createdAt: -1 }).limit(100);
+  res.json({ success: true, count: list.length, data: list });
+});
+
+/* ═══════════════════════════════════════════════
+   Sales (Quick Sale / Open Tab checkout, POS)
+═══════════════════════════════════════════════ */
 exports.listSales = asyncHandler(async (req, res) => {
-  const filter = { department: 'restaurant' };
-  if (req.query.date) {
-    const start = new Date(req.query.date);
-    const end = new Date(req.query.date);
-    end.setHours(23, 59, 59, 999);
-    filter.createdAt = { $gte: start, $lte: end };
+  const { status, method, table, search, start, end } = req.query;
+  const filter = { department: DEPT };
+
+  if (status) filter.status = status;
+  if (method) filter.method = method;
+  if (table) filter.table = table;
+  if (start || end) {
+    filter.date = {};
+    if (start) filter.date.$gte = new Date(start);
+    if (end) filter.date.$lte = new Date(end);
   }
-  const sales = await Sale.find(filter).sort({ createdAt: -1 });
-  res.json(sales);
+  if (search) {
+    filter.$or = [
+      { id: new RegExp(search, 'i') },
+      { staff: new RegExp(search, 'i') },
+      { table: new RegExp(search, 'i') },
+      { 'items.name': new RegExp(search, 'i') },
+    ];
+  }
+
+  const list = await Sale.find(filter).sort({ date: -1 });
+  res.json({ success: true, count: list.length, data: list });
 });
 
-// @desc    Create a sale
-// @route   POST /api/restaurant/sales
+// Creates a completed sale, deducts RestaurantStock for each item sold
+// (best-effort — sale still completes for items with no matching stock
+// record, e.g. plain menu-only items with nothing tracked in inventory),
+// and posts a room charge onto the guest's folio when paid via Room Charge.
 exports.createSale = asyncHandler(async (req, res) => {
-  const saleData = {
-    ...req.body,
-    id: 'SALE-' + Date.now(),
-  };
-  const sale = await Sale.create(saleData);
-  res.status(201).json(sale);
-});
+  const { items, method, table, discount, roomNumber, guestName } = req.body;
 
-// @desc    Void a sale by id
-// @route   POST /api/restaurant/sales/:id/void
-exports.voidSale = asyncHandler(async (req, res) => {
-  const sale = await Sale.findOne({ id: req.params.id });
-  if (!sale) {
-    return res.status(404).json({ message: 'Sale not found' });
+  const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
+  const discountPct = Number(discount) || 0;
+  const total = subtotal * (1 - discountPct / 100);
+
+  const count = await Sale.countDocuments({ department: DEPT });
+  const id = `RST-${String(count + 1).padStart(5, '0')}`;
+
+  for (const it of items) {
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    if (!stockItem) continue; // not every menu item is stock-tracked
+    stockItem.qty = Math.max(0, stockItem.qty - Number(it.qty));
+    await stockItem.save();
+
+    await RestaurantMovement.create({
+      date: nowStamp(),
+      item: stockItem.name,
+      qtyIn: 0,
+      qtyOut: Number(it.qty),
+      balance: stockItem.qty,
+      reason: `Sale ${id}`,
+    });
   }
-  sale.status = 'voided';
-  sale.voidReason = req.body.voidReason;
-  sale.voidedBy = req.body.voidedBy;
-  sale.voidDate = req.body.voidDate || new Date();
-  await sale.save();
-  res.json(sale);
-});
 
-// @desc    Get all KitchenStock items (restaurant inventory)
-// @route   GET /api/restaurant/inventory
-exports.listInventory = asyncHandler(async (req, res) => {
-  const inventory = await KitchenStock.find();
-  res.json(inventory);
-});
-
-// @desc    Create a KitchenStock item
-// @route   POST /api/restaurant/inventory
-exports.createInventory = asyncHandler(async (req, res) => {
-  const item = await KitchenStock.create(req.body);
-  res.status(201).json(item);
-});
-
-// @desc    Update a KitchenStock item by id
-// @route   PUT /api/restaurant/inventory/:id
-exports.updateInventory = asyncHandler(async (req, res) => {
-  const item = await KitchenStock.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
+  const sale = await Sale.create({
+    id,
+    department: DEPT,
+    items: items.map((i) => ({ name: i.name, qty: Number(i.qty), price: Number(i.price) })),
+    subtotal,
+    discount: discountPct,
+    total,
+    method: method || 'Cash',
+    staff: req.user ? req.user.name : '',
+    table: table || '',
+    date: new Date(),
+    status: 'completed',
   });
-  if (!item) {
-    return res.status(404).json({ message: 'Inventory item not found' });
+
+  if (method === 'Room Charge') {
+    const guest = await Guest.findOne({ name: guestName });
+    if (guest) {
+      guest.charges.push({
+        date: todayDDMMYY(),
+        source: 'Restaurant',
+        desc: items.map((i) => `${i.qty}x ${i.name}`).join(', '),
+        room: roomNumber,
+        amount: total,
+        paid: 0,
+        by: req.user ? req.user.name : '',
+        status: 'Pending',
+        payments: [],
+      });
+      await guest.save();
+    } else {
+      // Sale still completes even if the guest folio couldn't be found —
+      // front desk can reconcile manually rather than losing the sale.
+      await logActivity('amber', `Room Charge sale ${id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-sales.html');
+    }
   }
-  res.json(item);
+
+  await logActivity('green', `Sale ${id} — ${total} (${method || 'Cash'})`, 'restaurant-sales.html');
+  res.status(201).json({ success: true, data: sale });
 });
 
-// @desc    Delete a KitchenStock item by id
-// @route   DELETE /api/restaurant/inventory/:id
-exports.deleteInventory = asyncHandler(async (req, res) => {
-  const item = await KitchenStock.findByIdAndDelete(req.params.id);
-  if (!item) {
-    return res.status(404).json({ message: 'Inventory item not found' });
+// Voids a completed sale and restores stock — matches the frontend's
+// "voided — stock restored" toast in restaurant-sales.html.
+exports.voidSale = asyncHandler(async (req, res) => {
+  const sale = await Sale.findOne({ id: req.params.id, department: DEPT });
+  if (!sale) return res.status(404).json({ success: false, error: 'Sale not found' });
+  if (sale.status === 'voided') return res.status(400).json({ success: false, error: 'Sale already voided' });
+
+  const { reason } = req.body;
+  sale.status = 'voided';
+  sale.voidReason = reason;
+  sale.voidedBy = req.user ? req.user.name : '';
+  sale.voidedByRole = req.user ? req.user.role : '';
+  sale.voidDate = new Date();
+  await sale.save();
+
+  for (const it of sale.items) {
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    if (!stockItem) continue;
+    stockItem.qty += Number(it.qty);
+    await stockItem.save();
+
+    await RestaurantMovement.create({
+      date: nowStamp(),
+      item: stockItem.name,
+      qtyIn: Number(it.qty),
+      qtyOut: 0,
+      balance: stockItem.qty,
+      reason: `Void Sale ${sale.id} — Restored`,
+    });
   }
-  res.json({ message: 'Inventory item removed' });
+
+  await logActivity('red', `Sale ${sale.id} voided — ${reason}`, 'restaurant-sales.html');
+  res.json({ success: true, data: sale });
 });
 
-// @desc    Get all Transfers where to='Restaurant'
-// @route   GET /api/restaurant/transfers
+/* ═══════════════════════════════════════════════
+   Transfers — incoming pushes from Kitchen/Store into
+   the Restaurant. Restaurant only accepts/rejects; it
+   never raises these (that's Kitchen's addTransfer).
+═══════════════════════════════════════════════ */
 exports.listTransfers = asyncHandler(async (req, res) => {
-  const transfers = await Transfer.find({ to: 'Restaurant' });
-  res.json(transfers);
+  const list = await Transfer.find({ $or: [{ restaurant: DESTINATION }, { to: DESTINATION }] }).sort({ createdAt: -1 });
+  res.json({ success: true, count: list.length, data: list });
+});
+
+exports.acceptTransfer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { receivedBy } = req.body;
+
+  const transfer = await Transfer.findOne({ $or: [{ _id: id }, { transferNo: id }] });
+  if (!transfer) return res.status(404).json({ success: false, error: 'Transfer not found' });
+  if (transfer.status !== 'sent') {
+    return res.status(400).json({ success: false, error: `Cannot accept a transfer with status '${transfer.status}'` });
+  }
+
+  transfer.status = 'accepted';
+  transfer.receivedBy = receivedBy || (req.user ? req.user.name : '');
+  transfer.dateReceived = nowStamp();
+  await transfer.save();
+
+  // Accepting adds the delivered quantity onto matching restaurant stock,
+  // creating the stock record on the fly if this is the first delivery of it.
+  let stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${transfer.meal.trim()}$`, 'i') });
+  if (!stockItem) {
+    stockItem = await RestaurantStock.create({ name: transfer.meal.trim(), unit: transfer.unit || 'portion', qty: 0 });
+  }
+  stockItem.qty += Number(transfer.quantity);
+  await stockItem.save();
+
+  await RestaurantMovement.create({
+    date: nowStamp(),
+    item: stockItem.name,
+    qtyIn: Number(transfer.quantity),
+    qtyOut: 0,
+    balance: stockItem.qty,
+    reason: `Transfer Accepted (${transfer.transferNo})`,
+  });
+
+  await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
+  res.json({ success: true, data: transfer });
+});
+
+// Rejecting moves the transfer to history with no stock added, matching
+// the modal copy: "Rejecting … will move it to history — no stock will be added."
+exports.rejectTransfer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { rejectReason } = req.body;
+
+  const transfer = await Transfer.findOne({ $or: [{ _id: id }, { transferNo: id }] });
+  if (!transfer) return res.status(404).json({ success: false, error: 'Transfer not found' });
+  if (transfer.status !== 'sent') {
+    return res.status(400).json({ success: false, error: `Cannot reject a transfer with status '${transfer.status}'` });
+  }
+
+  transfer.status = 'rejected';
+  transfer.rejectReason = rejectReason;
+  await transfer.save();
+
+  await logActivity('red', `Transfer ${transfer.transferNo} rejected — ${rejectReason}`, 'restaurant-transfer-history.html');
+  res.json({ success: true, data: transfer });
+});
+
+/* ═══════════════════════════════════════════════
+   Requisitions — Restaurant raising a request to Store.
+   Restaurant only submits + watches status; fulfillment
+   happens on the Store side (same split as Kitchen's).
+═══════════════════════════════════════════════ */
+exports.listRestaurantRequisitions = asyncHandler(async (req, res) => {
+  const list = await Requisition.find({ dept: 'Restaurant' }).sort({ dateRaised: -1 });
+  res.json({ success: true, count: list.length, data: list });
+});
+
+exports.submitRequisition = asyncHandler(async (req, res) => {
+  const { items, requester, neededBy, priority, remark } = req.body;
+
+  const count = await Requisition.countDocuments();
+  const requisitionNo = `REQ-${String(count + 1).padStart(5, '0')}`;
+
+  const requisition = await Requisition.create({
+    requisitionNo,
+    mode: 'store_issue',
+    requester,
+    dept: 'Restaurant',
+    neededBy: neededBy || '',
+    priority: priority || 'Normal',
+    remark: remark || '',
+    items: items.map((i) => ({ name: i.name, unit: i.unit || 'Pieces', qty: Number(i.qty) })),
+    status: 'Pending',
+    dateRaised: new Date(),
+  });
+
+  await logActivity('blue', `Requisition ${requisitionNo} sent to Store`, 'restaurant-transfer-history.html');
+  res.status(201).json({ success: true, data: requisition });
 });

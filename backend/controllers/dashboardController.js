@@ -14,44 +14,35 @@ exports.overview = asyncHandler(async (req, res) => {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const dateFilter = { date: { $gte: today, $lt: tomorrow } };
-
   const [
     roomsByStatus,
     totalRooms,
     todayBookings,
     restaurantSales,
     poolbarSales,
-    roomRevenue,
     totalRevenue,
     pendingProcurement,
     lowStock,
     staffOnDuty,
     recentActivity,
   ] = await Promise.all([
-    Room.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
+    Room.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
     Room.countDocuments(),
-    Booking.countDocuments(dateFilter),
+    Booking.countDocuments({ createdAt: { $gte: today.getTime() } }),
     Sale.aggregate([
-      { $match: { department: 'restaurant', status: 'completed', ...dateFilter } },
+      { $match: { source: 'Restaurant', status: 'completed', createdAt: { $gte: today } } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]),
     Sale.aggregate([
-      { $match: { department: 'poolbar', status: 'completed', ...dateFilter } },
+      { $match: { source: 'Poolbar', status: 'completed', createdAt: { $gte: today } } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]),
     LedgerEntry.aggregate([
-      { $match: { type: 'income', department: 'Rooms', ...dateFilter } },
+      { $match: { type: 'income', date: { $gte: today } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
-    LedgerEntry.aggregate([
-      { $match: { type: 'income', ...dateFilter } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
-    PurchaseRequest.countDocuments({ status: { $in: ['pending', 'accountant', 'gm'] } }),
-    KitchenStock.countDocuments({ $expr: { $lte: ['$qty', '$reorderLevel'] } }),
+    PurchaseRequest.countDocuments({ status: { $in: ['pending', 'accountant', 'gm', 'Pending'] } }),
+    KitchenStock.countDocuments({ $expr: { $lte: ['$qty', '$min'] } }),
     Staff.countDocuments({ status: 'on_duty' }),
     Activity.find().sort({ createdAt: -1 }).limit(10),
   ]);
@@ -62,21 +53,26 @@ exports.overview = asyncHandler(async (req, res) => {
   }
 
   res.json({
-    rooms: {
-      available: statusMap.available || 0,
-      occupied: statusMap.occupied || 0,
-      maintenance: statusMap.maintenance || 0,
-      reserved: statusMap.reserved || 0,
-      total: totalRooms,
+    success: true,
+    data: {
+      rooms: {
+        vacant: statusMap.vacant || statusMap.available || 0,
+        available: statusMap.vacant || statusMap.available || 0,
+        occupied: statusMap.occupied || statusMap.checkedin || 0,
+        checkedin: statusMap.checkedin || statusMap.occupied || 0,
+        maintenance: statusMap.maintenance || 0,
+        reserved: statusMap.reserved || 0,
+        cleaning: statusMap.cleaning || 0,
+        total: totalRooms,
+      },
+      todayBookings,
+      restaurantSalesToday: restaurantSales[0]?.total || 0,
+      poolbarSalesToday: poolbarSales[0]?.total || 0,
+      totalRevenueToday: totalRevenue[0]?.total || 0,
+      pendingProcurement,
+      lowStock,
+      staffOnDuty,
+      recentActivity,
     },
-    todayBookings,
-    restaurantSalesToday: restaurantSales[0]?.total || 0,
-    poolbarSalesToday: poolbarSales[0]?.total || 0,
-    roomRevenueToday: roomRevenue[0]?.total || 0,
-    totalRevenueToday: totalRevenue[0]?.total || 0,
-    pendingProcurement,
-    lowStock,
-    staffOnDuty,
-    recentActivity,
   });
 });

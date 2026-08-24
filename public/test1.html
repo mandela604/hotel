@@ -150,7 +150,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title">Pending Transfers from Kitchen</div>
-            <button class="panel-action" onclick="location.href='restaurant-transfers.html'">Review All →</button>
+            <button class="panel-action" onclick="location.href='restaurant-transfer-history.html'">Review All →</button>
           </div>
           <div id="pendingXfer"></div>
         </div>
@@ -244,7 +244,7 @@ function renderKPIs(inventory, transfers, sales){
   const plates   = inventory.reduce((s,i)=>s+i.qty,0);
 
   document.getElementById('kpiRow').innerHTML = `
-    <a class="kpi-card" href="restaurant-transfers.html">
+    <a class="kpi-card" href="restaurant-transfer-history.html">
       <div class="kpi-label">Pending Transfers</div>
       <div class="kpi-value" style="color:var(--blue);">${pending}</div>
       <div class="kpi-trend ${pending>0?'warn':'up'}">${pending>0?'⚠ Awaiting review':'✓ All clear'}</div>
@@ -302,7 +302,7 @@ function renderPendingTransfers(transfers){
   el.innerHTML = transfers.length === 0
     ? `<div class="empty-note">No transfers awaiting review.</div>`
     : transfers.map(t => `
-      <a class="list-row" href="restaurant-transfers.html">
+      <a class="list-row" href="restaurant-transfer-history.html">
         <span class="list-dot" style="background:var(--blue)"></span>
         <div class="list-body"><div class="list-name">${t.no} — ${t.meal}</div><div class="list-meta">${t.qty} ${t.unit} · from ${t.from} · ${t.date}</div></div>
         <span class="chip chip-sent">Sent</span>

@@ -16,9 +16,8 @@
   const NAV = [
     { key: 'dashboard',  label: 'Dashboard',           href: 'kitchen-dashboard.html',          icon: 'fa-solid fa-gauge-high' },
     { key: 'stock',      label: 'Kitchen Stock',       href: 'kitchen-inventory.html',          icon: 'fa-solid fa-box' },
-    { key: 'production', label: 'New Production',      href: 'kitchen-production.html',         icon: 'fa-solid fa-plus-circle' },
-    { key: 'prodhist',   label: 'Production History',  href: 'kitchen-production-history.html', icon: 'fa-solid fa-kitchen-set' },
-    { key: 'transfers',  label: 'Meal Transfers',      href: 'kitchen-transfers.html',          icon: 'fa-solid fa-truck-fast', badgeKey: 'transfers' },
+    { key: 'recipes',    label: 'kitchen Recipes',     href: 'kitchen-recipes.html',            icon: 'fa-solid fa-book-open' },
+    { key: 'prodhist',   label: 'Production',          href: 'kitchen-production-history.html', icon: 'fa-solid fa-kitchen-set' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";
@@ -161,54 +160,41 @@
     document.head.appendChild(s);
   }
 
-  // ── CONFIG — the only place to change Demo↔Live ──
+  // ── CONFIG — live only, no demo fallback ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
     LOGIN_URL: '../login.html',
-    DEMO_USER: { name: 'Kitchen Manager', initials: 'KM', role: 'manager', privilege: 'chef' },
   };
 
-  function goLogin(reason) {
-    console.warn('[KitchenShell] Auth failed — redirecting to login:', reason || '');
-    const next = encodeURIComponent(location.pathname + location.search);
-    const base = CONFIG.LOGIN_URL || '../login.html';
-    location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
+  function getToken() {
+    try { return localStorage.getItem('token'); } catch (e) { return null; }
   }
 
-  /**
-   * Demo  → DEMO_USER
-   * Live  → real user from API
-   * Live fail → redirect (never returns demo)
-   */
+  function redirectToLogin() {
+    try { localStorage.removeItem('token'); localStorage.removeItem('aurum_user'); } catch (e) {}
+    window.location.href = CONFIG.LOGIN_URL;
+  }
+
   async function fetchSession() {
-    if (CONFIG.USE_DEMO) {
-      return CONFIG.DEMO_USER;
-    }
+    const token = getToken();
+    if (!token) { redirectToLogin(); return null; }
 
     try {
-      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
-        credentials: 'include',
-        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 401 || res.status === 403) {
-        goLogin('HTTP ' + res.status);
-        return null;
-      }
-      if (!res.ok) throw new Error('Session API returned ' + res.status);
       const data = await res.json();
-      if (!data || !data.role) {
-        goLogin('missing role');
-        return null;
-      }
+      if (!res.ok || !data.success) throw new Error(data.error || `Session API returned ${res.status}`);
       return {
         name: data.name,
         initials: data.initials,
         role: data.role,
-        privilege: data.privilege || null,
+        privilege: data.privilege,
+        department: data.department,
       };
     } catch (err) {
-      goLogin(err && err.message);
+      console.warn('[KitchenShell] Session invalid, redirecting to login:', err.message);
+      redirectToLogin();
       return null;
     }
   }
@@ -221,11 +207,12 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
-    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
-    let initials = user
-      ? (user.initials || (user.name || 'KM').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
-      : '…';
+    // Provisional user shown immediately while the real session loads;
+    // fetchSession() below replaces this or redirects to login if the
+    // token is missing/invalid. No demo fallback — a failed session
+    // check always ends in a redirect, never a fabricated user.
+    let user = opts.user || { name: 'Loading…', initials: '··', role: '', privilege: '' };
+    let initials = user.initials || (user.name || 'KM').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 
     sidebarTarget.innerHTML = `
       <div id="khs-overlay"></div>
@@ -269,7 +256,7 @@
         <div class="khs-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="khs-date" id="khs-date"></div>
-          <div class="khs-apibadge" id="khs-apiBadge"><span class="dot"></span><span id="khs-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
+          <div class="khs-apibadge" id="khs-apiBadge"><span class="dot"></span><span id="khs-apiLabel">Loading</span></div>
           <div class="khs-notif"><i class="fa-regular fa-bell"></i><div class="khs-notifdot"></div></div>
           <div class="khs-avatar" id="khs-avatar">${initials}</div>
         </div>
@@ -277,10 +264,10 @@
 
     document.getElementById('khs-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    const sidebar   = document.getElementById('khs-sidebar');
-    const overlay   = document.getElementById('khs-overlay');
+    const sidebar     = document.getElementById('khs-sidebar');
+    const overlay     = document.getElementById('khs-overlay');
     const collapseBtn = document.getElementById('khs-collapseBtn');
-    const hamburger = document.getElementById('khs-hamburger');
+    const hamburger   = document.getElementById('khs-hamburger');
 
     let collapsed = false;
     collapseBtn.addEventListener('click', () => {
@@ -303,9 +290,9 @@
     });
 
     let isDark = false;
-    const themeBtn   = document.getElementById('khs-themeBtn');
-    const themeIcon  = document.getElementById('khs-themeIcon');
-    const themeLabel = document.getElementById('khs-themeLabel');
+    const themeBtn    = document.getElementById('khs-themeBtn');
+    const themeIcon   = document.getElementById('khs-themeIcon');
+    const themeLabel  = document.getElementById('khs-themeLabel');
     const toggleTrack = document.getElementById('khs-toggleTrack');
     function applyTheme() {
       document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -323,7 +310,7 @@
     } catch (e) {}
     applyTheme();
 
-    const handle = {
+    const shellApi = {
       setApiMode(mode) {
         const badge = document.getElementById('khs-apiBadge');
         const label = document.getElementById('khs-apiLabel');
@@ -361,19 +348,21 @@
       },
     };
 
-    fetchSession().then(function (sessionUser) {
-      if (!sessionUser) return; // live fail → already redirected
-      user = sessionUser;
-      initials = user.initials || (user.name || 'KM').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
+    // ── Fetch the real session. A missing/invalid token redirects to
+    // LOGIN_URL from inside fetchSession() — nothing below runs in
+    // that case since the page is navigating away. ──
+    fetchSession().then(sessionUser => {
+      if (!sessionUser) return;
+      user = Object.assign({}, user, sessionUser);
       const avatar = document.getElementById('khs-avatar');
       if (avatar) {
-        avatar.textContent = initials;
+        avatar.textContent = user.initials || (user.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
         avatar.title = user.name || '';
       }
-      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+      shellApi.setApiMode('Live');
     });
 
-    return handle;
+    return shellApi;
   }
 
   global.KitchenShell = { attach: attach, CONFIG: CONFIG };

@@ -1,6 +1,16 @@
 /**
  * data/kitchen-seed.js — Kitchen module demo seed
- * DEMO_STOCK (raw ingredients) | DEMO_PRODUCTION (production log) | DEMO_MOVEMENTS | DEMO_TRANSFERS
+ * DEMO_STOCK (raw ingredients) | DEMO_RECIPES (how to make each dish) |
+ * DEMO_PRODUCTION (production log) | DEMO_MOVEMENTS | DEMO_TRANSFERS
+ *
+ * WHAT'S NEW
+ * ──────────
+ * DEMO_RECIPES: this is step 2 from the Jollof Rice walkthrough —
+ * "to cook Jollof Rice, we normally use these ingredients, for this
+ * base quantity, giving about this many plates." Each recipe is
+ * defined per 1 unit of its base ingredient (e.g. per 1kg of rice),
+ * so kitchen-service.js can scale it up/down for whatever batch size
+ * staff actually cooks (step 3), without a new recipe every time.
  */
 (function (global) {
   'use strict';
@@ -35,10 +45,74 @@
     { name: 'Thyme', category: 'Pantry', cat: 'Pantry', unit: 'kg', qty: 3, min: 2, price: 2400, cost: 2400, batch: 'PT-0321', received: '15/07/26', desc: '' },
   ];
 
+  // ── Recipes: "how to make it" — defined per 1 unit of the base
+  // ingredient. kitchen-service.js's scaleRecipe() multiplies every
+  // line (and expectedYield) by (targetQty / baseQty) at production
+  // time, so staff only ever enters "I'm cooking 3kg of rice today."
+  const DEMO_RECIPES = [
+    {
+      id: 'RCP-00001',
+      dish: 'Jollof Rice',
+      baseQty: 1, baseUnit: 'kg', baseIngredient: 'Rice (Long Grain)',
+      ingredients: [
+        { name: 'Rice (Long Grain)', qty: 1,    unit: 'kg' },
+        { name: 'Tomatoes',          qty: 0.8,  unit: 'kg' },
+        { name: 'Onions',            qty: 0.5,  unit: 'kg' },
+        { name: 'Vegetable Oil',     qty: 0.3,  unit: 'litre' },
+        { name: 'Seasoning Cubes',   qty: 0.3,  unit: 'pack' },
+        { name: 'Curry Powder',      qty: 0.05, unit: 'kg' },
+        { name: 'Thyme',             qty: 0.02, unit: 'kg' },
+      ],
+      expectedYield: 3, expectedYieldUnit: 'plates',
+      notes: 'Standard party-style jollof. Scale by kg of rice.',
+    },
+    {
+      id: 'RCP-00002',
+      dish: 'Fried Rice',
+      baseQty: 1, baseUnit: 'kg', baseIngredient: 'Rice (Long Grain)',
+      ingredients: [
+        { name: 'Rice (Long Grain)', qty: 1,    unit: 'kg' },
+        { name: 'Tomatoes',          qty: 0.5,  unit: 'kg' },
+        { name: 'Onions',            qty: 0.25, unit: 'kg' },
+        { name: 'Vegetable Oil',     qty: 0.25, unit: 'litre' },
+        { name: 'Seasoning Cubes',   qty: 0.25, unit: 'pack' },
+      ],
+      expectedYield: 3.5, expectedYieldUnit: 'plates',
+      notes: 'Scale by kg of rice.',
+    },
+    {
+      id: 'RCP-00003',
+      dish: 'Egusi Soup',
+      baseQty: 1, baseUnit: 'kg', baseIngredient: 'Beef',
+      ingredients: [
+        { name: 'Beef',             qty: 1,    unit: 'kg' },
+        { name: 'Palm Oil',         qty: 0.5,  unit: 'litre' },
+        { name: 'Onions',           qty: 0.5,  unit: 'kg' },
+        { name: 'Seasoning Cubes',  qty: 0.25, unit: 'pack' },
+      ],
+      expectedYield: 3.5, expectedYieldUnit: 'portions',
+      notes: 'Scale by kg of beef.',
+    },
+    {
+      id: 'RCP-00004',
+      dish: 'Pepper Soup',
+      baseQty: 1, baseUnit: 'kg', baseIngredient: 'Beef',
+      ingredients: [
+        { name: 'Beef',             qty: 1,    unit: 'kg' },
+        { name: 'Scotch Bonnet',    qty: 0.25, unit: 'kg' },
+        { name: 'Seasoning Cubes',  qty: 0.25, unit: 'pack' },
+        { name: 'Thyme',            qty: 0.05, unit: 'kg' },
+      ],
+      expectedYield: 3.5, expectedYieldUnit: 'bowls',
+      notes: 'Scale by kg of beef.',
+    },
+  ];
+
   const DEMO_PRODUCTION = [
     {
       id: 'PROD-00096', no: 'PROD-00096', batchNo: 'BATCH-00050', type: 'rts', dish: 'Fried Rice', outputQty: 30, outputUnit: 'Plates',
       meals: [{ name: 'Fried Rice', qty: 30, unit: 'Plates' }],
+      recipeId: 'RCP-00002', scaleFactor: 8, expectedYield: 28,
       ingredients: [
         { name: 'Rice (Long Grain)', qty: 8, unit: 'kg' },
         { name: 'Tomatoes', qty: 4, unit: 'kg' },
@@ -66,6 +140,7 @@
     {
       id: 'PROD-00094', no: 'PROD-00094', batchNo: 'BATCH-00048', type: 'rts', dish: 'Egusi Soup', outputQty: 15, outputUnit: 'Portions',
       meals: [{ name: 'Egusi Soup', qty: 15, unit: 'Portions' }],
+      recipeId: 'RCP-00003', scaleFactor: 4, expectedYield: 14,
       ingredients: [
         { name: 'Beef', qty: 4, unit: 'kg' },
         { name: 'Palm Oil', qty: 2, unit: 'litre' },
@@ -78,6 +153,7 @@
     {
       id: 'PROD-00092', no: 'PROD-00092', batchNo: 'BATCH-00046', type: 'rts', dish: 'Pepper Soup', outputQty: 15, outputUnit: 'bowls',
       meals: [{ name: 'Pepper Soup', qty: 15, unit: 'bowls' }],
+      recipeId: 'RCP-00004', scaleFactor: 4, expectedYield: 14,
       ingredients: [
         { name: 'Beef', qty: 4, unit: 'kg' },
         { name: 'Scotch Bonnet', qty: 1, unit: 'kg' },
@@ -104,5 +180,5 @@
     { transferNo: 'KTN-00041', productionNo: '', meal: 'Fried Rice', quantity: 10, unit: 'Plates', kitchen: 'Main Kitchen', restaurant: 'Main Restaurant / POS', sentBy: 'Head Chef', receivedBy: '', dateSent: '14/07/26 09:10 AM', dateReceived: '', status: 'cancelled', remarks: '', cancelReason: 'Duplicate entry — meal was combined with KTN-00042.' }
   ];
 
-  global.KitchenSeed = { DEMO_STOCK, DEMO_PRODUCTION, DEMO_MOVEMENTS, DEMO_TRANSFERS };
+  global.KitchenSeed = { DEMO_STOCK, DEMO_RECIPES, DEMO_PRODUCTION, DEMO_MOVEMENTS, DEMO_TRANSFERS };
 })(window);

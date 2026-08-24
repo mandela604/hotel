@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Profit &amp; Loss | Aurum Accounting</title>
+<title>Profit &amp; Loss | Grace Accounting</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
@@ -35,8 +35,8 @@
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
   .print-header{ display:none; }
-  .print-header h2{ font-size:18px; font-weight:800; }
-  .print-header p{ font-size:11px; color:#555; margin-top:3px; }
+  .print-header h2{ font-size:18px; font-weight:800; text-align:center; }
+  .print-header p{ font-size:11px; color:#555; margin-top:3px; text-align:center; }
 
   /* ═══ KPI CARDS ═══ */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
@@ -282,7 +282,7 @@
     <div id="topbarSlot"></div>
     <div class="content">
 
-      <div class="print-header"><h2>Aurum Hotel — Statement of Account (Profit &amp; Loss)</h2><p id="printSub"></p></div>
+      <div class="print-header"><h2>Grace Hotel — Statement of Account (Profit &amp; Loss)</h2><p id="printSub"></p></div>
 
       <div class="kpi-row" id="kpiRow"></div>
 
@@ -449,27 +449,27 @@ const storage = window.storage || {
 };
 const KEY_INCOME   = 'accounting-income';
 const KEY_EXPENSES = 'accounting-expenses';
-const PAGE_SIZE = 7; // Income / Expenses tables — max rows per page
+const PAGE_SIZE = 7;
 
 async function loadShared(key, fallback) {
   try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p) && p.length) return p; } } catch(e) {}
   return fallback;
 }
 async function saveShared(key, value) { try { await storage.set(key, JSON.stringify(value), true); } catch(e) {} }
-async function fetchFromAPI(path) {
-  const opts = { headers: {} };
+async function apiFetch(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (CONFIG.API_KEY) opts.headers['Authorization'] = `Bearer ${CONFIG.API_KEY}`;
+  if (body) opts.body = JSON.stringify(body);
   const res = await fetch(CONFIG.API_BASE + path, opts);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
-/* getAccountingData() — try the real API first, fall back to demo/shared
-   storage on failure. Same { income, expenses } shape either way. */
+
 async function getAccountingData() {
   if (!CONFIG.USE_DEMO) {
     try {
-      const data = await fetchFromAPI('/api/accounting/pnl');
-      return { income: data.income, expenses: data.expenses };
+      const data = await apiFetch('GET', '/api/accounting/pnl');
+      return { income: data.income || [], expenses: data.expenses || [] };
     } catch (err) {
       console.warn('[P&L] API unavailable, falling back to demo data:', err.message);
     }
@@ -479,8 +479,39 @@ async function getAccountingData() {
   await Promise.all([ saveShared(KEY_INCOME, income), saveShared(KEY_EXPENSES, expenses) ]);
   return { income, expenses };
 }
-async function saveAccountingData(income, expenses) {
-  await Promise.all([ saveShared(KEY_INCOME, income), saveShared(KEY_EXPENSES, expenses) ]);
+async function apiAddIncome(entry) {
+  if (!CONFIG.USE_DEMO) return apiFetch('POST', '/api/accounting/pnl/income', entry);
+  const list = await loadShared(KEY_INCOME, []);
+  const row = { id: uid('inc'), ...entry };
+  list.push(row); await saveShared(KEY_INCOME, list); return row;
+}
+async function apiUpdateIncome(id, entry) {
+  if (!CONFIG.USE_DEMO) return apiFetch('PUT', '/api/accounting/pnl/income/' + id, entry);
+  const list = await loadShared(KEY_INCOME, []);
+  const row = list.find(e => e.id === id); if (row) Object.assign(row, entry);
+  await saveShared(KEY_INCOME, list); return row;
+}
+async function apiDeleteIncome(id) {
+  if (!CONFIG.USE_DEMO) return apiFetch('DELETE', '/api/accounting/pnl/income/' + id);
+  const list = (await loadShared(KEY_INCOME, [])).filter(e => e.id !== id);
+  await saveShared(KEY_INCOME, list); return true;
+}
+async function apiAddExpense(entry) {
+  if (!CONFIG.USE_DEMO) return apiFetch('POST', '/api/accounting/pnl/expense', entry);
+  const list = await loadShared(KEY_EXPENSES, []);
+  const row = { id: uid('exp'), ...entry };
+  list.push(row); await saveShared(KEY_EXPENSES, list); return row;
+}
+async function apiUpdateExpense(id, entry) {
+  if (!CONFIG.USE_DEMO) return apiFetch('PUT', '/api/accounting/pnl/expense/' + id, entry);
+  const list = await loadShared(KEY_EXPENSES, []);
+  const row = list.find(e => e.id === id); if (row) Object.assign(row, entry);
+  await saveShared(KEY_EXPENSES, list); return row;
+}
+async function apiDeleteExpense(id) {
+  if (!CONFIG.USE_DEMO) return apiFetch('DELETE', '/api/accounting/pnl/expense/' + id);
+  const list = (await loadShared(KEY_EXPENSES, [])).filter(e => e.id !== id);
+  await saveShared(KEY_EXPENSES, list); return true;
 }
 
 let income = [];
@@ -580,14 +611,14 @@ function renderIncomeTable() {
     : rows.map(e => `
       <tr>
         <td data-label="Date">${fmtDate(e.date)}</td>
-        <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span>${e.department}</span></td>
+        <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span>${e.department}${e.autoGenerated ? ' <span style="font-size:9px;color:var(--text3);margin-left:4px;">AUTO</span>' : ''}</span></td>
         <td data-label="Description">${e.description}</td>
         <td data-label="Amount" class="right" style="font-weight:700;color:var(--blue);">${fmtN(e.amount)}</td>
         <td class="no-print" style="width:60px;">
-          <div class="row-actions">
+          ${e.autoGenerated ? '' : `<div class="row-actions">
             <button class="icon-btn edit" onclick="openEntryModal('income','${e.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
             <button class="icon-btn del" onclick="openDeleteConfirm('income','${e.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
-          </div>
+          </div>`}
         </td>
       </tr>`).join('');
 
@@ -739,29 +770,29 @@ async function saveEntry() {
   }
 
   const isIncome = entryKind === 'income';
-  const list = isIncome ? income : expenses;
+  const payload = isIncome
+    ? { date, department: cat, description: desc, amount: amt, recordedBy: by }
+    : { date, category: cat, description: desc, amount: amt, recordedBy: by };
 
-  if (editId) {
-    const rec = list.find(e => e.id === editId);
-    if (rec) {
-      rec.date = date; rec.description = desc; rec.amount = amt; rec.recordedBy = by;
-      if (isIncome) rec.department = cat; else rec.category = cat;
+  try {
+    if (editId) {
+      if (isIncome) await apiUpdateIncome(editId, payload);
+      else await apiUpdateExpense(editId, payload);
+    } else {
+      if (isIncome) await apiAddIncome(payload);
+      else await apiAddExpense(payload);
+      if (isIncome) incomePage = 1; else expensePage = 1;
     }
-  } else {
-    const rec = { id: uid(isIncome ? 'inc' : 'exp'), date, description: desc, amount: amt, recordedBy: by };
-    if (isIncome) rec.department = cat; else rec.category = cat;
-    list.push(rec);
-    // A brand-new entry should be visible right away — jump to page 1
-    // of its table rather than leaving the user on whatever page they
-    // were paginated to before adding it.
-    if (isIncome) incomePage = 1; else expensePage = 1;
+    showToast(`${isIncome ? 'Income' : 'Expense'} ${editId ? 'updated' : 'saved'}.`, 'success');
+    closeModal('entryModal');
+    editId = null;
+    const data = await getAccountingData();
+    income = data.income;
+    expenses = data.expenses;
+    renderAll();
+  } catch (err) {
+    showToast('Failed to save: ' + err.message, 'error');
   }
-
-  await saveAccountingData(income, expenses);
-  showToast(`${isIncome ? 'Income' : 'Expense'} ${editId ? 'updated' : 'saved'}.`, 'success');
-  closeModal('entryModal');
-  editId = null;
-  renderAll();
 }
 
 function openDeleteConfirm(kind, id) {
@@ -774,13 +805,19 @@ function openDeleteConfirm(kind, id) {
 }
 async function confirmDeleteEntry() {
   if (!deleteTarget) return;
-  if (deleteTarget.kind === 'income') income = income.filter(e => e.id !== deleteTarget.id);
-  else expenses = expenses.filter(e => e.id !== deleteTarget.id);
-  await saveAccountingData(income, expenses);
-  closeModal('deleteModal');
-  deleteTarget = null;
-  showToast('Entry deleted.', 'info');
-  renderAll();
+  try {
+    if (deleteTarget.kind === 'income') await apiDeleteIncome(deleteTarget.id);
+    else await apiDeleteExpense(deleteTarget.id);
+    closeModal('deleteModal');
+    deleteTarget = null;
+    showToast('Entry deleted.', 'info');
+    const data = await getAccountingData();
+    income = data.income;
+    expenses = data.expenses;
+    renderAll();
+  } catch (err) {
+    showToast('Failed to delete: ' + err.message, 'error');
+  }
 }
 
 /* ═══════════════════════════════════════════════

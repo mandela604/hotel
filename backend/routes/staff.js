@@ -1,10 +1,16 @@
-const router = require('express').Router();
-const ctrl = require('../controllers/staffController');
+const express = require('express');
+const router = express.Router();
+const staffController = require('../controllers/staffController');
+const auth = require('../middleware/auth');
+const roleGuard = require('../middleware/roleGuard');
 
-router.get('/',          ctrl.list);
-router.post('/',         ctrl.create);
-router.put('/:id',       ctrl.update);
-router.delete('/:id',    ctrl.remove);
-router.put('/:id/permissions', ctrl.updatePermissions);
+router.use(auth);
+
+router.get('/', staffController.listStaff);
+router.get('/:id', staffController.getStaffById);
+router.post('/', roleGuard(['admin', 'manager']), staffController.createStaff);
+router.put('/:id', roleGuard(['admin', 'manager']), staffController.updateStaff);
+router.delete('/:id', roleGuard(['admin', 'manager']), staffController.deleteStaff);
+router.patch('/:id/status', roleGuard(['admin', 'manager']), staffController.updateStatus);
 
 module.exports = router;

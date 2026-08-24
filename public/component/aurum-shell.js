@@ -11,27 +11,37 @@
   if (window.__aurumShell) return;
   window.__aurumShell = true;
 
-  // ── CONFIG — the only place to change Demo↔Live ──
+  // ── CONFIG — live only, no demo fallback ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
-    DEMO_USER: { name: 'User', initials: 'US', role: 'staff', privilege: null },
+    LOGIN_URL: 'login.html',
   };
 
+  function getToken() {
+    try { return localStorage.getItem('token'); } catch (e) { return null; }
+  }
+
+  function redirectToLogin() {
+    try { localStorage.removeItem('token'); localStorage.removeItem('aurum_user'); } catch (e) {}
+    window.location.href = CONFIG.LOGIN_URL;
+  }
+
   async function fetchSession() {
-    if (!CONFIG.USE_DEMO) {
-      try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-          headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-        });
-        if (!res.ok) throw new Error(`Session API returned ${res.status}`);
-        const data = await res.json();
-        return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege, avatar: data.avatar };
-      } catch (err) {
-        console.warn('[AurumShell] Session fetch failed, using demo user:', err.message);
-      }
+    const token = getToken();
+    if (!token) { redirectToLogin(); return null; }
+
+    try {
+      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || `Session API returned ${res.status}`);
+      return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege, department: data.department };
+    } catch (err) {
+      console.warn('[AurumShell] Session invalid, redirecting to login:', err.message);
+      redirectToLogin();
+      return null;
     }
-    return CONFIG.DEMO_USER;
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -353,8 +363,8 @@
         }
         const badge = document.getElementById(instId + '-apiBadge');
         const text = document.getElementById(instId + '-apiText');
-        if (text) text.textContent = CONFIG.USE_DEMO ? 'Demo' : 'Live';
-        if (badge) badge.classList.toggle('aur-live', !CONFIG.USE_DEMO);
+        if (text) text.textContent = 'Live';
+        if (badge) badge.classList.add('aur-live');
       }
     });
 

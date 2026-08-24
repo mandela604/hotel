@@ -78,6 +78,18 @@
   .chip-rejected, .chip-voided{ background:var(--red-bg); color:var(--red); }
   .chip-rts{ background:var(--purple-bg); color:var(--purple); }
   .chip-coo{ background:var(--amber-bg); color:var(--amber); }
+  .chip-in-progress{ background:var(--amber-bg); color:var(--amber); }
+
+  .btn-primary-sm{ background:var(--gold); color:#fff; border:1px solid var(--gold); border-radius:9px; padding:8px 14px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px; text-decoration:none; transition:all .2s; }
+  .btn-primary-sm:hover{ background:var(--gold-light); }
+
+  .modal-action-block{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px; margin-top:6px; }
+  .modal-action-title{ font-size:11.5px; font-weight:800; color:var(--text); margin-bottom:10px; display:flex; align-items:center; gap:7px; }
+  .modal-action-title.danger{ color:var(--red); }
+  .modal-row2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .modal-input{ background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:8px 11px; font-size:12.5px; font-family:inherit; color:var(--text); width:100%; outline:none; }
+  .modal-input:focus{ border-color:var(--gold-border); }
+  .btn-danger-sm{ background:var(--red-bg); border:1px solid rgba(240,68,56,.3); color:var(--red); font-weight:700; padding:8px 14px; border-radius:9px; cursor:pointer; font-family:inherit; font-size:12px; }
 
   .pagin{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); flex-wrap:wrap; gap:8px; font-size:11.5px; color:var(--text2); }
   .page-btns{ display:flex; align-items:center; gap:4px; }
@@ -99,6 +111,9 @@
   .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; border:1px solid transparent; font-family:inherit; }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; font-weight:600; }
+  .toast.success{ border-left:3px solid var(--green); } .toast.error{ border-left:3px solid var(--red); } .toast.info{ border-left:3px solid var(--blue); }
 
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 </style>
@@ -127,10 +142,8 @@
             <div class="flt-label">Status</div>
             <select class="filter-select" id="fStatus">
               <option value="">All Statuses</option>
-              <option value="sent">Awaiting Approval</option>
-              <option value="accepted">Accepted</option>
+              <option value="in-progress">Awaiting Yield</option>
               <option value="completed">Completed</option>
-              <option value="rejected">Rejected</option>
               <option value="voided">Voided</option>
             </select>
           </div>
@@ -150,7 +163,10 @@
       <div class="table-card">
         <div class="table-head-bar">
           <div class="table-title">Production History Log</div>
-          <div style="font-size:11.5px;color:var(--text3);font-weight:600;" id="tblCount">Loading…</div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="font-size:11.5px;color:var(--text3);font-weight:600;" id="tblCount">Loading…</div>
+            <a class="btn-primary-sm" href="kitchen-production.html"><i class="fa-solid fa-plus"></i> New Production</a>
+          </div>
         </div>
         <div class="table-wrap">
           <table class="data-tbl">
@@ -178,43 +194,10 @@
   </div>
 </div>
 
-<!-- DETAIL MODAL -->
-<div class="modal-overlay" id="productionModal">
-  <div class="modal">
-    <div class="modal-title" id="pmTitle">Production Details</div>
-    <div class="detail-grid">
-      <div class="detail-item"><div class="detail-label">Production No.</div><div class="detail-value" id="pmNo">—</div></div>
-      <div class="detail-item"><div class="detail-label">Batch No.</div><div class="detail-value" id="pmBatch">—</div></div>
-      <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value" id="pmStatus">—</div></div>
-      <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value" id="pmType">—</div></div>
-      <div class="detail-item"><div class="detail-label">Prepared By</div><div class="detail-value" id="pmBy">—</div></div>
-      <div class="detail-item"><div class="detail-label">Time</div><div class="detail-value" id="pmTime">—</div></div>
-      <div class="detail-item"><div class="detail-label">Destination</div><div class="detail-value" id="pmDest">—</div></div>
-    </div>
-    <div class="detail-item" style="margin-bottom:12px;">
-      <div class="detail-label">Remarks</div>
-      <div class="detail-value" id="pmRemarks" style="font-weight:400;color:var(--text2);">—</div>
-    </div>
-    <div class="detail-item" style="margin-bottom:12px;">
-      <div class="detail-label">Meals Output</div>
-      <div id="pmMeals" style="margin-top:4px;"></div>
-    </div>
-    <div class="detail-item" style="margin-bottom:12px;">
-      <div class="detail-label">Ingredients Deducted</div>
-      <div id="pmDeductions" style="margin-top:4px;"></div>
-    </div>
-    <div id="pmTransferWrap" style="display:none;margin-top:10px;">
-      <a href="javascript:void(0)" id="pmTransferLink" onclick="jumpToTransfer()" style="color:var(--gold);font-weight:700;text-decoration:none;font-size:12.5px;">View Transfer →</a>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('productionModal')">Close</button>
-    </div>
-  </div>
-</div>
-
 <script src="data/kitchen-seed.js"></script>
 <script src="services/kitchen-service.js"></script>
 <script src="../component/kitchen-shell.js"></script>
+<script src="../component/production-modal.js"></script>
 <script>
 const shell = KitchenShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -228,7 +211,22 @@ const shell = KitchenShell.attach({
 let page = 1;
 const PAGE_SIZE = 10;
 let filtered = [];
-const STATUS_LBL = { draft:'Draft', saved:'Saved', sent:'Awaiting Approval', accepted:'Accepted', rejected:'Rejected', completed:'Completed', voided:'Voided' };
+
+function showToast(msg, type) {
+  type = type || 'success';
+  const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+function getSession() { return shell ? shell.getUser() : null; }
+function getStaffName() {
+  const session = getSession();
+  return (session && session.name) || 'Head Chef';
+}
+const STATUS_LBL = { draft:'Draft', saved:'Saved', 'in-progress':'Awaiting Yield', sent:'Awaiting Approval', accepted:'Accepted', rejected:'Rejected', completed:'Completed', voided:'Voided' };
 const TYPE_LBL = { rts:'Ready-to-Serve', coo:'Cook-on-Order' };
 function fmtQty(n){ return (Math.round((n||0)*100)/100).toString(); }
 
@@ -255,9 +253,9 @@ function mealSummary(p){
 function renderKPIs(){
   const productions = KitchenService.state.production || [];
   const total = productions.length;
-  const awaiting = productions.filter(p=>p.status==='sent').length;
-  const accepted = productions.filter(p=>p.status==='accepted' || p.status==='completed').length;
-  const rejected = productions.filter(p=>p.status==='rejected' || p.status==='voided').length;
+  const awaiting = productions.filter(p=>p.status==='in-progress').length;
+  const accepted = productions.filter(p=>p.status==='completed').length;
+  const rejected = productions.filter(p=>p.status==='voided').length;
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card acc-blue">
       <div class="kpi-top">
@@ -270,23 +268,23 @@ function renderKPIs(){
     <div class="kpi-card acc-amber">
       <div class="kpi-top">
         <div class="kpi-ic ic-amber"><i class="fa-solid fa-truck-fast"></i></div>
-        <div class="kpi-label">Awaiting Approval</div>
+        <div class="kpi-label">Awaiting Yield</div>
       </div>
       <div class="kpi-value" style="color:var(--amber);">${awaiting}</div>
-      <div class="kpi-trend warn">${awaiting>0?'Sent, not yet accepted':'✓ All clear'}</div>
+      <div class="kpi-trend warn">${awaiting>0?'Cooking in progress':'✓ All clear'}</div>
     </div>
     <div class="kpi-card acc-green">
       <div class="kpi-top">
         <div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div>
-        <div class="kpi-label">Accepted / Completed</div>
+        <div class="kpi-label">Completed</div>
       </div>
       <div class="kpi-value" style="color:var(--green);">${accepted}</div>
-      <div class="kpi-trend up">Confirmed & delivered</div>
+      <div class="kpi-trend up">Yield recorded</div>
     </div>
     <div class="kpi-card acc-red">
       <div class="kpi-top">
         <div class="kpi-ic ic-red"><i class="fa-solid fa-circle-xmark"></i></div>
-        <div class="kpi-label">Rejected / Voided</div>
+        <div class="kpi-label">Voided</div>
       </div>
       <div class="kpi-value" style="color:var(--red);">${rejected}</div>
       <div class="kpi-trend ${rejected>0?'warn':'up'}">${rejected>0?'Review needed':'None on record'}</div>
@@ -352,50 +350,23 @@ function render(){ filtered = getFiltered(); renderKPIs(); renderTable(); }
 function openProductionModal(no){
   const productions = KitchenService.state.production || [];
   const p = productions.find(x=>(x.no===no || x.id===no)); if (!p) return;
-  const pNo = p.no || p.id;
-  const pType = p.type || 'rts';
-  document.getElementById('pmTitle').textContent = `Production ${pNo}`;
-  document.getElementById('pmNo').textContent = pNo;
-  document.getElementById('pmBatch').textContent = p.batchNo || '—';
-  document.getElementById('pmStatus').innerHTML = `<span class="chip chip-${p.status}">${STATUS_LBL[p.status] || p.status}</span>`;
-  document.getElementById('pmType').innerHTML = `<span class="chip chip-${pType==='rts'?'rts':'coo'}">${TYPE_LBL[pType] || pType}</span>`;
-  document.getElementById('pmBy').textContent = p.by || p.staff || 'Head Chef';
-  document.getElementById('pmTime').textContent = formatTime12(p.time || (p.date ? p.date.split(' ')[1] : ''));
-
-  const dest = document.getElementById('pmDest');
-  if (pType === 'rts') { dest.textContent = p.destination || 'Main Restaurant / POS'; dest.classList.toggle('muted', !p.destination); }
-  else { dest.textContent = p.linkedOrder || 'Not applicable'; dest.classList.toggle('muted', !p.linkedOrder); }
-
-  const rm = document.getElementById('pmRemarks');
-  if (p.remarks || p.notes) { rm.textContent=p.remarks || p.notes; rm.classList.remove('muted'); } else { rm.textContent='No remarks recorded.'; rm.classList.add('muted'); }
-
-  const meals = p.meals || (p.dish ? [{ name: p.dish, qty: p.outputQty, unit: p.outputUnit }] : []);
-  document.getElementById('pmMeals').innerHTML = meals.length===0
-    ? `<div style="font-size:12px;color:var(--text3);">No meals recorded.</div>`
-    : meals.map(m => `<div class="ing-row"><span>${m.name}</span><span style="font-weight:700;">${fmtQty(m.qty)} ${m.unit||''}</span></div>`).join('');
-
-  const ded = p.ingredients || [];
-  document.getElementById('pmDeductions').innerHTML = ded.length===0
-    ? `<div style="font-size:12px;color:var(--text3);">No inventory deduction recorded.</div>`
-    : ded.map(d => `<div class="ing-row"><span>${d.name}</span><span style="font-weight:700;color:var(--red);">−${fmtQty(d.qty)} ${d.unit||''}</span></div>`).join('');
-
-  const xw = document.getElementById('pmTransferWrap');
-  if (p.transferNo) { xw.style.display=''; document.getElementById('pmTransferLink').textContent = `🚚 View Transfer ${p.transferNo} →`; window._pmActiveTransfer = p.transferNo; }
-  else xw.style.display='none';
-  document.getElementById('productionModal').classList.add('show');
+  prodModal.openView(p);
 }
-
-function jumpToTransfer(){ if (window._pmActiveTransfer) window.location.href = `kitchen-transfers.html?open=${window._pmActiveTransfer}`; }
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-document.getElementById('productionModal').addEventListener('click', function(e){ if (e.target===this) closeModal('productionModal'); });
 
 ['fSearch','fStatus','fType'].forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener(id==='fSearch'?'input':'change', ()=>{ page=1; render(); });
 });
 
+let prodModal = null;
+
 async function init(){
   await KitchenService.loadAll();
+  prodModal = ProductionModal.create({
+    service: KitchenService,
+    session: getSession(),
+    onSaved: render,
+  });
   render();
   KitchenService.onChange(render);
   const openNo = new URLSearchParams(location.search).get('open');

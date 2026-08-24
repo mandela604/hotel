@@ -694,9 +694,24 @@ async function saveRoomStatus() {
   const newSt = document.getElementById('rsNewStatus').value;
   if (!newSt) return;
   const note = document.getElementById('rsNote').value.trim();
+  const curSt = getRoomStatus(statusRoom);
 
   try {
-    await BookingData.setRoomStatus(statusRoom, newSt, { notes: note });
+    // Check-in and check-out are their own backend endpoints — they carry
+    // logic (setting real checkin/checkout timestamps, finalizing the
+    // stay, etc.) that the generic status PUT does not. Route those two
+    // transitions accordingly; everything else (vacant, maintenance,
+    // cancel) still goes through the plain status change.
+    if (newSt === 'checkedin') {
+      await BookingData.checkinBooking(statusRoom, { notes: note });
+    } else if (curSt === 'checkedin') {
+      // checkoutBooking() always lands the room on 'cleaning' itself —
+      // staff can move it further (Available/Maintenance) afterward as
+      // its own separate action, not bundled into checkout.
+      await BookingData.checkoutBooking(statusRoom);
+    } else {
+      await BookingData.setRoomStatus(statusRoom, newSt, { notes: note });
+    }
     closeModal('roomStatusModal');
     showToast('Room ' + statusRoom + ' → ' + (RC_LBL[newSt] || newSt) + '.', 'success');
     await refreshDataAndRender();

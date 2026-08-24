@@ -191,6 +191,7 @@
 
   global.PoolBarSeed = {
     PAYMENT_METHODS,
+    MONEY_RECEIVED_METHODS: ['Cash', 'POS', 'Transfer'],
     ROOM_CHARGE_METHOD,
     ORDER_STATUS_OPTIONS,
     COMPLETED_SALE_STATUS,

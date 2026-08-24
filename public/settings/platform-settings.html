@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Platform Settings | Grace Hotel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ height:auto; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text);
+  }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .page-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .page-head h1{ font-size:18px; font-weight:800; }
+  .page-head p{ font-size:12px; color:var(--text2); margin-top:2px; }
+
+  .banner{ display:none; align-items:center; gap:10px; background:var(--amber-bg); border:1px solid rgba(247,144,9,.3); color:#92510a; border-radius:12px; padding:10px 14px; font-size:12.5px; font-weight:600; }
+  .banner.show{ display:flex; }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13.5px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .panel-title i{ color:var(--gold); font-size:13px; }
+  .panel-sub{ font-size:11px; color:var(--text3); margin-top:2px; }
+  .panel-body{ padding:16px 20px 20px; }
+
+  .chip-list{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip{ display:inline-flex; align-items:center; gap:8px; padding:7px 8px 7px 14px; border-radius:20px; background:var(--surface2); border:1px solid var(--border); font-size:12.5px; font-weight:600; color:var(--text); }
+  .chip button{ width:19px; height:19px; border-radius:50%; border:none; background:var(--red-bg); color:var(--red); font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .chip button:hover{ background:var(--red); color:#fff; }
+  .chip.empty{ color:var(--text3); font-style:italic; background:none; border-style:dashed; }
+
+  .add-row{ display:flex; gap:8px; }
+  .add-row input{ flex:1; background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; font-size:13px; font-family:inherit; color:var(--text); outline:none; }
+  .add-row input:focus{ border-color:var(--gold-border); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid transparent; font-family:inherit; white-space:nowrap; transition:all .15s; }
+  .btn-primary{ background:var(--gold); color:#fff; }
+  .btn-primary:hover{ background:var(--gold-light); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .field-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .field-row label{ font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; }
+  .field-row select{ background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; font-size:13px; font-family:inherit; color:var(--text); outline:none; min-width:140px; }
+  .hint{ font-size:11.5px; color:var(--text3); margin-top:8px; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:#fff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:13px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; font-weight:600; }
+  .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
+  .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="page-head">
+        <div>
+          <h1>Platform Settings</h1>
+          <p>Payment methods, shift timing, and departments used across every module.</p>
+        </div>
+      </div>
+
+      <div class="banner" id="permBanner">
+        <i class="fa-solid fa-lock"></i>
+        <span>You're viewing settings in read-only mode — only admins/managers can make changes.</span>
+      </div>
+
+      <!-- Payment Methods -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-credit-card"></i> Payment Methods</div>
+            <div class="panel-sub">Used by Accounting, Kitchen, Restaurant, Pool Bar and Store for every sale/transaction.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="chip-list" id="paymentChips"></div>
+          <div class="add-row">
+            <input type="text" id="newMethodInput" placeholder="e.g. Mobile Money" maxlength="40">
+            <button class="btn btn-primary" id="addMethodBtn"><i class="fa-solid fa-plus"></i> Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shift Settings -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-clock"></i> Shift Settings</div>
+            <div class="panel-sub">The hour a business "shift day" rolls over — drives Accounting's shift keys and reconciliation.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="field-row">
+            <label for="shiftHourSel">Shift starts at</label>
+            <select id="shiftHourSel"></select>
+            <button class="btn btn-outline" id="saveShiftBtn"><i class="fa-solid fa-check"></i> Save</button>
+          </div>
+          <div class="hint">Example: a sale at 8:59 AM still counts toward <em>yesterday's</em> shift if this is set to 9:00 AM.</div>
+        </div>
+      </div>
+
+      <!-- Departments -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-building"></i> Departments</div>
+            <div class="panel-sub">Departments available for shift reconciliation and cross-module reporting.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="chip-list" id="deptChips"></div>
+          <div class="add-row">
+            <input type="text" id="newDeptInput" placeholder="e.g. Spa" maxlength="60">
+            <button class="btn btn-primary" id="addDeptBtn"><i class="fa-solid fa-plus"></i> Add</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="data/platform-settings-seed.js"></script>
+<script src="services/platform-settings-service.js"></script>
+<script src="../component/accounting-shell.js"></script>
+<script>
+/* Reuses AccountingShell for the sidebar/topbar since this page lives
+   alongside the Accounting pages today. Swap to whatever shared shell
+   component the rest of the platform settles on if one gets built. */
+const shell = AccountingShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'platform-settings.html',
+  pageTitle:     'Platform Settings',
+  pageSubtitle:  'Shared config for every module',
+  user:          { initials: 'AD' },
+});
+
+let settings = null;
+let canEdit = false;
+
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = `toast ${type || 'success'}`;
+  t.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-xmark' : 'fa-circle-check'}"></i> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+function renderPaymentChips() {
+  const el = document.getElementById('paymentChips');
+  const list = settings.paymentMethods || [];
+  el.innerHTML = list.length
+    ? list.map(m => `
+        <span class="chip">
+          ${m}
+          ${canEdit ? `<button data-method="${m}" title="Remove"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        </span>`).join('')
+    : '<span class="chip empty">No payment methods configured</span>';
+
+  el.querySelectorAll('button[data-method]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        settings = await PlatformSettings.removePaymentMethod(btn.dataset.method);
+        renderPaymentChips();
+        showToast(`Removed "${btn.dataset.method}"`, 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  });
+}
+
+function renderDeptChips() {
+  const el = document.getElementById('deptChips');
+  const list = settings.departments || [];
+  el.innerHTML = list.length
+    ? list.map(d => `
+        <span class="chip">
+          ${d}
+          ${canEdit ? `<button data-dept="${d}" title="Remove"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        </span>`).join('')
+    : '<span class="chip empty">No departments configured</span>';
+
+  el.querySelectorAll('button[data-dept]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        settings = await PlatformSettings.removeDepartment(btn.dataset.dept);
+        renderDeptChips();
+        showToast(`Removed "${btn.dataset.dept}"`, 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  });
+}
+
+function fmtHour(h) {
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return `${hh}:00 ${suffix}`;
+}
+
+function renderShiftHourSelect() {
+  const sel = document.getElementById('shiftHourSel');
+  sel.innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${fmtHour(h)}</option>`).join('');
+  sel.value = settings.shiftStartHour;
+}
+
+function applyEditPermission() {
+  document.getElementById('permBanner').classList.toggle('show', !canEdit);
+  document.getElementById('newMethodInput').disabled = !canEdit;
+  document.getElementById('addMethodBtn').disabled = !canEdit;
+  document.getElementById('newDeptInput').disabled = !canEdit;
+  document.getElementById('addDeptBtn').disabled = !canEdit;
+  document.getElementById('shiftHourSel').disabled = !canEdit;
+  document.getElementById('saveShiftBtn').disabled = !canEdit;
+}
+
+document.getElementById('addMethodBtn').addEventListener('click', async () => {
+  const input = document.getElementById('newMethodInput');
+  const val = input.value.trim();
+  if (!val) return;
+  try {
+    settings = await PlatformSettings.addPaymentMethod(val);
+    input.value = '';
+    renderPaymentChips();
+    showToast(`Added "${val}"`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
+document.getElementById('newMethodInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addMethodBtn').click();
+});
+
+document.getElementById('addDeptBtn').addEventListener('click', async () => {
+  const input = document.getElementById('newDeptInput');
+  const val = input.value.trim();
+  if (!val) return;
+  try {
+    settings = await PlatformSettings.addDepartment(val);
+    input.value = '';
+    renderDeptChips();
+    showToast(`Added "${val}"`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
+document.getElementById('newDeptInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addDeptBtn').click();
+});
+
+document.getElementById('saveShiftBtn').addEventListener('click', async () => {
+  const hour = document.getElementById('shiftHourSel').value;
+  try {
+    settings = await PlatformSettings.setShiftStartHour(hour);
+    showToast(`Shift start set to ${fmtHour(Number(hour))}`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
+
+async function init() {
+  settings = await PlatformSettings.getSettings();
+  canEdit = PlatformSettings.canEditSettings();
+  renderPaymentChips();
+  renderDeptChips();
+  renderShiftHourSelect();
+  applyEditPermission();
+
+  PlatformSettings.onChange((s) => { settings = s; });
+}
+init();
+</script>
+</body>
+</html>

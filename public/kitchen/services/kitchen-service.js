@@ -1,36 +1,66 @@
 /**
  * services/kitchen-service.js — Shared data + business logic for the Kitchen module
- * Depends on: data/kitchen-seed.js (window.KitchenSeed), optionally services/permissions.js
- * Load order: kitchen-seed.js, THEN this file, then the page's own <script>.
+ *
+ * PRODUCTION VERSION: talks to the real backend (routes/kitchen.js →
+ * controllers/kitchenController.js) instead of shared client-side
+ * storage. The public interface (KitchenService.*) is unchanged from
+ * the demo version, so pages that already call KitchenService.loadAll(),
+ * .addStockItem(), .startProduction(), etc. don't need to change.
+ *
+ * IDs: never generated client-side anymore. Every record's `id` is a
+ * uuidv4 assigned by the server; human-readable numbers (no,
+ * transferNo, requisitionNo) are also server-assigned and only used
+ * for display, never for lookups.
+ *
+ * ASSUMPTION — auth header: this file reads a bearer token from
+ * window.AuthService.getToken() if present, else localStorage 'token'.
+ * Adjust getAuthHeaders() below if this app's real auth convention is
+ * different.
+ *
+ * ASSUMPTION — API base: defaults to '/api/kitchen'. Override by
+ * setting window.KITCHEN_API_BASE before this script loads.
  */
 (function (global) {
   'use strict';
 
-  const KEYS = {
-    STOCK: 'kitchen-stock',
-    PRODUCTION: 'kitchen-production',
-    MOVEMENTS: 'kitchen-movements',
-    RECEIVED_REQS: 'kitchen-received-req-lines',
-    TRANSFERS: 'kitchen-transfers',
-  };
+  const API_BASE = global.KITCHEN_API_BASE || '/api/kitchen';
 
-  const storage = global.storage || {
-    async get(key, shared) { const v = localStorage.getItem(key); return v == null ? null : { key, value: v, shared }; },
-    async set(key, value, shared) { localStorage.setItem(key, value); return { key, value, shared }; },
-    async delete(key, shared) { localStorage.removeItem(key); return { key, deleted: true, shared }; },
-    async list(prefix, shared) { const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return { keys, prefix, shared }; },
-  };
-
-  async function loadShared(key, fallback) {
+  function getAuthHeaders() {
+    let token = null;
     try {
-      const r = await storage.get(key, true);
-      if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; if (parsed && typeof parsed === 'object') return parsed; }
-    } catch (e) { /* first run */ }
-    return fallback;
+      if (global.AuthService && typeof global.AuthService.getToken === 'function') {
+        token = global.AuthService.getToken();
+      } else {
+        token = localStorage.getItem('token');
+      }
+    } catch (e) { /* no storage access */ }
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }
-  async function saveShared(key, value) {
-    try { await storage.set(key, JSON.stringify(value), true); return true; }
-    catch (e) { console.warn('[KitchenService] sync failed:', key, e); return false; }
+
+  /**
+   * Every backend response follows { success, data|error }. This throws
+   * a plain Error with the server's message on failure, so existing
+   * try/catch(e => e.message) callers keep working unchanged.
+   */
+  async function request(path, options = {}) {
+    const res = await fetch(API_BASE + path, {
+      method: options.method || 'GET',
+      headers: Object.assign(
+        { 'Content-Type': 'application/json' },
+        getAuthHeaders(),
+        options.headers || {}
+      ),
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    });
+
+    let payload;
+    try { payload = await res.json(); }
+    catch (e) { throw new Error(`Server returned an unreadable response (${res.status}).`); }
+
+    if (!res.ok || !payload.success) {
+      throw new Error(payload.error || `Request failed (${res.status}).`);
+    }
+    return payload.data;
   }
 
   function pad2(n) { return String(n).padStart(2, '0'); }
@@ -45,51 +75,27 @@
   function todayDDMMYY() { const d = new Date(); return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)}`; }
   function todayISO() { return new Date().toISOString().split('T')[0]; }
 
+  function normalizeProductionType(t) {
+    return (t === 'cook_on_order' || t === 'coo') ? 'coo' : 'rts';
+  }
+
   function stockLevel(i) { return i.qty <= 0 ? 'out' : (i.qty <= i.min ? 'low' : 'ok'); }
   const LEVEL_CHIP = { ok: 'chip-ok', low: 'chip-low', out: 'chip-out' };
   const LEVEL_LABEL = { ok: 'In Stock', low: 'Low Stock', out: 'Out of Stock' };
 
-  function nextProductionId(list) {
-    let max = 1000;
-    (list || []).forEach(p => {
-      const idStr = String(p.id || p.no || '');
-      const n = parseInt(idStr.replace(/^(KPR-|PROD-)/, ''), 10);
-      if (!isNaN(n) && n > max) max = n;
-    });
-    return 'PROD-' + String(max + 1).padStart(5, '0');
-  }
-
-  function nextTransferNo(list) {
-    let max = 40;
-    (list || []).forEach(t => {
-      const n = parseInt((t.transferNo || '').replace('KTN-', ''), 10);
-      if (!isNaN(n) && n > max) max = n;
-    });
-    return 'KTN-' + String(max + 1).padStart(5, '0');
-  }
-
   const state = {
     stock: [],
+    recipes: [],
     production: [],
     movements: [],
     transfers: [],
-    receivedReqLines: {},
+    requisitions: [],
     ready: false,
   };
 
   const listeners = [];
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(fn => { try { fn(state, reason); } catch (e) { console.warn('[KitchenService] listener error', e); } }); }
-
-  function seed() {
-    const s = global.KitchenSeed || {};
-    return {
-      stock: s.DEMO_STOCK || [],
-      production: s.DEMO_PRODUCTION || [],
-      movements: s.DEMO_MOVEMENTS || [],
-      transfers: s.DEMO_TRANSFERS || [],
-    };
-  }
 
   function normalizeItem(i) {
     if (!i) return i;
@@ -104,43 +110,48 @@
     return i;
   }
 
+  function normalizeRecipe(r) {
+    if (!r) return r;
+    r.baseQty = Number(r.baseQty) || 1;
+    r.expectedYield = Number(r.expectedYield) || 0;
+    r.ingredients = (r.ingredients || []).map(i => ({ name: i.name, qty: Number(i.qty) || 0, unit: i.unit || '' }));
+    return r;
+  }
+
+  /**
+   * Loads all Kitchen data from the server. No more seed-merging — the
+   * backend is the single source of truth, so an empty collection just
+   * means the backend genuinely has no rows yet (nothing to paper over
+   * client-side).
+   */
   async function loadAll() {
-    const s = seed();
-    const [stock, production, movements, transfers, receivedReqLines] = await Promise.all([
-      loadShared(KEYS.STOCK, s.stock),
-      loadShared(KEYS.PRODUCTION, s.production),
-      loadShared(KEYS.MOVEMENTS, s.movements),
-      loadShared(KEYS.TRANSFERS, s.transfers),
-      loadShared(KEYS.RECEIVED_REQS, {}),
+    const [stock, recipes, production, movements, transfers] = await Promise.all([
+      request('/stock'),
+      request('/recipes'),
+      request('/production'),
+      request('/movements'),
+      request('/transfers'),
     ]);
+
     state.stock = (stock || []).map(normalizeItem);
+    state.recipes = (recipes || []).map(normalizeRecipe);
     state.production = production || [];
     state.movements = movements || [];
     state.transfers = transfers || [];
-    state.receivedReqLines = receivedReqLines || {};
-    state.ready = true;
 
-    await Promise.all([
-      saveShared(KEYS.STOCK, state.stock),
-      saveShared(KEYS.PRODUCTION, state.production),
-      saveShared(KEYS.MOVEMENTS, state.movements),
-      saveShared(KEYS.TRANSFERS, state.transfers),
-      saveShared(KEYS.RECEIVED_REQS, state.receivedReqLines),
-    ]);
+    // Requisitions are read-only status watching from Kitchen's side —
+    // fetched separately so a failure here (e.g. route not deployed
+    // yet) doesn't block the rest of the page from loading.
+    try {
+      state.requisitions = await request('/requisitions');
+    } catch (e) {
+      console.warn('[KitchenService] requisitions fetch failed:', e.message);
+      state.requisitions = [];
+    }
+
+    state.ready = true;
     emitChange('load');
     return state;
-  }
-
-  async function persist(keys) {
-    const map = {
-      stock: KEYS.STOCK,
-      production: KEYS.PRODUCTION,
-      movements: KEYS.MOVEMENTS,
-      transfers: KEYS.TRANSFERS,
-      receivedReqLines: KEYS.RECEIVED_REQS,
-    };
-    const list = keys && keys.length ? keys : Object.keys(map);
-    await Promise.all(list.map(k => saveShared(map[k], state[k])));
   }
 
   function findStock(name) {
@@ -151,61 +162,60 @@
 
   /* ── Stock CRUD ── */
   async function addStockItem(raw) {
-    const name = (raw.name || '').trim();
-    if (!name) throw new Error('Item name is required.');
-    if (findStock(name)) throw new Error(`"${name}" is already tracked — edit it instead.`);
-    const entry = normalizeItem({
-      name: name,
-      category: raw.category || raw.cat || 'Grains',
-      unit: raw.unit || 'kg',
-      qty: raw.qty != null ? Number(raw.qty) : 0,
-      min: Number(raw.min) || 0,
-      price: raw.price != null ? Number(raw.price) : (raw.cost != null ? Number(raw.cost) : 0),
-      batch: raw.batch || '—',
-      received: raw.received || todayDDMMYY(),
-      desc: raw.desc || '',
+    const item = await request('/stock', {
+      method: 'POST',
+      body: {
+        name: raw.name,
+        category: raw.category || raw.cat,
+        unit: raw.unit,
+        qty: raw.qty,
+        min: raw.min,
+        price: raw.price != null ? raw.price : raw.cost,
+        batch: raw.batch,
+        received: raw.received,
+        desc: raw.desc,
+      },
     });
-    state.stock.push(entry);
-    await persist(['stock']);
+    normalizeItem(item);
+    state.stock.push(item);
     emitChange('stock:add');
-    return entry;
+    return item;
   }
 
-  async function editStockItem(name, updates) {
-    const i = findStock(name);
-    if (!i) throw new Error(`"${name}" not found in stock.`);
-    const { qty, batch, received, ...safeUpdates } = updates;
-    Object.assign(i, safeUpdates);
-    normalizeItem(i);
-    await persist(['stock']);
+  /**
+   * Now keyed by the item's server `id` (uuidv4), not its name — the
+   * caller should pass the stock item's `id`. `name` is accepted for
+   * backward compatibility and resolved to an id via findStock().
+   */
+  async function editStockItem(nameOrId, updates) {
+    const existing = state.stock.find(i => i.id === nameOrId) || findStock(nameOrId);
+    if (!existing) throw new Error(`"${nameOrId}" not found in stock.`);
+
+    const item = await request(`/stock/${existing.id}`, { method: 'PUT', body: updates });
+    normalizeItem(item);
+    const idx = state.stock.findIndex(i => i.id === existing.id);
+    if (idx > -1) state.stock[idx] = item; else state.stock.push(item);
     emitChange('stock:edit');
-    return i;
+    return item;
   }
 
-  async function deleteStockItem(name) {
-    state.stock = state.stock.filter(i => i.name !== name);
-    await persist(['stock']);
+  async function deleteStockItem(nameOrId) {
+    const existing = state.stock.find(i => i.id === nameOrId) || findStock(nameOrId);
+    if (!existing) throw new Error(`"${nameOrId}" not found in stock.`);
+
+    await request(`/stock/${existing.id}`, { method: 'DELETE' });
+    state.stock = state.stock.filter(i => i.id !== existing.id);
     emitChange('stock:delete');
   }
 
   async function deductStock(name, qty, reason, notes) {
-    const i = findStock(name);
-    if (!i) throw new Error(`"${name}" not found in stock.`);
-    if (qty < 0) throw new Error('Enter a valid quantity.');
-    if (qty > i.qty) throw new Error(`Cannot deduct more than the ${i.qty} ${i.unit} on hand.`);
-    i.qty -= qty;
-    state.movements.unshift({ date: nowStamp(), item: i.name, qtyIn: 0, qtyOut: qty, balance: i.qty, reason: notes ? `${reason} — ${notes}` : reason });
-    await persist(['stock', 'movements']);
+    const item = await request('/stock/deduct', { method: 'POST', body: { name, qty, reason, notes } });
+    normalizeItem(item);
+    const idx = state.stock.findIndex(i => i.id === item.id);
+    if (idx > -1) state.stock[idx] = item; else state.stock.push(item);
+    state.movements.unshift({ date: nowStamp(), item: item.name, qtyIn: 0, qtyOut: qty, balance: item.qty, reason: notes ? `${reason} — ${notes}` : reason });
     emitChange('stock:deduct');
-    return i;
-  }
-
-  function restoreStock(name, qty, reason) {
-    const i = findStock(name);
-    if (!i) return null;
-    i.qty += qty;
-    state.movements.unshift({ date: nowStamp(), item: i.name, qtyIn: qty, qtyOut: 0, balance: i.qty, reason });
-    return i;
+    return item;
   }
 
   function ingredientCost(name, qty) {
@@ -213,179 +223,209 @@
     return (i ? i.price : 0) * qty;
   }
 
-  /* ── Production Runs ── */
-  async function recordProduction({ dish, outputQty, outputUnit, ingredients, staff, notes = '' }) {
-    if (!dish || !dish.trim()) throw new Error('Enter the dish or item name.');
-    if (!outputQty || outputQty <= 0) throw new Error('Enter how many were produced.');
-    if (!ingredients || !ingredients.length) throw new Error('Add at least one ingredient used.');
-    if (!staff) throw new Error('Please enter the staff name.');
+  /* ── Recipes ── */
+  function findRecipe(dish) {
+    if (!dish) return null;
+    const clean = String(dish).toLowerCase().trim();
+    return state.recipes.find(r => r.dish.toLowerCase().trim() === clean);
+  }
+  function findRecipeById(id) {
+    return state.recipes.find(r => r.id === id);
+  }
 
-    const cleanIngredients = ingredients.map(function (ing) {
-      const stockItem = findStock(ing.name);
-      const qty = Number(ing.qty) || 0;
-      if (!stockItem) throw new Error(`"${ing.name}" is not a tracked ingredient.`);
-      if (qty <= 0) throw new Error(`Enter a valid quantity for ${ing.name}.`);
-      if (qty > stockItem.qty) throw new Error(`Not enough ${ing.name} on hand (have ${stockItem.qty} ${stockItem.unit}).`);
-      return { name: stockItem.name, qty, unit: stockItem.unit };
+  async function addRecipe(raw) {
+    const recipe = await request('/recipes', {
+      method: 'POST',
+      body: {
+        dish: raw.dish,
+        baseQty: raw.baseQty,
+        baseUnit: raw.baseUnit,
+        baseIngredient: raw.baseIngredient,
+        ingredients: (raw.ingredients || []).filter(i => i.name && Number(i.qty) > 0),
+        expectedYield: raw.expectedYield,
+        expectedYieldUnit: raw.expectedYieldUnit,
+        notes: raw.notes,
+      },
     });
-
-    const cost = cleanIngredients.reduce(function (s, ing) { return s + ingredientCost(ing.name, ing.qty); }, 0);
-    const stamp = nowStamp();
-    const idStr = nextProductionId(state.production);
-    const record = {
-      id: idStr,
-      no: idStr,
-      batchNo: 'BATCH-' + String(Math.floor(Math.random() * 900) + 100),
-      dish: dish.trim(),
-      outputQty: Number(outputQty),
-      outputUnit: outputUnit || 'units',
-      meals: [{ name: dish.trim(), qty: Number(outputQty), unit: outputUnit || 'units' }],
-      ingredients: cleanIngredients,
-      cost,
-      staff,
-      by: staff,
-      notes,
-      remarks: notes,
-      date: stamp,
-      time: stamp.split(' ')[1] + ' ' + (stamp.split(' ')[2] || ''),
-      status: 'completed',
-      type: 'coo',
-    };
-
-    cleanIngredients.forEach(function (ing) {
-      const stockItem = findStock(ing.name);
-      stockItem.qty = Math.max(0, stockItem.qty - ing.qty);
-      state.movements.unshift({ date: stamp, item: ing.name, qtyIn: 0, qtyOut: ing.qty, balance: stockItem.qty, reason: `Production (${record.id})` });
-    });
-
-    state.production.unshift(record);
-    await persist(['production', 'stock', 'movements']);
-    emitChange('production:record');
-    return record;
+    normalizeRecipe(recipe);
+    state.recipes.push(recipe);
+    emitChange('recipe:add');
+    return recipe;
   }
 
-  async function voidProduction(productionId, reason, voidedBy) {
-    const p = state.production.find(x => x.id === productionId || x.no === productionId);
-    if (!p) throw new Error(`Production run ${productionId} not found.`);
-    if (p.status === 'voided') return p;
-    const stamp = nowStamp();
-    (p.ingredients || []).forEach(function (ing) {
-      restoreStock(ing.name, ing.qty, `Voided Production (${p.id || p.no})`);
-    });
-    p.status = 'voided'; p.voidReason = reason; p.voidDate = stamp; p.voidedBy = voidedBy;
-    await persist(['production', 'stock', 'movements']);
-    emitChange('production:void');
-    return p;
-  }
-
-  /* ── Transfers to Restaurant/Poolbar ── */
-  async function addTransfer({ meal, quantity, unit, sentBy, remarks = '', productionNo = '', restaurant = 'Main Restaurant / POS' }) {
-    if (!meal || !meal.trim()) throw new Error('Please enter a meal.');
-    if (!quantity || quantity <= 0) throw new Error('Please enter a valid quantity.');
-    if (!sentBy || !sentBy.trim()) throw new Error('Please enter who is sending this transfer.');
-
-    const entry = {
-      transferNo: nextTransferNo(state.transfers),
-      productionNo: productionNo.trim(),
-      meal: meal.trim(),
-      quantity: Number(quantity),
-      unit: unit || 'Plates',
-      kitchen: 'Main Kitchen',
-      restaurant: restaurant || 'Main Restaurant / POS',
-      sentBy: sentBy.trim(),
-      receivedBy: '',
-      dateSent: nowStamp(),
-      dateReceived: '',
-      status: 'sent',
-      remarks: remarks.trim(),
-    };
-
-    state.transfers.unshift(entry);
-    await persist(['transfers']);
-    emitChange('transfer:add');
-    return entry;
-  }
-
-  async function updateTransferStatus(transferNo, status, details = {}) {
-    const t = state.transfers.find(x => x.transferNo === transferNo);
-    if (!t) throw new Error(`Transfer ${transferNo} not found.`);
-    t.status = status;
-    if (details.cancelReason) t.cancelReason = details.cancelReason;
-    if (details.rejectReason) t.rejectReason = details.rejectReason;
-    if (details.receivedBy) t.receivedBy = details.receivedBy;
-    if (details.dateReceived) t.dateReceived = details.dateReceived;
-    await persist(['transfers']);
-    emitChange('transfer:update');
-    return t;
-  }
-
-  /* ── Requisitions ── */
-  async function getKitchenRequisitions() {
-    let idx = [];
-    try {
-      const r = await storage.get('req-index', true);
-      idx = r ? JSON.parse(r.value) : [];
-    } catch (e) { idx = []; }
-
-    const reqs = [];
-    for (const no of idx) {
-      try {
-        const r = await storage.get(`req:${no}`, true);
-        if (r) {
-          const parsed = JSON.parse(r.value);
-          if (parsed && parsed.dept === 'Kitchen') reqs.push(parsed);
-        }
-      } catch (e) { /* skip unreadable entry */ }
+  async function editRecipe(id, updates) {
+    if (updates.ingredients) {
+      updates = { ...updates, ingredients: updates.ingredients.filter(i => i.name && Number(i.qty) > 0) };
     }
-    return reqs;
+    const recipe = await request(`/recipes/${id}`, { method: 'PUT', body: updates });
+    normalizeRecipe(recipe);
+    const idx = state.recipes.findIndex(r => r.id === id);
+    if (idx > -1) state.recipes[idx] = recipe; else state.recipes.push(recipe);
+    emitChange('recipe:edit');
+    return recipe;
+  }
+
+  async function deleteRecipe(id) {
+    await request(`/recipes/${id}`, { method: 'DELETE' });
+    state.recipes = state.recipes.filter(r => r.id !== id);
+    emitChange('recipe:delete');
+  }
+
+  function scaleRecipe(recipe, targetQty) {
+    if (!recipe) throw new Error('Recipe not found.');
+    const qty = Number(targetQty) || 0;
+    const factor = recipe.baseQty > 0 ? qty / recipe.baseQty : 0;
+    return {
+      factor,
+      targetQty: qty,
+      ingredients: recipe.ingredients.map(i => ({
+        name: i.name,
+        unit: i.unit,
+        qty: Math.round(i.qty * factor * 1000) / 1000,
+      })),
+      expectedYield: Math.round(recipe.expectedYield * factor * 100) / 100,
+      expectedYieldUnit: recipe.expectedYieldUnit,
+    };
+  }
+
+  function estimateRecipeCost(recipe, targetQty) {
+    const scaled = scaleRecipe(recipe, targetQty);
+    return scaled.ingredients.reduce((s, i) => s + ingredientCost(i.name, i.qty), 0);
+  }
+
+  /**
+   * No dedicated plate-cost endpoint on the backend — derived from the
+   * most recently completed production run for that dish, same number
+   * the old localStorage-cached plateCost store held, just computed
+   * on the fly from state.production instead of a separate persisted key.
+   */
+  function getPlateCost(dish) {
+    if (!dish) return null;
+    const clean = String(dish).toLowerCase().trim();
+    const runs = state.production
+      .filter(p => p.status === 'completed' && p.costPerUnit != null && (p.dish || '').toLowerCase().trim() === clean)
+      .sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
+    return runs.length ? runs[0].costPerUnit : null;
+  }
+
+  /* ── Production Runs ──
+     Two-phase, matching the backend: POST /production deducts
+     ingredients immediately and creates the run 'in-progress' with no
+     output yet (this is what the backend calls recordProduction, but
+     its behavior is exactly "start"). PUT /production/:id/complete
+     records the actual yield once cooking finishes. */
+  async function startProduction({ dish, recipeId, type, expectedYield, expectedYieldUnit, ingredients, staff, notes = '' }) {
+    const run = await request('/production', {
+      method: 'POST',
+      body: {
+        dish,
+        recipeId,
+        type: normalizeProductionType(type),
+        expectedYield,
+        expectedYieldUnit,
+        ingredients,
+        staff,
+        notes,
+      },
+    });
+    state.production.unshift(run);
+    // Stock was deducted server-side — refresh local stock/movement
+    // views for the ingredients that were used so the UI reflects it
+    // without needing a full reload.
+    (run.ingredients || []).forEach(ing => {
+      const s = findStock(ing.name);
+      if (s) s.qty = Math.max(0, s.qty - ing.qty);
+    });
+    emitChange('production:start');
+    return run;
+  }
+
+  async function completeProduction(productionId, { outputQty, outputUnit }) {
+    const run = await request(`/production/${productionId}/complete`, {
+      method: 'PUT',
+      body: { outputQty, outputUnit },
+    });
+    const idx = state.production.findIndex(p => p.id === productionId);
+    if (idx > -1) state.production[idx] = run; else state.production.unshift(run);
+    emitChange('production:complete');
+    return run;
+  }
+
+  /**
+   * Legacy single-step path, kept only for backward compatibility with
+   * any caller still using it. The backend has no single-call
+   * "start + immediately complete" endpoint, so this now performs the
+   * same two HTTP calls startProduction()+completeProduction() would.
+   */
+  async function recordProduction({ dish, recipeId, type, expectedYield, expectedYieldUnit, outputQty, outputUnit, ingredients, staff, notes = '' }) {
+    const run = await startProduction({ dish, recipeId, type, expectedYield, expectedYieldUnit, ingredients, staff, notes });
+    return completeProduction(run.id, { outputQty, outputUnit });
+  }
+
+  async function voidProduction(productionId, reason) {
+    const run = await request(`/production/${productionId}/void`, { method: 'POST', body: { reason } });
+    const idx = state.production.findIndex(p => p.id === productionId);
+    if (idx > -1) state.production[idx] = run; else state.production.unshift(run);
+    // Stock was restored server-side — bump local qty for each restored
+    // ingredient so the UI reflects it without a full reload.
+    (run.ingredients || []).forEach(ing => {
+      const s = findStock(ing.name);
+      if (s) s.qty += Number(ing.qty) || 0;
+    });
+    emitChange('production:void');
+    return run;
+  }
+
+  /* ── Transfers to Restaurant/Poolbar ──
+     No more client-side "bridge" write into Restaurant's own storage —
+     that only worked because everything shared one localStorage/demo
+     store. In production, Restaurant reads its own incoming-transfers
+     list from its own API, backed by the same Transfer collection. */
+  async function addTransfer({ meal, quantity, unit, sentBy, remarks = '', productionNo = '', restaurant = 'Main Restaurant / POS' }) {
+    const transfer = await request('/transfers', {
+      method: 'POST',
+      body: { meal, quantity, unit, sentBy, remarks, productionNo, restaurant },
+    });
+    state.transfers.unshift(transfer);
+    emitChange('transfer:add');
+    return transfer;
+  }
+
+  async function updateTransferStatus(id, status, details = {}) {
+    const transfer = await request(`/transfers/${id}/status`, {
+      method: 'PATCH',
+      body: { status, ...details },
+    });
+    const idx = state.transfers.findIndex(t => t.id === id);
+    if (idx > -1) state.transfers[idx] = transfer; else state.transfers.unshift(transfer);
+    emitChange('transfer:update');
+    return transfer;
+  }
+
+  /* ── Requisitions ──
+     Kitchen only watches fulfillment status here — raising/fulfilling
+     happens on the Store side, via Store's own screens/API. There is
+     no client-side stock crediting anymore (the old demo version
+     wrote directly to stock, which only made sense with one shared
+     storage bucket and no real Store-side workflow). */
+  async function getKitchenRequisitions() {
+    state.requisitions = await request('/requisitions');
+    emitChange('requisitions:load');
+    return state.requisitions;
   }
 
   function receivedSoFar(reqNo, itemName) {
-    return (state.receivedReqLines[reqNo] && state.receivedReqLines[reqNo][itemName]) || 0;
+    const req = state.requisitions.find(r => r.no === reqNo);
+    const line = req && (req.items || []).find(i => i.name === itemName);
+    return line ? Number(line.issuedQty) || 0 : 0;
   }
 
-  async function receiveRequisition(reqNo) {
-    let req;
-    try {
-      const r = await storage.get(`req:${reqNo}`, true);
-      req = r ? JSON.parse(r.value) : null;
-    } catch (e) { req = null; }
-    if (!req || req.dept !== 'Kitchen') throw new Error(`Requisition ${reqNo} not found for Kitchen.`);
-
-    let receivedAny = false;
-    (req.items || []).forEach(function (it) {
-      const issued = Number(it.issuedQty) || 0;
-      const already = receivedSoFar(reqNo, it.name);
-      const delta = issued - already;
-      if (delta <= 0) return;
-      receivedAny = true;
-
-      let stockItem = findStock(it.name);
-      if (!stockItem) {
-        stockItem = { name: it.name, category: 'Uncategorized', unit: it.unit || 'units', qty: 0, min: 0, price: Number(it.cost) || 0, batch: reqNo, received: todayDDMMYY(), desc: '' };
-        state.stock.push(stockItem);
-      }
-      stockItem.qty += delta;
-      stockItem.batch = reqNo;
-      stockItem.received = todayDDMMYY();
-      state.movements.unshift({ date: nowStamp(), item: stockItem.name, qtyIn: delta, qtyOut: 0, balance: stockItem.qty, reason: `Requisition Received (${reqNo})` });
-
-      state.receivedReqLines[reqNo] = state.receivedReqLines[reqNo] || {};
-      state.receivedReqLines[reqNo][it.name] = issued;
-    });
-
-    if (!receivedAny) throw new Error('Nothing new to receive on this requisition yet.');
-
-    await persist(['stock', 'movements', 'receivedReqLines']);
-    emitChange('requisition:received');
-    return req;
-  }
-
-  /* ── KPIs ── */
+  /* ── KPIs (client-side aggregation over already-loaded state; the
+     backend has no dedicated Kitchen dashboard endpoint) ── */
   function dashboardKPIs() {
     const lowStock = state.stock.filter(i => stockLevel(i) !== 'ok').length;
     const todayStr = todayDDMMYY();
-    const todayRuns = state.production.filter(p => p.status === 'completed' && (p.date || '').startsWith(todayStr));
+    const todayRuns = state.production.filter(p => (p.status === 'completed' || p.status === 'in-progress') && (p.date || '').startsWith(todayStr));
     const todayCost = todayRuns.reduce((s, x) => s + (x.cost || 0), 0);
     const units = state.stock.reduce((s, i) => s + i.qty, 0);
     return { lowStock, todayRunsCount: todayRuns.length, todayCost, units, itemCount: state.stock.length };
@@ -397,7 +437,11 @@
     const voided = rows.filter(p => p.status === 'voided' || p.status === 'rejected');
     const cost = completed.reduce((s, x) => s + (x.cost || 0), 0);
     const outputUnits = completed.reduce((s, x) => s + (x.outputQty || 0), 0);
-    return { total: rows.length, completed: completed.length, voided: voided.length, cost, outputUnits };
+    const withVariance = completed.filter(x => x.yieldVariancePct != null);
+    const avgVariancePct = withVariance.length
+      ? Math.round((withVariance.reduce((s, x) => s + x.yieldVariancePct, 0) / withVariance.length) * 10) / 10
+      : null;
+    return { total: rows.length, completed: completed.length, voided: voided.length, cost, outputUnits, avgVariancePct };
   }
 
   function stockKPIs() {
@@ -416,12 +460,18 @@
     return { total, sent, accepted, needsAttention };
   }
 
+  function recipeKPIs() {
+    const total = state.recipes.length;
+    const dishesProduced = new Set(state.production.filter(p => p.recipeId).map(p => p.recipeId)).size;
+    return { total, dishesProduced };
+  }
+
   function can(session, permission) {
-    if (!global.Permissions) return true;
+    if (!global.Permissions || typeof global.Permissions.hasPermission !== 'function') return true;
     return global.Permissions.hasPermission(session, permission, 'kitchen');
   }
   function canVoidProduction(session) {
-    if (!global.Permissions) return true;
+    if (!global.Permissions || typeof global.Permissions.canVoid !== 'function') return true;
     return global.Permissions.canVoid(session, 'kitchen');
   }
 
@@ -452,21 +502,19 @@
   }
 
   global.KitchenService = {
-    KEYS,
-    storage, loadShared, saveShared,
+    API_BASE,
     fmtN, nowStamp, fmtStamp, todayDDMMYY, todayISO,
     stockLevel, LEVEL_CHIP, LEVEL_LABEL,
-    nextProductionId, nextTransferNo,
     state,
     onChange,
     loadAll,
-    persist,
     findStock,
-    addStockItem, editStockItem, deleteStockItem, deductStock, restoreStock,
-    recordProduction, voidProduction,
+    addStockItem, editStockItem, deleteStockItem, deductStock,
+    findRecipe, findRecipeById, addRecipe, editRecipe, deleteRecipe, scaleRecipe, estimateRecipeCost, getPlateCost,
+    recordProduction, voidProduction, startProduction, completeProduction,
     addTransfer, updateTransferStatus,
-    getKitchenRequisitions, receiveRequisition, receivedSoFar,
-    dashboardKPIs, productionKPIs, stockKPIs, transferKPIs,
+    getKitchenRequisitions, receivedSoFar,
+    dashboardKPIs, productionKPIs, stockKPIs, transferKPIs, recipeKPIs,
     can, canVoidProduction,
     listStaffNames,
     getShiftProduction, isManagerLike,

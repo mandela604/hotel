@@ -1,123 +1,482 @@
 const PurchaseRequest = require('../models/PurchaseRequest');
-const PurchaseOrder = require('../models/PurchaseOrder');
+const Requisition = require('../models/Requisition');
 const Supplier = require('../models/Supplier');
-const GoodsReceipt = require('../models/GoodsReceipt');
-const Config = require('../models/Config');
-const asyncHandler = require('../middleware/asyncHandler');
+const ProcurementCategory = require('../models/ProcurementCategory');
+const { ApiError } = require('../middleware/errorHandler');
+const { ROLES, STAGE_APPROVER_ROLE } = require('../middleware/procurementRoles');
 
-exports.listPRs = asyncHandler(async (req, res) => {
-  const filter = {};
-  if (req.query.status) filter.status = req.query.status;
-  const prs = await PurchaseRequest.find(filter).sort({ createdAt: -1 });
-  res.json(prs);
-});
+const MD_APPROVAL_THRESHOLD = 100000;
+const PIPELINE_STAGES = ['pending', 'accountant', 'gm', 'md', 'approved'];
+const ACTIVE_STAGES = ['pending', 'accountant', 'gm', 'md'];
 
-exports.createPR = asyncHandler(async (req, res) => {
-  const count = await PurchaseRequest.countDocuments();
-  const qty = Number(req.body.qty) || 1;
-  const unitCost = Number(req.body.unitCost) || 0;
-  const pr = await PurchaseRequest.create({
-    ...req.body,
-    prNo: 'PR-' + String(100 + count + 1),
-    totalAmount: qty * unitCost,
-    qty,
-    unitCost,
-    approvalStage: 'pending',
-    status: 'pending',
-  });
-  res.status(201).json(pr);
-});
-
-exports.approvePR = asyncHandler(async (req, res) => {
-  const pr = await PurchaseRequest.findById(req.params.id);
-  if (!pr) return res.status(404).json({ message: 'Purchase request not found' });
-
-  const config = await Config.findOne() || {};
-  const threshold = config.mdApprovalThreshold || 100000;
-
-  const stages = pr.totalAmount > threshold
-    ? ['pending', 'accountant', 'gm', 'md', 'approved']
-    : ['pending', 'accountant', 'gm', 'approved'];
-
-  const idx = stages.indexOf(pr.approvalStage);
-  if (idx < 0 || idx >= stages.length - 1) {
-    return res.status(400).json({ message: 'Cannot advance approval stage' });
+function actorName(req) {
+  return (req.user && (req.user.name || req.user.role)) || 'User';
+}
+/**
+ * Enforces STAGE_APPROVER_ROLE for the stage a PR is CURRENTLY at —
+ * called from approvePR/rejectPR. roleGuard(CAN_APPROVE) at the route
+ * level only confirms the caller is SOME kind of approver; this is what
+ * actually checks they're the RIGHT one for this specific stage. Admin
+ * always passes, matching roleGuard.js's own bypass rule.
+ */
+function assertCanActOnStage(req, stage) {
+  const role = (req.user && req.user.role || '').toLowerCase();
+  if (role === ROLES.ADMIN) return;
+  const required = STAGE_APPROVER_ROLE[stage];
+  if (required && role !== required) {
+    throw new ApiError(403, `Only ${required} can act on a request at the '${stage}' stage`);
   }
+}
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+function computeItemsTotal(items) {
+  return (items || []).reduce((sum, i) => {
+    const qty = Number(i.qty) || 0;
+    const cost = Number(i.cost) || 0;
+    return sum + qty * cost;
+  }, 0);
+}
+async function nextPurchaseOrderNumbers() {
+  const n = (await PurchaseRequest.countDocuments()) + 1;
+  const year = new Date().getFullYear();
+  const seq = String(n).padStart(3, '0');
+  return { prNo: `PR-${year}-${seq}`, poNo: `PO-${year}-${seq}` };
+}
 
-  const nextStage = stages[idx + 1];
-  pr.approvalStage = nextStage;
-  pr.status = nextStage;
-  pr.history.push({
-    date: new Date().toISOString(),
-    action: 'approved',
-    by: req.body.by || '',
-    stage: nextStage,
-  });
+/* ── Purchase Requests ── */
 
-  await pr.save();
-  res.json(pr);
-});
+exports.listPRs = async (req, res, next) => {
+  try {
+    const prs = await PurchaseRequest.find().sort({ createdAt: -1 });
+    res.json({ success: true, data: prs });
+  } catch (err) { next(err); }
+};
 
-exports.rejectPR = asyncHandler(async (req, res) => {
-  const pr = await PurchaseRequest.findById(req.params.id);
-  if (!pr) return res.status(404).json({ message: 'Purchase request not found' });
+exports.getPR = async (req, res, next) => {
+  try {
+    const pr = await PurchaseRequest.findById(req.params.id);
+    if (!pr) return next(new ApiError(404, 'Purchase request not found'));
+    res.json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
 
-  pr.approvalStage = 'rejected';
-  pr.status = 'rejected';
-  pr.history.push({
-    date: new Date().toISOString(),
-    action: 'rejected',
-    by: req.body.by || '',
-    stage: 'rejected',
-  });
+exports.listPOs = async (req, res, next) => {
+  try {
+    const pos = await PurchaseRequest.find({ poNo: { $ne: '' } }).sort({ createdAt: -1 });
+    res.json({ success: true, data: pos });
+  } catch (err) { next(err); }
+};
 
-  await pr.save();
-  res.json(pr);
-});
+/**
+ * Create a purchase request/order — same computation as
+ * ProcurementService.createPurchaseOrder() on the frontend: assigns
+ * sequential PR/PO numbers (unless already supplied), computes
+ * totalAmount + needsMDApproval from items, derives the `item` summary
+ * string, and seeds history.
+ */
+exports.createPR = async (req, res, next) => {
+  try {
+    const body = req.body;
+    const items = body.items || [];
+    const totalAmount = computeItemsTotal(items);
+    const needsMDApproval = totalAmount > MD_APPROVAL_THRESHOLD;
+    const nums = await nextPurchaseOrderNumbers();
+    const by = body.by || actorName(req);
+    const source = body.source === 'Store' ? 'Store' : 'Procurement';
 
-exports.listPOs = asyncHandler(async (req, res) => {
-  const pos = await PurchaseOrder.find().sort({ createdAt: -1 });
-  res.json(pos);
-});
+    const pr = await PurchaseRequest.create({
+      prNo: body.prNo || nums.prNo,
+      item: items.map((i) => i.name).join(', ') || body.item || '',
+      cat: body.cat || 'General',
+      dept: body.dept || '',
+      source,
+      storeReqNo: body.storeReqNo || '',
+      by,
+      date: body.date ? new Date(body.date) : new Date(),
+      needed: body.needed || '',
+      qty: body.qty != null ? Number(body.qty) : 1,
+      unit: body.unit || 'Units',
+      unitCost: body.unitCost != null ? Number(body.unitCost) : 0,
+      priority: body.priority || 'Normal',
+      totalAmount,
+      needsMDApproval,
+      status: 'pending',
+      approvalStage: 'pending',
+      supplier: body.supplier || '',
+      notes: body.notes || '',
+      items,
+      history: [{
+        date: todayISO(),
+        action: source === 'Store' ? 'Imported from Store request' : 'Request submitted',
+        by,
+        note: body.storeReqNo ? `Originally raised as ${body.storeReqNo}` : '',
+        stage: 'pending',
+      }],
+    });
 
-exports.createPO = asyncHandler(async (req, res) => {
-  const count = await PurchaseOrder.countDocuments();
-  const po = await PurchaseOrder.create({
-    ...req.body,
-    poNo: 'PO-' + String(1000 + count + 1),
-  });
-  res.status(201).json(po);
-});
+    res.status(201).json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
 
-exports.updatePO = asyncHandler(async (req, res) => {
-  const po = await PurchaseOrder.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!po) return res.status(404).json({ message: 'Purchase order not found' });
-  res.json(po);
-});
+/**
+ * Edit an existing PR/PO — recomputes totalAmount and needsMDApproval
+ * from the (possibly changed) items list, matching
+ * ProcurementService.updatePurchaseOrder(). Fields not present on the
+ * body are left untouched.
+ */
+exports.updatePR = async (req, res, next) => {
+  try {
+    const pr = await PurchaseRequest.findById(req.params.id);
+    if (!pr) return next(new ApiError(404, 'Purchase request not found'));
 
-exports.listSuppliers = asyncHandler(async (req, res) => {
-  const suppliers = await Supplier.find().sort({ name: 1 });
-  res.json(suppliers);
-});
+    const body = req.body;
+    const items = body.items !== undefined ? body.items : pr.items;
+    const totalAmount = computeItemsTotal(items);
+    const needsMDApproval = totalAmount > MD_APPROVAL_THRESHOLD;
 
-exports.createSupplier = asyncHandler(async (req, res) => {
-  const supplier = await Supplier.create(req.body);
-  res.status(201).json(supplier);
-});
+    const updatable = ['dept', 'priority', 'supplier', 'notes', 'needed', 'unit', 'unitCost', 'qty'];
+    updatable.forEach((k) => { if (body[k] !== undefined) pr[k] = body[k]; });
 
-exports.updateSupplier = asyncHandler(async (req, res) => {
-  const supplier = await Supplier.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!supplier) return res.status(404).json({ message: 'Supplier not found' });
-  res.json(supplier);
-});
+    pr.items = items;
+    pr.totalAmount = totalAmount;
+    pr.needsMDApproval = needsMDApproval;
+    if (items.length) pr.item = items.map((i) => i.name).join(', ');
 
-exports.deleteSupplier = asyncHandler(async (req, res) => {
-  const supplier = await Supplier.findByIdAndDelete(req.params.id);
-  if (!supplier) return res.status(404).json({ message: 'Supplier not found' });
-  res.json({ ok: true });
-});
+    await pr.save();
+    res.json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
 
-exports.receiveGoods = asyncHandler(async (req, res) => {
-  const receipt = await GoodsReceipt.create(req.body);
-  res.status(201).json(receipt);
-});
+/**
+ * Advance one stage: pending -> accountant -> gm -> (md if
+ * totalAmount > ₦100,000, else approved) -> approved. Same state
+ * machine as ProcurementService.approvePR() on the frontend — every
+ * approver just calls this, and the stage they were approving FROM
+ * determines what happens, rather than the backend hard-checking the
+ * caller's specific role against the specific stage.
+ */
+exports.approvePR = async (req, res, next) => {
+  try {
+    const pr = await PurchaseRequest.findById(req.params.id);
+    if (!pr) return next(new ApiError(404, 'Purchase request not found'));
+    assertCanActOnStage(req, pr.approvalStage);
+
+    let nextStage, action;
+    switch (pr.approvalStage) {
+      case 'pending':
+        nextStage = 'accountant'; action = 'Accountant approved'; break;
+      case 'accountant':
+        nextStage = 'gm'; action = 'GM approved'; break;
+      case 'gm':
+        if (pr.totalAmount > MD_APPROVAL_THRESHOLD) {
+          nextStage = 'md'; action = 'Forwarded to MD';
+        } else {
+          nextStage = 'approved'; action = 'Fully approved';
+        }
+        break;
+      case 'md':
+        nextStage = 'approved'; action = 'MD approved'; break;
+      default:
+        return next(new ApiError(400, `Cannot approve from stage: ${pr.approvalStage}`));
+    }
+
+    pr.approvalStage = nextStage;
+    pr.status = nextStage === 'approved' ? 'approved' : nextStage;
+    pr.history.push({
+      date: todayISO(), action, by: actorName(req),
+      note: req.body.note || '', stage: nextStage,
+    });
+    await pr.save();
+    res.json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
+
+exports.rejectPR = async (req, res, next) => {
+  try {
+    const pr = await PurchaseRequest.findById(req.params.id);
+    if (!pr) return next(new ApiError(404, 'Purchase request not found'));
+    assertCanActOnStage(req, pr.approvalStage);
+
+    const note = req.body.note || req.body.reason;
+    pr.status = 'rejected';
+    pr.approvalStage = 'rejected';
+    pr.history.push({ date: todayISO(), action: 'Rejected', by: actorName(req), note, stage: 'rejected' });
+    await pr.save();
+    res.json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
+
+/**
+ * Issue a PO against an already-fully-approved PR — same guard as
+ * ProcurementService.createPO(): refuses unless approvalStage==='approved'.
+ */
+exports.createPO = async (req, res, next) => {
+  try {
+    const pr = await PurchaseRequest.findById(req.params.id);
+    if (!pr) return next(new ApiError(404, 'Purchase request not found'));
+    if (pr.approvalStage !== 'approved') {
+      return next(new ApiError(400, 'PR must be fully approved before creating a PO'));
+    }
+
+    pr.status = 'fulfilled';
+    pr.approvalStage = 'fulfilled';
+    pr.poNo = req.body.poNo.trim();
+    pr.supplier = req.body.supplier.trim();
+    pr.history.push({
+      date: todayISO(), action: 'PO Created', by: actorName(req),
+      note: `PO ${pr.poNo} issued to ${pr.supplier}`, stage: 'fulfilled',
+    });
+    await pr.save();
+    res.json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
+
+/**
+ * Item-name + last-cost suggestions for the po-form.html entry-row
+ * autocomplete — derived fresh from every item ever purchased, same as
+ * ProcurementService.getItemCatalog(). No separate cache collection.
+ */
+exports.getItemCatalog = async (req, res, next) => {
+  try {
+    const prs = await PurchaseRequest.find({}, { items: 1 });
+    const seen = new Set();
+    const list = [];
+    prs.forEach((pr) => {
+      (pr.items || []).forEach((it) => {
+        const key = (it.name || '').trim().toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        list.push({ name: (it.name || '').trim(), price: it.cost || 0 });
+      });
+    });
+    res.json({ success: true, data: list });
+  } catch (err) { next(err); }
+};
+
+/* ── Suppliers ──
+   Schema uses `category`/`contactPerson`; older frontend calls sent
+   `cat`/`contact` — accepted as fallbacks here so either naming works. */
+
+exports.listSuppliers = async (req, res, next) => {
+  try {
+    const suppliers = await Supplier.find().sort({ name: 1 });
+    res.json({ success: true, data: suppliers });
+  } catch (err) { next(err); }
+};
+
+exports.getSupplier = async (req, res, next) => {
+  try {
+    const supplier = await Supplier.findById(req.params.id);
+    if (!supplier) return next(new ApiError(404, 'Supplier not found'));
+    res.json({ success: true, data: supplier });
+  } catch (err) { next(err); }
+};
+
+exports.createSupplier = async (req, res, next) => {
+  try {
+    const body = req.body;
+    const name = body.name.trim();
+    const exists = await Supplier.findOne({ name: new RegExp(`^${name}$`, 'i') });
+    if (exists) return next(new ApiError(409, 'A supplier with that name already exists'));
+
+    const supplier = await Supplier.create({
+      name,
+      category: body.category || body.cat || 'General',
+      contactPerson: body.contactPerson || body.contact || '',
+      phone: body.phone || '',
+      email: body.email || '',
+      rating: body.rating != null ? Number(body.rating) : 0,
+    });
+    res.status(201).json({ success: true, data: supplier });
+  } catch (err) { next(err); }
+};
+
+exports.updateSupplier = async (req, res, next) => {
+  try {
+    const supplier = await Supplier.findById(req.params.id);
+    if (!supplier) return next(new ApiError(404, 'Supplier not found'));
+
+    const body = req.body;
+    if (body.name !== undefined) {
+      const name = body.name.trim();
+      const dup = await Supplier.findOne({ _id: { $ne: supplier._id }, name: new RegExp(`^${name}$`, 'i') });
+      if (dup) return next(new ApiError(409, 'A supplier with that name already exists'));
+      supplier.name = name;
+    }
+    if (body.category !== undefined || body.cat !== undefined) supplier.category = body.category || body.cat;
+    if (body.contactPerson !== undefined || body.contact !== undefined) supplier.contactPerson = body.contactPerson || body.contact;
+    if (body.phone !== undefined) supplier.phone = body.phone;
+    if (body.email !== undefined) supplier.email = body.email;
+    if (body.rating !== undefined) supplier.rating = Number(body.rating);
+
+    await supplier.save();
+    res.json({ success: true, data: supplier });
+  } catch (err) { next(err); }
+};
+
+/* ── Categories ──
+   Independently persisted (see ProcurementCategory.js docblock) — NOT
+   derived from Supplier.category on the fly. */
+
+exports.listCategories = async (req, res, next) => {
+  try {
+    const cats = await ProcurementCategory.find().sort({ name: 1 });
+    res.json({ success: true, data: cats.map((c) => c.name) });
+  } catch (err) { next(err); }
+};
+
+exports.addCategory = async (req, res, next) => {
+  try {
+    const name = req.body.name.trim();
+    const exists = await ProcurementCategory.findOne({ name: new RegExp(`^${name}$`, 'i') });
+    if (exists) return next(new ApiError(409, `Category "${name}" already exists`));
+    await ProcurementCategory.create({ name });
+    res.status(201).json({ success: true, data: name });
+  } catch (err) { next(err); }
+};
+
+exports.renameCategory = async (req, res, next) => {
+  try {
+    const oldName = req.params.name;
+    const newName = req.body.name.trim();
+    const cat = await ProcurementCategory.findOne({ name: oldName });
+    if (!cat) return next(new ApiError(404, `Category "${oldName}" not found`));
+
+    if (newName.toLowerCase() !== oldName.toLowerCase()) {
+      const dup = await ProcurementCategory.findOne({ name: new RegExp(`^${newName}$`, 'i') });
+      if (dup) return next(new ApiError(409, `Category "${newName}" already exists`));
+    }
+    cat.name = newName;
+    await cat.save();
+    await Supplier.updateMany({ category: oldName }, { $set: { category: newName } });
+    res.json({ success: true, data: newName });
+  } catch (err) { next(err); }
+};
+
+exports.deleteCategory = async (req, res, next) => {
+  try {
+    const name = req.params.name;
+    const reassignTo = (req.body.reassignTo || 'Other').trim() || 'Other';
+    const cat = await ProcurementCategory.findOne({ name });
+    if (!cat) return next(new ApiError(404, `Category "${name}" not found`));
+
+    await cat.deleteOne();
+    const reassignExists = await ProcurementCategory.findOne({ name: new RegExp(`^${reassignTo}$`, 'i') });
+    if (!reassignExists) await ProcurementCategory.create({ name: reassignTo });
+    await Supplier.updateMany({ category: name }, { $set: { category: reassignTo } });
+    res.json({ success: true, data: { deleted: name, reassignedTo: reassignTo } });
+  } catch (err) { next(err); }
+};
+
+/* ── Store → Procurement bridge ──
+   Requisition (mode:'purchase') is the backend equivalent of Kitchen's
+   incoming-requisitions read — same cross-module idea, just against the
+   real DB instead of shared key/value storage. */
+
+exports.listIncomingStoreRequests = async (req, res, next) => {
+  try {
+    const reqs = await Requisition.find({
+      mode: 'purchase',
+      procurementPrId: null,
+      status: { $ne: 'Rejected' },
+    }).sort({ dateRaised: -1 });
+    res.json({ success: true, data: reqs });
+  } catch (err) { next(err); }
+};
+
+/**
+ * Pulls one Store purchase-mode requisition into Procurement as a
+ * normal 'pending'-stage PR (source:'Store'), then stamps
+ * procurementPrId/procurementPrNo back onto the Requisition so it can't
+ * be imported twice. Item unit costs come across as whatever Store had
+ * (usually 0 — Store doesn't price purchase requests); Procurement is
+ * expected to price them via PUT /procurement/purchase-orders/:id
+ * before approving.
+ */
+exports.importStoreRequest = async (req, res, next) => {
+  try {
+    const requisition = await Requisition.findOne({ requisitionNo: req.params.no });
+    if (!requisition) return next(new ApiError(404, `Store request ${req.params.no} not found`));
+    if (requisition.mode !== 'purchase') return next(new ApiError(400, `${req.params.no} is not a purchase request`));
+    if (requisition.procurementPrId) return next(new ApiError(409, `${req.params.no} has already been imported`));
+
+    const items = (requisition.items || []).map((it) => ({
+      name: it.name, qty: it.qty, unit: it.unit || 'unit', cost: it.cost || 0,
+    }));
+    const totalAmount = computeItemsTotal(items);
+    const nums = await nextPurchaseOrderNumbers();
+    const by = requisition.requester || 'Store';
+
+    const pr = await PurchaseRequest.create({
+      prNo: nums.prNo,
+      item: items.map((i) => i.name).join(', '),
+      cat: 'General',
+      dept: requisition.dept || 'Store',
+      source: 'Store',
+      storeReqNo: requisition.requisitionNo,
+      by,
+      date: new Date(),
+      needed: requisition.neededBy || '',
+      qty: items.length,
+      unit: 'Units',
+      unitCost: 0,
+      priority: requisition.priority || 'Normal',
+      totalAmount,
+      needsMDApproval: totalAmount > MD_APPROVAL_THRESHOLD,
+      status: 'pending',
+      approvalStage: 'pending',
+      supplier: requisition.supplier || '',
+      notes: requisition.remark || '',
+      items,
+      history: [{
+        date: todayISO(),
+        action: 'Imported from Store request',
+        by,
+        note: `Originally raised as ${requisition.requisitionNo}`,
+        stage: 'pending',
+      }],
+    });
+
+    requisition.procurementPrId = pr._id;
+    requisition.procurementPrNo = pr.prNo;
+    await requisition.save();
+
+    res.status(201).json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
+
+/* ── Dashboard aggregates ── */
+
+exports.dashboardKPIs = async (req, res, next) => {
+  try {
+    const prs = await PurchaseRequest.find();
+    const pending = prs.filter((p) => ACTIVE_STAGES.includes(p.approvalStage)).length;
+    const monthPrefix = new Date().toISOString().slice(0, 7);
+    const closedThisMonth = prs.filter((p) =>
+      (p.approvalStage === 'approved' || p.approvalStage === 'fulfilled') &&
+      new Date(p.date).toISOString().startsWith(monthPrefix));
+    const needsMD = prs.filter((p) => p.needsMDApproval && ACTIVE_STAGES.includes(p.approvalStage)).length;
+
+    res.json({
+      success: true,
+      data: {
+        pending,
+        approvedThisMonth: closedThisMonth.length,
+        spendThisMonth: closedThisMonth.reduce((s, p) => s + (p.totalAmount || 0), 0),
+        needsMD,
+      },
+    });
+  } catch (err) { next(err); }
+};
+
+exports.approvalPipelineCounts = async (req, res, next) => {
+  try {
+    const prs = await PurchaseRequest.find({}, { approvalStage: 1 });
+    const counts = {};
+    PIPELINE_STAGES.forEach((stage) => {
+      counts[stage] = prs.filter((p) => p.approvalStage === stage).length;
+    });
+    res.json({ success: true, data: counts });
+  } catch (err) { next(err); }
+};

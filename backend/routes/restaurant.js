@@ -1,30 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const {
-  listMenu,
-  createMenu,
-  updateMenu,
-  deleteMenu,
-  listTables,
-  updateTable,
-  listSales,
-  createSale,
-  voidSale,
-  listInventory,
-  createInventory,
-  updateInventory,
-  deleteInventory,
-  listTransfers,
-} = require('../controllers/restaurantController');
+const restaurantController = require('../controllers/restaurantController');
+const auth = require('../middleware/auth');
+const roleGuard = require('../middleware/roleGuard');
+const v = require('../middleware/restaurantValidators');
 
-router.route('/menu').get(listMenu).post(createMenu);
-router.route('/menu/:id').put(updateMenu).delete(deleteMenu);
-router.route('/tables').get(listTables);
-router.route('/tables/:id').put(updateTable);
-router.route('/sales').get(listSales).post(createSale);
-router.route('/sales/:id/void').post(voidSale);
-router.route('/inventory').get(listInventory).post(createInventory);
-router.route('/inventory/:id').put(updateInventory).delete(deleteInventory);
-router.route('/transfers').get(listTransfers);
+router.use(auth);
+
+const canManage = roleGuard(['admin', 'manager', 'restaurant_manager']);
+const canSell = roleGuard(['admin', 'manager', 'restaurant_manager', 'waiter', 'cashier']);
+
+/* Menu */
+router.get('/menu', restaurantController.listMenu);
+router.post('/menu', canManage, v.validateAddMenuItem, restaurantController.addMenuItem);
+router.put('/menu/:id', canManage, v.validateParam('id'), v.validateUpdateMenuItem, restaurantController.updateMenuItem);
+router.patch('/menu/:id', canManage, v.validateParam('id'), v.validateUpdateMenuItem, restaurantController.patchMenuItem);
+router.delete('/menu/:id', canManage, v.validateParam('id'), restaurantController.deleteMenuItem);
+
+/* Stock */
+router.get('/stock', restaurantController.listStock);
+router.post('/stock', canManage, v.validateAddStock, restaurantController.addStockItem);
+router.put('/stock/:name', canManage, v.validateParam('name'), v.validateUpdateStock, restaurantController.editStockItem);
+router.delete('/stock/:name', canManage, v.validateParam('name'), restaurantController.deleteStockItem);
+router.get('/movements', restaurantController.listMovements);
+
+/* Sales */
+router.get('/sales', restaurantController.listSales);
+router.post('/sales', canSell, v.validateCreateSale, restaurantController.createSale);
+router.post('/sales/:id/void', canManage, v.validateParam('id'), v.validateVoidSale, restaurantController.voidSale);
+
+/* Transfers (incoming from Kitchen/Store) */
+router.get('/transfers', restaurantController.listTransfers);
+router.post('/transfers/:id/accept', canSell, v.validateParam('id'), restaurantController.acceptTransfer);
+router.post('/transfers/:id/reject', canSell, v.validateParam('id'), v.validateRejectTransfer, restaurantController.rejectTransfer);
+
+/* Requisitions (Restaurant -> Store) */
+router.get('/requisitions', restaurantController.listRestaurantRequisitions);
+router.post('/requisitions', canManage, v.validateSubmitRequisition, restaurantController.submitRequisition);
 
 module.exports = router;

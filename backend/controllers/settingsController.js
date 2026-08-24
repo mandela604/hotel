@@ -6,7 +6,7 @@ exports.get = asyncHandler(async (req, res) => {
   if (!config) {
     config = await Config.create({});
   }
-  res.json(config);
+  res.json({ success: true, data: config });
 });
 
 exports.update = asyncHandler(async (req, res) => {
@@ -17,5 +17,5 @@ exports.update = asyncHandler(async (req, res) => {
     Object.assign(config, req.body);
     await config.save();
   }
-  res.json(config);
+  res.json({ success: true, data: config });
 });
