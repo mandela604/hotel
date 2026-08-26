@@ -1,7 +1,8 @@
 /**
  * component/booking-modal.js — Compact New / Edit / View Booking modal
  * ─────────────────────────────────────────────────────────────────
- * - Check out (checked-in only) → service.setRoomStatus(room, 'cleaning')
+ * - Check out (checked-in only) → service.checkoutBooking(room)
+ *   (does checkout + moves room to cleaning in one call)
  * - Payments: ledger table + accordion for new payment
  * - Room charges: settle with custom confirm (not reversible)
  * - Discount = money amount per night × nights
@@ -516,7 +517,8 @@
       var t = document.createElement('div');
       t.className = 'bkm-toast ' + type;
       var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
-      t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+      // Use esc() on msg to prevent XSS from error messages that may contain user input
+      t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + esc(String(msg == null ? '' : msg));
       document.body.appendChild(t);
       setTimeout(function () { t.remove(); }, 3400);
     }
@@ -691,6 +693,10 @@
 
       root.querySelectorAll('input[name="bkmStatus"]').forEach(function (el) {
         el.disabled = !editable;
+        // Hide status radio in edit mode — check-in goes through the
+        // dedicated POST /:room/checkin endpoint, not the edit form.
+        if (mode !== 'new') el.closest('.bkm-status-group').hidden = true;
+        else el.closest('.bkm-status-group').hidden = false;
       });
 
       applyDiscountLock();
@@ -1012,7 +1018,7 @@
       pendingSettle = null;
       try {
         var updated = await service.addChargePayment(
-          currentGuest.id || currentGuest.name,
+          currentGuest.id,
           idx,
           { amount: amt, mode: payMode }
         );
@@ -1032,7 +1038,7 @@
         toast("You don't have permission to check out this booking.", 'error');
         return;
       }
-      if (!service || typeof service.setRoomStatus !== 'function') {
+      if (!service || typeof service.checkoutBooking !== 'function') {
         toast('Check-out is not available.', 'error');
         return;
       }
@@ -1047,7 +1053,7 @@
       if (!ok) return;
 
       try {
-        var row = await service.setRoomStatus(editBooking.room, 'cleaning');
+        var row = await service.checkoutBooking(editBooking.room);
         toast('Guest checked out. Room is now Cleaning.', 'success');
         close();
         onSaved(row);

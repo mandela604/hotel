@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Approve Issue | Grace Hotel HMS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{ box-sizing:border-box; margin:0; padding:0; }
+html, body{ height:100%; overflow:hidden; }
+body{
+  font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  font-size:13px; transition:background .3s,color .3s;
+}
+.app{ display:flex; height:100vh; overflow:hidden; }
+.main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+@media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+.content{
+  --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+  --border:#eef0f6; --border2:#dfe3ec;
+  --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+  --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+  --green:#12b76a; --green-bg:#e9f9f0;
+  --red:#f04438;  --red-bg:#feecec;
+  --amber:#f79009; --amber-bg:#fff4e5;
+  --blue:#2f6fed;  --blue-bg:#eaf1ff;
+  --purple:#8b5cf6; --purple-bg:#f4efff;
+  --pink:#ec4899; --pink-bg:#fdf2f8;
+  flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; gap:16px; min-height:0;
+  background:var(--bg); color:var(--text);
+}
+@media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+@media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+.kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+@media (max-width:900px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+.kpi-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:14px 14px 12px; position:relative; overflow:hidden;
+  box-shadow:var(--shadow); cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s;
+  display:flex; flex-direction:column; animation:fadeUp .4s ease both;
+}
+.kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+.kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+.kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+.kpi-card.acc-green::before{  background:linear-gradient(90deg,var(--green),transparent); }
+.kpi-card.acc-amber::before{  background:linear-gradient(90deg,var(--amber),transparent); }
+.kpi-card.acc-red::before{    background:linear-gradient(90deg,var(--red),transparent); }
+.kpi-card.acc-blue::before{   background:linear-gradient(90deg,var(--blue),transparent); }
+.kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+.kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.ic-blue{  background:var(--blue-bg);  color:var(--blue);  }
+.ic-green{ background:var(--green-bg); color:var(--green); }
+.ic-amber{ background:var(--amber-bg); color:var(--amber); }
+.ic-red{   background:var(--red-bg);   color:var(--red);   }
+.kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+.kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+@media (max-width:420px){ .kpi-value{ font-size:18px; } }
+.kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+.kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); }
+
+.toolbar{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0;
+}
+.toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:space-between; }
+.toolbar-left{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; flex:1; min-width:0; }
+.toolbar-right{ display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
+.flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
+.search-box{
+  display:flex; align-items:center; gap:7px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:10px; padding:8px 12px;
+  transition:border-color .2s; min-width:200px; max-width:280px; flex:1;
+}
+.search-box:focus-within{ border-color:var(--gold-border); }
+.search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; font-family:inherit; }
+.search-box input::placeholder{ color:var(--text3); }
+.filter-select{
+  background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer;
+  outline:none; transition:border-color .2s; color-scheme:light; font-family:inherit;
+}
+.filter-select:focus{ border-color:var(--gold-border); }
+.btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; font-family:inherit; }
+.btn-ghost:hover{ color:var(--gold); }
+.btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; }
+.btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+.btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+.btn-primary{ background:var(--gold); color:#fff; font-weight:700; }
+.btn-primary:hover{ background:var(--gold-light); }
+.btn-danger{ background:var(--red); color:#fff; font-weight:700; }
+.btn-danger:hover{ background:#d9372e; }
+.btn-sm{ padding:6px 12px; font-size:11.5px; }
+
+.status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+.status-pill{
+  display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px;
+  font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border);
+  background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap;
+  font-family:inherit;
+}
+.status-pill:hover{ border-color:var(--gold-border); }
+.status-pill i.fa-circle{ font-size:6px; }
+.status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+.status-pill.on.pending{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
+.status-pill.on.partial{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
+.status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
+
+/* Requisition cards */
+.req-list{ display:flex; flex-direction:column; gap:12px; }
+.req-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .35s ease both;
+}
+.req-card-head{
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  padding:14px 18px 12px; border-bottom:1px solid var(--border); background:var(--surface2);
+}
+.req-card-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.req-no{ font-size:14px; font-weight:800; color:var(--gold); }
+.req-dept{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text2); }
+.req-dept-dot{ width:7px; height:7px; border-radius:50%; background:var(--purple); flex-shrink:0; }
+.req-by{ font-size:12px; color:var(--text2); }
+.req-date{ font-size:11px; color:var(--text3); }
+.chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+.chip i{ font-size:6px; }
+.chip-urgent{ background:var(--red-bg); color:var(--red); }
+.chip-normal{ background:var(--amber-bg); color:var(--amber); }
+.chip-status-pending{ background:var(--amber-bg); color:var(--amber); }
+.chip-status-partial{ background:var(--blue-bg); color:var(--blue); }
+.chip-status-rejected{ background:var(--red-bg); color:var(--red); }
+.chip-status-issued{ background:var(--green-bg); color:var(--green); }
+.req-card-actions{ display:flex; gap:6px; flex-shrink:0; }
+
+/* Items table inside card */
+.req-items-wrap{ padding:0; overflow-x:auto; }
+.req-items{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.req-items thead th{
+  text-align:left; padding:9px 14px; font-size:9px; text-transform:uppercase;
+  letter-spacing:1.2px; color:var(--text3); font-weight:700;
+  background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.req-items thead th.center{ text-align:center; }
+.req-items tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+.req-items tbody tr:last-child{ border-bottom:none; }
+.req-items tbody td{ padding:9px 14px; color:var(--text); vertical-align:middle; }
+.req-items tbody td.center{ text-align:center; }
+.req-items tbody tr:hover{ background:var(--surface2); }
+
+.issue-input{
+  width:70px; background:var(--surface2); border:1px solid var(--border); border-radius:7px;
+  padding:5px 8px; font-size:12.5px; text-align:center; color:var(--text);
+  font-family:inherit; outline:none; transition:border-color .2s;
+}
+.issue-input:focus{ border-color:var(--gold-border); }
+.issue-input.over{ border-color:var(--red); background:var(--red-bg); }
+
+.stock-badge{
+  display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+  border-radius:12px; font-size:11px; font-weight:700;
+}
+.stock-badge.ok{ background:var(--green-bg); color:var(--green); }
+.stock-badge.low{ background:var(--amber-bg); color:var(--amber); }
+.stock-badge.out{ background:var(--red-bg); color:var(--red); }
+
+.req-remark{ padding:10px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); }
+
+/* Modal */
+.modal-overlay{
+  display:none; position:fixed; inset:0; background:rgba(15,20,40,0.55); backdrop-filter:blur(4px); z-index:300;
+  align-items:center; justify-content:center; padding:20px;
+}
+.modal-overlay.show{ display:flex; }
+.modal{
+  background:#fff; border:1px solid #eef0f6; border-radius:18px; padding:24px;
+  width:min(480px,96vw); box-shadow:0 30px 80px rgba(15,20,40,0.25);
+  animation:modalIn .22s cubic-bezier(.4,0,.2,1); margin:auto; color:#1c2440;
+  display:flex; flex-direction:column;
+}
+.modal-sm{ width:min(400px,96vw); }
+@keyframes modalIn{ from{opacity:0;transform:translateY(14px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+.modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-shrink:0; }
+.modal-title{ font-size:18px; font-weight:800; color:#1c2440; }
+.modal-close{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:8px; width:30px; height:30px; color:#6b7280; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.modal-close:hover{ color:var(--red); border-color:rgba(240,68,56,0.3); }
+.modal-body{ flex:1; overflow-y:auto; min-height:0; }
+.form-group{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+.form-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:#9aa1b3; font-weight:700; }
+.form-textarea{
+  background:#f4f6fb; border:1px solid #eef0f6; border-radius:9px; padding:9px 12px;
+  color:#1c2440; font-family:inherit; font-size:13px; outline:none; width:100%;
+  resize:vertical; min-height:80px;
+}
+.form-textarea:focus{ border-color:var(--gold-border); }
+.modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid #eef0f6; flex-shrink:0; }
+
+.toast{ position:fixed; bottom:20px; right:20px; background:var(--surface,#fff); border:1px solid var(--border,#eef0f6); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text,#1c2440); box-shadow:var(--shadow-lg,0 8px 28px rgba(15,34,55,.15)); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:inherit; }
+.toast.success{ border-left:3px solid var(--green,#12b76a); }
+.toast.error{   border-left:3px solid var(--red,#f04438); }
+.toast.info{    border-left:3px solid var(--blue,#2f6fed); }
+@keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@media (max-width:480px){ .toast{ left:12px; right:12px; bottom:12px; max-width:none; } }
+
+.empty-state{ text-align:center; padding:40px 20px; color:var(--text3); }
+.empty-state i{ font-size:32px; margin-bottom:10px; display:block; }
+.empty-state p{ font-size:13px; }
+
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+@keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="toolbar no-print">
+        <div class="toolbar-row">
+          <div class="toolbar-left">
+            <div class="flt-group" style="flex:1;min-width:200px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px"></i>
+                <input type="text" id="fSearch" placeholder="Requisition no, requester, department…" oninput="page=1;render()">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Department</span>
+              <select class="filter-select" id="fDept" onchange="page=1;render()">
+                <option value="">All Departments</option>
+              </select>
+            </div>
+            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear</button>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+          </div>
+        </div>
+        <div class="status-pills" id="statusPills"></div>
+      </div>
+
+      <div class="req-list" id="reqList"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--red);">Reject Requisition</div>
+      <button class="modal-close" onclick="closeRejectModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text2);margin-bottom:12px;">
+        Requisition <strong id="rejectReqNo"></strong> will be rejected. Provide a reason below.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Rejection Reason</label>
+        <textarea class="form-textarea" id="rejectReason" placeholder="Type rejection reason…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" onclick="closeRejectModal()">Cancel</button>
+      <button type="button" class="btn btn-danger" id="rejectConfirmBtn" onclick="confirmReject()"><i class="fa-solid fa-ban"></i> Reject</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="services/store-service.js"></script>
+<script src="../component/store-shell.js"></script>
+<script>
+const shell = StoreShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'store-approval.html',
+  pageTitle:     'Approve & Issue',
+  pageSubtitle:  'Review pending store-issue requisitions and issue stock.',
+});
+
+const svc = window.StoreService;
+
+/* ─── Utilities ─── */
+function escapeHtml(s){
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmtN(n){ return '\u20A6' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+
+function showToast(msg, type){
+  type = type || 'success';
+  const icon = type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = 'toast '+type;
+  t.innerHTML = '<i class="fa-solid '+escapeHtml(icon)+'"></i> '+escapeHtml(msg);
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3400);
+}
+
+/* ─── State ─── */
+let allReqs = [];
+let filteredReqs = [];
+let page = 1;
+const PAGE_SIZE = 8;
+let statusFilter = '';
+let rejectTargetNo = null;
+
+const STATUS_TABS = [
+  { k:'', l:'All', dot:'var(--gold)' },
+  { k:'Pending', l:'Pending', dot:'var(--amber)' },
+  { k:'Partial', l:'Partial', dot:'var(--blue)' },
+  { k:'Rejected', l:'Rejected', dot:'var(--red)' },
+];
+
+const CHIP_CLASS = { Pending:'chip-status-pending', Partial:'chip-status-partial', Rejected:'chip-status-rejected', Issued:'chip-status-issued' };
+const STOCK_CHIP = { ok:'ok', low:'low', out:'out' };
+
+/* ─── KPIs ─── */
+function renderKPIs(){
+  const pending = allReqs.filter(function(r){ return r.status==='Pending'; }).length;
+  const partial = allReqs.filter(function(r){ return r.status==='Partial'; }).length;
+  const rejected = allReqs.filter(function(r){ return r.status==='Rejected'; }).length;
+  let totalItems = 0;
+  allReqs.forEach(function(r){
+    if (r.status==='Pending'||r.status==='Partial'){
+      r.items.forEach(function(it){ totalItems += (it.qty||0) - (it.issuedQty||0); });
+    }
+  });
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card acc-amber">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-clock"></i></div><div class="kpi-label">Pending</div></div>
+      <div class="kpi-value" style="color:var(--amber)">${pending}</div>
+      <div class="kpi-trend ${pending>0?'warn':'up'}">${pending>0?'Awaiting action':'All clear'}</div>
+    </div>
+    <div class="kpi-card acc-blue">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-layer-group"></i></div><div class="kpi-label">Partially Issued</div></div>
+      <div class="kpi-value" style="color:var(--blue)">${partial}</div>
+      <div class="kpi-trend neutral">Some items remaining</div>
+    </div>
+    <div class="kpi-card acc-red">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-circle-xmark"></i></div><div class="kpi-label">Rejected</div></div>
+      <div class="kpi-value" style="color:var(--red)">${rejected}</div>
+      <div class="kpi-trend ${rejected>0?'down':'up'}">${rejected>0?'Denied requisitions':'None'}</div>
+    </div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-box-open"></i></div><div class="kpi-label">Items to Issue</div></div>
+      <div class="kpi-value" style="color:var(--green)">${totalItems}</div>
+      <div class="kpi-trend up">Remaining qty across pending</div>
+    </div>`;
+}
+
+/* ─── Status tabs ─── */
+function renderStatusTabs(){
+  document.getElementById('statusPills').innerHTML = STATUS_TABS.map(function(t){
+    const on = t.k===statusFilter ? ' on '+(t.k||'all') : '';
+    return '<div class="status-pill'+on+'" data-status="'+escapeHtml(t.k)+'" onclick="setStatusFilter(this,\''+escapeHtml(t.k)+'\')">'
+      +'<i class="fa-solid fa-circle" style="color:'+t.dot+'"></i>'+escapeHtml(t.l)+'</div>';
+  }).join('');
+}
+function setStatusFilter(el, k){
+  statusFilter = k;
+  document.querySelectorAll('.status-pill').forEach(function(p){ p.classList.remove('on'); });
+  el.classList.add('on', k || 'all');
+  page = 1;
+  render();
+}
+
+/* ─── Department filter ─── */
+function populateDeptFilter(){
+  var sel = document.getElementById('fDept');
+  var cur = sel.value;
+  var depts = [];
+  allReqs.forEach(function(r){ if (r.dept && depts.indexOf(r.dept)===-1) depts.push(r.dept); });
+  depts.sort();
+  sel.innerHTML = '<option value="">All Departments</option>' + depts.map(function(d){
+    return '<option value="'+escapeHtml(d)+'"'+(d===cur?' selected':'')+'>'+escapeHtml(d)+'</option>';
+  }).join('');
+}
+
+/* ─── Render ─── */
+function getFiltered(){
+  var q = (document.getElementById('fSearch').value||'').toLowerCase();
+  var dept = document.getElementById('fDept').value;
+
+  return allReqs.filter(function(r){
+    var mq = !q || r.no.toLowerCase().includes(q) || r.by.toLowerCase().includes(q) || r.dept.toLowerCase().includes(q);
+    var ms = !statusFilter || r.status === statusFilter;
+    var md = !dept || r.dept === dept;
+    return mq && ms && md;
+  });
+}
+
+function stockStatus(qty){
+  if (qty<=0) return 'out';
+  return 'ok';
+}
+
+function render(){
+  filteredReqs = getFiltered();
+  var total = filteredReqs.length;
+  var totalPages = Math.max(1, Math.ceil(total/PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  var start = (page-1)*PAGE_SIZE;
+  var pageReqs = filteredReqs.slice(start, start+PAGE_SIZE);
+
+  var listEl = document.getElementById('reqList');
+  if (pageReqs.length === 0){
+    listEl.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No requisitions match your filters.</p></div>';
+    renderKPIs();
+    return;
+  }
+
+  listEl.innerHTML = pageReqs.map(function(r, idx){
+    var chipCls = CHIP_CLASS[r.status] || 'chip-status-pending';
+    var statusLabel = r.status === 'Partial' ? 'Partial Issue' : (r.status || 'Pending');
+    var itemsHtml = r.items.map(function(it, i){
+      var stock = svc.stockQtyFor(it.name);
+      var remaining = (it.qty||0) - (it.issuedQty||0);
+      var lvl = stock <= 0 ? 'out' : (stock <= remaining ? 'low' : 'ok');
+      var lvlLabel = stock <= 0 ? 'Out' : (lvl==='low' ? 'Low' : 'OK');
+      return '<tr>'
+        +'<td>'+escapeHtml(it.name)+'</td>'
+        +'<td class="center">'+escapeHtml(it.unit||'unit')+'</td>'
+        +'<td class="center">'+(it.qty||0)+'</td>'
+        +'<td class="center">'+(it.issuedQty||0)+'</td>'
+        +'<td class="center" style="font-weight:700;">'+remaining+'</td>'
+        +'<td class="center"><span class="stock-badge '+STOCK_CHIP[lvl]+'"><i class="fa-solid fa-circle" style="font-size:5px"></i>'+stock+' <span style="color:var(--text3);font-weight:400;">('+escapeHtml(lvlLabel)+')</span></span></td>'
+        +'<td class="center"><input class="issue-input" type="number" min="0" max="'+(Math.min(remaining,stock))+'" value="'+Math.min(remaining,stock)+'" data-req="'+escapeHtml(r.no)+'" data-idx="'+i+'" data-max="'+Math.min(remaining,stock)+'" onchange="validateInput(this)" oninput="validateInput(this)"></td>'
+        +'</tr>';
+    }).join('');
+
+    var pendingOnly = r.status==='Pending'||r.status==='Partial';
+    var actionsHtml = '';
+    if (pendingOnly){
+      actionsHtml = '<button class="btn btn-primary btn-sm" onclick="issueReq(\''+escapeHtml(r.no)+'\')"><i class="fa-solid fa-check"></i> Issue</button>'
+        +'<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(240,68,56,.3);" onclick="openRejectModal(\''+escapeHtml(r.no)+'\')"><i class="fa-solid fa-ban"></i> Reject</button>';
+    }
+
+    var remarkHtml = r.remark ? '<div class="req-remark"><i class="fa-solid fa-comment" style="margin-right:4px;"></i>'+escapeHtml(r.remark)+'</div>' : '';
+
+    return '<div class="req-card" style="animation-delay:'+(idx*0.04)+'s">'
+      +'<div class="req-card-head">'
+        +'<div class="req-card-left">'
+          +'<span class="req-no">'+escapeHtml(r.no)+'</span>'
+          +'<span class="req-dept"><span class="req-dept-dot"></span>'+escapeHtml(r.dept||'—')+'</span>'
+          +'<span class="req-by"><i class="fa-solid fa-user" style="margin-right:3px;font-size:10px;"></i>'+escapeHtml(r.by||'—')+'</span>'
+          +'<span class="req-date"><i class="fa-solid fa-calendar" style="margin-right:3px;font-size:10px;"></i>'+fmtDate(r.dateRaised)+'</span>'
+          +'<span class="chip '+(r.priority==='Urgent'?'chip-urgent':'chip-normal')+'"><i class="fa-solid fa-circle"></i>'+escapeHtml(r.priority||'Normal')+'</span>'
+          +'<span class="chip '+chipCls+'"><i class="fa-solid fa-circle"></i>'+escapeHtml(statusLabel)+'</span>'
+        +'</div>'
+        +'<div class="req-card-actions">'+actionsHtml+'</div>'
+      +'</div>'
+      +'<div class="req-items-wrap"><table class="req-items">'
+        +'<thead><tr>'
+          +'<th>Item</th><th class="center">Unit</th><th class="center">Requested</th>'
+          +'<th class="center">Already Issued</th><th class="center">Remaining</th>'
+          +'<th class="center">Stock Available</th><th class="center">Issue Qty</th>'
+        +'</tr></thead>'
+        +'<tbody>'+itemsHtml+'</tbody>'
+      +'</table></div>'
+      +remarkHtml
+    +'</div>';
+  }).join('');
+
+  renderKPIs();
+}
+
+function validateInput(inp){
+  var max = parseInt(inp.getAttribute('data-max'),10)||0;
+  var val = parseInt(inp.value,10)||0;
+  if (val > max){ inp.value = max; inp.classList.add('over'); }
+  else if (val < 0){ inp.value = 0; inp.classList.remove('over'); }
+  else { inp.classList.remove('over'); }
+}
+
+/* ─── Issue ─── */
+async function issueReq(no){
+  var inputs = document.querySelectorAll('.issue-input[data-req="'+no+'"]');
+  var issuedQtyByItem = {};
+  var anyIssued = false;
+  inputs.forEach(function(inp){
+    var idx = parseInt(inp.getAttribute('data-idx'),10);
+    var qty = parseInt(inp.value,10)||0;
+    var req = allReqs.find(function(r){ return r.no===no; }) || filteredReqs.find(function(r){ return r.no===no; });
+    if (req && req.items[idx]){
+      var itemName = req.items[idx].name;
+      issuedQtyByItem[itemName] = qty;
+      if (qty > 0) anyIssued = true;
+    }
+  });
+
+  if (!anyIssued){ showToast('Set at least one issue quantity above 0.', 'error'); return; }
+
+  try{
+    await svc.approveAndIssue(no, issuedQtyByItem);
+    showToast('Requisition '+no+' issued successfully.', 'success');
+    await refreshData();
+  } catch(e){
+    showToast(e.message || 'Failed to issue requisition.', 'error');
+  }
+}
+
+/* ─── Reject modal ─── */
+function openRejectModal(no){
+  rejectTargetNo = no;
+  document.getElementById('rejectReqNo').textContent = no;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectModal').classList.add('show');
+}
+function closeRejectModal(){
+  rejectTargetNo = null;
+  document.getElementById('rejectModal').classList.remove('show');
+}
+async function confirmReject(){
+  if (!rejectTargetNo) return;
+  var reason = (document.getElementById('rejectReason').value||'').trim();
+  if (!reason){ showToast('Please enter a rejection reason.', 'error'); return; }
+  try{
+    await svc.rejectRequisition(rejectTargetNo, reason);
+    closeRejectModal();
+    showToast('Requisition '+rejectTargetNo+' rejected.', 'error');
+    await refreshData();
+  } catch(e){
+    showToast(e.message || 'Failed to reject requisition.', 'error');
+  }
+}
+
+/* ─── Helpers ─── */
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fDept').value = '';
+  statusFilter = '';
+  page = 1;
+  renderStatusTabs();
+  render();
+}
+
+async function refreshData(){
+  try{ await svc.loadAll(); } catch(e){}
+  allReqs = (svc.state.requests||[]).filter(function(r){ return r.mode==='store_issue'; });
+  populateDeptFilter();
+  renderStatusTabs();
+  render();
+}
+
+/* ─── Init ─── */
+async function init(){
+  if (!svc){ showToast('StoreService not loaded.', 'error'); return; }
+  try{
+    await svc.loadAll();
+  } catch(e){
+    console.error('[StoreApproval] loadAll failed:', e);
+    showToast(e.message||'Failed to load data.', 'error');
+  }
+  allReqs = (svc.state.requests||[]).filter(function(r){ return r.mode==='store_issue'; });
+  populateDeptFilter();
+  renderStatusTabs();
+  render();
+
+  if (svc.onChange){
+    svc.onChange(function(){
+      allReqs = (svc.state.requests||[]).filter(function(r){ return r.mode==='store_issue'; });
+      populateDeptFilter();
+      render();
+    });
+  }
+
+  document.getElementById('rejectModal').addEventListener('click', function(e){ if(e.target===this) closeRejectModal(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeRejectModal(); });
+}
+init();
+</script>
+</body>
+</html>

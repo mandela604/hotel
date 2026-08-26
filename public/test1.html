@@ -178,7 +178,7 @@ const shell = RestaurantShell.attach({
   activeFile:    'restaurant-dashboard.html',
   pageTitle:     'Dashboard',
   pageSubtitle:  'Restaurant operations overview',
-  apiMode:       'Demo',
+    apiMode:       'Live',
   user:          { name: 'Restaurant Manager', initials: 'RM' },
 });
 
@@ -189,7 +189,7 @@ const shell = RestaurantShell.attach({
    module — via window.storage (shared:true), with a localStorage
    fallback so this page always renders something on its own.
 ═══════════════════════════════════════════ */
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true };
+const CFG = { API_BASE:'', API_KEY:'' };
 
 const storage = window.storage || {
   async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
@@ -206,23 +206,6 @@ async function apiFetch(method, path){
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
-
-/* Demo fallbacks — used only until real transfers/inventory/sales are synced */
-const DEMO_INVENTORY = [
-  { meal:'Egusi Soup',  qty:15, unit:'Portions', batch:'PROD-00094', received:'17/07/26', min:8 },
-  { meal:'Moi Moi',     qty:4,  unit:'Pieces',   batch:'PROD-00090', received:'16/07/26', min:8 },
-  { meal:'Jollof Rice', qty:0,  unit:'Plates',   batch:'PROD-00088', received:'16/07/26', min:6 },
-  { meal:'Fried Rice',  qty:18, unit:'Plates',   batch:'PROD-00085', received:'16/07/26', min:6 },
-];
-const DEMO_TRANSFERS = [
-  { no:'KTN-00045', meal:'Fried Rice',  qty:30, unit:'Plates', from:'Kitchen', date:'17/07/26 10:30 AM', prodNo:'PROD-00096' },
-  { no:'KTN-00044', meal:'Jollof Rice', qty:20, unit:'Plates', from:'Kitchen', date:'17/07/26 09:15 AM', prodNo:'PROD-00095' },
-];
-const DEMO_SALES = [
-  { id:'SALE-1043', meal:'Egusi Soup',  qty:2, total:12000, method:'Cash',     time:'11:05 AM' },
-  { id:'SALE-1042', meal:'Fried Rice',  qty:3, total:18000, method:'POS',      time:'10:40 AM' },
-  { id:'SALE-1041', meal:'Moi Moi',     qty:1, total:2500,  method:'Transfer', time:'09:52 AM' },
-];
 
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function invLevel(i){ return i.qty<=0 ? 'out' : (i.qty<=i.min ? 'low' : 'ok'); }
@@ -324,16 +307,14 @@ function renderLowStock(inventory){
 
 async function init(){
   let inventory, transfers, sales;
-  if (!CFG.USE_DEMO) {
-    try {
-      const data = await apiFetch('GET', '/api/restaurant/dashboard-summary');
-      inventory = data.inventory; transfers = data.transfers; sales = data.sales;
-      shell.setApiMode('Live');
-    } catch(e) { console.warn('[API] Falling back to local demo data:', e.message); }
-  }
-  if (!inventory) inventory = await loadShared('restaurant-inventory', DEMO_INVENTORY);
-  if (!transfers) transfers = await loadShared('restaurant-pending-transfers', DEMO_TRANSFERS);
-  if (!sales)     sales     = await loadShared('restaurant-sales', DEMO_SALES);
+  try {
+    const data = await apiFetch('GET', '/api/restaurant/dashboard-summary');
+    inventory = data.inventory; transfers = data.transfers; sales = data.sales;
+    shell.setApiMode('Live');
+  } catch(e) { console.warn('[API] Falling back to stored data:', e.message); }
+  if (!inventory) inventory = await loadShared('restaurant-inventory', []);
+  if (!transfers) transfers = await loadShared('restaurant-pending-transfers', []);
+  if (!sales)     sales     = await loadShared('restaurant-sales', []);
 
   renderKPIs(inventory, transfers, sales);
   renderRevenue(sales);

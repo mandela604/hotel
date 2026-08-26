@@ -7,6 +7,12 @@ const KitchenMovement = require('../models/KitchenMovement');
 const Requisition = require('../models/Requisition');
 const asyncHandler = require('../middleware/asyncHandler');
 
+// Escapes regex special characters from user-supplied strings so they
+// can be safely used in new RegExp(...) without ReDoS or broken patterns.
+function sanitizeRegex(str) {
+  return String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function todayDDMMYY() {
   const d = new Date();
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
@@ -159,19 +165,31 @@ exports.recordProduction = asyncHandler(async (req, res) => {
   let totalCost = 0;
   const processedIngredients = [];
 
-  // Deduct stock for each ingredient
+  // ── Pass 1: validate every ingredient BEFORE touching any stock.
+  // This prevents a partial deduction where ingredient 1 succeeds but
+  // ingredient 3 fails — stock would be permanently wrong with no rollback.
   if (Array.isArray(ingredients)) {
     for (const ing of ingredients) {
       const q = Number(ing.qty) || 0;
       if (!ing.name || q <= 0) continue;
 
-      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${ing.name.trim()}$`, 'i') });
+      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
       if (!stockItem) {
         return res.status(404).json({ success: false, error: `Ingredient "${ing.name}" not found in stock` });
       }
       if (stockItem.qty < q) {
         return res.status(400).json({ success: false, error: `Not enough ${stockItem.name}. Have ${stockItem.qty}, need ${q}` });
       }
+    }
+  }
+
+  // ── Pass 2: all ingredients validated — now safe to deduct.
+  if (Array.isArray(ingredients)) {
+    for (const ing of ingredients) {
+      const q = Number(ing.qty) || 0;
+      if (!ing.name || q <= 0) continue;
+
+      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
 
       const unitCost = stockItem.price || stockItem.cost || 0;
       stockItem.qty = Math.max(0, stockItem.qty - q);

@@ -2,9 +2,9 @@
    StaffShell — sidebar + topbar for the standalone Staff
    module. Drop this in as component/staff-shell.js.
 
-   Matches restaurant-shell.js / poolbar-shell.js / accounting-shell.js
-   pattern exactly: session fetch when USE_DEMO = false, demo fallback,
-   collapse, theme toggle, back link, same #2f6fed palette.
+   Fetches session from API via /api/auth/session.
+   Failure → redirect to login. No demo fallback.
+   Collapse, theme toggle, back link, same #2f6fed palette.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -153,26 +153,45 @@
     document.head.appendChild(s);
   }
 
+  // ── CONFIG ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
-    DEMO_USER: { name: 'Admin User', initials: 'AU', role: 'admin', privilege: null },
+    LOGIN_URL: '../login.html',
   };
 
+  function goLogin(reason) {
+    console.warn('[StaffShell] Auth failed — redirecting to login:', reason || '');
+    const next = encodeURIComponent(location.pathname + location.search);
+    const base = CONFIG.LOGIN_URL || '../login.html';
+    location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
+  }
+
   async function fetchSession() {
-    if (!CONFIG.USE_DEMO) {
-      try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-          headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-        });
-        if (!res.ok) throw new Error(`Session API returned ${res.status}`);
-        const data = await res.json();
-        return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege };
-      } catch (err) {
-        console.warn('[StaffShell] Session fetch failed, using demo user:', err.message);
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
+        credentials: 'include',
+        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+      });
+      if (res.status === 401 || res.status === 403) {
+        goLogin('HTTP ' + res.status);
+        return null;
       }
+      if (!res.ok) throw new Error('Session API returned ' + res.status);
+      const data = await res.json();
+      if (!data || !data.role) {
+        goLogin('missing role');
+        return null;
+      }
+      return {
+        name: data.name,
+        initials: data.initials,
+        role: data.role,
+        privilege: data.privilege || null,
+      };
+    } catch (err) {
+      goLogin(err && err.message);
+      return null;
     }
-    return CONFIG.DEMO_USER;
   }
 
   function normalizeFile(str) {
@@ -189,8 +208,10 @@
     const activeFileNorm = normalizeFile(opts.activeFile);
     const activeKey = opts.activeKey || '';
 
-    let user = opts.user || CONFIG.DEMO_USER;
-    let initials = user.initials || (user.name || 'AU').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    let user = opts.user || null;
+    let initials = user
+      ? (user.initials || (user.name || '··').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join(''))
+      : '…';
 
     sidebarTarget.innerHTML = `
       <div id="stf-overlay"></div>
@@ -238,7 +259,7 @@
         <div class="stf-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="stf-date" id="stf-date"></div>
-          <div class="stf-apibadge" id="stf-apiBadge"><span class="dot"></span><span id="stf-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
+          <div class="stf-apibadge" id="stf-apiBadge"><span class="dot"></span><span id="stf-apiLabel">Live</span></div>
           <div class="stf-notif"><i class="fa-regular fa-bell"></i><div class="stf-notifdot"></div></div>
           <div class="stf-avatar" id="stf-avatar">${initials}</div>
         </div>
@@ -323,7 +344,7 @@
           avatar.textContent = initials;
           avatar.title = user.name || '';
         }
-        handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+        handle.setApiMode('Live');
       }
     });
 

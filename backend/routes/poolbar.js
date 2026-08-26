@@ -1,8 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const ctrl    = require('../controllers/poolbarController');
-const auth    = require('../middleware/auth');
-const roleGuard = require('../middleware/roleGuard');
+const { roleGuard, departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const {
   validateAddStock,
   validateUpdateStock,
@@ -14,36 +13,44 @@ const {
   validateCancelOrder,
   validateCreateRequisition,
   validateObjectIdParam,
-  validateStrictObjectIdParam,
 } = require('../middleware/poolbarValidators');
 
-router.use(auth);
+// auth is already applied at the mount point in server.js — no router.use(auth) here
+
+const inDept  = departmentGuard('Pool Bar');
+const isAdmin = roleGuard('admin');
+const inDeptCanView = [departmentGuard('Pool Bar'), privilegeGuard('poolbar', 'canView')];
+
+/* ── Dashboard ──────────────────────────────── */
+router.get('/dashboard', ...inDeptCanView, ctrl.getDashboard);
 
 /* ── Stock ──────────────────────────────────── */
-router.get('/stock',   ctrl.listStock);
-router.post('/stock',  roleGuard('admin','manager','poolbar_staff'), validateAddStock,  ctrl.addStock);
-router.put('/stock/:id', roleGuard('admin','manager','poolbar_staff'), validateStrictObjectIdParam('id'), validateUpdateStock, ctrl.updateStock);
-router.delete('/stock/:id', roleGuard('admin'), validateStrictObjectIdParam('id'), ctrl.deleteStock);
-router.post('/stock/deduct', validateDeductStock, ctrl.deductStock);
-router.post('/stock/:id/deduct', validateStrictObjectIdParam('id'), validateDeductById, ctrl.deductStockById);
+router.get('/stock',       ...inDeptCanView, ctrl.listStock);
+router.post('/stock',      inDept, privilegeGuard('poolbar', 'canCreate'), validateAddStock,  ctrl.addStock);
+router.put('/stock/:id',   inDept, privilegeGuard('poolbar', 'canEdit'),   validateObjectIdParam('id'), validateUpdateStock, ctrl.updateStock);
+router.delete('/stock/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteStock);
+router.post('/stock/deduct', inDept, privilegeGuard('poolbar', 'canEdit'), validateDeductStock, ctrl.deductStock);
+router.post('/stock/:id/deduct', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), validateDeductById, ctrl.deductStockById);
 
 /* ── Sales ──────────────────────────────────── */
-router.get('/sales',  ctrl.listSales);
-router.post('/sales', validateCreateSale, ctrl.createSale);
-router.post('/sales/:id/void', roleGuard('admin','manager','poolbar_staff'), validateObjectIdParam('id'), validateVoidSale, ctrl.voidSale);
+router.get('/sales',  ...inDeptCanView, ctrl.listSales);
+router.post('/sales', inDept, privilegeGuard('poolbar', 'canCreate'), validateCreateSale, ctrl.createSale);
+router.post('/sales/:id/void', inDept, privilegeGuard('poolbar', 'canVoid'), validateObjectIdParam('id'), validateVoidSale, ctrl.voidSale);
 
 /* ── Orders / Tabs ──────────────────────────── */
-router.get('/orders',  ctrl.listOrders);
-router.post('/orders', validateOpenOrder, ctrl.openOrder);
-router.put('/orders/:id', validateObjectIdParam('id'), ctrl.updateOrder);
-router.post('/orders/:id/pay', validateObjectIdParam('id'), ctrl.payOrder);
-router.post('/orders/:id/cancel', validateObjectIdParam('id'), validateCancelOrder, ctrl.cancelOrder);
+router.get('/orders',  ...inDeptCanView, ctrl.listOrders);
+router.post('/orders', inDept, privilegeGuard('poolbar', 'canCreate'), validateOpenOrder, ctrl.openTab);
+router.put('/orders/:id', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.updateOrder);
+router.post('/orders/:id/serve', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.markServed);
+router.post('/orders/:id/pay', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.payOrder);
+router.post('/orders/:id/cancel', inDept, privilegeGuard('poolbar', 'canManageOrders'), validateObjectIdParam('id'), validateCancelOrder, ctrl.cancelOrder);
 
 /* ── Requisitions (Pool Bar → Store) ─────────── */
-router.get('/requisitions',  ctrl.listRequisitions);
-router.post('/requisitions', validateCreateRequisition, ctrl.createRequisition);
+router.get('/requisitions',  ...inDeptCanView, ctrl.listRequisitions);
+router.post('/requisitions', inDept, privilegeGuard('poolbar', 'canCreate'), validateCreateRequisition, ctrl.createRequisition);
+router.post('/requisitions/:id/receive', inDept, privilegeGuard('poolbar', 'canCreate'), validateObjectIdParam('id'), ctrl.receiveRequisition);
 
 /* ── Movements ──────────────────────────────── */
-router.get('/movements', ctrl.listMovements);
+router.get('/movements', ...inDeptCanView, ctrl.listMovements);
 
 module.exports = router;

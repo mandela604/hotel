@@ -2,8 +2,8 @@
    AccountingShell — sidebar + topbar for the standalone Accounting
    module. Drop this in as component/accounting-shell.js.
 
-   Rebuilt to match booking-shell.js pattern exactly: fetches session
-   from API when USE_DEMO = false, falls back to demo user otherwise.
+   Fetches session from API via /api/auth/session.
+   Failure → redirect to login. No demo fallback.
    All pages get session via shell.getUser() for permission checks.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
@@ -156,27 +156,45 @@
     document.head.appendChild(s);
   }
 
-  // ── CONFIG — the only place to change Demo↔Live ──
+  // ── CONFIG ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
-    DEMO_USER: { name: 'Accountant', initials: 'AC', role: 'staff', privilege: 'accountant' },
+    LOGIN_URL: '../login.html',
   };
 
+  function goLogin(reason) {
+    console.warn('[AccountingShell] Auth failed — redirecting to login:', reason || '');
+    const next = encodeURIComponent(location.pathname + location.search);
+    const base = CONFIG.LOGIN_URL || '../login.html';
+    location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
+  }
+
   async function fetchSession() {
-    if (!CONFIG.USE_DEMO) {
-      try {
-        const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-          headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-        });
-        if (!res.ok) throw new Error(`Session API returned ${res.status}`);
-        const data = await res.json();
-        return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege };
-      } catch (err) {
-        console.warn('[AccountingShell] Session fetch failed, using demo user:', err.message);
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
+        credentials: 'include',
+        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+      });
+      if (res.status === 401 || res.status === 403) {
+        goLogin('HTTP ' + res.status);
+        return null;
       }
+      if (!res.ok) throw new Error('Session API returned ' + res.status);
+      const data = await res.json();
+      if (!data || !data.role) {
+        goLogin('missing role');
+        return null;
+      }
+      return {
+        name: data.name,
+        initials: data.initials,
+        role: data.role,
+        privilege: data.privilege || null,
+      };
+    } catch (err) {
+      goLogin(err && err.message);
+      return null;
     }
-    return CONFIG.DEMO_USER;
   }
 
   // Normalize a URL/filename down to its bare filename, lowercase,
@@ -252,9 +270,9 @@
         <div class="acc-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="acc-date" id="acc-date"></div>
-          <div class="acc-apibadge" id="acc-apiBadge"><span class="dot"></span><span id="acc-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
+          <div class="acc-apibadge" id="acc-apiBadge"><span class="dot"></span><span id="acc-apiLabel">Live</span></div>
           <div class="acc-notif"><i class="fa-regular fa-bell"></i><div class="acc-notifdot"></div></div>
-          <div class="acc-avatar" id="acc-avatar">${(opts.user && opts.user.initials) || CONFIG.DEMO_USER.initials}</div>
+          <div class="acc-avatar" id="acc-avatar">${(opts.user && opts.user.initials) || '··'}</div>
         </div>
       </div>`;
 
@@ -308,8 +326,8 @@
     } catch (e) {}
     applyTheme();
 
-    // Start with passed user or demo default
-    let user = opts.user || CONFIG.DEMO_USER;
+    // Start empty until API responds (or redirect).
+    let user = opts.user || null;
 
     // ── Fetch real session and update avatar ──
     const handle = {
@@ -354,7 +372,7 @@
           avatar.textContent = initials;
           avatar.title = user.name || '';
         }
-        handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+        handle.setApiMode('Live');
       }
     });
 

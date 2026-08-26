@@ -442,7 +442,6 @@ tbody td.nowrap{ white-space:nowrap; }
 
 <!-- ─── SCRIPTS ─── -->
 <script src="../services/permissions.js"></script>
-<script src="data/booking-demo-seed.js"></script>
 <script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
 <script src="../component/booking-modal.js"></script>
@@ -777,26 +776,40 @@ function renderCharges(g){
   buildPagination('chargePageBtns','chargePaginLabel',pfChargePage,total,CHARGE_PER_PAGE,p=>{pfChargePage=p;renderCharges(g);});
 }
 
-/* ── Settle opens the Booking Modal ── */
+/* ── Settle opens the Booking Modal — or settles directly if no active booking ── */
 function settleCharge(idx){
   const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
   const c = g.charges[idx];
-  if(c.status !== 'Pending' || !c.room) {
-    showToast('Charge already settled or has no room attached.', 'info');
+  if(c.status !== 'Pending') {
+    showToast('Charge already settled.', 'info');
     return;
   }
 
-  const booking = bookingsData.find(b => b.room === c.room && b.guest === g.name);
-  if(!booking) {
-    showToast('Could not find an active booking for this charge.', 'error');
-    return;
+  // If the charge has a room and there's an active booking for it, open
+  // the booking modal so staff can settle in context. Otherwise settle
+  // the charge directly via the API (guest checked out but charge remains).
+  if(c.room) {
+    const booking = bookingsData.find(b => b.room === c.room && b.guest === g.name);
+    if(booking) {
+      closeProfile();
+      setTimeout(() => {
+        if(bookingModal) bookingModal.openEdit(booking);
+        showToast('Open the booking modal to settle this charge.', 'info');
+      }, 350);
+      return;
+    }
   }
 
-  closeProfile();
-  setTimeout(() => {
-    if(bookingModal) bookingModal.openEdit(booking);
-    showToast('Open the booking modal to settle this charge.', 'info');
-  }, 350);
+  // Fallback: no active booking found — settle the charge directly.
+  BookingData.settleCharge(g.id, idx)
+    .then(async () => {
+      showToast('Charge settled.', 'success');
+      await loadGuestsData();
+      openProfile(g.id);
+      const folioBtn = document.querySelector('.subtab[data-sub="folio"]');
+      if (folioBtn) switchSub('folio', folioBtn);
+    })
+    .catch(err => showToast((err && err.message) || 'Failed to settle charge.', 'error'));
 }
 
 async function settleAll(){
@@ -804,6 +817,9 @@ async function settleAll(){
   const pending = g.charges.filter(c=>c.status==='Pending');
   if(!pending.length){ showToast('No pending charges.','info'); return; }
 
+  // If there's an active booking for the first pending charge, open the
+  // booking modal so staff can settle in context. Otherwise settle all
+  // charges directly via the API (e.g. guest already checked out).
   const firstCharge = pending[0];
   if(firstCharge && firstCharge.room) {
     const booking = bookingsData.find(b => b.room === firstCharge.room && b.guest === g.name);
@@ -816,7 +832,18 @@ async function settleAll(){
       return;
     }
   }
-  showToast('No active bookings found for these charges.', 'error');
+
+  // Fallback: settle all charges directly via API.
+  try {
+    await BookingData.settleAllCharges(g.id);
+    showToast('All charges settled.', 'success');
+    await loadGuestsData();
+    openProfile(g.id);
+    const folioBtn = document.querySelector('.subtab[data-sub="folio"]');
+    if (folioBtn) switchSub('folio', folioBtn);
+  } catch(err) {
+    showToast((err && err.message) || 'Failed to settle charges.', 'error');
+  }
 }
 
 /* ── Sales Detail Integration ──

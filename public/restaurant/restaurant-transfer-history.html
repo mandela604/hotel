@@ -496,7 +496,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../services/permissions.js"></script>
-<script src="data/restaurant-seed.js"></script>
 <script src="services/restaurant-service.js"></script>
 <script src="../store/data/store-seed.js"></script>
 <script src="../store/services/store-service.js"></script>
@@ -666,8 +665,8 @@ function statusChipInfo(t) {
 }
 
 /* Merges Restaurant's own pending/history transfers (Kitchen/Store ->
- * Restaurant pushes) with every StoreService requisition Restaurant has
- * raised itself (Restaurant -> Store), at any status. */
+ * Restaurant pushes), KitchenService sent transfers, and every
+ * StoreService requisition Restaurant has raised (Restaurant -> Store). */
 function getAllRecords() {
   const pending = (RS.state.pending || []).map((t) =>
     Object.assign({}, t, {
@@ -682,13 +681,31 @@ function getAllRecords() {
   const history = (RS.state.history || []).map((h) =>
     Object.assign({}, h, { source: normalizeSource(h), _kind: 'transfer' })
   );
+
+  let kitchenTransfers = [];
+  if (window.KitchenService && KitchenService.state && KitchenService.state.transfers) {
+    kitchenTransfers = KitchenService.state.transfers
+      .filter((t) => t.status === 'sent')
+      .map((t) => ({
+        no: t.transferNo,
+        items: [{ name: t.meal, qty: t.quantity, unit: t.unit }],
+        status: 'pending',
+        from: 'Kitchen',
+        sentBy: t.sentBy,
+        date: t.dateSent,
+        source: 'Kitchen',
+        _kind: 'transfer',
+      }));
+  }
+
   let requisitions = [];
   if (window.StoreService && typeof StoreService.getRequisitions === 'function') {
     requisitions = StoreService.getRequisitions({ mode: 'store_issue' })
       .filter((r) => r.dept === REQ_DEPT_LABEL)
       .map((r) => Object.assign({}, r, { _kind: 'requisition' }));
   }
-  return pending.concat(history, requisitions);
+
+  return pending.concat(history, kitchenTransfers, requisitions);
 }
 
 /* ── Date range ────────────────────────────────────────── */
@@ -743,24 +760,24 @@ function populateFilterOptions() {
 /* ── KPIs ──────────────────────────────────────────────── */
 function renderKPIs() {
   const kpis = RS.transferKPIs();
-  const decided = kpis.accepted + kpis.rejected;
-  const acceptRate = decided ? Math.round((kpis.accepted / decided) * 100) : 0;
+  const decided = kpis.acceptedToday + kpis.rejectedToday;
+  const acceptRate = decided ? Math.round((kpis.acceptedToday / decided) * 100) : 0;
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card clickable acc-amber" data-status="pending" onclick="setStatusFilter('pending')">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending Transfers</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${kpis.pending}</div>
-      <div class="kpi-trend ${kpis.pending > 0 ? 'warn' : 'up'}">${kpis.pending > 0 ? 'Awaiting review' : 'All clear'}</div>
+      <div class="kpi-value" style="color:var(--amber);">${kpis.pendingCount}</div>
+      <div class="kpi-trend ${kpis.pendingCount > 0 ? 'warn' : 'up'}">${kpis.pendingCount > 0 ? 'Awaiting review' : 'All clear'}</div>
     </div>
     <div class="kpi-card clickable acc-green" data-status="accepted" onclick="setStatusFilter('accepted')">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Accepted Transfers</div></div>
-      <div class="kpi-value" style="color:var(--green);">${kpis.accepted}</div>
+      <div class="kpi-value" style="color:var(--green);">${kpis.acceptedToday}</div>
       <div class="kpi-trend up">Added to stock</div>
     </div>
     <div class="kpi-card clickable acc-red" data-status="rejected" onclick="setStatusFilter('rejected')">
       <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected Transfers</div></div>
-      <div class="kpi-value" style="color:var(--red);">${kpis.rejected}</div>
-      <div class="kpi-trend ${kpis.rejected > 0 ? 'warn' : 'up'}">${kpis.rejected > 0 ? 'Sent back to origin' : 'None on record'}</div>
+      <div class="kpi-value" style="color:var(--red);">${kpis.rejectedToday}</div>
+      <div class="kpi-trend ${kpis.rejectedToday > 0 ? 'warn' : 'up'}">${kpis.rejectedToday > 0 ? 'Sent back to origin' : 'None on record'}</div>
     </div>
     <div class="kpi-card acc-blue">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-chart-line"></i></div><div class="kpi-label">Acceptance Rate</div></div>
@@ -1376,13 +1393,19 @@ function closeModal(id) {
   });
 });
 
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(s));
+  return d.innerHTML;
+}
+
 function showToast(msg, type) {
   type = type || 'success';
   const t = document.createElement('div');
   t.className = 'toast ' + type;
   const icon =
     type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + escapeHtml(msg);
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
@@ -1401,36 +1424,6 @@ function printPage() {
   window.print();
 }
 
-function getAllRecords() {
-  const pending = (RS.state.pending || []).map(t => ({ ...t, _kind: 'transfer' }));
-  const history = (RS.state.history || []).map(h => ({ ...h, _kind: 'transfer' }));
-  
-  let kitchenTransfers = [];
-  if (window.KitchenService && KitchenService.state.transfers) {
-    kitchenTransfers = KitchenService.state.transfers
-      .filter(t => t.status === 'sent') // only pending
-      .map(t => ({
-        ...t,
-        no: t.transferNo,
-        items: [{ name: t.meal, qty: t.quantity, unit: t.unit }],
-        status: 'pending',
-        from: 'Kitchen',
-        sentBy: t.sentBy,
-        date: t.dateSent,
-        source: 'Kitchen',
-        _kind: 'transfer'
-      }));
-  }
-
-  let requisitions = [];
-  if (window.StoreService) {
-    requisitions = StoreService.getRequisitions({ mode: 'store_issue' })
-      .filter(r => r.dept === 'Restaurant / Bar')
-      .map(r => ({ ...r, _kind: 'requisition' }));
-  }
-
-  return [...pending, ...history, ...kitchenTransfers, ...requisitions];
-}
 /* ── Init (call service, then render) ──────────────────── */
 async function init() {
   if (window.KitchenService) {
@@ -1449,9 +1442,8 @@ async function init() {
   const btnReq = document.getElementById('btnNewReq');
   if (btnReq && !canRaiseReq) btnReq.style.display = 'none';
 
-  const shellCfg = shell.getConfig && shell.getConfig();
-  if (shellCfg && shell.setApiMode) {
-    shell.setApiMode(shellCfg.USE_DEMO === false ? 'Live' : 'Demo');
+  if (shell.setApiMode) {
+    shell.setApiMode('Live');
   }
 
   initDateRangePicker();

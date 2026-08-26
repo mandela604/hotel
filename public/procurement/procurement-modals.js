@@ -75,8 +75,8 @@ const ProcurementModals = (function() {
   function showPRDetail(pr) {
     if (!pr) return;
     
-    const statusLabels = { pending:'Pending', accountant:'Accountant Review', gm:'GM Review', md:'MD Review', approved:'Approved', fulfilled:'Fulfilled', rejected:'Rejected' };
-    const statusColors = { pending:'var(--amber)', accountant:'var(--blue)', gm:'var(--green)', md:'var(--purple)', approved:'var(--green)', fulfilled:'var(--purple)', rejected:'var(--red)' };
+    const statusLabels = { pending:'Pending', accountant:'Accountant Review', gm:'GM Review', md:'MD Review', approved:'Approved', sent_to_store:'Sent to Store', fulfilled:'Fulfilled', rejected:'Rejected', voided:'Voided — Corrected' };
+    const statusColors = { pending:'var(--amber)', accountant:'var(--blue)', gm:'var(--green)', md:'var(--purple)', approved:'var(--green)', sent_to_store:'var(--blue)', fulfilled:'var(--purple)', rejected:'var(--red)', voided:'var(--text3)' };
     
     const historyHtml = pr.history && pr.history.length > 0 
       ? pr.history.map(h => `
@@ -94,6 +94,26 @@ const ProcurementModals = (function() {
     const canApprove = pr.approvalStage === 'pending' || pr.approvalStage === 'accountant' || pr.approvalStage === 'gm' || pr.approvalStage === 'md';
     const canReject = canApprove;
     const canCreatePO = pr.approvalStage === 'approved';
+    // Void & Correct is only offered once Store has actually accepted the
+    // PO ('fulfilled') — a PO still moving through internal approval gets
+    // edited/rejected the normal way instead, and one that's already been
+    // voided or rejected can't be voided again.
+    const canVoid = pr.approvalStage === 'fulfilled';
+
+    const awaitingStoreNote = pr.approvalStage === 'sent_to_store'
+      ? `<div style="padding:12px;background:var(--blue-bg);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--blue);">
+           <i class="fa-solid fa-circle-info"></i> Fully approved internally — now waiting on Store to accept or reject it.
+         </div>`
+      : '';
+    const voidLinkNote = pr.voidedIntoPrId
+      ? `<div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--text2);">
+           <i class="fa-solid fa-rotate"></i> Voided — a corrected request was raised in its place (PR ${pr.voidedIntoPrNo || pr.voidedIntoPrId}).
+         </div>`
+      : (pr.correctionOfPrId
+        ? `<div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--text2);">
+             <i class="fa-solid fa-rotate"></i> Raised to correct ${pr.correctionOfPrNo || pr.correctionOfPrId} after the original quantities/costs didn't match what was actually received.
+           </div>`
+        : '');
 
     init();
     
@@ -116,6 +136,8 @@ const ProcurementModals = (function() {
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Needs MD Approval</div><div style="font-size:13px;color:${pr.needsMDApproval ? 'var(--purple)' : 'var(--text)'};">${pr.needsMDApproval ? 'Yes (>₦100k)' : 'No'}</div></div>
         </div>
 
+        ${awaitingStoreNote}
+        ${voidLinkNote}
         ${pr.notes ? `<div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--text2);font-style:italic;">"${pr.notes}"</div>` : ''}
 
         <div style="margin-bottom:20px;">
@@ -127,6 +149,7 @@ const ProcurementModals = (function() {
           ${canApprove ? `<button onclick="approvePR('${pr.id}')" style="padding:8px 20px;background:var(--green);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Approve</button>` : ''}
           ${canReject ? `<button onclick="rejectPR('${pr.id}')" style="padding:8px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✕ Reject</button>` : ''}
           ${canCreatePO ? `<button onclick="createPO('${pr.id}')" style="padding:8px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📋 Create PO</button>` : ''}
+          ${canVoid ? `<button onclick="ProcurementModals.showVoidCorrectModal('${pr.id}')" style="padding:8px 20px;background:var(--amber);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">↺ Void &amp; Correct</button>` : ''}
           <button onclick="ProcurementModals.close()" style="padding:8px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Close</button>
         </div>
       </div>
@@ -190,6 +213,93 @@ const ProcurementModals = (function() {
     }
   }
 
+  /**
+   * Void & Correct — for a PO Store has already accepted ('fulfilled')
+   * where the actual market purchase didn't match what was approved
+   * (short quantities, different cost, etc). Voids the original PR and,
+   * in the same action, raises a corrected PR pre-filled with the
+   * original's items so Procurement only has to adjust the lines that
+   * changed. The corrected PR skips internal review (it's a correction
+   * of something already fully approved) and goes straight to
+   * 'sent_to_store' — Store then either accepts it or rejects it, same
+   * as any other incoming PO.
+   */
+  function showVoidCorrectModal(prId) {
+    const pr = (ProcurementAPI.state.prs || []).find(p => p.id === prId);
+    if (!pr) return;
+    const items = (pr.items && pr.items.length)
+      ? pr.items
+      : [{ name: pr.item, qty: pr.qty, price: pr.unitCost }];
+
+    init();
+
+    const rowsHtml = items.map((it, i) => `
+      <div style="display:grid;grid-template-columns:1fr 90px 110px;gap:8px;margin-bottom:8px;align-items:center;">
+        <div style="font-size:12.5px;color:var(--text);">${it.name}</div>
+        <input type="number" min="0" step="any" id="vc-qty-${i}" value="${it.qty}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface2));color:var(--text);font-size:12.5px;">
+        <input type="number" min="0" step="any" id="vc-price-${i}" value="${it.price != null ? it.price : it.cost || 0}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface2));color:var(--text);font-size:12.5px;">
+      </div>`).join('');
+
+    modalContainer.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);pointer-events:all;animation:modalIn .3s ease;">
+        <div style="font-size:16px;font-weight:700;color:var(--amber);margin-bottom:6px;font-family:'Cormorant Garamond',serif;">Void &amp; Correct ${pr.prNo}</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">
+          This voids the original PO and raises a corrected request with the quantities/costs you actually received.
+          The corrected request skips re-approval and goes straight back to Store to accept or reject.
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 90px 110px;gap:8px;margin-bottom:6px;">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">Item</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">Qty received</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">Unit cost</div>
+        </div>
+        ${rowsHtml}
+
+        <div style="margin-top:12px;">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Reason for voiding (required)</div>
+          <textarea id="vc-reason" rows="3" placeholder="e.g. supplier only had 8 of the 12 cartons in stock" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg,var(--surface2));color:var(--text);font-family:inherit;font-size:12.5px;resize:vertical;"></textarea>
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+          <button onclick="ProcurementModals.close()" style="padding:8px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+          <button onclick="ProcurementModals.submitVoidCorrect('${pr.id}', ${items.length})" style="padding:8px 20px;background:var(--amber);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Void &amp; Raise Corrected PO</button>
+        </div>
+      </div>
+    `;
+
+    overlay.style.display = 'flex';
+    modalContainer.style.display = 'flex';
+  }
+
+  async function submitVoidCorrect(prId, itemCount) {
+    const reasonEl = document.getElementById('vc-reason');
+    const reason = reasonEl ? reasonEl.value.trim() : '';
+    if (!reason) {
+      ProcurementModals.alert('Please explain why this PO is being voided.', 'Error');
+      return;
+    }
+
+    const pr = (ProcurementAPI.state.prs || []).find(p => p.id === prId);
+    const sourceItems = (pr && pr.items && pr.items.length) ? pr.items : [{ name: pr.item, qty: pr.qty, price: pr.unitCost }];
+
+    const items = [];
+    for (let i = 0; i < itemCount; i++) {
+      const qtyEl = document.getElementById('vc-qty-' + i);
+      const priceEl = document.getElementById('vc-price-' + i);
+      const qty = qtyEl ? Number(qtyEl.value) : 0;
+      const price = priceEl ? Number(priceEl.value) : 0;
+      items.push(Object.assign({}, sourceItems[i], { qty, price, cost: price }));
+    }
+
+    try {
+      await ProcurementAPI.voidAndCorrectPO(prId, { items, reason }, 'current');
+      ProcurementModals.alert('PO voided. A corrected request has been raised and sent to Store.', 'Success');
+      location.reload();
+    } catch (error) {
+      ProcurementModals.alert('Error voiding this PO: ' + error.message, 'Error');
+    }
+  }
+
   // Add CSS animation
   const style = document.createElement('style');
   style.textContent = `
@@ -208,6 +318,8 @@ const ProcurementModals = (function() {
     showPRDetail,
     approvePR,
     rejectPR,
-    createPO
+    createPO,
+    showVoidCorrectModal,
+    submitVoidCorrect
   };
 })();

@@ -26,15 +26,8 @@
   const API_BASE = global.KITCHEN_API_BASE || '/api/kitchen';
 
   function getAuthHeaders() {
-    let token = null;
-    try {
-      if (global.AuthService && typeof global.AuthService.getToken === 'function') {
-        token = global.AuthService.getToken();
-      } else {
-        token = localStorage.getItem('token');
-      }
-    } catch (e) { /* no storage access */ }
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    // httpOnly cookie is sent automatically — no Authorization header needed.
+    return {};
   }
 
   /**
@@ -44,6 +37,7 @@
    */
   async function request(path, options = {}) {
     const res = await fetch(API_BASE + path, {
+      credentials: 'include',
       method: options.method || 'GET',
       headers: Object.assign(
         { 'Content-Type': 'application/json' },

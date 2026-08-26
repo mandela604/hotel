@@ -262,7 +262,6 @@
 
 <!-- ─── SCRIPTS ─── -->
 <script src="../services/permissions.js"></script>
-<script src="data/gym-seed.js"></script>
 <script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
 <script src="../component/gym-member-modal.js"></script>
@@ -523,7 +522,7 @@ async function init(){
   }
   bindStatusPills();
   try {
-    await GymService.loadAll(GymSeed);
+    await GymService.loadAll();
     await refreshMembers();
     GymService.onChange(function(){ refreshMembers(); profileModal.refresh(); });
   } catch (err) {

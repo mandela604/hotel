@@ -384,14 +384,35 @@
       if (!this.memberId) return;
       const m = this.service.findMember(this.memberId);
       if (!m) return;
-      if (!confirm(`Remove "${m.name}" from the gym member list? This cannot be undone.`)) return;
-      this.service.deleteMember(this.memberId)
-        .then(() => {
-          if (this.onDeleted) this.onDeleted();
-          this.close();
-          this._toast('Member removed.', 'error');
-        })
-        .catch(err => this._toast(err.message || 'Delete failed.', 'error'));
+      this._confirm('Remove "' + _esc(m.name) + '" from the gym member list? This cannot be undone.').then(ok => {
+        if (!ok) return;
+        this.service.deleteMember(this.memberId)
+          .then(() => {
+            if (this.onDeleted) this.onDeleted();
+            this.close();
+            this._toast('Member removed.', 'error');
+          })
+          .catch(err => this._toast(err.message || 'Delete failed.', 'error'));
+      });
+    }
+
+    _confirm(message) {
+      return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:400;display:flex;align-items:center;justify-content:center;padding:16px;';
+        overlay.innerHTML =
+          '<div style="background:#fff;border-radius:14px;padding:22px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,0.25);font-family:\'Segoe UI\',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;">' +
+            '<p style="font-size:14px;color:#1c2440;margin-bottom:18px;line-height:1.6;">' + message + '</p>' +
+            '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+              '<button class="btn-cancel" style="padding:7px 14px;border-radius:8px;border:1px solid #eef0f6;background:#fff;color:#6b7280;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>' +
+              '<button class="btn-confirm" style="padding:7px 14px;border-radius:8px;border:none;background:rgba(240,68,56,0.1);color:#f04438;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>' +
+            '</div>' +
+          '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('.btn-cancel').addEventListener('click', () => { overlay.remove(); resolve(false); });
+        overlay.querySelector('.btn-confirm').addEventListener('click', () => { overlay.remove(); resolve(true); });
+        overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      });
     }
 
     // ── helpers ──

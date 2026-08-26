@@ -355,7 +355,7 @@
   <div class="confirm-box">
     <div class="confirm-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
     <div class="confirm-title">Remove this staff member?</div>
-    <div class="confirm-msg" id="confirmMsg">This can't be undone in demo mode.</div>
+    <div class="confirm-msg" id="confirmMsg">This can't be undone.</div>
     <div class="confirm-actions">
       <button class="btn btn-outline btn-sm" onclick="closeConfirm()">Cancel</button>
       <button class="btn btn-sm" style="background:#f04438;color:#fff;" onclick="confirmDeleteYes()">Delete</button>
@@ -363,7 +363,15 @@
   </div>
 </div>
 
-<script src="../component/staff-shell.js"></script><script>
+<script src="../component/staff-shell.js"></script><script src="services/staff-service.js"></script><script>
+/* ── Pull shared constants from StaffService ── */
+const { PERMISSIONS, ALL_MODULES, ALL_ACTIONS, ROLE_KEYS, PRIVILEGE_KEYS } = StaffService;
+const labelize = StaffService.labelize;
+const initials = StaffService.initials;
+const pickPrivilege = StaffService.pickPrivilege;
+const getBasePermission = StaffService.getBasePermission;
+const getEffectivePermission = StaffService.getEffectivePermission;
+
 /* ── Shell (same pattern as restaurant / poolbar / accounting) ── */
 const shell = StaffShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -406,68 +414,7 @@ document.querySelectorAll('[data-nav-key="directory"]').forEach(a => {
   });
 });
 
-const PERMISSIONS = {
-  roles: {
-    admin:   { canView:true,  canCreate:true,  canEdit:true,  canDelete:true,  canApprove:true,  canVoid:true,  canViewReports:true },
-    manager: { canView:true,  canCreate:true,  canEdit:true,  canDelete:false, canApprove:true,  canVoid:true,  canViewReports:true },
-    staff:   { canView:true,  canCreate:false, canEdit:false, canDelete:false, canApprove:false, canVoid:false, canViewReports:false },
-  },
-  privileges: {
-    pool_bar_staff: { poolbar:    { canView:true, canCreate:true, canEdit:false, canDelete:false, canVoid:false, canGiveDiscount:false } },
-    sales_rep:      { restaurant: { canView:true, canCreate:true, canEdit:false, canDelete:false, canVoid:false, canGiveDiscount:false } },
-    accountant:     { accounting: { canView:true, canCreate:true, canEdit:true,  canDelete:false, canViewReports:true },
-                       procurement:{ canView:true, canApprove:true } },
-    store_keeper:   { store:      { canView:true, canCreate:true, canEdit:true,  canDelete:false, canApprove:false } },
-    front_desk:     { frontdesk:  { canView:true, canCreate:true, canEdit:false, canDelete:false, canVoid:false } },
-  },
-};
-
-const ALL_MODULES = ['poolbar', 'restaurant', 'store', 'accounting', 'frontdesk', 'procurement'];
-const ALL_ACTIONS = ['canView', 'canCreate', 'canEdit', 'canDelete', 'canApprove', 'canVoid', 'canGiveDiscount', 'canViewReports'];
-const ROLE_KEYS = Object.keys(PERMISSIONS.roles);
-const PRIVILEGE_KEYS = Object.keys(PERMISSIONS.privileges || {});
-const CONFIG = { USE_DEMO: true, API_BASE: '' };
-const KEY_STAFF = 'platform-staff';
-
-function pickPrivilege(preferred){
-  if (PRIVILEGE_KEYS.includes(preferred)) return preferred;
-  return PRIVILEGE_KEYS[0] || null;
-}
-const DEMO_STAFF = [
-  { id:'st001', name:'Adaeze Nwankwo', email:'adaeze@gracehotel.com', phone:'0803 111 2222', role:'admin', privilege:null, dept:'Executive', status:'Active', password:'demo1234', overrides:{} },
-  { id:'st002', name:'Chinedu Okafor', email:'chinedu@gracehotel.com', phone:'0803 222 3333', role:'manager', privilege:null, dept:'Front Desk', status:'Active', password:'demo1234', overrides:{} },
-  { id:'st003', name:'Emeka Success', email:'emeka.s@gracehotel.com', phone:'0803 333 4444', role:'staff', privilege:pickPrivilege('pool_bar_staff'), dept:'Pool Bar', status:'Active', password:'demo1234', overrides:{} },
-  { id:'st004', name:'Amaka Obi', email:'amaka.o@gracehotel.com', phone:'0803 444 5555', role:'staff', privilege:pickPrivilege('pool_bar_staff'), dept:'Pool Bar', status:'Active', password:'demo1234', overrides:{} },
-  { id:'st005', name:'Ngozi Adeyemi', email:'ngozi@gracehotel.com', phone:'0803 555 6666', role:'staff', privilege:pickPrivilege('sales_rep'), dept:'Restaurant', status:'Active', password:'demo1234', overrides:{} },
-  { id:'st006', name:'Ifeoma Kalu', email:'ifeoma@gracehotel.com', phone:'0803 666 7777', role:'staff', privilege:pickPrivilege('accountant'), dept:'Accounts', status:'Active', password:'demo1234', overrides:{} },
-  { id:'st007', name:'Tunde Bakare', email:'tunde@gracehotel.com', phone:'0803 777 8888', role:'staff', privilege:pickPrivilege('store_keeper'), dept:'Main Store', status:'Active', password:'demo1234', overrides:{} },
-  { id:'st008', name:'Musa Yakubu', email:'musa@gracehotel.com', phone:'0803 888 9999', role:'staff', privilege:pickPrivilege('front_desk'), dept:'Front Desk', status:'Inactive', password:'demo1234', overrides:{} },
-  { id:'st009', name:'Grace Eze', email:'grace.e@gracehotel.com', phone:'0803 999 0000', role:'manager', privilege:null, dept:'Procurement', status:'Active', password:'demo1234', overrides:{} },
-];
-
-function getBasePermission(staff, module, action){
-  if (staff.role === 'admin') return true;
-  if (staff.role === 'manager') return !!(PERMISSIONS.roles.manager || {})[action];
-  if (staff.privilege && PERMISSIONS.privileges[staff.privilege] && PERMISSIONS.privileges[staff.privilege][module]) {
-    return !!PERMISSIONS.privileges[staff.privilege][module][action];
-  }
-  return !!(PERMISSIONS.roles.staff || {})[action];
-}
-function getEffectivePermission(staff, module, action){
-  const ov = staff.overrides && staff.overrides[module] ? staff.overrides[module][action] : undefined;
-  return ov !== undefined ? ov : getBasePermission(staff, module, action);
-}
-
-function loadStaff(){
-  try {
-    const raw = localStorage.getItem(KEY_STAFF);
-    if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed) && parsed.length) return parsed; }
-  } catch(e){}
-  return JSON.parse(JSON.stringify(DEMO_STAFF));
-}
-function saveStaffList(list){ try { localStorage.setItem(KEY_STAFF, JSON.stringify(list)); } catch(e){} }
-
-let STAFF = loadStaff();
+let STAFF = [];
 let stPage = 1;
 const ST_PAGE_SIZE = 8;
 let filteredStaff = [];
@@ -475,7 +422,6 @@ let viewAsRole = 'admin';
 let deleteTargetId = null;
 
 function canManageStaff(){ return viewAsRole === 'admin'; }
-function initials(name){ return name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase(); }
 
 function onViewAsChange(){
   viewAsRole = document.getElementById('viewAsRole').value;
@@ -502,8 +448,6 @@ function switchTab(tab){
 }
 window.switchTab = switchTab;
 
-function labelize(key){ return String(key).replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase()); }
-
 function populateSelects(){
   document.getElementById('stPrivilege').innerHTML =
     `<option value="">All Privileges</option>` + PRIVILEGE_KEYS.map(p => `<option value="${p}">${labelize(p)}</option>`).join('');
@@ -523,26 +467,23 @@ function onFormRoleChange(){
 window.onFormRoleChange = onFormRoleChange;
 
 function renderKpis(){
-  const total = STAFF.length;
-  const active = STAFF.filter(s=>s.status==='Active').length;
-  const admins = STAFF.filter(s=>s.role==='admin'||s.role==='manager').length;
-  const depts = new Set(STAFF.map(s=>s.dept)).size;
+  const kpis = StaffService.dashboardKPIs();
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-users"></i></div><div class="kpi-label">Total Staff</div></div>
-      <div class="kpi-value">${total}</div><div class="kpi-trend">Across all departments</div>
+      <div class="kpi-value">${kpis.total}</div><div class="kpi-trend">Across all departments</div>
     </div>
     <div class="kpi-card acc-green">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Active</div></div>
-      <div class="kpi-value" style="color:#12b76a;">${active}</div><div class="kpi-trend up">${total?Math.round(active/total*100):0}% of staff</div>
+      <div class="kpi-value" style="color:#12b76a;">${kpis.active}</div><div class="kpi-trend up">${kpis.total?kpis.activePercent:0}% of staff</div>
     </div>
     <div class="kpi-card acc-purple">
       <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-user-shield"></i></div><div class="kpi-label">Admins &amp; Managers</div></div>
-      <div class="kpi-value" style="color:#8b5cf6;">${admins}</div><div class="kpi-trend">Elevated access</div>
+      <div class="kpi-value" style="color:#8b5cf6;">${kpis.admins}</div><div class="kpi-trend">Elevated access</div>
     </div>
     <div class="kpi-card acc-amber">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-building"></i></div><div class="kpi-label">Departments</div></div>
-      <div class="kpi-value" style="color:#f79009;">${depts}</div><div class="kpi-trend">Represented in directory</div>
+      <div class="kpi-value" style="color:#f79009;">${kpis.depts}</div><div class="kpi-trend">Represented in directory</div>
     </div>`;
 }
 
@@ -669,7 +610,7 @@ document.getElementById('staffModal').addEventListener('click', function(e){ if 
 
 function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
-function saveStaffForm(){
+async function saveStaffForm(){
   const id = document.getElementById('fsId').value;
   const name = document.getElementById('fsName').value.trim();
   const email = document.getElementById('fsEmail').value.trim();
@@ -688,31 +629,33 @@ function saveStaffForm(){
   if (!ok) return;
   const role = document.getElementById('fsRole').value;
   const existing = id ? STAFF.find(s=>s.id===id) : null;
-  const entry = {
-    id: id || ('st' + Date.now()),
+  const data = {
     name, email,
     phone: document.getElementById('fsPhone').value.trim(),
     role,
     privilege: role === 'staff' ? (document.getElementById('fsPrivilege').value || null) : null,
     dept: document.getElementById('fsDept').value.trim(),
     status: document.getElementById('fsStatus').value,
-    password: changingPw ? pw : (existing ? existing.password : pw),
+    password: changingPw ? pw : undefined,
     overrides: existing ? existing.overrides : {},
   };
-  if (id) {
-    const idx = STAFF.findIndex(s=>s.id===id);
-    if (idx > -1) STAFF[idx] = entry;
-  } else {
-    if (STAFF.some(s=>s.email.toLowerCase()===email.toLowerCase())) {
-      showToast('A staff member with that email already exists.', 'error');
-      return;
+  try {
+    if (id) {
+      await StaffService.editStaff(id, data);
+    } else {
+      if (STAFF.some(s=>s.email.toLowerCase()===email.toLowerCase())) {
+        showToast('A staff member with that email already exists.', 'error');
+        return;
+      }
+      await StaffService.addStaff(data);
     }
-    STAFF.push(entry);
+    STAFF = StaffService.state.staff;
+    closeStaffModal();
+    showToast(id ? `${name} updated.` : `${name} added to staff directory.`, 'success');
+    renderStaff();
+  } catch (e) {
+    showToast(e.message || 'Save failed.', 'error');
   }
-  saveStaffList(STAFF);
-  closeStaffModal();
-  showToast(id ? `${name} updated.` : `${name} added to staff directory.`, 'success');
-  renderStaff();
 }
 window.saveStaff = saveStaffForm;
 
@@ -721,20 +664,25 @@ function askDeleteStaff(id){
   const s = STAFF.find(x=>x.id===id);
   if (!s) return;
   deleteTargetId = id;
-  document.getElementById('confirmMsg').textContent = `Remove ${s.name} from the staff directory? This can't be undone in demo mode.`;
+  document.getElementById('confirmMsg').textContent = `Remove ${s.name} from the staff directory? This can't be undone.`;
   document.getElementById('confirmOverlay').classList.add('show');
 }
 window.askDeleteStaff = askDeleteStaff;
 function closeConfirm(){ document.getElementById('confirmOverlay').classList.remove('show'); deleteTargetId = null; }
 window.closeConfirm = closeConfirm;
-function confirmDeleteYes(){
+async function confirmDeleteYes(){
   if (!deleteTargetId) return closeConfirm();
   const s = STAFF.find(x=>x.id===deleteTargetId);
-  STAFF = STAFF.filter(x=>x.id!==deleteTargetId);
-  saveStaffList(STAFF);
-  closeConfirm();
-  showToast(`${s ? s.name : 'Staff member'} removed.`, 'success');
-  renderStaff();
+  try {
+    await StaffService.deleteStaff(deleteTargetId);
+    STAFF = StaffService.state.staff;
+    closeConfirm();
+    showToast(`${s ? s.name : 'Staff member'} removed.`, 'success');
+    renderStaff();
+  } catch (e) {
+    closeConfirm();
+    showToast(e.message || 'Delete failed.', 'error');
+  }
 }
 window.confirmDeleteYes = confirmDeleteYes;
 
@@ -795,14 +743,18 @@ function togglePermCell(module, action){
 window.togglePermCell = togglePermCell;
 function resetPermOverrides(){ workingOverrides = {}; renderPermGrid(); }
 window.resetPermOverrides = resetPermOverrides;
-function savePermOverrides(){
-  const idx = STAFF.findIndex(x=>x.id===permTargetId);
-  if (idx === -1) return;
-  STAFF[idx].overrides = workingOverrides;
-  saveStaffList(STAFF);
-  showToast(`Permissions updated for ${STAFF[idx].name}.`, 'success');
-  closePermModal();
-  renderStaff();
+async function savePermOverrides(){
+  const s = STAFF.find(x=>x.id===permTargetId);
+  if (!s) return;
+  try {
+    await StaffService.editStaff(permTargetId, { overrides: workingOverrides });
+    STAFF = StaffService.state.staff;
+    showToast(`Permissions updated for ${s.name}.`, 'success');
+    closePermModal();
+    renderStaff();
+  } catch (e) {
+    showToast(e.message || 'Save failed.', 'error');
+  }
 }
 window.savePermOverrides = savePermOverrides;
 
@@ -850,12 +802,17 @@ function showToast(msg, type='success'){
   setTimeout(() => t.remove(), 3400);
 }
 
-populateSelects();
-applyPermissionGates();
-renderStaff();
-renderRolesMatrix();
-renderPrivilegeMatrix();
-if (location.hash === '#perms') switchTab('perms');
+/* ── Init (async — loads from API in prod mode) ── */
+(async function init(){
+  await StaffService.loadAll();
+  STAFF = StaffService.state.staff;
+  populateSelects();
+  applyPermissionGates();
+  renderStaff();
+  renderRolesMatrix();
+  renderPrivilegeMatrix();
+  if (location.hash === '#perms') switchTab('perms');
+})();
 </script>
 </body>
 </html>

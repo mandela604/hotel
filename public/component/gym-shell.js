@@ -2,13 +2,9 @@
    GymShell — sidebar + topbar for the standalone Gym module.
    Drop this in as component/gym-shell.js.
 
-   Wired to match RestaurantShell / PoolBarShell / KitchenShell:
-
-   Session rules:
-     USE_DEMO true  → always DEMO_USER
-     USE_DEMO false → GET /api/auth/session
-                      success → real user
-                      failure → redirect to LOGIN_URL (no demo fallback)
+   Session: GET /api/auth/session
+            success → real user
+            failure → redirect to LOGIN_URL
    Pages read session only via shell.getUser().
 
    Nav visibility:
@@ -26,8 +22,8 @@
      });
      shell.setPendingBadge(3);    // badge on "Check-in Log"
      shell.setExpiringBadge(2);   // badge on "Members" (expiring count)
-     shell.getUser();             // current session user (null until Live session resolves)
-     shell.getConfig();           // { API_BASE, USE_DEMO, LOGIN_URL, DEMO_USER }
+     shell.getUser();             // current session user (null until session resolves)
+     shell.getConfig();           // { API_BASE, LOGIN_URL }
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -179,12 +175,10 @@
     document.head.appendChild(s);
   }
 
-  // ── CONFIG — the only place to change Demo↔Live ──
+  // ── CONFIG ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
     LOGIN_URL: '../login.html',
-    DEMO_USER: { name: 'Gym Attendant', initials: 'GA', role: 'manager', privilege: 'gym_staff' },
   };
 
   function goLogin(reason) {
@@ -195,15 +189,10 @@
   }
 
   /**
-   * Demo  → DEMO_USER
-   * Live  → real user from API
-   * Live fail → redirect (never returns demo)
+   * GET /api/auth/session → real user
+   * Failure → redirect to login (never returns fallback)
    */
   async function fetchSession() {
-    if (CONFIG.USE_DEMO) {
-      return CONFIG.DEMO_USER;
-    }
-
     try {
       const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
         credentials: 'include',
@@ -247,8 +236,8 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
-    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    // Start empty until API responds (or redirect).
+    let user = opts.user || null;
     let initials = user
       ? (user.initials || (user.name || 'GA').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
       : '…';
@@ -295,7 +284,7 @@
         <div class="gym-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="gym-date" id="gym-date"></div>
-          <div class="gym-apibadge" id="gym-apiBadge"><span class="dot"></span><span id="gym-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
+          <div class="gym-apibadge" id="gym-apiBadge"><span class="dot"></span><span id="gym-apiLabel">Live</span></div>
           <div class="gym-notif"><i class="fa-regular fa-bell"></i><div class="gym-notifdot"></div></div>
           <div class="gym-avatar" id="gym-avatar">${initials}</div>
         </div>
@@ -387,7 +376,6 @@
       },
     };
 
-    // Demo mode already has a user synchronously — apply nav visibility now too.
     applyNavVisibility(user);
 
     fetchSession().then(function (sessionUser) {
@@ -399,7 +387,7 @@
         avatar.textContent = initials;
         avatar.title = user.name || '';
       }
-      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+      handle.setApiMode('Live');
       applyNavVisibility(user);
     });
 

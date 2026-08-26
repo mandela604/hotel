@@ -1,14 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════
    KitchenShell — sidebar + topbar for the standalone Kitchen
    module. Drop this in as component/kitchen-shell.js.
-   Sibling of component/poolbar-shell.js — same structure, same
-   CONFIG/session rules, just Kitchen's own nav.
+   Sibling of component/poolbar-shell.js — same structure.
 
-   Session rules:
-     USE_DEMO true  → always DEMO_USER
-     USE_DEMO false → GET /api/auth/session
-                      success → real user
-                      failure → redirect to LOGIN_URL (no demo fallback)
+   Session: GET /api/auth/session
+            success → real user
+            failure → redirect to LOGIN_URL
    Pages read session only via shell.getUser().
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
@@ -167,23 +164,18 @@
   };
 
   function getToken() {
-    try { return localStorage.getItem('token'); } catch (e) { return null; }
+    // httpOnly cookie is sent automatically — no localStorage token needed.
+    return '';
   }
 
   function redirectToLogin() {
-    try { localStorage.removeItem('token'); localStorage.removeItem('aurum_user'); } catch (e) {}
+    try { localStorage.removeItem('aurum_user'); } catch (e) {}
     window.location.href = CONFIG.LOGIN_URL;
   }
 
   async function fetchSession() {
-    const token = getToken();
-    if (!token) { redirectToLogin(); return null; }
-
     try {
-      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, { credentials: 'include' });      const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || `Session API returned ${res.status}`);
       return {
         name: data.name,

@@ -184,7 +184,7 @@ body{
         <div class="panel">
           <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
           <div class="quick-grid">
-            <a class="quick-btn" href="new-request.html"><i class="fa-solid fa-plus"></i> New Request</a>
+            <a class="quick-btn" href="store-new-request.html"><i class="fa-solid fa-plus"></i> New Request</a>
             <a class="quick-btn" href="store-approval.html"><i class="fa-solid fa-check"></i> Approve Issue</a>
             <a class="quick-btn" href="stock.html"><i class="fa-solid fa-boxes-stacked"></i> Manage Stock</a>
             <a class="quick-btn" href="all-requisitions.html"><i class="fa-solid fa-list-check"></i> All Requisitions</a>
@@ -197,7 +197,7 @@ body{
 </div>
 
 <!-- Load order: data seed → service → shell → page script (plain scripts, no ES modules — matches every other module shell in this suite) -->
-<script src="data/store-seed.js"></script>
+
 <script src="services/store-service.js"></script>
 <script src="../component/store-shell.js"></script>
 <script>
@@ -350,7 +350,7 @@ function paint(){
 
 async function init(){
   if (!svc) {
-    console.error('[Dashboard] StoreService not loaded — check script order: data/store-seed.js → services/store-service.js → this page.');
+    console.error('[Dashboard] StoreService not loaded — check script order: services/store-service.js → this page.');
     showToast('StoreService not loaded.', 'error');
     ['pendingList','stockAlerts','activityFeed'].forEach(id => {
       document.getElementById(id).innerHTML = '<div class="empty-note">Could not load data. Please refresh.</div>';

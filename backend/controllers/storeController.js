@@ -4,7 +4,7 @@ const StoreStock = require('../models/StoreStock');
 const Requisition = require('../models/Requisition');
 const Counter = require('../models/Counter');
 
-const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Bar: 'BREQ', 'Front Desk': 'FREQ', Maintenance: 'MREQ', Store: 'PR' };
+const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
 
 function actorName(req) {
   return (req.user && (req.user.name || req.user.role)) || 'User';
@@ -169,7 +169,7 @@ exports.peekNextRequisitionNumber = asyncHandler(async (req, res) => {
 });
 
 exports.getRequisition = asyncHandler(async (req, res) => {
-  const row = await Requisition.findOne({ no: req.params.no });
+  const row = await Requisition.findOne({ requisitionNo: req.params.no });
   if (!row) throw new ApiError(404, `Requisition ${req.params.no} not found.`);
   res.json({ success: true, data: row });
 });
@@ -180,11 +180,12 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
 
   const no = await nextNumber(dept, finalMode);
   const row = await Requisition.create({
-    no,
+    id: no,
+    requisitionNo: no,
     mode: finalMode,
-    by: by.trim(),
+    requester: by.trim(),
     dept,
-    needed,
+    neededBy: needed,
     priority: priority || 'Normal',
     remark: (remark || '').trim(),
     fulfillStore: finalMode === 'store_issue' ? (fulfillStore || 'Central Store') : null,
@@ -201,6 +202,36 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: row });
 });
 
+exports.updateRequisition = asyncHandler(async (req, res) => {
+  const row = await Requisition.findOne({ requisitionNo: req.params.no });
+  if (!row) throw new ApiError(404, `Requisition ${req.params.no} not found.`);
+
+  if (row.status !== 'Pending' && row.status !== 'Rejected') {
+    throw new ApiError(400, 'Can only edit requisitions that are Pending or Rejected.');
+  }
+
+  const { by, dept, needed, priority, remark, fulfillStore, supplier, linked, items } = req.body;
+
+  if (by !== undefined) row.requester = by.trim();
+  if (dept !== undefined) row.dept = dept;
+  if (needed !== undefined) row.neededBy = needed;
+  if (priority !== undefined) row.priority = priority;
+  if (remark !== undefined) row.remark = remark.trim();
+  if (row.mode === 'store_issue' && fulfillStore !== undefined) row.fulfillStore = fulfillStore || 'Central Store';
+  if (row.mode === 'purchase' && supplier !== undefined) row.supplier = supplier.trim();
+  if (row.mode === 'purchase' && linked !== undefined) row.linked = linked.trim();
+  if (Array.isArray(items)) {
+    row.items = items.map((i) => ({
+      name: (i.name || '').trim(), unit: i.unit || 'unit', qty: Number(i.qty) || 0,
+      cost: Number(i.cost) || 0, remark: i.remark || '', issuedQty: i.issuedQty || 0,
+    }));
+  }
+  if (row.status === 'Rejected') row.status = 'Pending';
+
+  await row.save();
+  res.json({ success: true, data: row });
+});
+
 /**
  * Approve & issue items against a Store-issue requisition. Deducts stock
  * only for the DELTA between what was previously issued and what's
@@ -208,12 +239,15 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
  * same rule as approveAndIssue() on the frontend.
  */
 exports.issueRequisition = asyncHandler(async (req, res) => {
-  const row = await Requisition.findOne({ no: req.params.no });
+  const row = await Requisition.findOne({ requisitionNo: req.params.no });
   if (!row) throw new ApiError(404, `Requisition ${req.params.no} not found.`);
   if (row.mode !== 'store_issue') throw new ApiError(400, 'Only Store-issue requisitions can be issued from here.');
   if (row.status === 'Rejected') throw new ApiError(400, 'This requisition was rejected and cannot be issued.');
 
   const { issuedQtyByItem } = req.body;
+
+  // Phase 1: resolve all items and compute deltas — NO writes yet.
+  const plan = [];
   let totalReq = 0, totalIssued = 0;
 
   for (const it of row.items) {
@@ -222,16 +256,20 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
     const avail = stockItem ? stockItem.qty : 0;
     const raw = Object.prototype.hasOwnProperty.call(issuedQtyByItem, it.name) ? issuedQtyByItem[it.name] : prevIssued;
     const issued = Math.max(0, Math.min(Number(raw) || 0, avail + prevIssued, it.qty));
-
     const delta = issued - prevIssued;
-    if (delta > 0 && stockItem) {
-      stockItem.qty = Math.max(0, stockItem.qty - delta);
-      await stockItem.save();
-    }
 
-    it.issuedQty = issued;
+    plan.push({ it, stockItem, delta, issued });
     totalReq += it.qty;
     totalIssued += issued;
+  }
+
+  // Phase 2: apply all stock deductions — if any fails, none are applied.
+  for (const entry of plan) {
+    if (entry.delta > 0 && entry.stockItem) {
+      entry.stockItem.qty = Math.max(0, entry.stockItem.qty - entry.delta);
+      await entry.stockItem.save();
+    }
+    entry.it.issuedQty = entry.issued;
   }
 
   row.status = totalIssued >= totalReq ? 'Full' : totalIssued > 0 ? 'Partial' : 'Pending';
@@ -241,7 +279,7 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
 
 exports.rejectRequisition = asyncHandler(async (req, res) => {
   const row = await Requisition.findOneAndUpdate(
-    { no: req.params.no },
+    { requisitionNo: req.params.no },
     { $set: { status: 'Rejected', rejectReason: req.body.reason.trim() } },
     { new: true }
   );
@@ -250,7 +288,7 @@ exports.rejectRequisition = asyncHandler(async (req, res) => {
 });
 
 exports.confirmReceipt = asyncHandler(async (req, res) => {
-  const row = await Requisition.findOne({ no: req.params.no });
+  const row = await Requisition.findOne({ requisitionNo: req.params.no });
   if (!row) throw new ApiError(404, `Requisition ${req.params.no} not found.`);
   if (row.status !== 'Full' && row.status !== 'Partial') {
     throw new ApiError(400, 'Only a Full or Partial requisition can be confirmed received.');
@@ -261,7 +299,7 @@ exports.confirmReceipt = asyncHandler(async (req, res) => {
 });
 
 exports.disputeDelivery = asyncHandler(async (req, res) => {
-  const row = await Requisition.findOne({ no: req.params.no });
+  const row = await Requisition.findOne({ requisitionNo: req.params.no });
   if (!row) throw new ApiError(404, `Requisition ${req.params.no} not found.`);
   if (row.status !== 'Full' && row.status !== 'Partial') {
     throw new ApiError(400, 'Only a Full or Partial requisition can be disputed.');

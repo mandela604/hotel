@@ -2,24 +2,21 @@
    StoreShell — sidebar + topbar for the standalone Store module.
    Drop this in as component/store-shell.js.
 
-   Rebuilt to match PoolBarShell / RestaurantShell structure exactly
-   (previous version copied booking-shell.js's fall-back-to-demo
-   pattern instead — that's now fixed).
-
-   Session rules (same as PoolBarShell / RestaurantShell):
-     USE_DEMO true  → always DEMO_USER
-     USE_DEMO false → GET /api/auth/session
-                      success → real user
-                      failure → redirect to LOGIN_URL (no demo fallback)
+   Session rules:
+     GET /api/auth/session (httpOnly cookie)
+     success → real user
+     failure → redirect to LOGIN_URL
    Pages read session only via shell.getUser().
+   AUTH: httpOnly cookie sent automatically via credentials:'include'.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
   const NAV = [
-    { key: 'dashboard',    label: 'Dashboard',     href: 'store-dashboard.html',  icon: 'fa-solid fa-gauge-high' },
-    { key: 'stock',        label: 'Stock',         href: 'stock.html',            icon: 'fa-solid fa-box' },
-    { key: 'requisitions', label: 'Requisitions',  href: 'all-requisitions.html', icon: 'fa-solid fa-clipboard-list', badgeKey: 'pending' },
-    { key: 'goodsreceipt', label: 'Goods Receipt', href: 'goods-receipt.html',    icon: 'fa-solid fa-truck-ramp-box' },
+    { key: 'dashboard',    label: 'Dashboard',          href: 'store-dashboard.html',       icon: 'fa-solid fa-gauge-high' },
+    { key: 'stock',        label: 'Stock',              href: 'stock.html',                 icon: 'fa-solid fa-box' },
+    { key: 'approval',     label: 'Approve Issue',      href: 'store-approval.html',        icon: 'fa-solid fa-check-double', badgeKey: 'pending' },
+    { key: 'newrequest',   label: 'New Request',        href: 'store-new-request.html',     icon: 'fa-solid fa-plus-circle' },
+    { key: 'requisitions', label: 'All Requisitions',   href: 'all-requisitions.html',      icon: 'fa-solid fa-clipboard-list' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";
@@ -162,12 +159,10 @@
     document.head.appendChild(s);
   }
 
-  // ── CONFIG — the only place to change Demo↔Live ──
+  // ── CONFIG ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
     LOGIN_URL: '../login.html',
-    DEMO_USER: { name: 'Store Manager', initials: 'SM', role: 'staff', privilege: 'store_keeper' },
   };
 
   function goLogin(reason) {
@@ -178,15 +173,10 @@
   }
 
   /**
-   * Demo  → DEMO_USER
-   * Live  → real user from API
-   * Live fail → redirect (never returns demo)
+   * Live  → real user from API. The httpOnly cookie is sent automatically.
+   * Live fail (401/403, bad response) → redirect.
    */
   async function fetchSession() {
-    if (CONFIG.USE_DEMO) {
-      return CONFIG.DEMO_USER;
-    }
-
     try {
       const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
         credentials: 'include',
@@ -222,8 +212,8 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
-    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    // Start empty until API responds (or redirect).
+    let user = opts.user || null;
     let initials = user
       ? (user.initials || (user.name || 'SM').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
       : '…';
@@ -270,7 +260,7 @@
         <div class="gs-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="gs-date" id="gs-date"></div>
-          <div class="gs-apibadge" id="gs-apiBadge"><span class="dot"></span><span id="gs-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
+          <div class="gs-apibadge" id="gs-apiBadge"><span class="dot"></span><span id="gs-apiLabel">Live</span></div>
           <div class="gs-notif"><i class="fa-regular fa-bell"></i><div class="gs-notifdot"></div></div>
           <div class="gs-avatar" id="gs-avatar">${initials}</div>
         </div>
@@ -365,7 +355,7 @@
         avatar.textContent = initials;
         avatar.title = user.name || '';
       }
-      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+      handle.setApiMode('Live');
     });
 
     return handle;

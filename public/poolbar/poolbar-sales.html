@@ -180,6 +180,12 @@ let filterBar = null;
 let salesTable = null;
 let filterState = null;
 
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function applyModuleBranding() {
   const dept = svc.getDepartmentName();
   const titleTag = document.getElementById('pageTitleTag');
@@ -281,7 +287,7 @@ function showToast(msg, type) {
   const t = document.createElement('div');
   t.className = 'toast ' + type;
   const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + escapeHtml(msg);
   document.body.appendChild(t);
   setTimeout(function () { t.remove(); }, 3400);
 }

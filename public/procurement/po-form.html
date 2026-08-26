@@ -252,8 +252,7 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/procurement-seed.js"></script>
-<script src="services/procurement-service.js"></script>
+  <script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -274,7 +273,7 @@ const shell = ProcurementShell.attach({
   activeFile:    'new-purchase-order.html',
   pageTitle:     EDIT_MODE ? 'Edit Purchase Order' : 'New Purchase Order',
   pageSubtitle:  EDIT_MODE ? 'Update an existing purchase order' : 'Create and track purchase orders',
-  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  apiMode:       'Live',
   user:          { name: session.name, initials: session.initials },
 });
 
@@ -338,9 +337,7 @@ function hideItemSuggestions(){
 
 /* ═══════════════════════════════════════════════
    SUPPLIER OPTIONS — always sourced through
-   ProcurementService.getSuppliers(), which branches on
-   CONFIG.USE_PROD internally. Never read DEMO_SUPPLIERS
-   directly here.
+   ProcurementService.getSuppliers().
 ═══════════════════════════════════════════════ */
 async function loadSupplierOptions(selected){
   const sel = document.getElementById('fSupplier');

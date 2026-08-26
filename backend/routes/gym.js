@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const roleGuard = require('../middleware/roleGuard');
+const { departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const v = require('../middleware/gymvalidators');
 const {
   listPlans,
@@ -25,42 +25,42 @@ const {
 
 router.use(auth);
 
-const canManage = roleGuard(['admin', 'manager', 'gym_attendant']);
+const inDept  = departmentGuard('Gym');
 
 /* Plans */
 router.route('/plans')
   .get(listPlans)
-  .post(canManage, v.validateCreatePlan, createPlan);
+  .post(inDept, privilegeGuard('gym', 'canCreate'), v.validateCreatePlan, createPlan);
 router.route('/plans/:id')
-  .put(canManage, v.validateParam('id'), v.validateUpdatePlan, updatePlan)
-  .delete(canManage, v.validateParam('id'), deletePlan);
+  .put(inDept, privilegeGuard('gym', 'canEdit'), v.validateParam('id'), v.validateUpdatePlan, updatePlan)
+  .delete(inDept, privilegeGuard('gym', 'canDelete'), v.validateParam('id'), deletePlan);
 
 /* Members */
 router.route('/members')
   .get(listMembers)
-  .post(canManage, v.validateCreateMember, createMember);
+  .post(inDept, privilegeGuard('gym', 'canCreate'), v.validateCreateMember, createMember);
 router.route('/members/:id')
-  .put(canManage, v.validateParam('id'), v.validateUpdateMember, updateMember)
-  .delete(canManage, v.validateParam('id'), deleteMember);
+  .put(inDept, privilegeGuard('gym', 'canEdit'), v.validateParam('id'), v.validateUpdateMember, updateMember)
+  .delete(inDept, privilegeGuard('gym', 'canDelete'), v.validateParam('id'), deleteMember);
 
 /* Member payments (partial payments, incl. Room Charge) */
-router.post('/members/:id/payments', v.validateParam('id'), v.validateAddPayment, addMemberPayment);
+router.post('/members/:id/payments', inDept, privilegeGuard('gym', 'canCreate'), v.validateParam('id'), v.validateAddPayment, addMemberPayment);
 
 /* Renew membership */
-router.post('/members/:id/renew', canManage, v.validateParam('id'), v.validateRenewMember, renewMember);
+router.post('/members/:id/renew', inDept, privilegeGuard('gym', 'canCreate'), v.validateParam('id'), v.validateRenewMember, renewMember);
 
 /* Check-ins — createCheckin itself enforces expired/frozen guard */
 router.route('/checkins')
   .get(listCheckins)
-  .post(v.validateCreateCheckin, createCheckin);
+  .post(inDept, privilegeGuard('gym', 'canCheckin'), v.validateCreateCheckin, createCheckin);
 
 /* Guest passes */
 router.route('/guests')
   .get(listGuests)
-  .post(canManage, v.validateCreateGuest, createGuest);
-router.delete('/guests/:id', canManage, v.validateParam('id'), deleteGuest);
+  .post(inDept, privilegeGuard('gym', 'canCreate'), v.validateCreateGuest, createGuest);
+router.delete('/guests/:id', inDept, privilegeGuard('gym', 'canDelete'), v.validateParam('id'), deleteGuest);
 
 /* Revenue report */
-router.route('/revenue').get(revenue);
+router.route('/revenue').get(inDept, privilegeGuard('gym', 'canViewReports'), revenue);
 
 module.exports = router;

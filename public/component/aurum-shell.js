@@ -1,8 +1,7 @@
 /**
  * aurum-shell.js — Aurum Hotel Reusable Sidebar + Topbar
  * 
- * Rebuilt to match booking-shell.js pattern exactly: fetches session
- * from API when USE_DEMO = false, falls back to demo user otherwise.
+ * Fetches session from API via /api/auth/session.
  * All pages get session via shell.getUser() for permission checks.
  */
 (function () {
@@ -18,22 +17,18 @@
   };
 
   function getToken() {
-    try { return localStorage.getItem('token'); } catch (e) { return null; }
+    // httpOnly cookie is sent automatically — no localStorage token needed.
+    return '';
   }
 
   function redirectToLogin() {
-    try { localStorage.removeItem('token'); localStorage.removeItem('aurum_user'); } catch (e) {}
+    try { localStorage.removeItem('aurum_user'); } catch (e) {}
     window.location.href = CONFIG.LOGIN_URL;
   }
 
   async function fetchSession() {
-    const token = getToken();
-    if (!token) { redirectToLogin(); return null; }
-
     try {
-      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`);
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || `Session API returned ${res.status}`);
       return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege, department: data.department };

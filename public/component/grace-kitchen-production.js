@@ -9,7 +9,7 @@
  *     departments: ['Main Restaurant / POS','Pool Bar','Room Service'],
  *     departmentsApiUrl: '/api/settings/departments',
  *     openOrders: [{ id:'ORD-1057', label:'ORD-1057 — Table 4, 2 covers' }, ...],
- *     cfg: { API_BASE:'', API_KEY:'', USE_DEMO:true },
+ *     cfg: { API_BASE:'', API_KEY:'' },
  *     kitchenName: 'Main Kitchen',
  *     storage: myStorageAdapter,
  *     onSave: (batch) => { ... },
@@ -254,7 +254,7 @@ const COMMON_UNITS = [
 
     const instId = 'gkp' + (++_instanceCounter);
     const storage = options.storage || DEFAULT_STORAGE;
-    const cfg = Object.assign({ API_BASE: '', API_KEY: '', USE_DEMO: true }, options.cfg || {});
+    const cfg = Object.assign({ API_BASE: '', API_KEY: '' }, options.cfg || {});
     const KITCHEN_NAME = options.kitchenName || 'Main Kitchen';
     const openOrders = options.openOrders || DEFAULT_OPEN_ORDERS;
     let departments = (options.departments && options.departments.length) ? options.departments.slice() : DEFAULT_DEPARTMENTS.slice();
@@ -797,7 +797,7 @@ const COMMON_UNITS = [
     }
 
     async function loadDepartments() {
-      if (cfg.USE_DEMO || !options.departmentsApiUrl) return;
+      if (!options.departmentsApiUrl) return;
       try {
         const opts = { headers: {} };
         if (cfg.API_KEY) opts.headers['Authorization'] = `Bearer ${cfg.API_KEY}`;

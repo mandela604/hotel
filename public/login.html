@@ -1,33 +1,28 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Sign In | Aurum Hotel</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Sign In | Grace Hotel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --gold: #c9a84c; --gold-light: #e8c96a; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.25);
-  --green: #4ade80; --green-bg: rgba(74,222,128,0.12);
-  --red: #f87171; --red-bg: rgba(248,113,113,0.12);
-  --amber: #fbbf24; --amber-bg: rgba(251,191,36,0.12);
-  --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1);
-}
-[data-theme="dark"] {
-  --bg: #080f18; --bg2: #0d1822; --surface: #111e2b; --surface2: #162435; --surface3: #1c2e40;
-  --border: #1e3045; --border2: #243850; --text: #e8f0f8; --text2: #a8bece; --text3: #6a8a9e;
-  --shadow: 0 8px 32px rgba(0,0,0,0.5); --shadow-lg: 0 16px 48px rgba(0,0,0,0.6);
-}
-[data-theme="light"] {
-  --bg: #eef2f7; --bg2: #e6ecf3; --surface: #ffffff; --surface2: #f4f7fb; --surface3: #e8edf5;
-  --border: #dce4ef; --border2: #ccd6e5; --text: #0f2237; --text2: #4a6580; --text3: #8aa0b8;
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
+  --border: #eef0f6; --border2: #dfe3ec;
+  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
   --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
+  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
+  --green: #12b76a; --green-bg: #e9f9f0;
+  --red: #f04438; --red-bg: #feecec;
+  --amber: #f79009; --amber-bg: #fff4e5;
+  --radius: 14px; --radius-sm: 10px; --transition: 0.3s cubic-bezier(.4,0,.2,1);
 }
 html, body { height: 100%; }
 body {
-  font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+  font-size: 13px; background: var(--bg); color: var(--text);
   display: flex; align-items: center; justify-content: center; min-height: 100vh;
   padding: 20px; transition: background var(--transition), color var(--transition);
 }
@@ -36,13 +31,13 @@ body {
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
 .brand { text-align: center; margin-bottom: 4px; }
-.brand-icon { width: 56px; height: 56px; background: linear-gradient(135deg, var(--gold), var(--gold-light)); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; color: #000; margin: 0 auto 12px; }
-.brand-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 700; color: var(--gold); }
-.brand-sub { font-size: 12px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+.brand-icon { width: 56px; height: 56px; background: linear-gradient(135deg, var(--gold), var(--gold-light)); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #fff; margin: 0 auto 12px; }
+.brand-name { font-size: 22px; font-weight: 700; color: var(--gold); }
+.brand-sub { font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); overflow: hidden; }
-.card-head { padding: 20px 24px 0; }
-.card-head .title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--text); }
+.card-head { padding: 22px 24px 0; }
+.card-head .title { font-size: 17px; font-weight: 700; color: var(--text); }
 .card-head .sub { font-size: 12.5px; color: var(--text3); margin-top: 4px; }
 .card-body { padding: 20px 24px 24px; }
 
@@ -54,29 +49,25 @@ body {
 
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
-.form-input { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 14px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; transition: border-color .2s; }
+.form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 14px; color: var(--text); font-family: inherit; font-size: 13px; outline: none; transition: border-color .2s; }
 .form-input:focus { border-color: var(--gold-border); }
 .form-input.err { border-color: var(--red); }
 .form-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
 .form-error.show { display: block; }
 .form-note { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
-.submit-btn { width: 100%; padding: 13px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; background: var(--gold); color: #0a1520; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.submit-btn { width: 100%; padding: 12px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; background: var(--gold); color: #fff; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .submit-btn:hover { background: var(--gold-light); }
 .submit-btn:disabled { opacity: .6; cursor: default; }
 
 .locked-note { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 12.5px; color: var(--text2); line-height: 1.5; text-align: center; }
-
-.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 100; }
-.theme-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all .2s; }
-.theme-btn:hover { border-color: var(--gold-border); color: var(--gold); }
 
 .toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 16px; font-size: 12.5px; color: var(--text); box-shadow: var(--shadow-lg); z-index: 9999; display: flex; align-items: center; gap: 8px; animation: toastIn .3s ease; max-width: calc(100vw - 40px); font-family: inherit; }
 .toast.success { border-left: 3px solid var(--green); }
 .toast.error { border-left: 3px solid var(--red); }
 @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-.spinner { width: 14px; height: 14px; border: 2px solid rgba(10,21,32,0.3); border-top-color: #0a1520; border-radius: 50%; animation: spin .7s linear infinite; }
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -85,14 +76,10 @@ body {
 </head>
 <body>
 
-<div class="theme-toggle">
-  <button class="theme-btn" id="themeToggle" title="Toggle theme">🌙</button>
-</div>
-
 <div class="login-wrap">
   <div class="brand">
-    <div class="brand-icon">A</div>
-    <div class="brand-name">Aurum Hotel</div>
+    <div class="brand-icon"><i class="fa-solid fa-building"></i></div>
+    <div class="brand-name">Grace Hotel</div>
     <div class="brand-sub">Management Suite</div>
   </div>
 
@@ -119,7 +106,7 @@ body {
           <input class="form-input" id="loginPass" type="password" placeholder="Enter password" autocomplete="current-password">
           <div class="form-error" id="loginPassErr">Invalid credentials.</div>
         </div>
-        <button class="submit-btn" id="loginBtn"><span id="loginBtnLabel">◈ Sign In</span></button>
+        <button class="submit-btn" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i> <span id="loginBtnLabel">Sign In</span></button>
       </div>
 
       <!-- Sign Up: only ever creates the FIRST account, which the
@@ -142,7 +129,7 @@ body {
           <div class="form-error" id="signupPassErr">Password must be at least 6 characters.</div>
           <div class="form-note">This account becomes the administrator. There's no other way to create it later.</div>
         </div>
-        <button class="submit-btn" id="signupBtn"><span id="signupBtnLabel">✦ Create Admin Account</span></button>
+        <button class="submit-btn" id="signupBtn"><i class="fa-solid fa-user-shield"></i> <span id="signupBtnLabel">Create Admin Account</span></button>
       </div>
 
       <!-- Shown instead of the Sign Up tab once bootstrapping is done. -->
@@ -153,7 +140,7 @@ body {
   </div>
 
   <div style="text-align:center;font-size:11px;color:var(--text3);">
-    Aurum Hotel Management Suite
+    Grace Hotel Management Suite
   </div>
 </div>
 
@@ -162,7 +149,7 @@ body {
   'use strict';
 
   function storeAuth(token, user) {
-    try { if (token) localStorage.setItem('token', token); } catch (e) {}
+    // Token is set as httpOnly cookie by the server — do NOT store in localStorage.
     try { if (user) localStorage.setItem('aurum_user', JSON.stringify(user)); } catch (e) {}
   }
 
@@ -171,6 +158,8 @@ body {
       method: method || 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      credentials: 'include'
+
     });
     let payload;
     try { payload = await res.json(); }
@@ -181,18 +170,7 @@ body {
     return payload;
   }
 
-  let isDark = true;
   const $ = id => document.getElementById(id);
-
-  /* ── Theme ── */
-  function applyTheme() {
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    $('themeToggle').textContent = isDark ? '☀️' : '🌙';
-    try { localStorage.setItem('aurum-theme', isDark ? 'dark' : 'light'); } catch (e) {}
-  }
-  try { isDark = (localStorage.getItem('aurum-theme') || 'dark') !== 'light'; } catch (e) {}
-  applyTheme();
-  $('themeToggle').addEventListener('click', () => { isDark = !isDark; applyTheme(); });
 
   /* ── Tab switching ── */
   function switchTab(tab) {
@@ -210,18 +188,18 @@ body {
   function showToast(msg, type) {
     const t = document.createElement('div');
     t.className = 'toast ' + (type === 'error' ? 'error' : 'success');
-    t.textContent = (type === 'error' ? '✕ ' : '✓ ') + msg;
+    t.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-xmark' : 'fa-circle-check'}"></i> ${msg}`;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3200);
   }
 
-  function setBusy(btn, label, busyText) {
+  function setBusy(btn, busyText) {
     btn.disabled = true;
-    label.innerHTML = `<span class="spinner"></span> ${busyText}`;
+    btn.innerHTML = `<span class="spinner"></span> ${busyText}`;
   }
-  function clearBusy(btn, label, restText) {
+  function clearBusy(btn, icon, restText) {
     btn.disabled = false;
-    label.textContent = restText;
+    btn.innerHTML = `<i class="fa-solid ${icon}"></i> ${restText}`;
   }
 
   /* ── Sign In ── */
@@ -235,11 +213,9 @@ body {
     if (!email) { $('loginEmailErr').classList.add('show'); return; }
     if (!pass) { $('loginPassErr').textContent = 'Please enter your password.'; $('loginPassErr').classList.add('show'); return; }
 
-    const btn = $('loginBtn'), label = $('loginBtnLabel');
-    setBusy(btn, label, 'Signing in…');
+    setBusy($('loginBtn'), 'Signing in...');
 
     try {
-      // Confirmed shape from authController.login: { success, token, user }
       const payload = await apiCall('/login', { email, password: pass });
       storeAuth(payload.token, payload.user);
       showToast('Signed in' + (payload.user && payload.user.name ? ' as ' + payload.user.name : ''), 'success');
@@ -247,7 +223,7 @@ body {
     } catch (err) {
       $('loginPassErr').textContent = err.message || 'Could not sign in.';
       $('loginPassErr').classList.add('show');
-      clearBusy(btn, label, '◈ Sign In');
+      clearBusy($('loginBtn'), 'fa-right-to-bracket', 'Sign In');
     }
   });
 
@@ -267,12 +243,9 @@ body {
 
     if (!valid) return;
 
-    const btn = $('signupBtn'), label = $('signupBtnLabel');
-    setBusy(btn, label, 'Creating admin account…');
+    setBusy($('signupBtn'), 'Creating admin account...');
 
     try {
-      // authController.signup only ever succeeds once — every account
-      // after the first is rejected with 403 by the server itself.
       const payload = await apiCall('/signup', { name, email, password: pass });
       storeAuth(payload.token, payload.user);
       showToast('Administrator account created. Welcome, ' + name, 'success');
@@ -280,7 +253,7 @@ body {
     } catch (err) {
       $('signupPassErr').textContent = err.message || 'Could not create account.';
       $('signupPassErr').classList.add('show');
-      clearBusy(btn, label, '✦ Create Admin Account');
+      clearBusy($('signupBtn'), 'fa-user-shield', 'Create Admin Account');
     }
   });
 
@@ -291,7 +264,7 @@ body {
      letting people hit a 403. ── */
   async function checkBootstrapStatus() {
     try {
-      const res = await fetch('/api/auth/bootstrap-status');
+      const res = await fetch('/api/auth/bootstrap-status', { credentials: 'include' });
       const payload = await res.json();
       if (payload.bootstrapped) {
         $('tabRow').classList.add('hidden');
@@ -299,30 +272,23 @@ body {
         switchTab('signin');
       }
     } catch (e) {
-      // If this check fails, leave the Sign Up tab visible — the
-      // server enforces the real rule either way, this is only UI polish.
       console.warn('[Login] bootstrap-status check failed:', e.message);
     }
   }
   checkBootstrapStatus();
 
-  /* ── If a token already exists, verify it's still valid before
-     redirecting straight past the login page. ── */
+  /* ── If a session cookie already exists, verify it's still valid
+     before redirecting straight past the login page. ── */
   (async function checkExistingSession() {
-    let token;
-    try { token = localStorage.getItem('token'); } catch (e) { token = null; }
-    if (!token) return;
-
     try {
-      const res = await fetch('/api/auth/session', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch('/api/auth/session', { credentials: 'include' });
       const payload = await res.json();
       if (res.ok && payload.success) {
         window.location.href = 'index.html';
         return;
       }
-      throw new Error('Session invalid');
     } catch (e) {
-      try { localStorage.removeItem('token'); localStorage.removeItem('aurum_user'); } catch (_) {}
+      // No valid session cookie — stay on login page
     }
   })();
 

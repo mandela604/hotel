@@ -1,39 +1,29 @@
 /* ═══════════════════════════════════════════════════════════════
    AccountingData — shared data/config layer for the Accounting
-   module. Pulled into its own file (matching the pattern of
-   component/grace-request-form.js, sales-detail.js, void-sale.js)
-   so every Accounting page — Dashboard, Shift Reconciliation,
-   Revenue Breakdown, Transactions, Reports — reads from ONE place
-   instead of each page re-declaring its own config/seeds/shift math.
+   module. Pulled into its own file so every Accounting page —
+   Dashboard, Shift Reconciliation, Revenue Breakdown, Transactions,
+   Reports — reads from ONE place.
 
    Load this BEFORE the page script:
      <script src="../services/accounting-data.js"></script>
-     <script> AccountingData.configure({ USE_DEMO: true }); ... </script>
 
    Exposes window.AccountingData:
-     configure(opts)                          — the one Demo↔Live switch
+     configure(opts)
      getRoomTransactions() / getRestaurantSales() / getPoolBarSales() / getShifts()
-                                                — Live-first, Demo/shared-storage
-                                                  fallback, auto-seeds on first load
      createShift(shift) / updateShift(key,patch) / deleteShift(key)
-                                                — CRUD, writes through to shared
-                                                  storage + (in Live mode) the API
-     buildTransactions(room, rest, pool)       — merges the 3 feeds into one shape
-     computeShiftTotals(transactions, shiftKey)— gross / net / per-department split
-     queryTransactions(list, opts)             — search + filter + sort + paginate
+     buildTransactions(room, rest, pool)
+     computeShiftTotals(transactions, shiftKey)
+     queryTransactions(list, opts)
      shiftKeyFor(date) / shiftRangeLabel(key) / fmtTime(date) / fmtHourLabel(h)
      parseTxDate(str) / fmtN(amount)
-     toast(msg, type)                          — same visual contract every page
-                                                  already defines a .toast block for
-     CFG                                        — read-only view of current config
+     toast(msg, type)
+     CFG
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
-  /* ── 1. CONFIG — the one switch every page shares ── */
   const CFG = {
     API_BASE: '',
     API_KEY: '',
-    USE_DEMO: true,
     SHIFT_START_HOUR: 9,
   };
   function configure(opts) { Object.assign(CFG, opts || {}); }
@@ -82,7 +72,7 @@
     }
   }
   function apiSave(method, path, body) {
-    if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(() => {});
+    apiFetch(method, path, body).catch(() => {});
   }
 
   /* ── 4. SHIFT-DAY LOGIC — a shift runs 9AM → 9AM the next day, so a
@@ -116,62 +106,29 @@
   }
   function fmtN(n) { return '₦' + Math.round(n || 0).toLocaleString('en-NG'); }
 
-  /* ── 5. DEMO SEEDS — single source of truth. Every page reads the
-     same records via loadShared(), so Dashboard/Transactions/Reports
-     never drift out of sync with each other. ── */
-  const DEMO_ROOM_TX = [
-    { id:'RM-2044', desc:'Room 312 — Checkout (Dr. Balogun)', amount:145000, method:'Room Charge', staff:'Adewale O.', date:'17/07/26 08:40 AM' },
-    { id:'RM-2043', desc:'Room 204 — Check-in (Mr. Adeyemi)', amount:98000,  method:'POS',         staff:'Adewale O.', date:'17/07/26 09:14 AM' },
-    { id:'RM-2042', desc:'Room 109 — Checkout (Ms. Okafor)',  amount:76000,  method:'Cash',         staff:'Ngozi Eze',  date:'17/07/26 08:05 AM' },
-    { id:'RM-2041', desc:'Room 402 — Check-in (Barr. Musa)',  amount:132000, method:'Transfer',     staff:'Adewale O.', date:'16/07/26 11:20 PM' },
-    { id:'RM-2040', desc:'Room 108 — Checkout (Mrs. Bello)',  amount:64000,  method:'Cash',         staff:'Kabiru Aliyu',date:'16/07/26 08:52 AM' },
-  ];
-  const DEMO_RESTAURANT_SALES = [
-    { id:'SALE-1043', items:[{meal:'Egusi Soup',qty:2,price:6000}], subtotal:12000, discount:0, total:12000, method:'Cash', staff:'Amaka O.', table:'Table 4', date:'17/07/26 11:05 AM', status:'completed' },
-    { id:'SALE-1042', items:[{meal:'Fried Rice',qty:3,price:6000}], subtotal:18000, discount:0, total:18000, method:'POS', staff:'Tunde A.', table:'Table 2', date:'17/07/26 10:40 AM', status:'completed' },
-    { id:'SALE-1041', items:[{meal:'Moi Moi',qty:1,price:2500}], subtotal:2500, discount:0, total:2500, method:'Transfer', staff:'Amaka O.', table:'Takeaway', date:'17/07/26 09:52 AM', status:'completed' },
-    { id:'SALE-1038', items:[{meal:'Suya Platter',qty:2,price:5500}], subtotal:11000, discount:0, total:11000, method:'Cash', staff:'Tunde A.', table:'Table 6', date:'17/07/26 12:20 AM', status:'completed' },
-  ];
-  const DEMO_POOLBAR_SALES = [
-    { id:'PBS-1021', item:'Heineken', qty:3, subtotal:4500,  discount:0, total:4500,  method:'Cash', staff:'Bola Nwosu', time:'17/07/26 11:15 AM' },
-    { id:'PBS-1020', item:'Mojito',   qty:2, subtotal:12000, discount:8, total:11040, method:'POS',  staff:'Bola Nwosu', time:'17/07/26 10:50 AM' },
-    { id:'PBS-1018', item:'Heineken', qty:6, subtotal:9000,  discount:0, total:9000,  method:'Cash', staff:'Emeka U.',   time:'17/07/26 01:05 AM' },
-  ];
-  const DEMO_SHIFTS = [
-    { key:'2026-07-17', staff:'Amaka Okonkwo (Front Office Cashier)', openingFloat:50000, actualCash:null, status:'open' },
-    { key:'2026-07-16', staff:'Tunde Adeyemi (Front Office Cashier)', openingFloat:50000, actualCash:399500, status:'reconciled', notes:'' },
-    { key:'2026-07-15', staff:'Amaka Okonkwo (Front Office Cashier)', openingFloat:50000, actualCash:255000, status:'reconciled', notes:'Short by ₦5,000 — under investigation.' },
-  ];
-
-  /* ── 6. READS — Live-first (with retry/timeout), Demo/shared-storage
-     fallback, auto-seeded into shared storage the first time a page
-     asks for it, so the "demo database" always has something to show. ── */
-  async function readCollection(apiPath, storageKey, demoSeed) {
-    if (!CFG.USE_DEMO) {
-      const r = await apiFetch('GET', apiPath, null, { retries: 1 });
-      if (r.ok && Array.isArray(r.data)) return r.data;
-      console.warn(`[AccountingData] Live fetch failed for ${apiPath}, falling back:`, r.error);
-    }
-    const rows = await loadShared(storageKey, demoSeed);
-    await saveShared(storageKey, rows);
+  /* ── 5. READS — Live-first (with retry/timeout), shared-storage fallback. ── */
+  async function readCollection(apiPath, storageKey) {
+    const r = await apiFetch('GET', apiPath, null, { retries: 1 });
+    if (r.ok && Array.isArray(r.data)) return r.data;
+    console.warn(`[AccountingData] API fetch failed for ${apiPath}, using stored data:`, r.error);
+    const rows = await loadShared(storageKey, []);
     return rows;
   }
-  const getRoomTransactions = () => readCollection('/api/accounting/room-tx', 'accounting-room-tx', DEMO_ROOM_TX);
-  const getRestaurantSales  = () => readCollection('/api/restaurant/sales',   'restaurant-sales',    DEMO_RESTAURANT_SALES);
-  const getPoolBarSales     = () => readCollection('/api/poolbar/sales',      'poolbar-sales',       DEMO_POOLBAR_SALES);
-  const getShifts           = () => readCollection('/api/accounting/shifts', 'accounting-shifts',   DEMO_SHIFTS);
+  const getRoomTransactions = () => readCollection('/api/accounting/room-tx', 'accounting-room-tx');
+  const getRestaurantSales  = () => readCollection('/api/restaurant/sales',   'restaurant-sales');
+  const getPoolBarSales     = () => readCollection('/api/poolbar/sales',      'poolbar-sales');
+  const getShifts           = () => readCollection('/api/accounting/shifts', 'accounting-shifts');
 
-  /* ── 7. WRITES — CRUD for shifts (the Reconciliation page's job;
-     defined here so it isn't reinvented per-page). ── */
+  /* ── 6. WRITES — CRUD for shifts. ── */
   async function createShift(shift) {
-    const shifts = await loadShared('accounting-shifts', DEMO_SHIFTS);
+    const shifts = await loadShared('accounting-shifts', []);
     shifts.unshift(shift);
     await saveShared('accounting-shifts', shifts);
     apiSave('POST', '/api/accounting/shifts', shift);
     return shifts;
   }
   async function updateShift(key, patch) {
-    const shifts = await loadShared('accounting-shifts', DEMO_SHIFTS);
+    const shifts = await loadShared('accounting-shifts', []);
     const s = shifts.find(x => x.key === key);
     if (s) Object.assign(s, patch);
     await saveShared('accounting-shifts', shifts);
@@ -179,7 +136,7 @@
     return shifts;
   }
   async function deleteShift(key) {
-    let shifts = await loadShared('accounting-shifts', DEMO_SHIFTS);
+    let shifts = await loadShared('accounting-shifts', []);
     shifts = shifts.filter(x => x.key !== key);
     await saveShared('accounting-shifts', shifts);
     apiSave('DELETE', `/api/accounting/shifts/${key}`);

@@ -79,6 +79,7 @@
   .status-pill.on.pending{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
   .status-pill.on.review{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
   .status-pill.on.approved{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.store{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
   .status-pill.on.fulfilled{ background:var(--purple-bg); border-color:rgba(139,92,246,.35); color:var(--purple); }
   .status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
   .btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
@@ -155,6 +156,8 @@
   .chip-rejected{ background:var(--red-bg); color:var(--red); }
   .chip-store{ background:var(--blue-bg); color:var(--blue); }
   .chip-procurement{ background:var(--purple-bg); color:var(--purple); }
+  .chip-sent-store{ background:var(--blue-bg); color:var(--blue); }
+  .chip-voided{ background:var(--surface3); color:var(--text3); }
 
   .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
   .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
@@ -208,6 +211,7 @@
                 <div class="status-pill" data-group="pending"><i class="fa-solid fa-circle" style="color:var(--amber)"></i>Pending</div>
                 <div class="status-pill" data-group="review"><i class="fa-solid fa-circle" style="color:var(--blue)"></i>In Review</div>
                 <div class="status-pill" data-group="approved"><i class="fa-solid fa-circle" style="color:var(--green)"></i>Approved</div>
+                <div class="status-pill" data-group="store"><i class="fa-solid fa-circle" style="color:var(--blue)"></i>Awaiting Store</div>
                 <div class="status-pill" data-group="fulfilled"><i class="fa-solid fa-circle" style="color:var(--purple)"></i>Fulfilled</div>
                 <div class="status-pill" data-group="rejected"><i class="fa-solid fa-circle" style="color:var(--red)"></i>Rejected</div>
               </div>
@@ -297,8 +301,7 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/procurement-seed.js"></script>
-<script src="services/procurement-service.js"></script>
+  <script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -308,13 +311,12 @@ const shell = ProcurementShell.attach({
   activeFile:    'po-history.html',
   pageTitle:     'PO History',
   pageSubtitle:  'Purchase order tracking',
-  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  apiMode:       'Live',
   user:          { name: 'Procurement Officer', initials: 'PO' },
 });
 
 // Single source of truth for this page — populated once by init() via
-// ProcurementService.getPOs(). Nothing below touches
-// ProcurementService.DEMO_PR or localStorage directly.
+// ProcurementService.getPOs(). Nothing below touches localStorage directly.
 let allPOsCache = [];
 
 let poPage = 1;
@@ -326,20 +328,28 @@ let filteredPO = [];
 let printMode = false;
 
 /* Status pills still group by the underlying approvalStage (accountant/
-   gm/md all bucket under "review") — that's about filtering the table. */
-const STAGE_TO_GROUP = { pending:'pending', accountant:'review', gm:'review', md:'review', approved:'approved', fulfilled:'fulfilled', rejected:'rejected' };
+   gm/md all bucket under "review") — that's about filtering the table.
+   'sent_to_store' gets its own "Awaiting Store" group rather than being
+   lumped into 'approved' — it's fully approved internally but not yet
+   resolved, so treating it as the same bucket as a truly-done PO would
+   hide that it still needs Store to act. 'voided' buckets with
+   'rejected' for filtering purposes — both are dead-end states for the
+   ORIGINAL PO (its replacement, if any, is a separate row). */
+const STAGE_TO_GROUP = { pending:'pending', accountant:'review', gm:'review', md:'review', approved:'approved', sent_to_store:'store', fulfilled:'fulfilled', rejected:'rejected', voided:'rejected' };
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-/* Status column — only ever one of these four end states. A PO sitting
+/* Status column — only ever one of these six end states. A PO sitting
    with any reviewer (accountant/gm/md) still reads "Pending" here;
    which reviewer it's with is the separate Review Stage column. */
-const SIMPLE_STATUS = { pending:'pending', accountant:'pending', gm:'pending', md:'pending', approved:'approved', fulfilled:'fulfilled', rejected:'rejected' };
-const SIMPLE_STATUS_LABEL = { pending:'Pending', approved:'Approved', fulfilled:'Fulfilled', rejected:'Rejected' };
-const SIMPLE_STATUS_CHIP  = { pending:'chip-pending', approved:'chip-approved', fulfilled:'chip-fulfilled', rejected:'chip-rejected' };
+const SIMPLE_STATUS = { pending:'pending', accountant:'pending', gm:'pending', md:'pending', approved:'approved', sent_to_store:'sent_to_store', fulfilled:'fulfilled', rejected:'rejected', voided:'voided' };
+const SIMPLE_STATUS_LABEL = { pending:'Pending', approved:'Approved', sent_to_store:'Awaiting Store', fulfilled:'Fulfilled', rejected:'Rejected', voided:'Voided' };
+const SIMPLE_STATUS_CHIP  = { pending:'chip-pending', approved:'chip-approved', sent_to_store:'chip-sent-store', fulfilled:'chip-fulfilled', rejected:'chip-rejected', voided:'chip-voided' };
 
 /* Review Stage column:
-   - Resolved POs (approved/rejected/fulfilled) mirror the Status label —
-     no separate "reviewer" once the pipeline is done.
+   - Resolved POs (approved/rejected/fulfilled/voided) mirror the Status
+     label — no separate "reviewer" once the pipeline is done.
+   - sent_to_store shows that it's specifically Store's turn now, not a
+     generic "Approved".
    - Still-pending POs show which department needs to approve next. */
 const REVIEW_STAGE_LABEL = {
   pending: 'Acc. Review',
@@ -347,8 +357,10 @@ const REVIEW_STAGE_LABEL = {
   gm: 'GM Review',
   md: 'MD Review',
   approved: 'Approved',
+  sent_to_store: 'Awaiting Store',
   fulfilled: 'Fulfilled',
   rejected: 'Rejected',
+  voided: 'Voided',
 };
 const REVIEW_STAGE_CHIP = {
   pending: 'chip-accountant',
@@ -356,15 +368,16 @@ const REVIEW_STAGE_CHIP = {
   gm: 'chip-gm',
   md: 'chip-md',
   approved: 'chip-approved',
+  sent_to_store: 'chip-sent-store',
   fulfilled: 'chip-fulfilled',
   rejected: 'chip-rejected',
+  voided: 'chip-voided',
 };
 
 /* Source column — WHO raised the PO, not which department the goods are
-   for. Only two values ever show here: Store or Procurement. Any record
-   missing `source` (older demo rows) defaults to Procurement, since this
-   module only ever wrote POs itself before Store could raise purchase
-   requisitions. */
+   for. Only two values ever show here: Store or Procurement. Records
+   missing `source` default to Procurement, since this module only ever
+   wrote POs itself before Store could raise purchase requisitions. */
 const SOURCE_CHIP = { Store: 'chip-store', Procurement: 'chip-procurement' };
 function sourceOf(p){ return p.source === 'Store' ? 'Store' : 'Procurement'; }
 

@@ -54,7 +54,7 @@
       },
       accountant: {
         accounting: {
-          canView: true, canCreate: false, canEdit: false, canDelete: false,
+          canView: true, canCreate: true, canEdit: true, canDelete: false,
           canApprove: true, canViewReports: true,
         },
       },
@@ -67,7 +67,7 @@
       sales_rep: {
         restaurant: {
           canView: true, canCreate: true, canEdit: false, canDelete: false,
-          canVoid: false, canGiveDiscount: false,
+          canVoid: false, canReject: true, canGiveDiscount: false,
         },
         poolbar: {
           canView: true, canCreate: true, canEdit: false, canDelete: false,

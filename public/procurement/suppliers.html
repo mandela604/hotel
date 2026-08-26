@@ -329,8 +329,7 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/procurement-seed.js"></script>
-<script src="services/procurement-service.js"></script>
+  <script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -339,7 +338,7 @@
  *
  * Every mutation (add supplier, edit supplier, add/rename/delete
  * category) goes through ProcurementService.* — this page never touches
- * DEMO_SUPPLIERS, DEMO_PR, the category list, or localStorage directly.
+ * the category list or localStorage directly.
  * It only collects form input, calls the service, and re-renders from
  * whatever the service returns / already knows.
  */
@@ -349,14 +348,12 @@ const shell = ProcurementShell.attach({
   activeFile:    'suppliers.html',
   pageTitle:     'Suppliers',
   pageSubtitle:  'Supplier directory and performance',
-  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  apiMode:       'Live',
   user:          { name: 'Procurement Officer', initials: 'PO' },
 });
 
 // Local caches — populated once by init() via ProcurementService.getSuppliers()
-// / getPRs() / getCategories(). Nothing on this page touches
-// ProcurementService.DEMO_SUPPLIERS, ProcurementService.DEMO_PR, or
-// localStorage directly.
+// / getPRs() / getCategories(). Nothing on this page touches localStorage directly.
 let allSuppliers = [];
 let allPRsForSpend = [];
 let allCategories = [];
@@ -372,9 +369,7 @@ let editingCategoryName = null;
 
 function fmtN(n){ return ProcurementService.fmtN(n); }
 
-/* Suppliers created in this session don't have status set by the original
-   demo seed, so anything missing the field is treated as Active — keeps
-   old demo rows working without needing to touch procurement-seed.js. */
+/* Suppliers without status set default to Active. */
 function supplierStatus(sp){ return sp.status || 'Active'; }
 
 function renderPagination(btnId,labelId,page,total,size,cb){

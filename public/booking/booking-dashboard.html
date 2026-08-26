@@ -170,7 +170,6 @@ body {
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/booking-demo-seed.js"></script>
 <script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
 <script>
@@ -187,12 +186,7 @@ const shell = BookingShell.attach({
 
 /* ═══════════════════════════════════════════════
    Data — same BookingData.getBookingData() every other booking page
-   uses. This used to be a private localStorage shim with its own
-   hardcoded seed, completely bypassed services/booking-service.js —
-   meaning flipping BookingData.CONFIG.USE_PROD to true would light up
-   every other page but leave this dashboard stuck showing fake local
-   data forever. Now it reads through the same service, so demo mode
-   and production mode both "just work" here too.
+   uses. Now it reads through the same service as all other pages.
 ═══════════════════════════════════════════════ */
 let allRooms = [];
 let bookings = [];
@@ -208,6 +202,10 @@ function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateStrin
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
 function calcTotal(b) { return BookingData.calcTotal(b); }
 function calcBal(b) { return BookingData.calcBal(b); }
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 function getRoomStatus(num) {
   const b = bookings.find(r => r.room === num);
   if (!b || !b.status) return 'available';
@@ -307,7 +305,7 @@ function renderOverview() {
       <div class="act-item">
         <div class="act-dot ${b.checkin===TODAY?'green':'red'}"></div>
         <div style="flex:1;">
-          <div class="act-text">${b.guest} — Room ${b.room}</div>
+          <div class="act-text">${esc(b.guest)} — Room ${esc(b.room)}</div>
           <div class="act-time">${b.checkin===TODAY?'Check-in today':'Check-out today'} · ${fmtDate(b.checkin===TODAY?b.checkin:b.checkout)}</div>
         </div>
       </div>`).join('');

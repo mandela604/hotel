@@ -202,7 +202,7 @@
         <div class="prc-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="prc-date" id="prc-date"></div>
-          <div class="prc-apibadge" id="prc-apiBadge"><span class="dot"></span><span id="prc-apiLabel">${opts.apiMode || 'Demo'}</span></div>
+          <div class="prc-apibadge" id="prc-apiBadge"><span class="dot"></span><span id="prc-apiLabel">Live</span></div>
           <div class="prc-notif">🔔<div class="prc-notifdot"></div></div>
           <div class="prc-avatar" id="prc-avatar">${initials}</div>
         </div>

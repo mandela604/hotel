@@ -4,8 +4,7 @@
  * One component for Pool Bar + Restaurant. No requisition UI (raise those
  * from Transfer History / inventory pages via GraceHotelRequestForm).
  *
- * PREFERRED: pass a module service so all mutations go through one layer
- * (easy go-live — flip USE_DEMO on the service only).
+ * PREFERRED: pass a module service so all mutations go through one layer.
  *
  *   // Restaurant
  *   await RestaurantService.loadAll();
@@ -349,7 +348,7 @@
       : FALLBACK_PAY_METHODS.slice();
     const allowRoomCharge = options.allowRoomCharge !== false;
     const guests = options.guests || [];
-    const CFG = Object.assign({ API_BASE: '', API_KEY: '', USE_DEMO: true }, options.CFG || {});
+    const CFG = Object.assign({ API_BASE: '', API_KEY: '' }, options.CFG || {});
     const apiPaths = Object.assign({
       page: '/api/' + moduleName + '/orders-page',
       sales: '/api/' + moduleName + '/sales',
@@ -371,7 +370,7 @@
     }
 
     function resolveStaffName() {
-      // Live/session first, then option, then demo default
+      // Live/session first, then option, then fallback default
       try {
         if (shell && typeof shell.getUser === 'function') {
           const u = shell.getUser();
@@ -429,11 +428,9 @@
       return res.json();
     }
     function apiSave(method, path, body) {
-      if (!CFG.USE_DEMO) {
-        apiFetch(method, path, body).catch(function (e) {
-          console.warn('[API write]', e.message);
-        });
-      }
+      apiFetch(method, path, body).catch(function (e) {
+        console.warn('[API write]', e.message);
+      });
     }
 
     // ── Shell HTML ──
@@ -1410,8 +1407,7 @@
             });
           }
           if (shell && shell.setApiMode) {
-            const cfg = (service.CONFIG || service.getConfig && service.getConfig()) || CFG;
-            shell.setApiMode(cfg.USE_DEMO === false ? 'Live' : 'Demo');
+            shell.setApiMode('Live');
           }
           finish();
           return;
@@ -1421,7 +1417,7 @@
       }
 
       // ── Fallback: direct API / storage ──
-      if (!CFG.USE_DEMO && CFG.API_BASE) {
+      if (CFG.API_BASE) {
         try {
           const data = await apiFetch('GET', apiPaths.page);
           stock = data.stock || [];

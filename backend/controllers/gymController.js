@@ -190,8 +190,8 @@ exports.listGuests = asyncHandler(async (req, res) => {
 });
 
 exports.createGuest = asyncHandler(async (req, res) => {
-  const { name, room, phone } = req.body;
-  const guest = await GymGuest.create({ name: name.trim(), room: (room || '').trim(), phone: (phone || '').trim() });
+  const { name, room, phone, memberId } = req.body;
+  const guest = await GymGuest.create({ name: name.trim(), room: (room || '').trim(), phone: (phone || '').trim(), memberId: memberId || null });
   res.status(201).json({ success: true, data: guest });
 });
 
@@ -204,7 +204,9 @@ exports.deleteGuest = asyncHandler(async (req, res) => {
 /* ═══════════════ Revenue report ═══════════════ */
 
 exports.revenue = asyncHandler(async (req, res) => {
-  const { from, to } = req.query;
+  let { from, to } = req.query;
+  if (from && isNaN(Date.parse(from))) from = null;
+  if (to && isNaN(Date.parse(to))) to = null;
   const [members, checkins, plans] = await Promise.all([
     GymMember.find({}),
     GymCheckin.find({}),

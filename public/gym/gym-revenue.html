@@ -159,15 +159,12 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/gym-seed.js"></script>
 <script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
 <script>
 'use strict';
 
-/* UI only: call GymService / Permissions / shell, then render.
-   No USE_DEMO, no seed arrays, no revenue math on this page.
-   Live = swap service (+ shell auth). This file stays. */
+/* UI only: call GymService / Permissions / shell, then render. */
 
 var shell = GymShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -180,7 +177,7 @@ var shell = GymShell.attach({
 document.documentElement.classList.add('gym-ready');
 
 var session = null;
-var canView = true;
+var canView = false;
 var activePreset = '30d';
 
 var COLOR_TOKENS = {
@@ -241,12 +238,10 @@ function getSession() {
 function applyPermissionUI() {
   var s = getSession();
   if (window.Permissions && Permissions.hasPermission) {
-    canView = Permissions.hasPermission(s, 'canView', 'gym') ||
-              Permissions.hasPermission(s, 'canEdit', 'gym') ||
-              Permissions.hasPermission(s, 'canCreate', 'gym') ||
-              true;
+    canView = Permissions.hasPermission(s, 'canViewReports', 'gym') ||
+              Permissions.hasPermission(s, 'canView', 'gym');
   } else {
-    canView = true;
+    canView = false;
   }
   var btn = document.getElementById('generateBtn');
   if (btn) btn.style.display = canView ? '' : 'none';
@@ -451,13 +446,7 @@ async function init() {
     return;
   }
   try {
-    var seed = window.GymSeed || {};
-    await GymService.loadAll({
-      members:  seed.DEMO_MEMBERS  || seed.members  || [],
-      plans:    seed.DEMO_PLANS    || seed.plans    || [],
-      checkins: seed.DEMO_CHECKINS || seed.checkins || [],
-      guests:   seed.DEMO_GUESTS   || seed.guests   || [],
-    });
+    await GymService.loadAll();
 
     session = (shell.getUser && shell.getUser()) || null;
     applyPermissionUI();

@@ -152,6 +152,56 @@ exports.validateRejectTransfer = (req, res, next) => {
   next();
 };
 
+/* ── Orders (Open Tab / Active Orders) ── */
+
+exports.validateOpenTab = (req, res, next) => {
+  const { items, method, table, notes, roomNumber, guestName, guestPhone } = req.body;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return fail(res, 'items must be a non-empty array', 'items');
+  }
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (!it || typeof it !== 'object') return fail(res, `items[${i}] must be an object`, 'items');
+    if (!isNonEmptyString(it.name)) return fail(res, `items[${i}].name is required`, 'items');
+    if (!isPositiveNumber(it.qty)) return fail(res, `items[${i}].qty must be a number > 0`, 'items');
+    if (!isNonNegativeNumber(it.price)) return fail(res, `items[${i}].price must be a number >= 0`, 'items');
+  }
+
+  if (method !== undefined && method !== null && !PAYMENT_METHODS.includes(method)) {
+    return fail(res, `method must be one of: ${PAYMENT_METHODS.join(', ')}`, 'method');
+  }
+  if (method === 'Room Charge') {
+    if (!isNonEmptyString(roomNumber)) return fail(res, 'roomNumber is required for Room Charge tabs', 'roomNumber');
+    if (!isNonEmptyString(guestName)) return fail(res, 'guestName is required for Room Charge tabs', 'guestName');
+  }
+  if (table !== undefined && typeof table !== 'string') return fail(res, 'table must be a string', 'table');
+  if (notes !== undefined && typeof notes !== 'string') return fail(res, 'notes must be a string', 'notes');
+  if (roomNumber !== undefined && typeof roomNumber !== 'string') return fail(res, 'roomNumber must be a string', 'roomNumber');
+  if (guestName !== undefined && typeof guestName !== 'string') return fail(res, 'guestName must be a string', 'guestName');
+  if (guestPhone !== undefined && typeof guestPhone !== 'string') return fail(res, 'guestPhone must be a string', 'guestPhone');
+
+  next();
+};
+
+exports.validatePayOrder = (req, res, next) => {
+  const { method, roomNumber, guestName, guestPhone } = req.body;
+
+  if (!isNonEmptyString(method)) return fail(res, 'method is required', 'method');
+  if (!PAYMENT_METHODS.includes(method)) {
+    return fail(res, `method must be one of: ${PAYMENT_METHODS.join(', ')}`, 'method');
+  }
+  if (method === 'Room Charge') {
+    if (!isNonEmptyString(roomNumber)) return fail(res, 'roomNumber is required for Room Charge', 'roomNumber');
+    if (!isNonEmptyString(guestName)) return fail(res, 'guestName is required for Room Charge', 'guestName');
+  }
+  if (roomNumber !== undefined && typeof roomNumber !== 'string') return fail(res, 'roomNumber must be a string', 'roomNumber');
+  if (guestName !== undefined && typeof guestName !== 'string') return fail(res, 'guestName must be a string', 'guestName');
+  if (guestPhone !== undefined && typeof guestPhone !== 'string') return fail(res, 'guestPhone must be a string', 'guestPhone');
+
+  next();
+};
+
 /* ── Requisitions (Restaurant → Store) ── */
 
 exports.validateSubmitRequisition = (req, res, next) => {
@@ -194,6 +244,17 @@ exports.validateStrictObjectIdParam = (paramName = 'id') => (req, res, next) => 
   next();
 };
 
+function isValidUuid(id) {
+  return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
+
+exports.validateStrictUuidParam = (paramName = 'id') => (req, res, next) => {
+  const id = req.params[paramName];
+  if (!isValidUuid(id)) return fail(res, `${paramName} must be a valid id`, paramName);
+  next();
+};
+
+exports.isValidUuid = isValidUuid;
 exports.isValidObjectId = isValidObjectId;
 exports.PAYMENT_METHODS = PAYMENT_METHODS;
 exports.SALE_STATUS = SALE_STATUS;

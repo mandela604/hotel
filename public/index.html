@@ -206,7 +206,7 @@ body.aur-sb-collapsed .main { margin-left:68px; }
 <script>
 /* ═══════════════════════════════════════
    DATA — reads from the unified DataStore,
-   which automatically seeds demo data on first load.
+    which reads from the unified DataStore.
 ═══════════════════════════════════════ */
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtNShort(n){ n = Math.round(n||0); if (n>=1000000) return '₦'+(n/1000000).toFixed(1)+'M'; if (n>=1000) return '₦'+(n/1000).toFixed(0)+'k'; return '₦'+n.toLocaleString('en-NG'); }
@@ -372,7 +372,7 @@ async function init(){
     topbarTarget:  '#topbarSlot',
     activeFile:    'index.html',
     pageTitle:     'Overview',
-    apiMode:       'Demo',
+    apiMode:       'Live',
     user:          { name: _user.name, initials: _user.initials || 'G' },
   });
 </script>

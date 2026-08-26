@@ -2,13 +2,41 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const asyncHandler = require('../middleware/asyncHandler');
 
+function getSecret() {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error('JWT_SECRET environment variable is required but not set');
+  return s;
+}
+
 function signToken(id) {
-  const secret = process.env.JWT_SECRET || 'aurum_hotel_jwt_secret_key_2026';
-  return jwt.sign({ id }, secret, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+  return jwt.sign({ id }, getSecret(), { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 }
 
 function initialsFrom(name) {
   return name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function isSecure() {
+  return process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true';
+}
+
+function cookieOptions() {
+  const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+  return {
+    httpOnly: true,
+    secure: isSecure(),
+    sameSite: isSecure() ? 'strict' : 'lax',
+    path: '/',
+    maxAge: maxAge,
+  };
+}
+
+function setTokenCookie(res, token) {
+  res.cookie('token', token, cookieOptions());
+}
+
+function clearTokenCookie(res) {
+  res.clearCookie('token', { path: '/' });
 }
 
 /**
@@ -54,13 +82,14 @@ exports.signup = asyncHandler(async (req, res) => {
     email: email.toLowerCase(),
     password,
     role: 'admin',
-    privilege: 'Full',
+    privileges: { type: null, overrides: {} },
     department: 'Management',
     phone: req.body.phone || '',
     initials: initialsFrom(name),
   });
 
-  const token = signToken(user._id);
+  const token = signToken(user.id);
+  setTokenCookie(res, token);
   res.status(201).json({ success: true, token, user: user.toJSON() });
 });
 
@@ -75,6 +104,10 @@ exports.login = asyncHandler(async (req, res) => {
     return res.status(401).json({ success: false, error: 'Invalid credentials or account disabled' });
   }
 
+  if (!user.password) {
+    return res.status(401).json({ success: false, error: 'Account has no password set — contact administrator' });
+  }
+
   const ok = await user.comparePassword(password || '');
   if (!ok) {
     return res.status(401).json({ success: false, error: 'Invalid credentials' });
@@ -83,7 +116,8 @@ exports.login = asyncHandler(async (req, res) => {
   user.lastLogin = new Date();
   await user.save();
 
-  const token = signToken(user._id);
+  const token = signToken(user.id);
+  setTokenCookie(res, token);
   res.json({ success: true, token, user: user.toJSON() });
 });
 
@@ -97,12 +131,13 @@ exports.session = asyncHandler(async (req, res) => {
     name: req.user.name,
     initials: req.user.initials || '',
     role: req.user.role,
-    privilege: req.user.privilege || 'Standard',
+    privileges: req.user.privileges || { type: null, overrides: {} },
     department: req.user.department || 'General',
   });
 });
 
 exports.logout = asyncHandler(async (req, res) => {
+  clearTokenCookie(res);
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
@@ -116,7 +151,7 @@ exports.listUsers = asyncHandler(async (req, res) => {
 });
 
 exports.createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, privilege, department, phone } = req.body;
+  const { name, email, password, role, privileges, department, phone } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ success: false, error: 'Name, email and password are required' });
   }
@@ -129,13 +164,17 @@ exports.createUser = asyncHandler(async (req, res) => {
     return res.status(409).json({ success: false, error: 'Email already registered' });
   }
 
+  const priv = privileges && typeof privileges === 'object'
+    ? { type: privileges.type || null, overrides: privileges.overrides || {} }
+    : { type: null, overrides: {} };
+
   const user = await User.create({
     name,
     email: email.toLowerCase(),
     password,
     role,
-    privilege: privilege || 'Standard',
-    department: department || 'General',
+    privileges: priv,
+    department: department || 'Management',
     phone: phone || '',
     initials: initialsFrom(name),
   });
@@ -151,9 +190,12 @@ exports.updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ success: false, error: 'User not found' });
 
-  const { role, privilege, department, status, name, phone } = req.body;
+  const { role, privileges, department, status, name, phone } = req.body;
   if (role !== undefined) user.role = role;
-  if (privilege !== undefined) user.privilege = privilege;
+  if (privileges !== undefined && typeof privileges === 'object') {
+    if (privileges.type !== undefined) user.privileges.type = privileges.type;
+    if (privileges.overrides !== undefined) user.privileges.overrides = privileges.overrides;
+  }
   if (department !== undefined) user.department = department;
   if (status !== undefined) user.status = status;
   if (name !== undefined) { user.name = name; user.initials = initialsFrom(name); }

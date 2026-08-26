@@ -1,13 +1,10 @@
 /**
- * UPDATED from the originally supplied schema — fixes a live bug in
- * bookingController.settleCharge(). chargeSchema was declared with
- * { _id: false }, so guest.charges.id(chargeId) could never match
- * anything (DocumentArray.id() looks up by _id, which charges didn't
- * have) — every settle attempt 404'd. Added an explicit `id` string
- * field, same pattern paymentEntrySchema/chargePaymentSchema already use
- * for the same reason. Everything else is unchanged.
+ * Guest model with explicit string `id` (uuidv4) for public-facing
+ * identification. Charge subdocuments also carry their own `id` field.
+ * Never read/write MongoDB `_id` as a public identifier — always use `id`.
  */
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const staySchema = new mongoose.Schema({
   room:     { type: String, default: '' },
@@ -29,7 +26,7 @@ const chargePaymentSchema = new mongoose.Schema({
 }, { _id: false });
 
 const chargeSchema = new mongoose.Schema({
-  id:       { type: String, required: true }, // ← added: the actual fix
+  id:       { type: String, default: uuidv4 },
   date:     { type: String, default: '' },
   source:   { type: String, default: 'Other' },
   desc:     { type: String, default: '' },
@@ -42,6 +39,7 @@ const chargeSchema = new mongoose.Schema({
 }, { _id: false });
 
 const guestSchema = new mongoose.Schema({
+  id:       { type: String, default: uuidv4, index: true, unique: true },
   guestId:  { type: String, required: true, unique: true },
   name:     { type: String, required: true },
   phone:    { type: String, default: '' },

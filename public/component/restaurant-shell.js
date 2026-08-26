@@ -2,12 +2,9 @@
    RestaurantShell — sidebar + topbar for the standalone Restaurant
    module. Drop this in as component/restaurant-shell.js.
 
-   Session rules (same as PoolBarShell):
-     USE_DEMO true  → always DEMO_USER
-     USE_DEMO false → GET /api/auth/session
-                      success → real user
-                      failure → redirect to LOGIN_URL (no demo fallback)
-   Pages read session only via shell.getUser().
+   Session: GET /api/auth/session
+            success → real user
+            failure → redirect to LOGIN_URL
 
    Nav visibility:
      Items flagged managerOnly stay hidden (display:none) until the
@@ -164,12 +161,10 @@
     document.head.appendChild(s);
   }
 
-  // ── CONFIG — the only place to change Demo↔Live ──
+  // ── CONFIG ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
     LOGIN_URL: '../login.html',
-    DEMO_USER: { name: 'Restaurant Manager', initials: 'RM', role: 'manager', privilege: 'restaurant_staff' },
   };
 
   function goLogin(reason) {
@@ -180,15 +175,10 @@
   }
 
   /**
-   * Demo  → DEMO_USER
-   * Live  → real user from API
-   * Live fail → redirect (never returns demo)
+   * GET /api/auth/session → real user
+   * Failure → redirect to login (never returns fallback)
    */
   async function fetchSession() {
-    if (CONFIG.USE_DEMO) {
-      return CONFIG.DEMO_USER;
-    }
-
     try {
       const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
         credentials: 'include',
@@ -232,8 +222,8 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
-    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    // Start empty until API responds (or redirect).
+    let user = opts.user || null;
     let initials = user
       ? (user.initials || (user.name || 'RM').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
       : '…';
@@ -280,7 +270,7 @@
         <div class="rst-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="rst-date" id="rst-date"></div>
-          <div class="rst-apibadge" id="rst-apiBadge"><span class="dot"></span><span id="rst-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
+          <div class="rst-apibadge" id="rst-apiBadge"><span class="dot"></span><span id="rst-apiLabel">Live</span></div>
           <div class="rst-notif"><i class="fa-regular fa-bell"></i><div class="rst-notifdot"></div></div>
           <div class="rst-avatar" id="rst-avatar">${initials}</div>
         </div>
@@ -366,7 +356,6 @@
       },
     };
 
-    // Demo mode already has a user synchronously — apply nav visibility now too.
     applyNavVisibility(user);
 
     fetchSession().then(function (sessionUser) {
@@ -378,7 +367,7 @@
         avatar.textContent = initials;
         avatar.title = user.name || '';
       }
-      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+      handle.setApiMode('Live');
       applyNavVisibility(user);
     });
 

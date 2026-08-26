@@ -22,7 +22,7 @@ const STATUS_TRANSITIONS = {
   available:   ['maintenance', 'reserved'],
   checkedin:   ['cleaning', 'checkout'],
   reserved:    ['checkedin', 'vacant', 'maintenance'],
-  checkout:    ['vacant', 'maintenance'],
+  checkout:    ['vacant', 'maintenance', 'cleaning'],
   maintenance: ['vacant'],
   cleaning:    ['vacant', 'maintenance'],
 };
@@ -43,10 +43,6 @@ function isPositiveNumber(v) {
 function isNonNegativeNumber(v) {
   const n = Number(v);
   return !Number.isNaN(n) && n >= 0;
-}
-
-function isValidObjectId(id) {
-  return typeof id === 'string' && /^[a-f\d]{24}$/i.test(id);
 }
 
 function isValidDateStr(v) {
@@ -118,7 +114,8 @@ exports.validateCreateBooking = (req, res, next) => {
   if (rate !== undefined && !isNonNegativeNumber(rate)) return fail(res, 'rate must be a number >= 0', 'rate');
   if (discount !== undefined) {
     const n = Number(discount);
-    if (Number.isNaN(n) || n < 0 || n > 100) return fail(res, 'discount must be a number between 0 and 100', 'discount');
+    if (Number.isNaN(n) || n < 0) return fail(res, 'discount must be a number >= 0', 'discount');
+    if (rate !== undefined && n > Number(rate)) return fail(res, 'discount cannot exceed rate', 'discount');
   }
   if (adults !== undefined && !isPositiveNumber(adults)) return fail(res, 'adults must be a number > 0', 'adults');
   if (children !== undefined && !isNonNegativeNumber(children)) return fail(res, 'children must be a number >= 0', 'children');
@@ -147,7 +144,8 @@ exports.validateUpdateBooking = (req, res, next) => {
   if (rate !== undefined && !isNonNegativeNumber(rate)) return fail(res, 'rate must be a number >= 0', 'rate');
   if (discount !== undefined) {
     const n = Number(discount);
-    if (Number.isNaN(n) || n < 0 || n > 100) return fail(res, 'discount must be a number between 0 and 100', 'discount');
+    if (Number.isNaN(n) || n < 0) return fail(res, 'discount must be a number >= 0', 'discount');
+    if (rate !== undefined && n > Number(rate)) return fail(res, 'discount cannot exceed rate', 'discount');
   }
   if (adults !== undefined && !isPositiveNumber(adults)) return fail(res, 'adults must be a number > 0', 'adults');
   if (children !== undefined && !isNonNegativeNumber(children)) return fail(res, 'children must be a number >= 0', 'children');
@@ -217,14 +215,6 @@ exports.validateParam = (paramName) => (req, res, next) => {
   next();
 };
 
-// Strict variant — use only on routes that are guaranteed Mongo _id lookups.
-exports.validateStrictObjectIdParam = (paramName = 'id') => (req, res, next) => {
-  const id = req.params[paramName];
-  if (!isValidObjectId(id)) return fail(res, `${paramName} must be a valid id`, paramName);
-  next();
-};
-
-exports.isValidObjectId = isValidObjectId;
 exports.STATUS_TRANSITIONS = STATUS_TRANSITIONS;
 exports.ROOM_STATUS = ROOM_STATUS;
 exports.ROOM_TYPES = ROOM_TYPES;

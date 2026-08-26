@@ -150,13 +150,46 @@
     document.head.appendChild(s);
   }
 
-  // ── CONFIG — Demo Working Mode ──
+  // ── CONFIG ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true,
     LOGIN_URL: '../login.html',
-    DEMO_USER: { name: 'Administrator', initials: 'AD', role: 'admin', privilege: 'settings' },
   };
+
+  function goLogin(reason) {
+    console.warn('[SettingsShell] Auth failed — redirecting to login:', reason || '');
+    const next = encodeURIComponent(location.pathname + location.search);
+    const base = CONFIG.LOGIN_URL || '../login.html';
+    location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
+  }
+
+  async function fetchSession() {
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
+        credentials: 'include',
+        headers: CONFIG.API_KEY ? { 'Authorization': 'Bearer ' + CONFIG.API_KEY } : {},
+      });
+      if (res.status === 401 || res.status === 403) {
+        goLogin('HTTP ' + res.status);
+        return null;
+      }
+      if (!res.ok) throw new Error('Session API returned ' + res.status);
+      const data = await res.json();
+      if (!data || !data.role) {
+        goLogin('missing role');
+        return null;
+      }
+      return {
+        name: data.name,
+        initials: data.initials,
+        role: data.role,
+        privilege: data.privilege || null,
+      };
+    } catch (err) {
+      goLogin(err && err.message);
+      return null;
+    }
+  }
 
   function attach(opts) {
     ensureFontAwesome();
@@ -166,8 +199,10 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    let user = opts.user || CONFIG.DEMO_USER;
-    let initials = user.initials || (user.name || 'AD').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    let user = opts.user || null;
+    let initials = user
+      ? (user.initials || (user.name || '··').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join(''))
+      : '…';
 
     sidebarTarget.innerHTML = `
       <div id="sts-overlay"></div>
@@ -211,7 +246,7 @@
         <div class="sts-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="sts-date" id="sts-date"></div>
-          <div class="sts-apibadge" id="sts-apiBadge"><span class="dot"></span><span id="sts-apiLabel">Demo</span></div>
+          <div class="sts-apibadge" id="sts-apiBadge"><span class="dot"></span><span id="sts-apiLabel">Live</span></div>
           <div class="sts-notif"><i class="fa-regular fa-bell"></i><div class="sts-notifdot"></div></div>
           <div class="sts-avatar" id="sts-avatar">${initials}</div>
         </div>
@@ -265,7 +300,7 @@
     } catch (e) {}
     applyTheme();
 
-    return {
+    const handle = {
       setApiMode(mode) {
         const badge = document.getElementById('sts-apiBadge');
         const label = document.getElementById('sts-apiLabel');
@@ -290,6 +325,20 @@
         return Object.assign({}, CONFIG);
       },
     };
+
+    fetchSession().then(function (sessionUser) {
+      if (!sessionUser) return;
+      user = sessionUser;
+      initials = user.initials || (user.name || '··').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
+      const avatar = document.getElementById('sts-avatar');
+      if (avatar) {
+        avatar.textContent = initials;
+        avatar.title = user.name || '';
+      }
+      handle.setApiMode('Live');
+    });
+
+    return handle;
   }
 
   global.SettingsShell = { attach: attach, CONFIG: CONFIG };

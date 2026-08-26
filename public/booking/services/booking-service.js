@@ -8,9 +8,8 @@
  *
  * AUTH
  * ────
- * All write endpoints require `Authorization: Bearer <token>` (see
- * middleware/auth.js) — apiFetch() below attaches it automatically from
- * wherever this app stores the JWT after login (CONFIG.TOKEN_STORAGE_KEY).
+ * All write endpoints require authentication via httpOnly cookie
+ * (credentials:'include') — apiFetch() below sends it automatically.
  * requirePerm() is UI-only (hide/disable a button before the round trip);
  * the server's roleGuard checks remain the real authorization boundary —
  * a 401/403 response is still surfaced as a thrown Error either way.
@@ -29,8 +28,8 @@
  * ────────────────────────────────
  * Callers still address a guest's charges by array index (the shape
  * every page already uses), but the backend addresses a charge by its
- * Mongo subdocument _id (PATCH /guests/:id/charges/:chargeId/settle).
- * addChargePayment()/settleCharge() resolve index -> _id with one
+ * string `id` field (PATCH /guests/:id/charges/:chargeId/settle).
+ * addChargePayment()/settleCharge() resolve index -> id with one
  * GET /guests/:id first, so no page needs to change.
  *
  * Script order: services/permissions.js (optional), then this file.
@@ -66,7 +65,7 @@
   }
   function calcTotal(b) {
     const n = nights(b.checkin, b.checkout) || 1;
-    return (b.rate || 0) * n * (1 - (b.discount || 0) / 100);
+    return ((b.rate || 0) - (b.discount || 0)) * n;
   }
   function calcPaid(b) {
     if (Array.isArray(b.payments) && b.payments.length) {
@@ -95,33 +94,14 @@
      Auth / session
   ══════════════════════════════════════════════════════════════ */
   function getToken() {
-    try { return localStorage.getItem(CONFIG.TOKEN_STORAGE_KEY) || ''; } catch (e) { return ''; }
+    // httpOnly cookie is sent automatically — no localStorage token needed.
+    return '';
   }
 
-  // Best-effort "who's logged in" for UI display only (greeting, default
-  // "by" on a freshly-composed form, etc.). Decodes the JWT payload — no
-  // signature check needed client-side; the server is the real
-  // authorization boundary regardless of what this returns.
-  function decodeJwtPayload(token) {
-    try {
-      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(atob(base64).split('').map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      return JSON.parse(json);
-    } catch (e) { return null; }
-  }
   function getSession() {
-    const token = getToken();
-    if (!token) return null;
-    const payload = decodeJwtPayload(token);
-    if (!payload) return null;
-    return {
-      id: payload.id || payload._id || null,
-      name: payload.name || 'Staff',
-      role: payload.role || 'staff',
-      privilege: payload.privilege || null,
-    };
+    // With httpOnly cookies, we can't decode the JWT client-side.
+    // Use the session API endpoint for user info, or return a default.
+    return null;
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -130,12 +110,11 @@
   async function apiFetch(path, options) {
     options = options || {};
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
-    const token = getToken();
-    if (token) headers.Authorization = 'Bearer ' + token;
+    // httpOnly cookie is sent automatically — no Authorization header needed.
 
     let res;
     try {
-      res = await fetch(CONFIG.API_BASE + path, Object.assign({}, options, { headers }));
+      res = await fetch(CONFIG.API_BASE + path, Object.assign({}, options, { headers, credentials: 'include'  }));
     } catch (networkErr) {
       throw new Error('Could not reach the server — check your connection.');
     }
@@ -242,8 +221,8 @@
   }
 
   async function saveGuest(patchBody) {
-    const id = patchBody && (patchBody.id || patchBody._id || patchBody.guestId);
-    if (!id) throw new Error('saveGuest() requires patch.id (the guest _id or guestId).');
+    const id = patchBody && (patchBody.id || patchBody.guestId);
+    if (!id) throw new Error('saveGuest() requires patch.id (the guest id).');
     const res = await patch('/guests/' + encodeURIComponent(id), patchBody);
     return res.data;
   }
@@ -253,13 +232,13 @@
     return res.data;
   }
 
-  // Resolves a charge's array index to its Mongo subdocument _id, then
+  // Resolves a charge's array index to its string id, then
   // settles through the real endpoint. See the header note on why this
   // extra lookup exists.
   async function resolveChargeId(guestId, chargeIndex) {
     const guest = await getGuest(guestId);
     if (!guest || !guest.charges || !guest.charges[chargeIndex]) throw new Error('Charge not found');
-    return guest.charges[chargeIndex]._id;
+    return guest.charges[chargeIndex].id;
   }
 
   async function addChargePayment(guestId, chargeIndex, payment) {

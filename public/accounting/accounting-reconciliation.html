@@ -343,9 +343,7 @@
 </div>
 
 <script src="../component/accounting-shell.js"></script>
-<!-- Demo/seed data for this module — see file header for why this exists
-     as its own file instead of being hardcoded inline. -->
-<script src="accounting-seed.js"></script>
+
 <!-- Shift Reconciliation detail/reconcile modal — Accounting-module component,
      not the shared /component folder, since it speaks accounting vocabulary
      (shifts, cash counts, variance) rather than being generic UI chrome. -->
@@ -357,14 +355,14 @@ const shell = AccountingShell.attach({
   activeFile:    'accounting-reconciliation.html',
   pageTitle:     'Shift Reconciliation',
   pageSubtitle:  'One cashier, one department, one shift — count cash against expected revenue',
-  apiMode:       'Demo',
+  apiMode:       'Live',
   user:          { name: 'Finance Manager', initials: 'FM' },
 });
 
 /* ═══════════════════════════════════════════
-   SEED DATA — pulled from accounting-seed.js, not hardcoded here.
-═══════════════════════════════════════════ */
-const { DEPARTMENTS, DEPT_COLOR, DEMO_ROOM_TX, DEMO_RESTAURANT_SALES, DEMO_POOLBAR_SALES, DEMO_SHIFTS, VARIANCE_TOLERANCE } = AccountingSeed;
+   SEED DATA — config constants from AccountingSeed.
+════════════════════════════════════════════ */
+const { DEPARTMENTS, DEPT_COLOR, VARIANCE_TOLERANCE } = AccountingSeed;
 
 /* ═══════════════════════════════════════════
    SHIFT-DAY LOGIC
@@ -402,7 +400,7 @@ function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', 
 /* ═══════════════════════════════════════════
    STORAGE + CONFIG
 ═══════════════════════════════════════════ */
-const CFG = { API_BASE:'', API_KEY:'', USE_DEMO:true, PAGE_SIZE:8 };
+const CFG = { API_BASE:'', API_KEY:'', PAGE_SIZE:8 };
 async function apiFetch(method, path, body=null){
   if (!CFG.API_BASE) throw new Error('No API_BASE configured');
   const opts = { method, headers:{ 'Content-Type':'application/json' } };
@@ -412,7 +410,7 @@ async function apiFetch(method, path, body=null){
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
-function apiSave(method, path, body){ if (!CFG.USE_DEMO) apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
+function apiSave(method, path, body){ apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
 
 const storage = window.storage || {
   async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
@@ -434,7 +432,7 @@ const KEY_SHIFTS = 'accounting-shifts';
    missing `dept` or `staff` (e.g. left over from an earlier version of
    this page, or corrupted by hand-editing storage during testing).
    Anything that doesn't look like a real shift record gets thrown out
-   and the whole array is reseeded from AccountingSeed.DEMO_SHIFTS
+   and the whole array is reset to an empty list
    instead of rendering broken rows.
 ═══════════════════════════════════════════ */
 function isValidShift(s){
@@ -891,14 +889,13 @@ async function init(){
   bindStatusPills();
   bindTableDelegation();
 
-  const roomTx    = await loadShared('accounting-room-tx', DEMO_ROOM_TX);
-  const restSales = await loadShared('restaurant-sales', DEMO_RESTAURANT_SALES);
-  const poolSales = await loadShared('poolbar-sales', DEMO_POOLBAR_SALES);
+  const roomTx    = await loadShared('accounting-room-tx', []);
+  const restSales = await loadShared('restaurant-sales', []);
+  const poolSales = await loadShared('poolbar-sales', []);
   transactions = buildTransactions(roomTx, restSales, poolSales);
 
   let loadedShifts = await loadShared(KEY_SHIFTS, null);
   if (!isValidShiftsArray(loadedShifts)) {
-    if (loadedShifts) console.warn('[Reconciliation] Stored shift data failed validation — reseeding from AccountingSeed.DEMO_SHIFTS.');
     loadedShifts = null;
   }
   shifts = loadedShifts;
@@ -907,15 +904,7 @@ async function init(){
   reconLog = Array.isArray(loadedLog) ? loadedLog : null;
 
   if (!shifts) {
-    shifts = DEMO_SHIFTS.map(s => ({ ...s }));
-    shifts.forEach(s => {
-      if (s.actualCash === 'auto') {
-        const expected = s.openingFloat + cashForShift(s.dept, s.key);
-        s.actualCash = expected + (s.demoVariance || 0);
-      }
-      delete s.demoVariance;
-    });
-    reconLog = null; // force the log to be rebuilt to match the fresh shifts below
+    shifts = [];
   }
   if (!reconLog) {
     reconLog = shifts.filter(s => s.status === 'reconciled').map(s => ({

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const storeController = require('../controllers/storeController');
 const auth = require('../middleware/auth');
-const roleGuard = require('../middleware/roleGuard');
+const { roleGuard, departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const sanitize = require('../middleware/sanitize');
 const {
   validateAddStock,
@@ -10,6 +10,7 @@ const {
   validateAddCategory,
   validateRenameCategory,
   validateSubmitRequisition,
+  validateUpdateRequisition,
   validateIssueRequisition,
   validateRejectRequisition,
   validateRejectDelivery,
@@ -19,26 +20,30 @@ const {
 router.use(auth);
 router.use(sanitize);
 
+const inDept  = departmentGuard('Store');
+const isAdmin = roleGuard('admin');
+
 /* Stock */
 router.get('/stock', storeController.listStock);
-router.post('/stock', roleGuard(['admin', 'manager', 'store_keeper']), validateAddStock, storeController.addStock);
-router.put('/stock/:id', roleGuard(['admin', 'manager', 'store_keeper']), validateParam('id'), validateUpdateStock, storeController.updateStock);
-router.delete('/stock/:id', roleGuard(['admin', 'manager', 'store_keeper']), validateParam('id'), storeController.deleteStock);
+router.post('/stock', inDept, privilegeGuard('store', 'canCreate'), validateAddStock, storeController.addStock);
+router.put('/stock/:id', inDept, privilegeGuard('store', 'canEdit'), validateParam('id'), validateUpdateStock, storeController.updateStock);
+router.delete('/stock/:id', isAdmin, validateParam('id'), storeController.deleteStock);
 
 /* Categories */
 router.get('/categories', storeController.listCategories);
-router.post('/categories', roleGuard(['admin', 'manager', 'store_keeper']), validateAddCategory, storeController.addCategory);
-router.put('/categories/:name', roleGuard(['admin', 'manager', 'store_keeper']), validateParam('name'), validateRenameCategory, storeController.renameCategory);
-router.delete('/categories/:name', roleGuard(['admin', 'manager', 'store_keeper']), validateParam('name'), storeController.deleteCategory);
+router.post('/categories', inDept, privilegeGuard('store', 'canCreate'), validateAddCategory, storeController.addCategory);
+router.put('/categories/:name', inDept, privilegeGuard('store', 'canEdit'), validateParam('name'), validateRenameCategory, storeController.renameCategory);
+router.delete('/categories/:name', isAdmin, validateParam('name'), storeController.deleteCategory);
 
 /* Requisitions — store_issue (any dept -> Store) and purchase (Store -> Procurement) */
 router.get('/requisitions', storeController.listRequisitions);
 router.get('/requisitions/next-number', storeController.peekNextRequisitionNumber);
 router.get('/requisitions/:no', validateParam('no'), storeController.getRequisition);
-router.post('/requisitions', validateSubmitRequisition, storeController.submitRequisition);
-router.patch('/requisitions/:no/issue', roleGuard(['admin', 'manager', 'store_keeper']), validateParam('no'), validateIssueRequisition, storeController.issueRequisition);
-router.patch('/requisitions/:no/reject', roleGuard(['admin', 'manager', 'store_keeper']), validateParam('no'), validateRejectRequisition, storeController.rejectRequisition);
-router.patch('/requisitions/:no/confirm', validateParam('no'), storeController.confirmReceipt);
-router.patch('/requisitions/:no/dispute', validateParam('no'), validateRejectDelivery, storeController.disputeDelivery);
+router.post('/requisitions', inDept, privilegeGuard('store', 'canCreate'), validateSubmitRequisition, storeController.submitRequisition);
+router.put('/requisitions/:no', inDept, privilegeGuard('store', 'canEdit'), validateParam('no'), validateUpdateRequisition, storeController.updateRequisition);
+router.patch('/requisitions/:no/issue', inDept, privilegeGuard('store', 'canRestock'), validateParam('no'), validateIssueRequisition, storeController.issueRequisition);
+router.patch('/requisitions/:no/reject', inDept, privilegeGuard('store', 'canReject'), validateParam('no'), validateRejectRequisition, storeController.rejectRequisition);
+router.patch('/requisitions/:no/confirm', inDept, privilegeGuard('store', 'canApprove'), validateParam('no'), storeController.confirmReceipt);
+router.patch('/requisitions/:no/dispute', inDept, privilegeGuard('store', 'canApprove'), validateParam('no'), validateRejectDelivery, storeController.disputeDelivery);
 
 module.exports = router;

@@ -1,16 +1,12 @@
 /**
- * middleware/procurementRoles.js — the ONLY place procurement role names
- * are spelled out. Routes and the controller both import from here, so
- * renaming/adding/removing a role means changing it in exactly one spot.
+ * middleware/procurementRoles.js — Stage-level approval roles for
+ * procurementController.js.  Route-level access is now handled by
+ * departmentGuard('Procurement') + privilegeGuard('procurement', action)
+ * in routes/procurement.js.
  *
  * Four roles, matching what's actually in use: admin, manager,
- * procurement_officer, accountant. There is no separate 'gm' or 'md'
- * role — those were the old approval-stage KEYS (still are, unchanged,
- * since po-form.html / procurement-dashboard.html / the PurchaseRequest
- * schema enum all key off them), but the PERSON performing that stage's
- * approval is just 'manager' (covers the old GM step) or 'admin' (covers
- * the old MD step). roleGuard.js already treats 'admin' as an automatic
- * pass on every check, so admin never needs to be listed explicitly.
+ * procurement_officer, accountant. 'admin' can always act regardless of
+ * this map — enforced in the controller, same rule roleGuard.js applies.
  */
 
 const ROLES = {
@@ -19,10 +15,6 @@ const ROLES = {
   PROCUREMENT_OFFICER: 'procurement_officer',
   ACCOUNTANT: 'accountant',
 };
-
-// Coarse route-level gates (used with roleGuard(...)).
-const CAN_MANAGE_PR = [ROLES.ADMIN, ROLES.MANAGER, ROLES.PROCUREMENT_OFFICER];
-const CAN_APPROVE = [ROLES.ADMIN, ROLES.MANAGER, ROLES.ACCOUNTANT];
 
 /**
  * Fine-grained gate used inside the controller: which role is allowed to
@@ -39,4 +31,4 @@ const STAGE_APPROVER_ROLE = {
   md: ROLES.ADMIN,             // Admin (old "MD") approval -> moves to 'approved'
 };
 
-module.exports = { ROLES, CAN_MANAGE_PR, CAN_APPROVE, STAGE_APPROVER_ROLE };
+module.exports = { ROLES, STAGE_APPROVER_ROLE };

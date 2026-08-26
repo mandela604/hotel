@@ -1,82 +1,63 @@
 /**
  * services/platform-settings-service.js — Shared platform-wide settings
- * Depends on: data/platform-settings-seed.js (window.PlatformSettingsSeed)
- * Optional: services/permissions.js (window.Permissions) — editing is
- * gated to admin/manager, same convention as AccountingData.
  *
- * Load order: platform-settings-seed.js, THEN this file, THEN any page
- * or other service that reads settings (e.g. accounting-service.js).
+ * PRODUCTION VERSION: talks to the real backend (routes/settings.js →
+ * controllers/settingsController.js → models/Config.js) over HTTP.
+ * No demo/localStorage fallback.
  *
- * Reads/writes ONE shared key ('platform-settings', shared:true) so
- * every module — Accounting, Kitchen, Restaurant, Pool Bar, Store —
- * sees the same payment methods / shift hour / department list instead
- * of each hardcoding its own copy. Falls back to localStorage when
- * window.storage isn't available (same fallback every other service
- * in this codebase uses).
+ * Load order: this file, THEN any page or other service that reads settings.
  *
  * Usage from any other module:
- *   <script src="../data/platform-settings-seed.js"></script>
- *   <script src="../services/platform-settings-service.js"></script>
- *   <script>
- *     const settings = await PlatformSettings.getSettings();
- *     settings.paymentMethods // ['Cash','POS',...]
- *   </script>
+ *   const settings = await PlatformSettings.getSettings();
+ *   settings.paymentMethods // ['Cash','POS',...]
  */
 (function (global) {
   'use strict';
 
   const KEY = 'platform-settings';
 
-  const storage = global.storage || {
-    async get(key, shared) {
-      const v = localStorage.getItem(key);
-      return v == null ? null : { key, value: v, shared };
-    },
-    async set(key, value, shared) {
-      localStorage.setItem(key, value);
-      return { key, value, shared };
-    },
+  const CONFIG = {
+    API_BASE: '/api/settings',
   };
+
+  function getToken() {
+    // httpOnly cookie is sent automatically — no localStorage token needed.
+    return '';
+  }
+
+  async function apiFetch(path, options) {
+    options = options || {};
+    // httpOnly cookie is sent automatically — no Authorization header needed.
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+
+    let res;
+    try {
+      res = await fetch(CONFIG.API_BASE + path, Object.assign({}, options, { headers }));
+    } catch (networkErr) {
+      const err = new Error('Network error contacting server: ' + networkErr.message);
+      err.code = 'NETWORK_ERROR';
+      throw err;
+    }
+
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* no/invalid JSON */ }
+
+    if (!res.ok || (body && body.success === false)) {
+      const msg = (body && body.error) || ('Request failed (' + res.status + ')');
+      const err = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+
+    return body;
+  }
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   function seedDefaults() {
     const s = global.PlatformSettingsSeed;
-    if (!s) {
-      console.error('[PlatformSettings] Load data/platform-settings-seed.js first');
-      return { paymentMethods: [], shiftStartHour: 9, departments: [] };
-    }
+    if (!s) return { paymentMethods: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'], shiftStartHour: 9, departments: ['Rooms', 'Restaurant', 'Pool Bar', 'Gym', 'Laundry', 'Events'] };
     return clone(s.DEFAULT_SETTINGS);
-  }
-
-  async function loadShared() {
-    try {
-      const r = await storage.get(KEY, true);
-      if (r && r.value) {
-        const parsed = JSON.parse(r.value);
-        if (parsed && typeof parsed === 'object') return parsed;
-      }
-    } catch (e) { /* fall through */ }
-    return null;
-  }
-  async function saveShared(value) {
-    try { await storage.set(KEY, JSON.stringify(value), true); return true; }
-    catch (e) { console.warn('[PlatformSettings] save failed:', e); return false; }
-  }
-
-  let _seeded = false;
-  let _seedPromise = null;
-  function ensureSeeded() {
-    if (_seeded) return Promise.resolve();
-    if (_seedPromise) return _seedPromise;
-    _seedPromise = (async () => {
-      const existing = await loadShared();
-      if (!existing) {
-        await saveShared(seedDefaults());
-      }
-      _seeded = true;
-    })();
-    return _seedPromise;
   }
 
   const state = { settings: null, ready: false };
@@ -84,30 +65,41 @@
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(fn => { try { fn(state.settings, reason); } catch (e) { console.warn('[PlatformSettings] listener error', e); } }); }
 
+  function normalize(cfg) {
+    if (!cfg) return seedDefaults();
+    return {
+      paymentMethods: Array.isArray(cfg.paymentMethods) ? cfg.paymentMethods : seedDefaults().paymentMethods,
+      shiftStartHour: typeof cfg.shiftStartHour === 'number' ? cfg.shiftStartHour : 9,
+      departments: Array.isArray(cfg.departments) ? cfg.departments : seedDefaults().departments,
+    };
+  }
+
   async function loadAll() {
-    await ensureSeeded();
-    state.settings = (await loadShared()) || seedDefaults();
+    try {
+      const res = await apiFetch('?_=' + Date.now());
+      state.settings = normalize(res.data);
+    } catch (e) {
+      console.warn('[PlatformSettings] API load failed, using defaults:', e.message);
+      state.settings = seedDefaults();
+    }
     state.ready = true;
     emitChange('load');
     return clone(state.settings);
   }
 
   async function getSettings() {
-    await ensureSeeded();
     if (!state.ready) await loadAll();
     return clone(state.settings);
   }
 
-  /* ── permission check — same shape as AccountingData.requirePerm ── */
   function getSession() {
-    try { return JSON.parse(localStorage.getItem('accounting-session')) || null; }
+    try { return JSON.parse(localStorage.getItem('accounting-session') || 'null') || null; }
     catch (e) { return null; }
   }
+
   function canEditSettings(session) {
     const P = global.Permissions;
     if (!P) {
-      // No Permissions module wired up — fall back to a role check so
-      // this isn't wide open by accident.
       const s = session || getSession();
       return !!s && (s.role === 'admin' || s.role === 'manager');
     }
@@ -115,27 +107,25 @@
   }
 
   async function updateSettings(patch, session) {
-    await ensureSeeded();
     if (!canEditSettings(session)) {
       const err = new Error("You don't have permission to change platform settings.");
       err.code = 'PERMISSION_DENIED';
       throw err;
     }
-    const current = state.ready ? state.settings : await loadAll();
+    const current = state.settings || seedDefaults();
     const next = { ...current, ...patch };
-    await saveShared(next);
-    state.settings = next;
+    const res = await apiFetch('', { method: 'PUT', body: JSON.stringify(next) });
+    state.settings = normalize(res.data);
     emitChange('update');
-    return clone(next);
+    return clone(state.settings);
   }
 
-  /* ── convenience helpers for the common cases ── */
   async function addPaymentMethod(method, session) {
     const s = await getSettings();
     const name = (method || '').trim();
     if (!name) throw new Error('Payment method name is required');
     if (s.paymentMethods.some(m => m.toLowerCase() === name.toLowerCase())) {
-      throw new Error(`"${name}" already exists`);
+      throw new Error('"' + name + '" already exists');
     }
     return updateSettings({ paymentMethods: [...s.paymentMethods, name] }, session);
   }
@@ -145,14 +135,14 @@
   }
   async function setShiftStartHour(hour, session) {
     const h = Number(hour);
-    if (Number.isNaN(h) || h < 0 || h > 23) throw new Error('shiftStartHour must be 0–23');
+    if (Number.isNaN(h) || h < 0 || h > 23) throw new Error('shiftStartHour must be 0\u201323');
     return updateSettings({ shiftStartHour: h }, session);
   }
   async function addDepartment(dept, session) {
     const s = await getSettings();
     const name = (dept || '').trim();
     if (!name) throw new Error('Department name is required');
-    if (s.departments.includes(name)) throw new Error(`"${name}" already exists`);
+    if (s.departments.includes(name)) throw new Error('"' + name + '" already exists');
     return updateSettings({ departments: [...s.departments, name] }, session);
   }
   async function removeDepartment(dept, session) {
@@ -165,18 +155,13 @@
   }
 
   global.PlatformSettings = {
-    KEY,
-    state,
-    onChange,
-    loadAll,
-    getSettings,
+    KEY, CONFIG, state,
+    onChange, loadAll, getSettings,
     updateSettings,
-    addPaymentMethod,
-    removePaymentMethod,
+    addPaymentMethod, removePaymentMethod,
     setShiftStartHour,
-    addDepartment,
-    removeDepartment,
-    resetToDefaults,
-    canEditSettings,
+    addDepartment, removeDepartment,
+    resetToDefaults, canEditSettings,
+    getSession,
   };
 })(window);

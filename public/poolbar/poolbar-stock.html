@@ -795,10 +795,10 @@ async function confirmDelete() {
   try {
     if (deleteTarget.type === 'item') {
       await svc.deleteStockItem(deleteTarget.name);
-      showToast('"' + deleteTarget.name + '" removed from stock.', 'error');
+      showToast('"' + deleteTarget.name + '" removed from stock.', 'success');
     } else if (deleteTarget.type === 'category') {
       await svc.deleteCategory(deleteTarget.name);
-      showToast('Category "' + deleteTarget.name + '" deleted.', 'error');
+      showToast('Category "' + deleteTarget.name + '" deleted.', 'success');
       renderCategoryList();
       populateFormDatalists();
     }

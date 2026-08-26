@@ -46,7 +46,7 @@
   .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
 
   /* ═══ KPI CARDS — same icon-box system as the Restaurant pages ═══ */
-  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
   .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden;
@@ -156,8 +156,7 @@
      and the real module layout (data/ + services/ one level up, shared
      with the rest of the app; procurement-shell.js stays alongside the
      pages themselves). -->
-<script src="data/procurement-seed.js"></script>
-<script src="services/procurement-service.js"></script>
+  <script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════════
@@ -192,6 +191,11 @@ function renderKpis(){
       <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-star"></i></div><div class="kpi-label">Needs MD Approval</div></div>
       <div class="kpi-value" style="color:var(--purple);">${kpis.needsMD}</div>
       <div class="kpi-trend neutral">Above ₦100k</div>
+    </a>
+    <a class="kpi-card acc-blue" href="po-history.html">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-truck-ramp-box"></i></div><div class="kpi-label">Sent to Store</div></div>
+      <div class="kpi-value" style="color:var(--blue);">${kpis.sentToStore}</div>
+      <div class="kpi-trend ${kpis.sentToStore>0?'info':'neutral'}">${kpis.sentToStore>0?'Awaiting Store accept/reject':'None waiting'}</div>
     </a>`;
 
   shell.setPendingBadge(kpis.pending);
@@ -199,12 +203,20 @@ function renderKpis(){
 
 function renderApprovalPipeline(){
   const counts = svc.approvalPipelineCounts();
+  // NOTE: this used to list a stage keyed 'approved', but
+  // approvalPipelineCounts() only ever populates
+  // pending/accountant/gm/md/sent_to_store/fulfilled — 'approved' was
+  // never a real key here, so that row silently always showed 0.
+  // Replaced with the two real terminal-ish stages: sent_to_store
+  // (fully approved internally, waiting on Store) and fulfilled
+  // (Store accepted it).
   const stages = [
-    { key: 'pending',    label: 'Pending',    icon: 'fa-hourglass-half', cls: 'ic-amber',  color: 'var(--amber)' },
-    { key: 'accountant', label: 'Accountant', icon: 'fa-calculator',     cls: 'ic-blue',   color: 'var(--blue)' },
-    { key: 'gm',         label: 'GM',         icon: 'fa-user-tie',       cls: 'ic-green',  color: 'var(--green)' },
-    { key: 'md',         label: 'MD',         icon: 'fa-star',          cls: 'ic-purple', color: 'var(--purple)' },
-    { key: 'approved',   label: 'Approved',   icon: 'fa-circle-check',   cls: 'ic-green',  color: 'var(--green)' },
+    { key: 'pending',       label: 'Pending',       icon: 'fa-hourglass-half',   cls: 'ic-amber',  color: 'var(--amber)' },
+    { key: 'accountant',    label: 'Accountant',     icon: 'fa-calculator',      cls: 'ic-blue',   color: 'var(--blue)' },
+    { key: 'gm',            label: 'GM',             icon: 'fa-user-tie',        cls: 'ic-green',  color: 'var(--green)' },
+    { key: 'md',            label: 'MD',             icon: 'fa-star',           cls: 'ic-purple', color: 'var(--purple)' },
+    { key: 'sent_to_store', label: 'Sent to Store',  icon: 'fa-truck-ramp-box', cls: 'ic-blue',   color: 'var(--blue)' },
+    { key: 'fulfilled',     label: 'Fulfilled',      icon: 'fa-circle-check',   cls: 'ic-green',  color: 'var(--green)' },
   ];
 
   const el = document.getElementById('approvalPipeline');
@@ -235,7 +247,7 @@ async function init(){
     activeFile:    'procurement-dashboard.html',
     pageTitle:     'Dashboard',
     pageSubtitle:  'Procurement overview',
-    apiMode:       svc && svc.CONFIG.USE_PROD ? 'Live' : 'Demo',
+    apiMode:       'Live',
     user:          { name: 'Procurement Officer', initials: 'PO' },
   });
 

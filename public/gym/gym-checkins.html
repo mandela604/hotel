@@ -257,7 +257,6 @@
      Gym page reads from) — this page no longer keeps its own storage
      shim, seed fallback, or duplicated status/plan helpers. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
-<script src="data/gym-seed.js"></script>
 <script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
 <script>
@@ -521,7 +520,7 @@ async function init(){
   }
   initDateRangePicker();
   try {
-    await GymService.loadAll(GymSeed);
+    await GymService.loadAll();
     await refresh();
     GymService.onChange(refresh);
   } catch (err) {

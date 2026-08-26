@@ -325,8 +325,7 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/procurement-seed.js"></script>
-<script src="services/procurement-service.js"></script>
+  <script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -336,14 +335,13 @@ const shell = ProcurementShell.attach({
   activeFile:    'requisition-history.html',
   pageTitle:     'Requisition History',
   pageSubtitle:  'All purchase requests',
-  apiMode:       ProcurementService.CONFIG.USE_PROD ? 'Live' : 'Demo',
+  apiMode:       'Live',
   user:          { name: 'Procurement Officer', initials: 'PO' },
 });
 
 // Single source of truth for this page — populated once by init() via
 // ProcurementService.getPRs(). Every filter/sort/render function below
-// reads from this local cache; nothing on this page touches
-// ProcurementService.DEMO_PR or localStorage directly.
+// reads from this local cache; nothing on this page touches localStorage directly.
 let allPRs = [];
 
 let pPage = 1;

@@ -6,8 +6,8 @@ const { ApiError } = require('../middleware/errorHandler');
 const { ROLES, STAGE_APPROVER_ROLE } = require('../middleware/procurementRoles');
 
 const MD_APPROVAL_THRESHOLD = 100000;
-const PIPELINE_STAGES = ['pending', 'accountant', 'gm', 'md', 'approved'];
-const ACTIVE_STAGES = ['pending', 'accountant', 'gm', 'md'];
+const PIPELINE_STAGES = ['pending', 'accountant', 'gm', 'md', 'sent_to_store', 'fulfilled'];
+const ACTIVE_STAGES = ['pending', 'accountant', 'gm', 'md', 'sent_to_store'];
 
 function actorName(req) {
   return (req.user && (req.user.name || req.user.role)) || 'User';
@@ -172,17 +172,17 @@ exports.approvePR = async (req, res, next) => {
         if (pr.totalAmount > MD_APPROVAL_THRESHOLD) {
           nextStage = 'md'; action = 'Forwarded to MD';
         } else {
-          nextStage = 'approved'; action = 'Fully approved';
+          nextStage = 'sent_to_store'; action = 'Fully approved — sent to Store';
         }
         break;
       case 'md':
-        nextStage = 'approved'; action = 'MD approved'; break;
+        nextStage = 'sent_to_store'; action = 'MD approved — sent to Store'; break;
       default:
         return next(new ApiError(400, `Cannot approve from stage: ${pr.approvalStage}`));
     }
 
     pr.approvalStage = nextStage;
-    pr.status = nextStage === 'approved' ? 'approved' : nextStage;
+    pr.status = nextStage;
     pr.history.push({
       date: todayISO(), action, by: actorName(req),
       note: req.body.note || '', stage: nextStage,
@@ -229,6 +229,94 @@ exports.createPO = async (req, res, next) => {
     });
     await pr.save();
     res.json({ success: true, data: pr });
+  } catch (err) { next(err); }
+};
+
+/**
+ * Void & Correct — marks a fulfilled PO as voided (with reason), then
+ * raises a NEW corrected PR that skips the approval chain and goes
+ * straight to 'sent_to_store'. Both records are cross-linked:
+ *   original.voidedIntoPrId  → corrected._id
+ *   corrected.correctionOfPrId → original._id
+ *
+ * Only legal when the source PO is at 'fulfilled' stage (Store already
+ * accepted it, but the actual purchase came back short/different).
+ */
+exports.voidAndCorrectPO = async (req, res, next) => {
+  try {
+    const pr = await PurchaseRequest.findById(req.params.id);
+    if (!pr) return next(new ApiError(404, 'Purchase request not found'));
+    if (pr.approvalStage !== 'fulfilled') {
+      return next(new ApiError(400, 'Only fulfilled POs can be voided and corrected'));
+    }
+
+    const { items, reason } = req.body;
+    if (!reason || !String(reason).trim()) {
+      return next(new ApiError(400, 'A reason for voiding is required'));
+    }
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return next(new ApiError(400, 'Corrected items are required'));
+    }
+
+    const by = actorName(req);
+
+    // 1) Mark the original as voided
+    pr.approvalStage = 'voided';
+    pr.status = 'voided';
+    pr.voidReason = String(reason).trim();
+    pr.history.push({
+      date: todayISO(),
+      action: 'PO Voided — correcting',
+      by,
+      note: String(reason).trim(),
+      stage: 'voided',
+    });
+    await pr.save();
+
+    // 2) Create the corrected PR — same prNo sequence, same dept/supplier,
+    //    but with the actual received items and amounts. Goes straight to
+    //    'sent_to_store' (skips the approval chain).
+    const totalAmount = computeItemsTotal(items);
+    const nums = await nextPurchaseOrderNumbers();
+    const corrected = await PurchaseRequest.create({
+      prNo: nums.prNo,
+      poNo: pr.poNo || '',
+      item: items.map((i) => i.name).join(', '),
+      cat: pr.cat || 'General',
+      dept: pr.dept || '',
+      source: pr.source || 'Procurement',
+      storeReqNo: pr.storeReqNo || '',
+      by,
+      date: new Date(),
+      needed: pr.needed || '',
+      qty: items.length,
+      unit: pr.unit || 'Units',
+      unitCost: 0,
+      priority: pr.priority || 'Normal',
+      totalAmount,
+      needsMDApproval: false,
+      status: 'sent_to_store',
+      approvalStage: 'sent_to_store',
+      supplier: pr.supplier || '',
+      notes: `Corrected from ${pr.prNo}. ${String(reason).trim()}`,
+      items,
+      correctionOfPrId: String(pr._id),
+      history: [
+        {
+          date: todayISO(),
+          action: 'Corrected PO raised — sent to Store',
+          by,
+          note: `Corrected from ${pr.prNo}. ${String(reason).trim()}`,
+          stage: 'sent_to_store',
+        },
+      ],
+    });
+
+    // 3) Cross-link: stamp the corrected PR's _id back onto the original
+    pr.voidedIntoPrId = String(corrected._id);
+    await pr.save();
+
+    res.json({ success: true, data: { original: pr, corrected } });
   } catch (err) { next(err); }
 };
 

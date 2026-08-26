@@ -130,13 +130,19 @@ const shell = PoolBarShell.attach({
 });
 const svc = PoolBarService;
 const { fmtN, todayDDMMYY, parseStamp, dateOnly } = svc;
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 // Sale-status vocabulary and money-received rules are the service's
 // business logic, never re-typed as string literals on this page.
 const completedStatus = svc.getCompletedSaleStatus();
 const voidedStatus = svc.getStatusConstants ? svc.getStatusConstants().SALE_VOIDED : null;
 const roomChargeMethod = svc.getRoomChargeMethodName ? svc.getRoomChargeMethodName() : null;
 const emptyValue = svc.getEmptyValuePlaceholder ? svc.getEmptyValuePlaceholder() : '—';
-// Session comes ONLY from the shell (Demo → CONFIG.DEMO_USER, Live → real
+// Session comes ONLY from the shell (Live → real
 // API user, Live-fail → shell already redirected to login). No hardcoded
 // session object, no hardcoded shell `user` option, no permission bypass —
 // same pattern as poolbar-dashboard.html.
@@ -226,9 +232,9 @@ function applyFilters(state) {
   document.getElementById('printSub').textContent =
     'Generated: ' + now + ' · ' + filtered.length + ' records · Net: ' + fmtN(net);
   document.getElementById('printMeta').innerHTML =
-    '<span>Period: ' + (bounds.label || 'All') + '</span>' +
-    '<span>Payment: ' + (state.payment || 'All') + '</span>' +
-    '<span>Staff: ' + (state.staff || 'All') + '</span>';
+    '<span>Period: ' + escapeHtml(bounds.label || 'All') + '</span>' +
+    '<span>Payment: ' + escapeHtml(state.payment || 'All') + '</span>' +
+    '<span>Staff: ' + escapeHtml(state.staff || 'All') + '</span>';
 }
 function openSaleModal(saleOrId) {
   const id = typeof saleOrId === 'string' ? saleOrId : (saleOrId && saleOrId.id);

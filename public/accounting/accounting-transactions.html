@@ -332,7 +332,7 @@ tbody td.right{ text-align:right; }
 <script src="../component/accounting-shell.js"></script>
 <!-- Shared demo/seed data for this module — see file header there for why
      this exists as its own file instead of being hardcoded inline. -->
-<script src="accounting-seed.js"></script>
+
 <script>
 /* ═══════════════════════════════════════════
    Shell — sidebar + topbar, same accounting-shell.js component every
@@ -345,7 +345,7 @@ const shell = AccountingShell.attach({
   activeFile:    'accounting-transactions.html',
   pageTitle:     'Transactions',
   pageSubtitle:  'Consolidated revenue ledger — Restaurant, Bar, Pool Bar, Rooms & Gym',
-  apiMode:       'Demo',
+  apiMode:       'Live',
   user:          { name: 'Accountant', initials: 'AC' },
 });
 
@@ -358,12 +358,7 @@ const shell = AccountingShell.attach({
      restaurant-sales     → Restaurant sales (Sales page)
      booking-bookings     → Room revenue (paid amounts on bookings)
      gym-members          → Membership payments (amountPaid on join)
-   Falls back to the same demo seeds as every other Accounting page
-   (AccountingSeed) if a key hasn't been written yet — Bookings/Gym
-   aren't reconciliation concerns so their small demo seeds stay local
-   to this page rather than living in accounting-seed.js.
 ═══════════════════════════════════════════════════════════════ */
-const { DEMO_RESTAURANT_SALES, DEMO_POOLBAR_SALES } = AccountingSeed;
 
 const storage = window.storage || {
   async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
@@ -374,17 +369,8 @@ async function loadShared(key, fallback){
     const r = await storage.get(key, true);
     if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
   } catch(e){}
-  return fallback;
+  return fallback || [];
 }
-
-const DEMO_BOOKINGS = [
-  { room:'101', guest:'Mr. Adeyemi, Tunde', rate:35000, discount:0, paid:140000, payMethod:'Transfer', payStatus:'Fully Paid', recordedBy:'Emeka S.', checkin:'2026-03-10', checkout:'2026-03-14', status:'checkedin' },
-  { room:'301', guest:'Chief Dangote, Emeka', rate:120000, discount:0, paid:600000, payMethod:'Transfer', payStatus:'Fully Paid', recordedBy:'Amaka O.', checkin:'2026-03-10', checkout:'2026-03-15', status:'checkedin' },
-];
-const DEMO_GYM_MEMBERS = [
-  { id:'gm01', name:'Chidi Nwankwo', planId:'pl02', joined:'2026-03-10', amountPaid:35000 },
-  { id:'gm06', name:'Ngozi Okafor', planId:'pl04', joined:'2026-03-17', amountPaid:60000 },
-];
 
 let txns = [];
 let page = 1;
@@ -470,10 +456,10 @@ async function refreshData(manual){
   document.getElementById('tblBody').innerHTML = `<tr class="empty-row"><td colspan="8"><i class="fa-solid fa-spinner fa-spin"></i> Loading transactions…</td></tr>`;
   try {
     const [poolbar, restaurant, bookings, gym] = await Promise.all([
-      loadShared('poolbar-sales', DEMO_POOLBAR_SALES),
-      loadShared('restaurant-sales', DEMO_RESTAURANT_SALES),
-      loadShared('booking-bookings', DEMO_BOOKINGS),
-      loadShared('gym-members', DEMO_GYM_MEMBERS),
+      loadShared('poolbar-sales', []),
+      loadShared('restaurant-sales', []),
+      loadShared('booking-bookings', []),
+      loadShared('gym-members', []),
     ]);
     txns = [
       ...fromPoolBar(poolbar),

@@ -5,79 +5,9 @@
    for production readiness
 ═══════════════════════════════════════════════ */
 const CONFIG = {
-  USE_DEMO: true,  // ← flip to false for production
-  API_BASE: 'https://api.yourdomain.com',  // ← change to your API
-  API_KEY: '',  // ← add if needed
+  API_BASE: '',
+  API_KEY: '',
   PAGE_SIZE: 10,
-};
-
-/* ═══════════════════════════════════════════════
-   DEMO DATA
-═══════════════════════════════════════════════ */
-
-function isoAgo(days) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().split('T')[0];
-}
-
-function isoIn(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
-}
-
-function isoAgoHours(hours) {
-  const d = new Date();
-  d.setHours(d.getHours() - hours);
-  return d.toISOString();
-}
-
-// DEMO PLANS
-const DEMO_PLANS = [
-  { id: 'pl01', name: 'Basic', price: 15000, durationDays: 30, notes: 'Full gym floor access during opening hours. Locker included.', color: 'blue' },
-  { id: 'pl02', name: 'Premium', price: 35000, durationDays: 30, notes: 'Everything in Basic, plus group classes, sauna access, and one personal-training consult per month.', color: 'gold' },
-  { id: 'pl03', name: 'Day Pass', price: 5000, durationDays: 1, notes: 'Single-day access for hotel guests and walk-ins. No locker.', color: 'purple' },
-  { id: 'pl04', name: 'Annual', price: 120000, durationDays: 365, notes: 'Full year unlimited access. Best value.', color: 'green' },
-  { id: 'pl05', name: 'Student', price: 8000, durationDays: 30, notes: 'Discounted plan for students with valid ID.', color: 'amber' },
-];
-
-// DEMO MEMBERS
-const DEMO_MEMBERS = [
-  { id: 'gm01', name: 'Chidi Nwankwo', planId: 'pl02', room: 'Room 204', phone: '+234 801 234 5671', joined: isoAgo(120), expiry: isoIn(18), checkins: 34, lastCheckin: isoAgoHours(5), status: 'active', notes: '', amountPaid: 35000, totalDue: 35000 },
-  { id: 'gm02', name: 'Fatima Bello', planId: 'pl01', room: 'Room 118', phone: '+234 802 345 6782', joined: isoAgo(60), expiry: isoIn(4), checkins: 12, lastCheckin: isoAgoHours(30), status: 'active', notes: '', amountPaid: 15000, totalDue: 15000 },
-  { id: 'gm03', name: 'Segun Johnson', planId: 'pl03', room: 'Walk-in', phone: '+234 803 456 7893', joined: isoAgo(1), expiry: isoAgo(0), checkins: 1, lastCheckin: isoAgoHours(1), status: 'active', notes: '', amountPaid: 5000, totalDue: 5000 },
-  { id: 'gm04', name: 'Ada Williams', planId: 'pl02', room: 'Room 204 (Suite)', phone: '+234 804 567 8904', joined: isoAgo(200), expiry: isoAgo(10), checkins: 88, lastCheckin: isoAgo(10), status: 'active', notes: 'VIP guest', amountPaid: 20000, totalDue: 35000 },
-  { id: 'gm05', name: 'Ibrahim Musa', planId: 'pl01', room: 'Staff', phone: '+234 805 678 9015', joined: isoAgo(300), expiry: isoIn(90), checkins: 150, lastCheckin: isoAgo(45), status: 'frozen', notes: 'On medical leave', amountPaid: 15000, totalDue: 15000 },
-  { id: 'gm06', name: 'Ngozi Okafor', planId: 'pl04', room: 'Room 301', phone: '+234 806 789 0126', joined: isoAgo(10), expiry: isoIn(50), checkins: 6, lastCheckin: isoAgoHours(20), status: 'active', notes: '', amountPaid: 60000, totalDue: 120000 },
-  { id: 'gm07', name: 'Emeka Obi', planId: 'pl02', room: 'Room 105', phone: '+234 807 890 1234', joined: isoAgo(90), expiry: isoAgo(5), checkins: 45, lastCheckin: isoAgo(6), status: 'active', notes: 'Expired plan', amountPaid: 0, totalDue: 35000 },
-];
-
-// DEMO CHECKINS
-const DEMO_CHECKINS = [
-  { id: 'ci01', memberId: 'gm03', memberName: 'Segun Johnson', time: isoAgoHours(1) },
-  { id: 'ci02', memberId: 'gm01', memberName: 'Chidi Nwankwo', time: isoAgoHours(5) },
-  { id: 'ci03', memberId: 'gm06', memberName: 'Ngozi Okafor', time: isoAgoHours(20) },
-  { id: 'ci04', memberId: 'gm02', memberName: 'Fatima Bello', time: isoAgoHours(30) },
-  { id: 'ci05', memberId: 'gm01', memberName: 'Chidi Nwankwo', time: isoAgoHours(48) },
-];
-
-// DEMO GUESTS (for room charge feature)
-const DEMO_GUESTS = [
-  { id: 'g01', name: 'Mr. Adeyemi, Tunde', room: '101', phone: '+234 803 111 2233' },
-  { id: 'g02', name: 'Mrs. Okafor, Ngozi', room: '102', phone: '+234 806 222 4455' },
-  { id: 'g03', name: 'Mr. Bello, Ibrahim', room: '103', phone: '+234 701 333 6677' },
-  { id: 'g04', name: 'Dr. Eze, Chukwuemeka', room: '201', phone: '+234 802 444 8899' },
-  { id: 'g05', name: 'Ms. Abubakar, Fatima', room: '202', phone: '+234 805 555 0011' },
-  { id: 'g06', name: 'Mr. Johnson, Segun', room: '203', phone: '+234 708 666 2233' },
-  { id: 'g07', name: 'Prof. Williams, Ada', room: '204', phone: '+234 803 777 4455' },
-];
-
-// DEMO SESSION
-const DEMO_SESSION = {
-  name: 'Gym Attendant',
-  initials: 'GA',
-  role: 'gym_attendant',
 };
 
 /* ═══════════════════════════════════════════════
@@ -156,50 +86,42 @@ function computeStatus(member) {
 ═══════════════════════════════════════════════ */
 
 /**
- * Fetch all gym data
- * 
- * BEHAVIOR:
- * - Demo mode: Returns localStorage data or seeds with demo data
- * - Production mode: Tries API, throws error on failure
+ * Fetch all gym data — API-first with localStorage fallback.
  */
 export async function getGymData() {
-  if (!CONFIG.USE_DEMO) {
-    try {
-      const response = await fetch(`${CONFIG.API_BASE}/api/gym`, {
-        headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      if (!data.members || !data.plans) {
-        throw new Error('API response missing required fields');
-      }
-      
-      return {
-        members: data.members || [],
-        plans: data.plans || [],
-        checkins: data.checkins || [],
-        guests: data.guests || [],
-        session: data.session || DEMO_SESSION,
-      };
-      
-    } catch (err) {
-      console.error('[GymData] Production API error:', err.message);
-      throw new Error(`Failed to load gym data: ${err.message}. Please refresh or contact support.`);
+  try {
+    const response = await fetch(`${CONFIG.API_BASE}/api/gym`, {
+      headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response.statusText}`);
     }
+    
+    const data = await response.json();
+    
+    if (!data.members || !data.plans) {
+      throw new Error('API response missing required fields');
+    }
+    
+    return {
+      members: data.members || [],
+      plans: data.plans || [],
+      checkins: data.checkins || [],
+      guests: data.guests || [],
+      session: data.session || { name: 'Gym Attendant', initials: 'GA', role: 'gym_attendant' },
+    };
+    
+  } catch (err) {
+    console.warn('[GymData] API unavailable, using stored data:', err.message);
   }
 
-  // Demo mode
-  const members = await loadLocal(KEY_MEMBERS, DEMO_MEMBERS);
-  const plans = await loadLocal(KEY_PLANS, DEMO_PLANS);
-  const checkins = await loadLocal(KEY_CHECKINS, DEMO_CHECKINS);
-  const guests = await loadLocal(KEY_GUESTS, DEMO_GUESTS);
+  const members = await loadLocal(KEY_MEMBERS, []);
+  const plans = await loadLocal(KEY_PLANS, []);
+  const checkins = await loadLocal(KEY_CHECKINS, []);
+  const guests = await loadLocal(KEY_GUESTS, []);
   
-  return { members, plans, checkins, guests, session: DEMO_SESSION };
+  return { members, plans, checkins, guests, session: { name: 'Gym Attendant', initials: 'GA', role: 'gym_attendant' } };
 }
 
 /**
@@ -271,19 +193,17 @@ export async function createMember(data) {
   members.push(newMember);
   await saveLocal(KEY_MEMBERS, members);
 
-  if (!CONFIG.USE_DEMO) {
-    try {
-      await fetch(`${CONFIG.API_BASE}/api/gym/members`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
-        },
-        body: JSON.stringify(newMember)
-      });
-    } catch (err) {
-      console.warn('[GymData] API save failed:', err);
-    }
+  try {
+    await fetch(`${CONFIG.API_BASE}/api/gym/members`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
+      },
+      body: JSON.stringify(newMember)
+    });
+  } catch (err) {
+    console.warn('[GymData] API save failed:', err);
   }
 
   return newMember;
@@ -308,19 +228,17 @@ export async function updateMember(id, updates) {
 
   await saveLocal(KEY_MEMBERS, members);
 
-  if (!CONFIG.USE_DEMO) {
-    try {
-      await fetch(`${CONFIG.API_BASE}/api/gym/members/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
-        },
-        body: JSON.stringify(members[index])
-      });
-    } catch (err) {
-      console.warn('[GymData] API update failed:', err);
-    }
+  try {
+    await fetch(`${CONFIG.API_BASE}/api/gym/members/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
+      },
+      body: JSON.stringify(members[index])
+    });
+  } catch (err) {
+    console.warn('[GymData] API update failed:', err);
   }
 
   return members[index];
@@ -362,19 +280,17 @@ export async function recordCheckin(memberId) {
   await saveLocal(KEY_MEMBERS, members);
   await saveLocal(KEY_CHECKINS, checkins);
 
-  if (!CONFIG.USE_DEMO) {
-    try {
-      await fetch(`${CONFIG.API_BASE}/api/gym/checkins`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
-        },
-        body: JSON.stringify({ memberId, checkin })
-      });
-    } catch (err) {
-      console.warn('[GymData] API checkin failed:', err);
-    }
+  try {
+    await fetch(`${CONFIG.API_BASE}/api/gym/checkins`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
+      },
+      body: JSON.stringify({ memberId, checkin })
+    });
+  } catch (err) {
+    console.warn('[GymData] API checkin failed:', err);
   }
 
   return checkin;
@@ -410,19 +326,17 @@ export async function createPlan(data) {
   plans.push(newPlan);
   await saveLocal(KEY_PLANS, plans);
 
-  if (!CONFIG.USE_DEMO) {
-    try {
-      await fetch(`${CONFIG.API_BASE}/api/gym/plans`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
-        },
-        body: JSON.stringify(newPlan)
-      });
-    } catch (err) {
-      console.warn('[GymData] API plan save failed:', err);
-    }
+  try {
+    await fetch(`${CONFIG.API_BASE}/api/gym/plans`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
+      },
+      body: JSON.stringify(newPlan)
+    });
+  } catch (err) {
+    console.warn('[GymData] API plan save failed:', err);
   }
 
   return newPlan;
@@ -447,19 +361,17 @@ export async function updatePlan(id, updates) {
 
   await saveLocal(KEY_PLANS, plans);
 
-  if (!CONFIG.USE_DEMO) {
-    try {
-      await fetch(`${CONFIG.API_BASE}/api/gym/plans/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
-        },
-        body: JSON.stringify(plans[index])
-      });
-    } catch (err) {
-      console.warn('[GymData] API plan update failed:', err);
-    }
+  try {
+    await fetch(`${CONFIG.API_BASE}/api/gym/plans/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
+      },
+      body: JSON.stringify(plans[index])
+    });
+  } catch (err) {
+    console.warn('[GymData] API plan update failed:', err);
   }
 
   return plans[index];
@@ -479,15 +391,13 @@ export async function deletePlan(id) {
   const updatedPlans = plans.filter(p => p.id !== id);
   await saveLocal(KEY_PLANS, updatedPlans);
 
-  if (!CONFIG.USE_DEMO) {
-    try {
-      await fetch(`${CONFIG.API_BASE}/api/gym/plans/${id}`, {
-        method: 'DELETE',
-        headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
-      });
-    } catch (err) {
-      console.warn('[GymData] API plan delete failed:', err);
-    }
+  try {
+    await fetch(`${CONFIG.API_BASE}/api/gym/plans/${id}`, {
+      method: 'DELETE',
+      headers: CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {}
+    });
+  } catch (err) {
+    console.warn('[GymData] API plan delete failed:', err);
   }
 
   return true;
@@ -545,33 +455,20 @@ export async function renewMember(id, newExpiry) {
 
   await saveLocal(KEY_MEMBERS, members);
 
-  if (!CONFIG.USE_DEMO) {
-    try {
-      await fetch(`${CONFIG.API_BASE}/api/gym/members/${id}/renew`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
-        },
-        body: JSON.stringify({ expiry: newExpiry })
-      });
-    } catch (err) {
-      console.warn('[GymData] API renew failed:', err);
-    }
+  try {
+    await fetch(`${CONFIG.API_BASE}/api/gym/members/${id}/renew`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(CONFIG.API_KEY ? { 'Authorization': `Bearer ${CONFIG.API_KEY}` } : {})
+      },
+      body: JSON.stringify({ expiry: newExpiry })
+    });
+  } catch (err) {
+    console.warn('[GymData] API renew failed:', err);
   }
 
   return member;
-}
-
-/**
- * Reset all gym data to demo defaults
- */
-export async function resetGymData() {
-  await saveLocal(KEY_MEMBERS, DEMO_MEMBERS);
-  await saveLocal(KEY_PLANS, DEMO_PLANS);
-  await saveLocal(KEY_CHECKINS, DEMO_CHECKINS);
-  await saveLocal(KEY_GUESTS, DEMO_GUESTS);
-  return true;
 }
 
 /* ═══════════════════════════════════════════════

@@ -1,45 +1,24 @@
 /**
  * services/store-service.js — Shared data + business logic for the Store module
- * Depends on: data/store-seed.js (window.StoreSeed)
- * Optional: services/permissions.js (window.Permissions)
+ *
+ * PRODUCTION VERSION: talks to the real backend (routes/store.js →
+ * controllers/storeController.js) over HTTP. No demo/localStorage fallback.
  */
 (function (global) {
   'use strict';
+
+  const CONFIG = {
+    API_BASE: '/api/store',
+  };
 
   const KEYS = {
     REQ_INDEX: 'req-index',
     STOCK: 'store-stock',
   };
 
-  const storage = global.storage || {
-    async get(key, shared) { const v = localStorage.getItem(key); return v == null ? null : { key, value: v, shared }; },
-    async set(key, value, shared) { localStorage.setItem(key, value); return { key, value, shared }; },
-    async delete(key, shared) { localStorage.removeItem(key); return { key, deleted: true, shared }; },
-    async list(prefix, shared) { const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return { keys, prefix, shared }; },
-  };
+  const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
 
-  async function loadSharedRaw(key) {
-    try {
-      const r = await storage.get(key, true);
-      return r ? r.value : null;
-    } catch (e) { return null; }
-  }
-  async function saveSharedRaw(key, value) {
-    try { await storage.set(key, value, true); return true; }
-    catch (e) { console.warn('[StoreService] save failed:', key, e); return false; }
-  }
-  async function loadSharedJSON(key, fallback) {
-    const raw = await loadSharedRaw(key);
-    if (raw == null) return fallback;
-    try { return JSON.parse(raw); } catch (e) { return fallback; }
-  }
-  async function saveSharedJSON(key, value) {
-    return saveSharedRaw(key, JSON.stringify(value));
-  }
-
-  const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Bar: 'BREQ', 'Front Desk': 'FREQ', Maintenance: 'MREQ', Store: 'PR' };
-
-  function fmtN(n) { return '₦' + Math.round(n || 0).toLocaleString('en-NG'); }
+  function fmtN(n) { return '\u20A6' + Math.round(n || 0).toLocaleString('en-NG'); }
   function todayISO() { return new Date().toISOString().split('T')[0]; }
   function todayDisplay() {
     const d = new Date();
@@ -47,10 +26,9 @@
       ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   }
   function fmtDate(d) {
-    if (!d) return '—';
+    if (!d) return '\u2014';
     return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
-  function genStockId() { return 's' + Date.now() + Math.floor(Math.random() * 1000); }
 
   function stockLevel(s) {
     const qty = Number(s && s.qty) || 0;
@@ -62,34 +40,114 @@
   const LEVEL_CHIP = { ok: 'chip-ok', low: 'chip-low', out: 'chip-out' };
   const LEVEL_LABEL = { ok: 'In Stock', low: 'Low Stock', out: 'Out of Stock' };
 
-  const state = {
-    requests: [],
-    stock: [],
-    categories: [],
-    catalog: [],
-    ready: false,
-  };
+  const state = { requests: [], stock: [], categories: [], catalog: [], ready: false };
 
   const listeners = [];
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(fn => { try { fn(state, reason); } catch (e) { console.warn('[StoreService] listener error', e); } }); }
 
-  function seed() {
-    const s = global.StoreSeed || {};
+  function getToken() {
+    // httpOnly cookie is sent automatically — no localStorage token needed.
+    return '';
+  }
+
+  async function apiFetch(path, options) {
+    options = options || {};
+    // httpOnly cookie is sent automatically — no Authorization header needed.
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+
+    let res;
+    try {
+      res = await fetch(CONFIG.API_BASE + path, Object.assign({}, options, { headers }));
+    } catch (networkErr) {
+      const err = new Error('Network error contacting server: ' + networkErr.message);
+      err.code = 'NETWORK_ERROR';
+      throw err;
+    }
+
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* no/invalid JSON */ }
+
+    if (!res.ok || (body && body.success === false)) {
+      const msg = (body && body.error) || ('Request failed (' + res.status + ')');
+      const err = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+
+    return body ? body.data : null;
+  }
+
+  function normalizeStock(s) {
+    if (!s) return s;
     return {
-      stock: s.DEMO_STOCK || [],
-      catalog: s.DEMO_CATALOG || null,
-      requests: s.DEMO_REQUESTS || [],
+      id: s._id || s.id || '',
+      name: s.name || '',
+      cat: s.cat || 'Other',
+      unit: s.unit || 'unit',
+      qty: Number(s.qty) || 0,
+      cost: Number(s.cost) || 0,
+      min: Number(s.min) || 0,
     };
   }
 
-  function ensureStockShape(rows) {
-    return (rows || []).map(function (s) {
-      return Object.assign({
-        id: genStockId(),
-        cat: 'Other',
-      }, s);
-    });
+  function normalizeRequisition(r) {
+    if (!r) return r;
+    return {
+      no: r.requisitionNo || r.no || '',
+      mode: r.mode || 'store_issue',
+      by: r.requester || r.by || '',
+      dept: r.dept || '',
+      needed: r.neededBy || r.needed || '',
+      priority: r.priority || 'Normal',
+      remark: r.remark || '',
+      fulfillStore: r.fulfillStore || null,
+      supplier: r.supplier || null,
+      linked: r.linked || null,
+      items: (r.items || []).map(function (it) {
+        return {
+          name: it.name || '', unit: it.unit || 'unit', qty: Number(it.qty) || 0,
+          cost: Number(it.cost) || 0, remark: it.remark || '', issuedQty: Number(it.issuedQty) || 0,
+        };
+      }),
+      status: r.status || 'Pending',
+      rejectReason: r.rejectReason || '',
+      disputeReason: r.disputeReason || '',
+      dateRaised: r.dateRaised || '',
+      dateRaisedDisplay: r.dateRaisedDisplay || '',
+      procurementPrId: r.procurementPrId || null,
+      procurementPrNo: r.procurementPrNo || '',
+    };
+  }
+
+  function stockToPayload(fe) {
+    return {
+      name: fe.name,
+      cat: fe.cat || 'Other',
+      unit: fe.unit || 'unit',
+      min: Number(fe.min) || 0,
+      cost: Number(fe.cost) || 0,
+    };
+  }
+
+  function requisitionToPayload(fe) {
+    return {
+      mode: fe.mode || 'store_issue',
+      by: fe.by || '',
+      dept: fe.dept || '',
+      needed: fe.needed || '',
+      priority: fe.priority || 'Normal',
+      remark: fe.remark || '',
+      fulfillStore: fe.fulfillStore || null,
+      supplier: fe.supplier || null,
+      linked: fe.linked || null,
+      items: (fe.items || []).map(function (it) {
+        return {
+          name: it.name || '', unit: it.unit || 'unit', qty: Number(it.qty) || 0,
+          cost: Number(it.cost) || 0, remark: it.remark || '',
+        };
+      }),
+    };
   }
 
   function deriveCategories(stock) {
@@ -98,78 +156,10 @@
     return Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
   }
 
-  /**
-   * Rebuilds the item-picker catalog straight from current stock. Called
-   * on load AND after every stock mutation (add/edit/delete) so a brand
-   * new or renamed item is immediately searchable on the requisition form
-   * without needing a page reload.
-   */
   function rebuildCatalog() {
-    const s = seed();
-    state.catalog = (s.catalog && s.catalog.length)
-      ? s.catalog
-      : state.stock.map(function (i) { return { name: i.name, unit: i.unit }; });
+    state.catalog = state.stock.map(function (i) { return { name: i.name, unit: i.unit }; });
   }
 
-  async function loadAll() {
-    const s = seed();
-
-    let stock = await loadSharedJSON(KEYS.STOCK, null);
-    let needsSave = false;
-    if (!Array.isArray(stock) || !stock.length) {
-      stock = ensureStockShape(s.stock);
-      needsSave = true;
-    } else if (stock.some(function (i) { return !i.id; })) {
-      stock = ensureStockShape(stock);
-      needsSave = true;
-    }
-    state.stock = stock;
-    if (needsSave) await saveSharedJSON(KEYS.STOCK, state.stock);
-
-    state.categories = deriveCategories(state.stock);
-    rebuildCatalog();
-
-    let idx = await loadSharedJSON(KEYS.REQ_INDEX, null);
-    if (!Array.isArray(idx)) idx = [];
-
-    if (!idx.length && s.requests.length) {
-      for (const r of s.requests) {
-        await saveSharedJSON('req:' + r.no, r);
-      }
-      idx = s.requests.map(function (r) { return r.no; });
-      await saveSharedJSON(KEYS.REQ_INDEX, idx);
-    }
-
-    const reqs = [];
-    for (const no of idx) {
-      const r = await loadSharedJSON('req:' + no, null);
-      if (r) reqs.push(r);
-    }
-    state.requests = reqs;
-    state.ready = true;
-
-    emitChange('load');
-    return state;
-  }
-
-  async function persistStock() {
-    await saveSharedJSON(KEYS.STOCK, state.stock);
-  }
-
-  /**
-   * Resolves a requisition line's item name to a Store stock record.
-   * Requesting departments (Pool Bar, Restaurant, Kitchen, ...) don't
-   * always spell an item exactly the way Store's central stock does
-   * ("Bottled Water" on a requisition vs "Bottled Water 1.5L" in Store's
-   * stock list) — a strict-equality match silently treated that as "not
-   * found" and stockQtyFor() returned 0 even when Store actually had the
-   * item. This now falls back through three passes before giving up:
-   *   1. Exact match (case-insensitive) — unchanged, still tried first.
-   *   2. The requisition's item name appears inside a stock item's name
-   *      (e.g. "Bottled Water" -> "Bottled Water 1.5L").
-   *   3. A stock item's name appears inside the requisition's item name
-   *      (covers the reverse phrasing).
-   */
   function findStock(name) {
     const n = (name || '').trim();
     if (!n) return null;
@@ -184,97 +174,28 @@
     found = state.stock.find(function (i) { return nLower.includes((i.name || '').toLowerCase()); });
     return found || null;
   }
+
   function findStockById(id) {
     return state.stock.find(function (i) { return i.id === id; }) || null;
   }
+
   function stockQtyFor(name) {
     const i = findStock(name);
     return i ? (i.qty || 0) : 0;
   }
+
   function findCatalogItem(name) {
     const n = (name || '').trim().toLowerCase();
     return state.catalog.find(function (c) { return (c.name || '').toLowerCase() === n; }) || null;
   }
+
   function suggestIssueQty(name, requestedQty) {
     return Math.min(requestedQty || 0, stockQtyFor(name));
-  }
-
-  async function addStockItem({ name, cat, unit, min = 0 }) {
-    const n = (name || '').trim();
-    if (!n) throw new Error('Item name is required.');
-    if (findStock(n)) throw new Error(`"${n}" is already tracked — edit it instead.`);
-    const entry = {
-      id: genStockId(), name: n, cat: cat || 'Other', unit: unit || 'unit',
-      qty: 0, cost: 0, min: Number(min) || 0,
-    };
-    state.stock.push(entry);
-    await persistStock();
-    state.categories = deriveCategories(state.stock);
-    rebuildCatalog();
-    emitChange('stock:add');
-    return entry;
-  }
-
-  async function editStockItem(id, updates) {
-    const i = findStockById(id);
-    if (!i) throw new Error('Stock item not found.');
-    const { qty, cost, ...safe } = updates || {};
-    Object.assign(i, safe);
-    await persistStock();
-    state.categories = deriveCategories(state.stock);
-    rebuildCatalog();
-    emitChange('stock:edit');
-    return i;
-  }
-
-  async function deleteStockItem(id) {
-    state.stock = state.stock.filter(function (i) { return i.id !== id; });
-    await persistStock();
-    state.categories = deriveCategories(state.stock);
-    rebuildCatalog();
-    emitChange('stock:delete');
-  }
-
-  function getCategories() {
-    return state.categories.slice();
-  }
-  async function renameCategory(oldName, newName) {
-    const n = (newName || '').trim();
-    if (!n) throw new Error('Category name is required.');
-    if (n.toLowerCase() !== (oldName || '').toLowerCase() &&
-        state.categories.some(function (c) { return c.toLowerCase() === n.toLowerCase(); })) {
-      throw new Error(`Category "${n}" already exists.`);
-    }
-    state.stock.forEach(function (s) { if (s.cat === oldName) s.cat = n; });
-    await persistStock();
-    state.categories = deriveCategories(state.stock);
-    emitChange('category:rename');
-    return n;
-  }
-  async function deleteCategory(name, { reassignTo = 'Other' } = {}) {
-    state.stock.forEach(function (s) { if (s.cat === name) s.cat = reassignTo; });
-    await persistStock();
-    state.categories = deriveCategories(state.stock);
-    emitChange('category:delete');
   }
 
   function prefixForDept(dept, mode) {
     if (mode === 'purchase') return 'PR';
     return DEPT_PREFIX[dept] || 'REQ';
-  }
-  async function peekNextNumber(dept, mode) {
-    const prefix = prefixForDept(dept, mode);
-    const raw = await loadSharedRaw('counter:' + prefix);
-    const n = raw != null ? parseInt(raw, 10) : 45;
-    return prefix + '-2025-' + String(n + 1).padStart(5, '0');
-  }
-  async function nextNumber(dept, mode) {
-    const prefix = prefixForDept(dept, mode);
-    const raw = await loadSharedRaw('counter:' + prefix);
-    let n = raw != null ? parseInt(raw, 10) : 45;
-    n += 1;
-    await saveSharedRaw('counter:' + prefix, String(n));
-    return prefix + '-2025-' + String(n).padStart(5, '0');
   }
 
   function findReq(no) {
@@ -285,7 +206,6 @@
     return opts.mode ? state.requests.filter(function (r) { return r.mode === opts.mode; }) : state.requests.slice();
   }
   function getRequisition(no) { return findReq(no); }
-
   function getPendingRequisitions(opts) {
     return getRequisitions(opts).filter(function (r) {
       return r.status === 'Pending' || r.status === 'Partial';
@@ -293,6 +213,128 @@
   }
   function pendingCount(mode) {
     return getPendingRequisitions({ mode: mode }).length;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     loadAll
+  ══════════════════════════════════════════════════════════════ */
+  async function loadAll() {
+    try {
+      const stockData = await apiFetch('/stock?_=' + Date.now());
+      state.stock = (Array.isArray(stockData) ? stockData : []).map(normalizeStock);
+    } catch (e) {
+      console.error('[StoreService] Failed to load stock:', e.message);
+      state.stock = [];
+    }
+
+    state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
+
+    try {
+      const reqData = await apiFetch('/requisitions?_=' + Date.now());
+      state.requests = (Array.isArray(reqData) ? reqData : []).map(normalizeRequisition);
+    } catch (e) {
+      console.error('[StoreService] Failed to load requisitions:', e.message);
+      state.requests = [];
+    }
+
+    state.ready = true;
+    emitChange('load');
+    return state;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     Stock CRUD
+  ══════════════════════════════════════════════════════════════ */
+
+  async function addStockItem(data) {
+    const created = await apiFetch('/stock', { method: 'POST', body: JSON.stringify(stockToPayload(data)) });
+    const norm = normalizeStock(created);
+    state.stock.push(norm);
+    state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
+    emitChange('stock:add');
+    return norm;
+  }
+
+  async function editStockItem(id, updates) {
+    const payload = {};
+    if (updates.name !== undefined) payload.name = updates.name;
+    if (updates.cat !== undefined) payload.cat = updates.cat;
+    if (updates.unit !== undefined) payload.unit = updates.unit;
+    if (updates.min !== undefined) payload.min = updates.min;
+    if (updates.cost !== undefined) payload.cost = updates.cost;
+
+    const updated = await apiFetch('/stock/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+    const norm = normalizeStock(updated);
+    const idx = state.stock.findIndex(function (s) { return s.id === id; });
+    if (idx > -1) state.stock[idx] = norm; else state.stock.push(norm);
+    state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
+    emitChange('stock:edit');
+    return norm;
+  }
+
+  async function deleteStockItem(id) {
+    await apiFetch('/stock/' + id, { method: 'DELETE' });
+    state.stock = state.stock.filter(function (i) { return i.id !== id; });
+    state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
+    emitChange('stock:delete');
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     Categories
+  ══════════════════════════════════════════════════════════════ */
+
+  function getCategories() {
+    return state.categories.slice();
+  }
+
+  async function addCategory(name) {
+    const n = (name || '').trim();
+    if (!n) throw new Error('Category name is required.');
+    await apiFetch('/categories', { method: 'POST', body: JSON.stringify({ name: n }) });
+    if (!state.categories.some(function (c) { return c.toLowerCase() === n.toLowerCase(); })) {
+      state.categories.push(n);
+    }
+    emitChange('category:add');
+    return n;
+  }
+
+  async function renameCategory(oldName, newName) {
+    const n = (newName || '').trim();
+    if (!n) throw new Error('Category name is required.');
+    await apiFetch('/categories/' + encodeURIComponent(oldName), { method: 'PUT', body: JSON.stringify({ name: n }) });
+    state.stock.forEach(function (s) { if (s.cat === oldName) s.cat = n; });
+    state.categories = deriveCategories(state.stock);
+    emitChange('category:rename');
+    return n;
+  }
+
+  async function deleteCategory(name, opts) {
+    opts = opts || {};
+    const reassignTo = opts.reassignTo || 'Other';
+    await apiFetch('/categories/' + encodeURIComponent(name), { method: 'DELETE', body: JSON.stringify({ reassignTo: reassignTo }) });
+    state.stock.forEach(function (s) { if (s.cat === name) s.cat = reassignTo; });
+    state.categories = deriveCategories(state.stock);
+    emitChange('category:delete');
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     Requisitions
+  ══════════════════════════════════════════════════════════════ */
+
+  async function peekNextNumber(dept, mode) {
+    const params = new URLSearchParams({ dept: dept, mode: mode });
+    const result = await apiFetch('/requisitions/next-number?' + params.toString());
+    return result ? result.no : '';
+  }
+
+  async function nextNumber(dept, mode) {
+    const params = new URLSearchParams({ dept: dept, mode: mode });
+    const result = await apiFetch('/requisitions/next-number?' + params.toString());
+    return result ? result.no : '';
   }
 
   async function submitRequisition(opts) {
@@ -309,155 +351,201 @@
     });
     if (!validItems.length) throw new Error('Add at least one item with a name and quantity.');
 
-    const no = await nextNumber(dept, mode);
-    const entry = {
-      no: no, mode: mode, by: by, dept: dept, needed: needed, priority: opts.priority || 'Normal',
-      remark: (opts.remark || '').trim(),
-      fulfillStore: mode === 'store_issue' ? (opts.fulfillStore || 'Central Store') : null,
-      supplier: mode === 'purchase' ? (opts.supplier || '').trim() : null,
-      linked: mode === 'purchase' ? (opts.linked || '').trim() : null,
-      items: validItems.map(function (i) {
-        return {
-          name: i.name.trim(), unit: i.unit || 'unit', qty: parseFloat(i.qty) || 0,
-          cost: parseFloat(i.cost) || 0, remark: i.remark || '', issuedQty: 0,
-        };
-      }),
-      status: 'Pending',
-      dateRaised: todayISO(),
-      dateRaisedDisplay: todayDisplay(),
-    };
-
-    await saveSharedJSON('req:' + no, entry);
-    const idx = await loadSharedJSON(KEYS.REQ_INDEX, []);
-    idx.unshift(no);
-    await saveSharedJSON(KEYS.REQ_INDEX, idx);
-
-    state.requests.unshift(entry);
+    const payload = requisitionToPayload({
+      mode: mode, by: by, dept: dept, needed: needed,
+      priority: opts.priority, remark: opts.remark,
+      fulfillStore: opts.fulfillStore, supplier: opts.supplier, linked: opts.linked,
+      items: validItems,
+    });
+    const created = await apiFetch('/requisitions', { method: 'POST', body: JSON.stringify(payload) });
+    const norm = normalizeRequisition(created);
+    state.requests.unshift(norm);
     emitChange('requisition:submit');
-    return entry;
+    return norm;
   }
 
-  /**
-   * Edit an existing purchase-mode (mode:'purchase') requisition — used
-   * by the shared purchase-request form when it's opened as
-   * store-purchase-request.html?no=<no>. Only purchase-mode requests are
-   * editable here (store_issue requests go through approveAndIssue's
-   * separate lifecycle instead), and only before Procurement has picked
-   * it up: once ProcurementService.importStoreRequest() has stamped
-   * `procurementPrId` onto the record, it belongs to Procurement's own
-   * copy from then on and editing here would silently drift out of sync
-   * with what Procurement is actually pricing/approving.
-   */
   async function updatePurchaseRequest(no, updates) {
-    const req = findReq(no);
-    if (!req) throw new Error(`Request ${no} not found.`);
-    if (req.mode !== 'purchase') throw new Error('Only purchase requests can be edited here.');
-    if (req.procurementPrId) throw new Error('This request has already been sent to Procurement and can no longer be edited here.');
-
-    const validItems = (updates.items || []).filter(function (i) {
-      return i.name && i.name.trim() && (parseFloat(i.qty) || 0) > 0;
+    const payload = requisitionToPayload({
+      mode: 'purchase', by: updates.by || '', dept: updates.dept || '',
+      needed: updates.needed || '', priority: updates.priority,
+      remark: updates.remark, supplier: updates.supplier, items: updates.items,
     });
-    if (!validItems.length) throw new Error('Add at least one item with a name and quantity.');
-
-    Object.assign(req, {
-      dept: updates.dept || req.dept,
-      needed: updates.needed || req.needed,
-      priority: updates.priority || req.priority,
-      remark: updates.remark != null ? updates.remark.trim() : req.remark,
-      supplier: updates.supplier != null ? updates.supplier.trim() : req.supplier,
-      items: validItems.map(function (i) {
-        return {
-          name: i.name.trim(), unit: i.unit || 'unit', qty: parseFloat(i.qty) || 0,
-          cost: parseFloat(i.cost) || 0, remark: i.remark || '', issuedQty: 0,
-        };
-      }),
-    });
-
-    await saveSharedJSON('req:' + no, req);
+    const updated = await apiFetch('/requisitions/' + encodeURIComponent(no), { method: 'PUT', body: JSON.stringify(payload) });
+    const norm = normalizeRequisition(updated);
+    const idx = state.requests.findIndex(function (r) { return r.no === no; });
+    if (idx > -1) state.requests[idx] = norm; else state.requests.unshift(norm);
     emitChange('requisition:update');
-    return req;
+    return norm;
   }
 
   async function approveAndIssue(no, issuedQtyByItem) {
-    const req = findReq(no);
-    if (!req) throw new Error('Requisition ' + no + ' not found.');
-    if (req.mode !== 'store_issue') throw new Error('Only Store-issue requisitions can be issued from here.');
-    if (req.status === 'Rejected') throw new Error('This requisition was rejected and cannot be issued.');
-
-    let totalReq = 0, totalIssued = 0;
-    const nextItems = req.items.map(function (it) {
-      const has = issuedQtyByItem && Object.prototype.hasOwnProperty.call(issuedQtyByItem, it.name);
-      const raw = has ? issuedQtyByItem[it.name] : it.issuedQty;
-      const avail = stockQtyFor(it.name);
-      const issued = Math.max(0, Math.min(parseFloat(raw) || 0, avail, it.qty));
-      totalReq += it.qty;
-      totalIssued += issued;
-      return Object.assign({}, it, { issuedQty: issued });
+    const result = await apiFetch('/requisitions/' + encodeURIComponent(no) + '/issue', {
+      method: 'PATCH',
+      body: JSON.stringify({ issuedQtyByItem: issuedQtyByItem }),
     });
-
-    nextItems.forEach(function (it, i) {
-      const prevIssued = req.items[i].issuedQty || 0;
-      const delta = it.issuedQty - prevIssued;
-      if (delta > 0) {
-        const stockItem = findStock(it.name);
-        if (stockItem) stockItem.qty = Math.max(0, (stockItem.qty || 0) - delta);
-      }
-    });
-
-    req.items = nextItems;
-    req.status = totalIssued >= totalReq ? 'Full' : totalIssued > 0 ? 'Partial' : 'Pending';
-
-    await saveSharedJSON('req:' + no, req);
-    await persistStock();
+    const norm = normalizeRequisition(result);
+    const idx = state.requests.findIndex(function (r) { return r.no === no; });
+    if (idx > -1) state.requests[idx] = norm; else state.requests.unshift(norm);
     emitChange('requisition:issue');
-    return req;
+    return norm;
   }
 
   async function rejectRequisition(no, reason) {
-    const req = findReq(no);
-    if (!req) throw new Error('Requisition ' + no + ' not found.');
-    req.status = 'Rejected';
-    req.rejectReason = (reason || '').trim();
-    await saveSharedJSON('req:' + no, req);
+    const result = await apiFetch('/requisitions/' + encodeURIComponent(no) + '/reject', {
+      method: 'PATCH',
+      body: JSON.stringify({ reason: reason }),
+    });
+    const norm = normalizeRequisition(result);
+    const idx = state.requests.findIndex(function (r) { return r.no === no; });
+    if (idx > -1) state.requests[idx] = norm; else state.requests.unshift(norm);
     emitChange('requisition:reject');
-    return req;
+    return norm;
   }
 
   async function confirmReceipt(no) {
-    const req = findReq(no);
-    if (!req) throw new Error('Requisition ' + no + ' not found.');
-    if (req.status !== 'Full' && req.status !== 'Partial') {
-      throw new Error('Only a Full or Partial requisition can be confirmed received.');
-    }
-    req.status = 'Completed';
-    await saveSharedJSON('req:' + no, req);
+    const result = await apiFetch('/requisitions/' + encodeURIComponent(no) + '/confirm', { method: 'PATCH' });
+    const norm = normalizeRequisition(result);
+    const idx = state.requests.findIndex(function (r) { return r.no === no; });
+    if (idx > -1) state.requests[idx] = norm; else state.requests.unshift(norm);
     emitChange('requisition:confirm');
-    return req;
+    return norm;
   }
 
   async function rejectDelivery(no, reason) {
-    const req = findReq(no);
-    if (!req) throw new Error('Requisition ' + no + ' not found.');
-    if (req.status !== 'Full' && req.status !== 'Partial') {
-      throw new Error('Only a Full or Partial requisition can be disputed.');
-    }
-    req.status = 'Disputed';
-    req.disputeReason = (reason || '').trim();
-    await saveSharedJSON('req:' + no, req);
+    const result = await apiFetch('/requisitions/' + encodeURIComponent(no) + '/dispute', {
+      method: 'PATCH',
+      body: JSON.stringify({ reason: reason }),
+    });
+    const norm = normalizeRequisition(result);
+    const idx = state.requests.findIndex(function (r) { return r.no === no; });
+    if (idx > -1) state.requests[idx] = norm; else state.requests.unshift(norm);
     emitChange('requisition:dispute');
-    return req;
+    return norm;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     STORE HANDOFF — acceptPO() / rejectPO()
+     Delegates to ProcurementService for the PO status transition.
+     acceptPO also upserts stock items from the PO line items.
+  ══════════════════════════════════════════════════════════════ */
+
+  async function acceptPO(prId) {
+    const PS = global.ProcurementService;
+    if (!PS) throw new Error('ProcurementService not loaded on this page.');
+
+    const pr = await PS.getPR(prId);
+    if (!pr) throw new Error('PR not found.');
+    if (pr.approvalStage !== 'sent_to_store') {
+      throw new Error('This PO is not awaiting Store action.');
+    }
+
+    const items = pr.items || [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const name = (it.name || '').trim();
+      if (!name) continue;
+      const qty = parseFloat(it.qty) || 0;
+      const cost = parseFloat(it.cost) || 0;
+      const unit = it.unit || 'unit';
+
+      const stockItem = findStock(name);
+      if (stockItem) {
+        if (cost > 0) {
+          await apiFetch('/stock/' + stockItem.id, {
+            method: 'PUT',
+            body: JSON.stringify({ cost: cost }),
+          });
+        }
+        stockItem.qty = (stockItem.qty || 0) + qty;
+        if (cost > 0) stockItem.cost = cost;
+      } else {
+        const created = await apiFetch('/stock', {
+          method: 'POST',
+          body: JSON.stringify({ name: name, cat: pr.cat || 'General', unit: unit, cost: cost, min: 0 }),
+        });
+        const norm = normalizeStock(created);
+        norm.qty = qty;
+        state.stock.push(norm);
+      }
+    }
+
+    state.categories = deriveCategories(state.stock);
+    rebuildCatalog();
+    emitChange('stock:accept-po');
+
+    await PS.acceptPO(prId);
+    return pr;
+  }
+
+  async function rejectPO(prId, reason) {
+    const PS = global.ProcurementService;
+    if (!PS) throw new Error('ProcurementService not loaded on this page.');
+    const r = (reason || '').trim();
+    if (!r) throw new Error('Please provide a rejection reason.');
+
+    const pr = await PS.getPR(prId);
+    if (!pr) throw new Error('PR not found.');
+    if (pr.approvalStage !== 'sent_to_store') {
+      throw new Error('This PO is not awaiting Store action.');
+    }
+
+    await PS.rejectPO(prId, r);
+    return pr;
   }
 
   global.StoreService = {
-    KEYS, DEPT_PREFIX,
-    state, onChange, loadAll,
-    fmtN, fmtDate, todayISO, todayDisplay,
-    stockLevel, LEVEL_CHIP, LEVEL_LABEL,
-    findStock, findStockById, stockQtyFor, findCatalogItem, suggestIssueQty,
-    addStockItem, editStockItem, deleteStockItem,
-    getCategories, renameCategory, deleteCategory,
-    prefixForDept, peekNextNumber, nextNumber,
-    submitRequisition, updatePurchaseRequest, approveAndIssue, rejectRequisition, confirmReceipt, rejectDelivery,
-    getRequisitions, getRequisition, getPendingRequisitions, pendingCount,
+    CONFIG: CONFIG,
+    KEYS: KEYS,
+    DEPT_PREFIX: DEPT_PREFIX,
+
+    state: state,
+    onChange: onChange,
+    loadAll: loadAll,
+
+    fmtN: fmtN,
+    fmtDate: fmtDate,
+    todayISO: todayISO,
+    todayDisplay: todayDisplay,
+
+    stockLevel: stockLevel,
+    LEVEL_CHIP: LEVEL_CHIP,
+    LEVEL_LABEL: LEVEL_LABEL,
+
+    findStock: findStock,
+    findStockById: findStockById,
+    stockQtyFor: stockQtyFor,
+    findCatalogItem: findCatalogItem,
+    suggestIssueQty: suggestIssueQty,
+
+    addStockItem: addStockItem,
+    editStockItem: editStockItem,
+    deleteStockItem: deleteStockItem,
+
+    getCategories: getCategories,
+    addCategory: addCategory,
+    renameCategory: renameCategory,
+    deleteCategory: deleteCategory,
+
+    prefixForDept: prefixForDept,
+    peekNextNumber: peekNextNumber,
+    nextNumber: nextNumber,
+
+    submitRequisition: submitRequisition,
+    updatePurchaseRequest: updatePurchaseRequest,
+    approveAndIssue: approveAndIssue,
+    rejectRequisition: rejectRequisition,
+    confirmReceipt: confirmReceipt,
+    rejectDelivery: rejectDelivery,
+
+    getRequisitions: getRequisitions,
+    getRequisition: getRequisition,
+    getPendingRequisitions: getPendingRequisitions,
+    pendingCount: pendingCount,
+
+    acceptPO: acceptPO,
+    rejectPO: rejectPO,
+
+    normalizeStock: normalizeStock,
+    normalizeRequisition: normalizeRequisition,
   };
 })(window);

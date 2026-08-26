@@ -220,7 +220,7 @@ body.aur-sb-collapsed .main { margin-left:68px; }
         <div class="settings-panel" id="panel-api">
           <div class="panel-header"><h2>🔌 API & Integration</h2><p>Manage API connectivity, endpoints, and third-party integrations.</p></div>
           <div class="panel-body">
-            <div class="form-group"><label class="form-label">Mode</label><div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Use Live API</div><div class="toggle-desc">When disabled, the platform uses demo/simulated data.</div></div><label class="toggle-switch"><input type="checkbox" id="s_liveApi"><span class="toggle-slider"></span></label></div></div>
+            <div class="form-group"><label class="form-label">Mode</label><div class="toggle-group"><div class="toggle-info"><div class="toggle-title">Use Live API</div><div class="toggle-desc">When disabled, no API calls are made.</div></div><label class="toggle-switch"><input type="checkbox" id="s_liveApi"><span class="toggle-slider"></span></label></div></div>
             <div class="form-group"><label class="form-label">API Base URL</label><input class="form-input" type="url" id="s_apiBase" placeholder="https://api.yourhotel.ng"><div class="form-hint">The root endpoint for all API calls.</div></div>
             <div class="form-row"><div class="form-group"><label class="form-label">API Token</label><input class="form-input" type="password" id="s_apiKey" placeholder="Enter your API key"></div><div class="form-group"><label class="form-label">API Timeout (ms)</label><input class="form-input" type="number" id="s_apiTimeout" value="5000" min="1000" max="60000"></div></div>
             <div class="divider"></div>
@@ -363,7 +363,7 @@ function testConnection() {
   setTimeout(() => {
     const base = document.getElementById('s_apiBase').value;
     const key = document.getElementById('s_apiKey').value;
-    if (!base && !key) result.innerHTML = '<div style="padding:12px;background:var(--amber-bg);border-radius:var(--radius-xs);color:var(--amber);border:1px solid rgba(251,191,36,0.2);">⚠ Demo mode active. No API endpoint configured.</div>';
+    if (!base && !key) result.innerHTML = '<div style="padding:12px;background:var(--amber-bg);border-radius:var(--radius-xs);color:var(--amber);border:1px solid rgba(251,191,36,0.2);">⚠ No API endpoint configured. Set your API Base URL above.</div>';
     else result.innerHTML = '<div style="padding:12px;background:var(--green-bg);border-radius:var(--radius-xs);color:var(--green);border:1px solid rgba(74,222,128,0.2);">✓ Connection successful! Server responded in 213ms.</div>';
   }, 1500);
 }
@@ -418,7 +418,7 @@ document.addEventListener('keydown', function(e) {
     topbarTarget:  '#topbarSlot',
     activeFile:    'settings.html',
     pageTitle:     'Settings',
-    apiMode:       'Demo',
+    apiMode:       'Live',
     user:          { name: 'General Manager', initials: 'GM' },
   });
 </script>

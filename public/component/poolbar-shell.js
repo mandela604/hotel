@@ -3,16 +3,12 @@
    module. Drop this in as component/poolbar-shell.js.
 
    Session rules:
-     USE_DEMO true  → always DEMO_USER
-     USE_DEMO false → GET /api/auth/session (Bearer token)
-                      success → real user
-                      failure → redirect to LOGIN_URL (no demo fallback)
+     GET /api/auth/session (httpOnly cookie)
+     success → real user
+     failure → redirect to LOGIN_URL
    Pages read session only via shell.getUser().
 
-   AUTH: matches middleware/auth.js exactly — Bearer JWT in the
-   Authorization header, read from the SAME localStorage key
-   poolbar-service.js's apiFetch() already uses ('gh_token', falling
-   back to 'token'). No cookies anywhere in this flow.
+   AUTH: httpOnly cookie sent automatically via credentials:'include'.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -164,22 +160,11 @@
     document.head.appendChild(s);
   }
 
-  // ── CONFIG — the only place to change Demo↔Live ──
+  // ── CONFIG ──
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: false,
     LOGIN_URL: '../login.html',
-    DEMO_USER: { name: 'Pool Bar Manager', initials: 'PB', role: 'manager', privilege: 'pool_bar_staff' },
   };
-
-  // Same token lookup as poolbar-service.js's apiFetch() — keeping this
-  // in one place would be even better (a shared auth.js helper), but at
-  // minimum both files now read the SAME keys in the SAME order.
-  function getAuthToken() {
-    try {
-      return localStorage.getItem('gh_token') || localStorage.getItem('token') || '';
-    } catch (e) { return ''; }
-  }
 
   function goLogin(reason) {
     console.warn('[PoolBarShell] Auth failed — redirecting to login:', reason || '');
@@ -189,35 +174,18 @@
   }
 
   /**
-   * Demo  → DEMO_USER
-   * Live  → real user from API, authenticated the SAME way as every
-   *         other API call in this module: Authorization: Bearer <token>,
-   *         matching middleware/auth.js exactly. No cookies.
-   * Live fail (no token, 401/403, bad response) → redirect (never
-   * returns demo).
+   * Live  → real user from API. The httpOnly cookie is sent automatically.
+   * Live fail (401/403, bad response) → redirect.
    */
   async function fetchSession() {
-    if (CONFIG.USE_DEMO) {
-      return CONFIG.DEMO_USER;
-    }
-
-    const token = getAuthToken();
-    if (!token) {
-      goLogin('no auth token in localStorage');
-      return null;
-    }
-
     try {
-      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (res.status === 401 || res.status === 403) {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', { credentials: 'include' });      if (res.status === 401 || res.status === 403) {
         goLogin('HTTP ' + res.status);
         return null;
       }
       if (!res.ok) throw new Error('Session API returned ' + res.status);
       const data = await res.json();
-      const user = (data && data.data) ? data.data : data; // tolerate {success,data:{...}} or a bare user object
+      const user = (data && data.data) ? data.data : data;
       if (!user || !user.role) {
         goLogin('missing role');
         return null;
@@ -243,8 +211,8 @@
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
 
-    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
-    let user = CONFIG.USE_DEMO ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    // Start empty until API responds (or redirect).
+    let user = opts.user || null;
     let initials = user
       ? (user.initials || (user.name || 'PB').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
       : '…';
@@ -291,7 +259,7 @@
         <div class="pbs-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="pbs-date" id="pbs-date"></div>
-          <div class="pbs-apibadge" id="pbs-apiBadge"><span class="dot"></span><span id="pbs-apiLabel">${CONFIG.USE_DEMO ? 'Demo' : 'Live'}</span></div>
+          <div class="pbs-apibadge" id="pbs-apiBadge"><span class="dot"></span><span id="pbs-apiLabel">Live</span></div>
           <div class="pbs-notif"><i class="fa-regular fa-bell"></i><div class="pbs-notifdot"></div></div>
           <div class="pbs-avatar" id="pbs-avatar">${initials}</div>
         </div>
@@ -392,7 +360,7 @@
         avatar.textContent = initials;
         avatar.title = user.name || '';
       }
-      handle.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+      handle.setApiMode('Live');
     });
 
     return handle;

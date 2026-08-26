@@ -1,803 +1,617 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<title>All Requisitions | Grace Hotel HMS</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Requisitions | Grace Hotel HMS</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root { --radius: 14px; --radius-sm: 10px; --transition: .3s cubic-bezier(.4,0,.2,1); }
-html, body { height: 100%; overflow: hidden; }
-body {
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
-  font-size: 13px;
+*{ box-sizing:border-box; margin:0; padding:0; }
+html, body{ height:100%; overflow:hidden; }
+body{
+  font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  font-size:13px; transition:background .3s,color .3s;
 }
-.app { display: flex; height: 100vh; overflow: hidden; }
-.main {
-  flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100%; overflow: hidden;
-  margin-left: 256px; transition: margin-left .3s cubic-bezier(.4,0,.2,1);
-}
-body.gs-collapsed .main { margin-left: 68px; }
-@media (max-width: 860px) { .main { margin-left: 0 !important; width: 100%; } }
+.app{ display:flex; height:100vh; overflow:hidden; }
+.main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+@media (max-width:768px){ .main{ margin-left:0 !important; } }
 
-.content, .modal-overlay {
-  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
-  --border: #eef0f6; --border2: #dfe3ec;
-  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
-  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
-  --input-bg: #f4f6fb; --modal-bg: #ffffff;
-  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
-  --green: #12b76a; --green-bg: #e9f9f0;
-  --red: #f04438; --red-bg: #feecec;
-  --amber: #f79009; --amber-bg: #fff4e5;
-  --blue: #2f6fed; --blue-bg: #eaf1ff;
-  --purple: #8b5cf6; --purple-bg: #f4efff;
+.content{
+  --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+  --border:#eef0f6; --border2:#dfe3ec;
+  --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+  --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+  --green:#12b76a; --green-bg:#e9f9f0;
+  --red:#f04438;  --red-bg:#feecec;
+  --amber:#f79009; --amber-bg:#fff4e5;
+  --blue:#2f6fed;  --blue-bg:#eaf1ff;
+  --purple:#8b5cf6; --purple-bg:#f4efff;
+  flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; gap:16px; min-height:0;
+  background:var(--bg); color:var(--text);
 }
-.content {
-  flex: 1; padding: 20px 24px 28px; overflow-y: auto; overflow-x: hidden;
-  display: flex; flex-direction: column; gap: 16px; min-height: 0;
-  background: var(--bg); color: var(--text);
+@media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+@media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+.section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
+
+/* KPI cards */
+.kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+@media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:640px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:380px){ .kpi-row{ grid-template-columns:1fr; } }
+.kpi-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:14px 14px 12px; position:relative; overflow:hidden;
+  box-shadow:var(--shadow); cursor:default; display:flex; flex-direction:column;
+  transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both;
 }
-@media (max-width: 640px) { .content { padding: 16px 14px 22px; } }
-@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+.kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+.kpi-card:nth-child(5){animation-delay:.20s}
+.kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+.kpi-card.acc-green::before{  background:linear-gradient(90deg,var(--green),transparent); }
+.kpi-card.acc-red::before{    background:linear-gradient(90deg,var(--red),transparent); }
+.kpi-card.acc-amber::before{  background:linear-gradient(90deg,var(--amber),transparent); }
+.kpi-card.acc-blue::before{   background:linear-gradient(90deg,var(--blue),transparent); }
+.kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+.kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+.kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.ic-blue{   background:var(--blue-bg);   color:var(--blue);   }
+.ic-green{  background:var(--green-bg);  color:var(--green);  }
+.ic-amber{  background:var(--amber-bg);  color:var(--amber);  }
+.ic-red{    background:var(--red-bg);    color:var(--red);    }
+.ic-purple{ background:var(--purple-bg); color:var(--purple); }
+.kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+.kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+@media (max-width:420px){ .kpi-value{ font-size:18px; } }
+.kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+.kpi-trend.up{      color:var(--green); }
+.kpi-trend.warn{    color:var(--amber); }
+.kpi-trend.down{    color:var(--red);   }
+.kpi-trend.neutral{ color:var(--text3); }
 
-.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; flex-shrink: 0; }
-@media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 620px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 380px) { .kpi-row { grid-template-columns: 1fr; } }
-.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 14px 12px; position: relative; overflow: hidden;
-  box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s, border-color .2s; display: flex; flex-direction: column; animation: fadeUp .4s ease both; }
-.kpi-card:nth-child(1){animation-delay:.03s} .kpi-card:nth-child(2){animation-delay:.06s}
-.kpi-card:nth-child(3){animation-delay:.09s} .kpi-card:nth-child(4){animation-delay:.12s} .kpi-card:nth-child(5){animation-delay:.15s}
-.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--gold-border); }
-.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
-.kpi-card.acc-green::before { background: linear-gradient(90deg, var(--green), transparent); }
-.kpi-card.acc-amber::before { background: linear-gradient(90deg, var(--amber), transparent); }
-.kpi-card.acc-red::before { background: linear-gradient(90deg, var(--red), transparent); }
-.kpi-card.acc-blue::before { background: linear-gradient(90deg, var(--blue), transparent); }
-.kpi-card.acc-purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
-.kpi-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
-.kpi-ic { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
-.ic-blue { background: var(--blue-bg); color: var(--blue); }
-.ic-green { background: var(--green-bg); color: var(--green); }
-.ic-amber { background: var(--amber-bg); color: var(--amber); }
-.ic-red { background: var(--red-bg); color: var(--red); }
-.ic-purple { background: var(--purple-bg); color: var(--purple); }
-.kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; line-height: 1.3; }
-.kpi-value { font-size: 22px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
-@media (max-width: 420px) { .kpi-value { font-size: 18px; } }
-.kpi-trend { font-size: 10.5px; font-weight: 600; color: var(--text3); margin-top: auto; }
-.kpi-trend.up { color: var(--green); } .kpi-trend.warn { color: var(--amber); } .kpi-trend.down { color: var(--red); } .kpi-trend.neutral { color: var(--text3); }
-
-/* ═══ Toolbar — same box + popover date filter as po-history.html ═══ */
-.toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; position:relative; z-index:20; flex-shrink:0; }
+/* Toolbar */
+.toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; position:relative; z-index:20; }
 .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
 .toolbar-row.top{ justify-content:space-between; }
 .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
 .toolbar-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; position:relative; }
+.flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
 .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
 .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
 .search-box:focus-within{ border-color:var(--gold-border); }
-.search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; font-family:inherit; }
+.search-box input{ background:none; border:none; outline:none; color:var(--text); font-size:13px; width:100%; }
 .search-box input::placeholder{ color:var(--text3); }
-.filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; font-family:inherit; }
+.filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
 .filter-select:focus{ border-color:var(--gold-border); }
-.btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; font-family:inherit; }
+
+/* Status pills */
+.status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+.status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+.status-pill:hover{ border-color:var(--gold-border); }
+.status-pill i{ font-size:6px; }
+.status-pill.on.all{      background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+.status-pill.on.pending{  background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
+.status-pill.on.partial{  background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
+.status-pill.on.full{     background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+.status-pill.on.rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
+.status-pill.on.completed{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+.status-pill.on.disputed{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
+
+.btn-ghost{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
 .btn-ghost:hover{ color:var(--gold); }
 
-.date-filter-btn{ display:flex; align-items:center; gap:7px; white-space:nowrap; }
-.date-filter-btn.active{ border-color:var(--gold-border); color:var(--gold); background:var(--gold-dim); }
-.date-filter-panel{
-  display:none; position:fixed; top:0; left:0; background:var(--surface); border:1px solid var(--border);
-  border-radius:12px; padding:14px; box-shadow:var(--shadow-lg); z-index:500; width:260px;
-}
-.date-filter-panel.show{ display:block; }
-.cal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-.cal-header span{ font-size:12.5px; font-weight:700; color:var(--text); }
-.cal-nav{ background:var(--surface2); border:1px solid var(--border); border-radius:7px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text2); font-size:10px; }
-.cal-nav:hover{ border-color:var(--gold-border); color:var(--gold); }
-.cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:4px; }
-.cal-weekdays span{ font-size:9px; text-transform:uppercase; color:var(--text3); text-align:center; font-weight:700; display:block; }
-.cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
-.cal-cell{ width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; font-size:11.5px; color:var(--text2); }
-.cal-cell:hover{ background:var(--surface2); }
-.cal-cell.muted{ color:var(--text3); opacity:.35; cursor:default; }
-.cal-cell.muted:hover{ background:none; }
-.cal-cell.today{ box-shadow:inset 0 0 0 1px var(--gold-border); }
-.cal-cell.start, .cal-cell.end{ background:var(--gold); color:#fff; font-weight:700; }
-.cal-cell.in-range{ background:var(--gold-dim); color:var(--gold); border-radius:0; }
-.cal-summary{ font-size:11px; color:var(--text3); text-align:center; margin-top:10px; }
-.date-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+.btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; text-decoration:none; }
+.btn-primary{ background:var(--gold); color:#fff; font-weight:700; }
+.btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+.btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+.btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+.btn-sm{ padding:6px 12px; font-size:11.5px; }
 
-@media (max-width: 700px) {
-  .toolbar-row.top{ flex-direction: column; align-items: stretch; }
-  .toolbar-left{ flex-direction: column; align-items: stretch; }
-  .toolbar-actions{ flex-direction: column; align-items: stretch; }
-  .flt-group{ width: 100%; }
-  .search-box{ max-width: 100%; }
-  .filter-select{ width: 100%; }
-  .date-filter-panel{ width:calc(100vw - 28px); }
-}
+/* Panel / Table */
+.panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+.panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+.panel-title{ font-size:13px; font-weight:800; color:var(--text); }
+.tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; position:relative; scrollbar-width:thin; }
+.tbl-wrap::-webkit-scrollbar{ height:8px; }
+.tbl-wrap::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:1000px; }
+thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+thead th.center{ text-align:center; }
+tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+tbody tr:last-child{ border-bottom:none; }
+tbody tr.clickable{ cursor:pointer; }
+tbody tr:hover{ background:var(--surface2); }
+tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+tbody td.center{ text-align:center; }
+.empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
+.req-no{ color:var(--gold); font-weight:700; }
+.dept-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); }
+.dept-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--purple); }
 
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .2s; white-space: nowrap; border: 1px solid transparent; text-decoration: none; }
-.btn-primary { background: var(--gold); color: #fff; font-weight: 700; box-shadow: 0 4px 10px rgba(47,111,237,0.28); }
-.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
-.btn-outline { background: var(--surface); border-color: var(--border); color: var(--text); }
-.btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
-.btn-sm { padding: 6px 12px; font-size: 11.5px; }
+/* Priority chips */
+.chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+.chip i{ font-size:6px; }
+.chip-urgent{ background:var(--red-bg); color:var(--red); }
+.chip-normal{ background:var(--amber-bg); color:var(--amber); }
 
-.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
-.table-head-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); }
-.table-title { font-size: 14px; font-weight: 800; color: var(--text); }
-.table-count { font-size: 11.5px; color: var(--text3); font-weight: 600; }
-.table-scroll { overflow-x: auto; }
-table { width: 100%; min-width: 980px; border-collapse: collapse; }
-thead th { text-align: left; font-size: 9.5px; color: var(--text3); font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
-thead th.center { text-align: center; }
-tbody td { padding: 11px 14px; font-size: 12.5px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; white-space: nowrap; }
-tbody tr { cursor: pointer; transition: background .15s; }
-tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: var(--surface2); }
-tbody td.center { text-align: center; }
-.req-link { color: var(--gold); font-weight: 700; }
-.dept-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
-.dept-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.dot-restaurant { background: var(--amber); } .dot-poolbar { background: var(--blue); } .dot-procurement { background: var(--purple); }
-.type-chip, .status-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
-.type-chip i, .status-chip i { font-size: 6px; }
-.type-store { background: var(--blue-bg); color: var(--blue); }
-.type-purchase { background: var(--purple-bg); color: var(--purple); }
-.chip-pending, .chip-partial { background: var(--amber-bg); color: var(--amber); }
-.chip-full, .chip-approved, .chip-fulfilled { background: var(--green-bg); color: var(--green); }
-.chip-accountant, .chip-gm, .chip-md { background: var(--blue-bg); color: var(--blue); }
-.chip-rejected { background: var(--red-bg); color: var(--red); }
-.items-count { font-size: 12px; color: var(--text2); }
-.po-ref { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.act-btn { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 11px; font-size: 11px; font-weight: 700; color: var(--text2); cursor: pointer; transition: all .15s; font-family: inherit; }
-.act-btn:hover { border-color: var(--gold-border); color: var(--gold); }
-.empty-row td, .state-row td { text-align: center; padding: 32px; color: var(--text3); font-weight: 600; cursor: default; }
+/* Status chips */
+.chip-status-pending{   background:var(--amber-bg); color:var(--amber); }
+.chip-status-partial{   background:var(--amber-bg); color:var(--amber); }
+.chip-status-full{      background:var(--green-bg); color:var(--green); }
+.chip-status-completed{ background:var(--green-bg); color:var(--green); }
+.chip-status-rejected{  background:var(--red-bg);   color:var(--red);   }
+.chip-status-disputed{  background:var(--red-bg);   color:var(--red);   }
 
-.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
-.page-btns { display: flex; gap: 3px; flex-wrap: wrap; }
-.page-btn { min-width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: none; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all .15s; font-family: inherit; padding: 0 7px; font-weight: 600; }
-.page-btn:hover { border-color: var(--gold-border); color: var(--gold); }
-.page-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); font-weight: 700; }
-.page-btn:disabled { opacity: .3; cursor: default; pointer-events: none; }
+/* Action buttons in table */
+.action-btn{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; transition:all .15s; font-size:11px; }
+.action-btn:hover{ border-color:var(--gold-border); color:var(--gold); background:var(--gold-dim); }
+.action-btn.approve{ color:var(--gold); border-color:var(--gold-border); background:var(--gold-dim); }
 
-.offline-banner {
-  display: none; align-items: center; gap: 8px; background: var(--amber-bg); border: 1px solid rgba(247,144,9,0.3);
-  color: var(--amber); border-radius: var(--radius-sm); padding: 9px 14px; font-size: 12px; font-weight: 700;
-}
-.offline-banner.show { display: flex; }
+/* Pagination */
+.pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; }
+.page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+.page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; padding:0 7px; }
+.page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+.page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
+.page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,20,40,0.55); backdrop-filter: blur(5px); z-index: 300; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; }
-.modal-overlay.show { display: flex; }
-.modal-box { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: min(620px, 96vw); position: relative; margin: auto; box-shadow: 0 30px 80px rgba(15,20,40,0.25); animation: modalIn .22s cubic-bezier(.4,0,.2,1); }
-.modal-box-lg { width: min(1180px, 96vw); }
-.modal-box-form { width: min(920px, 96vw); }
-@keyframes modalIn { from{opacity:0;transform:translateY(14px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
-.modal-close { position: absolute; top: 14px; right: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; color: var(--text2); cursor: pointer; font-size: 14px; z-index: 2; display: flex; align-items: center; justify-content: center; }
-.modal-close:hover { border-color: var(--red); color: var(--red); }
+/* Detail expand row */
+.detail-row td{ padding:0; background:var(--surface2); }
+.detail-inner{ padding:14px 20px; }
+.detail-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+.detail-field{ display:flex; flex-direction:column; gap:2px; }
+.detail-field .lbl{ font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; }
+.detail-field .val{ font-size:12.5px; color:var(--text); font-weight:600; }
+.detail-items{ margin-top:12px; }
+.detail-items .items-title{ font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-weight:700; margin-bottom:6px; }
+.detail-items table{ min-width:auto; }
+.detail-items thead th{ font-size:8px; padding:6px 10px; background:var(--surface3); }
+.detail-items tbody td{ padding:6px 10px; font-size:12px; }
 
-.toast { position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999; display: flex; align-items: center; gap: 8px; animation: toastIn .3s ease; max-width: calc(100vw - 40px); font-weight: 600; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; }
-.toast.success { border-left: 3px solid #12b76a; } .toast.success i { color: #12b76a; }
-.toast.error { border-left: 3px solid #f04438; } .toast.error i { color: #f04438; }
-.toast.info { border-left: 3px solid #2f6fed; } .toast.info i { color: #2f6fed; }
-@keyframes toastIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-@media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
+/* Print header */
+.print-header{ display:none; }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2, #dfe3ec); border-radius: 6px; }
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
 
-@media print {
-  #sidebarSlot, #topbarSlot, .toolbar, .pagination, .no-print { display: none !important; }
-  body { background: #fff !important; color: #000 !important; }
-  .table-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+@keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+@media print{
+  #sidebarSlot,#topbarSlot,.toolbar,.kpi-row,.pagination,.no-print{ display:none !important; }
+  .main{ margin-left:0 !important; }
+  body{ background:#fff !important; color:#000 !important; }
+  .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+  .tbl-wrap{ overflow:visible !important; }
+  .detail-row{ display:none !important; }
+  .print-header{ display:block; margin-bottom:10px; }
+  .print-header .pt{ font-size:18px; font-weight:800; color:#000; }
+  .print-header .ps{ font-size:11px; color:#555; margin-top:2px; }
 }
 </style>
 </head>
 <body>
 <div class="app">
-
   <div id="sidebarSlot"></div>
-
   <div class="main">
     <div id="topbarSlot"></div>
-
     <div class="content">
 
-      <div class="offline-banner no-print" id="offlineBanner">
-        <i class="fa-solid fa-triangle-exclamation"></i> Couldn't reach the server — showing demo data.
+      <div>
+        <div class="section-title">Store-Issue Requisition History</div>
+        <div class="kpi-row" id="kpiRow"></div>
       </div>
-
-      <div class="kpi-row" id="kpiRow"></div>
 
       <div class="toolbar no-print">
         <div class="toolbar-row top">
           <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-group="">All</div>
+                <div class="status-pill" data-group="pending"><i class="fa-solid fa-circle" style="color:var(--amber)"></i>Pending</div>
+                <div class="status-pill" data-group="partial"><i class="fa-solid fa-circle" style="color:var(--amber)"></i>Partial</div>
+                <div class="status-pill" data-group="full"><i class="fa-solid fa-circle" style="color:var(--green)"></i>Full</div>
+                <div class="status-pill" data-group="rejected"><i class="fa-solid fa-circle" style="color:var(--red)"></i>Rejected</div>
+                <div class="status-pill" data-group="completed"><i class="fa-solid fa-circle" style="color:var(--green)"></i>Completed</div>
+                <div class="status-pill" data-group="disputed"><i class="fa-solid fa-circle" style="color:var(--red)"></i>Disputed</div>
+              </div>
+            </div>
             <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
               <span class="flt-label">Search</span>
               <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
-                <input type="text" id="fSearch" placeholder="Req no., requester, department…" oninput="page=1;render()">
+                <input type="text" id="searchInput" placeholder="Requisition no., requester, department…" oninput="currentPage=1;render()">
               </div>
-            </div>
-            <div class="flt-group">
-              <span class="flt-label">Type</span>
-              <select class="filter-select" id="fType" onchange="page=1;render()">
-                <option value="">All Types</option>
-                <option value="store_issue">Requisition</option>
-                <option value="purchase">Purchase Order Request</option>
-              </select>
             </div>
             <div class="flt-group">
               <span class="flt-label">Department</span>
-              <select class="filter-select" id="fDept" onchange="page=1;render()">
+              <select class="filter-select" id="deptFilter" onchange="currentPage=1;render()">
                 <option value="">All Departments</option>
-                <option value="Restaurant">Restaurant</option>
-                <option value="Poolbar">Poolbar</option>
-                <option value="Procurement">Procurement</option>
               </select>
             </div>
             <div class="flt-group">
-              <span class="flt-label">Status</span>
-              <select class="filter-select" id="fStatus" onchange="page=1;render()">
-                <option value="">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Partial">Partial</option>
-                <option value="Full">Full</option>
-                <option value="Approved">Approved</option>
-                <option value="Fulfilled">Fulfilled</option>
-                <option value="Rejected">Rejected</option>
+              <span class="flt-label">Priority</span>
+              <select class="filter-select" id="priorityFilter" onchange="currentPage=1;render()">
+                <option value="">All Priorities</option>
+                <option value="Normal">Normal</option>
+                <option value="Urgent">Urgent</option>
               </select>
             </div>
-            <div class="flt-group" id="dateFilterWrap">
-              <span class="flt-label">Date</span>
-              <button type="button" class="filter-select date-filter-btn" id="dateFilterBtn" onclick="toggleDatePanel(event)">
-                <i class="fa-solid fa-calendar-days"></i><span id="dateFilterLabel">All Dates</span>
-              </button>
-              <div class="date-filter-panel" id="dateFilterPanel">
-                <div class="cal-header">
-                  <button type="button" class="cal-nav" onclick="calPrevMonth(event)"><i class="fa-solid fa-chevron-left"></i></button>
-                  <span id="calLabel">—</span>
-                  <button type="button" class="cal-nav" onclick="calNextMonth(event)"><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-                <div class="cal-weekdays">
-                  <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
-                </div>
-                <div class="cal-grid" id="calGrid"></div>
-                <div class="cal-summary" id="calSummary">Select start date</div>
-                <div class="date-actions">
-                  <button class="btn-ghost" type="button" onclick="clearDateFilter(event)">Clear</button>
-                  <button class="btn btn-primary btn-sm" type="button" onclick="applyDateFilter(event)">Apply</button>
-                </div>
-              </div>
-            </div>
             <div class="flt-group">
-              <span class="flt-label">Sort</span>
-              <select class="filter-select" id="fSort" onchange="page=1;render()">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="sortFilter" onchange="currentPage=1;render()">
                 <option value="date_desc">Newest First</option>
                 <option value="date_asc">Oldest First</option>
-                <option value="items_desc">Most Items</option>
               </select>
             </div>
             <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
           </div>
           <div class="toolbar-actions">
-            <button class="btn btn-primary btn-sm" onclick="openNewRequestModal()"><i class="fa-solid fa-plus"></i> Create PO</button>
-            <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+            <button class="btn btn-outline btn-sm" onclick="printFilteredTable()"><i class="fa-solid fa-print"></i> Print</button>
           </div>
         </div>
       </div>
 
-      <div class="table-card">
-        <div class="table-head-row">
-          <div class="table-title">Requisition List</div>
-          <div class="table-count" id="tableCount">—</div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">All Store-Issue Requisitions</div>
+          <span style="font-size:11px;color:var(--text3);" id="tblCount">—</span>
         </div>
-        <div class="table-scroll">
+        <div class="print-header">
+          <div class="pt">Grace Hotel HMS — Store-Issue Requisitions</div>
+          <div class="ps" id="printMeta"></div>
+        </div>
+        <div class="tbl-wrap">
           <table>
             <thead>
               <tr>
-                <th>Req. No.</th>
-                <th>Type</th>
-                <th>Date Raised</th>
-                <th>Requested By</th>
+                <th>Requisition No</th>
                 <th>Department</th>
-                <th>Required Date</th>
+                <th>Requested By</th>
+                <th>Date</th>
                 <th class="center">Items</th>
-                <th>Status</th>
+                <th class="center">Priority</th>
+                <th class="center">Status</th>
                 <th class="center">Actions</th>
               </tr>
             </thead>
-            <tbody id="tbody"><tr class="state-row"><td colspan="9"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+            <tbody id="reqBody"></tbody>
           </table>
         </div>
         <div class="pagination">
-          <span id="paginLabel">—</span>
+          <span id="pageLabel">—</span>
           <div class="page-btns" id="pageBtns"></div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- ═══ New Requisition / Create PO popup — GraceHotelRequestForm renders inside here ═══ -->
-<div class="modal-overlay" id="reqFormModal">
-  <div class="modal-box modal-box-form">
-    <button class="modal-close" onclick="closeNewRequestModal()"><i class="fa-solid fa-xmark"></i></button>
-    <div id="requestFormPlaceholder"></div>
-  </div>
-</div>
 
-<!-- ═══ Store Approval popup — GraceHotelStoreApproval renders inside here (Store-issue requisitions) ═══ -->
-<div class="modal-overlay" id="approvalModal">
-  <div class="modal-box modal-box-lg">
-    <button class="modal-close" onclick="closeApprovalModal()"><i class="fa-solid fa-xmark"></i></button>
-    <div id="approvalPlaceholder"></div>
-  </div>
-</div>
-
-<!-- ═══ Purchase Request detail — plain read-out for mode:'purchase' rows ═══ -->
-<div class="modal-overlay" id="purchaseDetailModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closePurchaseDetailModal()"><i class="fa-solid fa-xmark"></i></button>
-    <div id="purchaseDetailContainer"></div>
-  </div>
-</div>
-
-<script src="data/store-seed.js"></script>
 <script src="services/store-service.js"></script>
 <script src="../component/store-shell.js"></script>
-<script src="../component/grace-request-form.js"></script>
-<script src="../component/grace-store-approval.js"></script>
 <script>
 const shell = StoreShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'all-requisitions.html',
-  pageTitle:     'All Requisitions',
-  pageSubtitle:  'Every requisition raised across departments and stores',
-  apiMode:       'Demo',
+  pageTitle:     'Requisitions',
+  pageSubtitle:  'Store-issue requisition history',
 });
-window.shell = shell;
 
-const DEPT_DOT = { Restaurant:'dot-restaurant', Poolbar:'dot-poolbar', Procurement:'dot-procurement' };
+const svc = window.StoreService;
 
+function escapeHtml(str){
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtN(n){ return svc && svc.fmtN ? svc.fmtN(n) : '\u20A6' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d){ if(!d) return '\u2014'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+
+let allReqs = [];
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let statusGroup = '';
+let expandedRow = null;
+
+const STATUS_LABEL = {
+  Pending: 'Pending',
+  Partial: 'Partial',
+  Full: 'Full',
+  Rejected: 'Rejected',
+  Completed: 'Completed',
+  Disputed: 'Disputed',
+};
 const STATUS_CHIP = {
-  Pending:'chip-pending', Partial:'chip-partial', Full:'chip-full', Rejected:'chip-rejected',
-  Approved:'chip-approved', Fulfilled:'chip-fulfilled',
-  Accountant:'chip-accountant', GM:'chip-gm', MD:'chip-md',
+  Pending: 'chip-status-pending',
+  Partial: 'chip-status-partial',
+  Full: 'chip-status-full',
+  Rejected: 'chip-status-rejected',
+  Completed: 'chip-status-completed',
+  Disputed: 'chip-status-disputed',
 };
 
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-function pad2(n){ return String(n).padStart(2,'0'); }
-function ymd(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
-function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
-function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}); }
-
-const PAGE_SIZE = 8;
-let page = 1;
-let dateFrom = '';
-let dateTo = '';
-let REQUISITIONS = [];
-
-function setOffline(isOffline){ document.getElementById('offlineBanner').classList.toggle('show', !!isOffline); }
-function showToast(msg, type='success'){
-  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3400);
-}
-window.showToast = showToast;
-
-function renderKPIs(){
-  const total = REQUISITIONS.length;
-  const storeReqs = REQUISITIONS.filter(r=>r.mode==='store_issue');
-  const purchaseReqs = REQUISITIONS.filter(r=>r.mode==='purchase');
-  const pending = REQUISITIONS.filter(r=>r.status==='Pending').length;
-  const rejected = REQUISITIONS.filter(r=>r.status==='Rejected').length;
+function renderKpis(){
+  const total = allReqs.length;
+  const pending = allReqs.filter(r => r.status === 'Pending').length;
+  const partial = allReqs.filter(r => r.status === 'Partial').length;
+  const full = allReqs.filter(r => r.status === 'Full').length;
+  const rejected = allReqs.filter(r => r.status === 'Rejected').length;
 
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card acc-blue">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-file-lines"></i></div><div class="kpi-label">Total Requisitions</div></div>
-      <div class="kpi-value">${total}</div>
-      <div class="kpi-trend neutral">All departments</div>
-    </div>
-    <div class="kpi-card acc-blue">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-boxes-stacked"></i></div><div class="kpi-label">Requisitions</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${storeReqs.length}</div>
-      <div class="kpi-trend neutral">Fulfilled from stock</div>
-    </div>
-    <div class="kpi-card acc-purple">
-      <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-file-invoice-dollar"></i></div><div class="kpi-label">Purchase Order Requests</div></div>
-      <div class="kpi-value" style="color:var(--purple);">${purchaseReqs.length}</div>
-      <div class="kpi-trend neutral">Routed to Procurement</div>
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-clipboard-list"></i></div><div class="kpi-label">Total Requisitions</div></div>
+      <div class="kpi-value" style="color:var(--blue)">${total}</div>
+      <div class="kpi-trend neutral">Store-issue requests</div>
     </div>
     <div class="kpi-card acc-amber">
-      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending Approval</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${pending}</div>
-      <div class="kpi-trend ${pending>0?'warn':'up'}">${pending>0?'Needs review':'None on record'}</div>
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending</div></div>
+      <div class="kpi-value" style="color:var(--amber)">${pending}</div>
+      <div class="kpi-trend ${pending?'warn':'up'}">${pending?'Awaiting issue':'All issued'}</div>
+    </div>
+    <div class="kpi-card acc-amber">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-truck-ramp-box"></i></div><div class="kpi-label">Partially Issued</div></div>
+      <div class="kpi-value" style="color:var(--amber)">${partial}</div>
+      <div class="kpi-trend ${partial?'warn':'neutral'}">${partial?'In progress':'None'}</div>
+    </div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Fully Issued</div></div>
+      <div class="kpi-value" style="color:var(--green)">${full}</div>
+      <div class="kpi-trend up">${total?Math.round(full/total*100):0}% completion rate</div>
     </div>
     <div class="kpi-card acc-red">
-      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected</div></div>
-      <div class="kpi-value" style="color:var(--red);">${rejected}</div>
-      <div class="kpi-trend ${rejected>0?'warn':'up'}">${rejected>0?'Review needed':'None on record'}</div>
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-circle-xmark"></i></div><div class="kpi-label">Rejected</div></div>
+      <div class="kpi-value" style="color:var(--red)">${rejected}</div>
+      <div class="kpi-trend ${rejected?'down':'up'}">${total?Math.round(rejected/total*100):0}% rejection rate</div>
     </div>`;
-  if (shell && typeof shell.setPendingBadge === 'function') {
-    const pendingOrPartial = REQUISITIONS.filter(r=>r.status==='Pending'||r.status==='Partial').length;
-    shell.setPendingBadge(pendingOrPartial);
-  }
 }
 
-window.clearFilters = function(){
-  document.getElementById('fSearch').value = '';
-  document.getElementById('fType').value = '';
-  document.getElementById('fDept').value = '';
-  document.getElementById('fStatus').value = '';
-  document.getElementById('fSort').value = 'date_desc';
-  clearDateFilter();
-  page = 1;
+function populateDeptFilter(){
+  const sel = document.getElementById('deptFilter');
+  const current = sel.value;
+  const depts = [...new Set(allReqs.map(r => r.dept))].sort();
+  sel.innerHTML = '<option value="">All Departments</option>' + depts.map(d => '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>').join('');
+  sel.value = current;
+}
+
+function bindStatusPills(){
+  document.querySelectorAll('.status-pill').forEach(function(pill){
+    pill.addEventListener('click', function(){
+      statusGroup = pill.dataset.group;
+      document.querySelectorAll('.status-pill').forEach(function(x){ x.classList.remove('on'); });
+      pill.classList.add('on', statusGroup || 'all');
+      currentPage = 1;
+      expandedRow = null;
+      render();
+    });
+  });
+}
+
+function clearFilters(){
+  document.getElementById('searchInput').value = '';
+  document.getElementById('deptFilter').value = '';
+  document.getElementById('priorityFilter').value = '';
+  document.getElementById('sortFilter').value = 'date_desc';
+  statusGroup = '';
+  expandedRow = null;
+  document.querySelectorAll('.status-pill').forEach(function(x){ x.classList.remove('on'); });
+  document.querySelector('.status-pill.all').classList.add('on');
+  currentPage = 1;
   render();
-};
+}
+
+function toggleRow(no){
+  expandedRow = expandedRow === no ? null : no;
+  renderPage();
+}
+
+function renderPagination(){
+  var filtered = getFiltered();
+  var total = filtered.length;
+  var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  var from = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  var to = Math.min(currentPage * PAGE_SIZE, total);
+  document.getElementById('pageLabel').textContent = total === 0 ? 'No records' : from + '\u2013' + to + ' of ' + total;
+
+  var wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+
+  function mkBtn(txt, pg, disabled, active){
+    var b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.innerHTML = txt;
+    b.disabled = disabled;
+    b.onclick = function(){ currentPage = pg; renderPage(); };
+    return b;
+  }
+
+  wrap.appendChild(mkBtn('<i class="fa-solid fa-chevron-left"></i>', currentPage - 1, currentPage === 1, false));
+
+  var startPage = Math.max(1, currentPage - 2);
+  var endPage = Math.min(totalPages, startPage + 4);
+  startPage = Math.max(1, endPage - 4);
+
+  for(var i = startPage; i <= endPage; i++){
+    wrap.appendChild(mkBtn(String(i), i, false, i === currentPage));
+  }
+
+  wrap.appendChild(mkBtn('<i class="fa-solid fa-chevron-right"></i>', currentPage + 1, currentPage >= totalPages, false));
+}
 
 function getFiltered(){
-  const q = document.getElementById('fSearch').value.toLowerCase();
-  const type = document.getElementById('fType').value;
-  const dept = document.getElementById('fDept').value;
-  const status = document.getElementById('fStatus').value;
-  const sort = document.getElementById('fSort').value;
+  var q = (document.getElementById('searchInput').value || '').toLowerCase();
+  var dept = document.getElementById('deptFilter').value;
+  var priority = document.getElementById('priorityFilter').value;
+  var sort = document.getElementById('sortFilter').value;
 
-  let rows = REQUISITIONS.filter(r => {
-    const mq = !q || r.no.toLowerCase().includes(q) || r.by.toLowerCase().includes(q) || r.dept.toLowerCase().includes(q);
-    const mtype = !type || r.mode === type;
-    const md = !dept || r.dept === dept;
-    const ms = !status || r.status === status;
-    const mdF = !dateFrom || r.dateRaised >= dateFrom;
-    const mdT = !dateTo || r.dateRaised <= dateTo;
-    return mq && mtype && md && ms && mdF && mdT;
+  var filtered = allReqs.filter(function(r){
+    var mq = !q || (r.no || '').toLowerCase().includes(q) || (r.by || '').toLowerCase().includes(q) || (r.dept || '').toLowerCase().includes(q);
+    var ms = !statusGroup || (r.status || '').toLowerCase() === statusGroup;
+    var md = !dept || r.dept === dept;
+    var mp = !priority || r.priority === priority;
+    return mq && ms && md && mp;
   });
 
-  if (sort === 'date_desc') rows.sort((a,b) => (b.dateRaised||'').localeCompare(a.dateRaised||''));
-  else if (sort === 'date_asc') rows.sort((a,b) => (a.dateRaised||'').localeCompare(b.dateRaised||''));
-  else if (sort === 'items_desc') rows.sort((a,b) => b.items.length - a.items.length);
+  if(sort === 'date_desc') filtered.sort(function(a,b){ return (b.dateRaised || '').localeCompare(a.dateRaised || ''); });
+  else if(sort === 'date_asc') filtered.sort(function(a,b){ return (a.dateRaised || '').localeCompare(b.dateRaised || ''); });
 
-  return rows;
+  return filtered;
 }
 
-function renderPagination(total){
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const from = total === 0 ? 0 : (page-1)*PAGE_SIZE + 1;
-  const to = Math.min(page*PAGE_SIZE, total);
-  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : `${from}–${to} of ${total}`;
-  const wrap = document.getElementById('pageBtns');
-  wrap.innerHTML = '';
-  const prev = document.createElement('button');
-  prev.className='page-btn'; prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>'; prev.disabled = (page===1);
-  prev.onclick = () => { page--; render(); };
-  wrap.appendChild(prev);
-  let start = Math.max(1, page-2), end = Math.min(totalPages, start+4);
-  start = Math.max(1, end-4);
-  for (let i=start;i<=end;i++){
-    const b = document.createElement('button');
-    b.className = 'page-btn' + (i===page?' active':'');
-    b.textContent = i;
-    b.onclick = (function(p){ return () => { page=p; render(); }; })(i);
-    wrap.appendChild(b);
+function rowHtml(r){
+  var itemsCount = (r.items || []).length;
+  var statusKey = r.status || 'Pending';
+  var chipClass = STATUS_CHIP[statusKey] || 'chip-status-pending';
+  var chipLabel = STATUS_LABEL[statusKey] || statusKey;
+  var isPending = statusKey === 'Pending' || statusKey === 'Partial';
+  var detailLink = isPending ? 'store-approval.html' : '#';
+  var isExpanded = expandedRow === r.no;
+
+  return '<tr class="clickable" onclick="toggleRow(\'' + escapeHtml(r.no) + '\')">' +
+    '<td class="req-no">' + escapeHtml(r.no) + '</td>' +
+    '<td><span class="dept-chip"><span class="dept-dot"></span>' + escapeHtml(r.dept) + '</span></td>' +
+    '<td>' + escapeHtml(r.by) + '</td>' +
+    '<td>' + fmtDate(r.dateRaised) + '</td>' +
+    '<td class="center" style="font-weight:700;">' + itemsCount + '</td>' +
+    '<td class="center"><span class="chip ' + (r.priority === 'Urgent' ? 'chip-urgent' : 'chip-normal') + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(r.priority) + '</span></td>' +
+    '<td class="center"><span class="chip ' + chipClass + '"><i class="fa-solid fa-circle"></i>' + chipLabel + '</span></td>' +
+    '<td class="center">' +
+      (isPending
+        ? '<a class="action-btn approve" href="store-approval.html" title="Review & Issue" onclick="event.stopPropagation()"><i class="fa-solid fa-check"></i></a>'
+        : '<button class="action-btn" title="View Details" onclick="event.stopPropagation();toggleRow(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i></button>') +
+    '</td>' +
+  '</tr>' +
+  '<tr class="detail-row" style="' + (isExpanded ? '' : 'display:none;') + '">' +
+    '<td colspan="8">' +
+      '<div class="detail-inner">' +
+        '<div class="detail-grid">' +
+          '<div class="detail-field"><span class="lbl">Requisition No</span><span class="val">' + escapeHtml(r.no) + '</span></div>' +
+          '<div class="detail-field"><span class="lbl">Department</span><span class="val">' + escapeHtml(r.dept) + '</span></div>' +
+          '<div class="detail-field"><span class="lbl">Requested By</span><span class="val">' + escapeHtml(r.by) + '</span></div>' +
+          '<div class="detail-field"><span class="lbl">Date Raised</span><span class="val">' + fmtDate(r.dateRaised) + '</span></div>' +
+          '<div class="detail-field"><span class="lbl">Needed By</span><span class="val">' + fmtDate(r.needed) + '</span></div>' +
+          '<div class="detail-field"><span class="lbl">Priority</span><span class="val">' + escapeHtml(r.priority) + '</span></div>' +
+          '<div class="detail-field"><span class="lbl">Status</span><span class="val">' + chipLabel + '</span></div>' +
+          (r.remark ? '<div class="detail-field"><span class="lbl">Remark</span><span class="val">' + escapeHtml(r.remark) + '</span></div>' : '') +
+          (r.rejectReason ? '<div class="detail-field"><span class="lbl">Rejection Reason</span><span class="val" style="color:var(--red)">' + escapeHtml(r.rejectReason) + '</span></div>' : '') +
+          (r.disputeReason ? '<div class="detail-field"><span class="lbl">Dispute Reason</span><span class="val" style="color:var(--red)">' + escapeHtml(r.disputeReason) + '</span></div>' : '') +
+        '</div>' +
+        '<div class="detail-items">' +
+          '<div class="items-title">Line Items (' + itemsCount + ')</div>' +
+          '<table style="min-width:auto;">' +
+            '<thead><tr><th>Item</th><th>Unit</th><th class="center">Qty</th><th class="center">Issued</th><th class="center">Unit Cost</th></tr></thead>' +
+            '<tbody>' +
+              (r.items || []).map(function(it){
+                return '<tr>' +
+                  '<td>' + escapeHtml(it.name) + '</td>' +
+                  '<td>' + escapeHtml(it.unit) + '</td>' +
+                  '<td class="center">' + (it.qty || 0) + '</td>' +
+                  '<td class="center">' + (it.issuedQty || 0) + '</td>' +
+                  '<td class="center">' + fmtN(it.cost) + '</td>' +
+                '</tr>';
+              }).join('') +
+            '</tbody>' +
+          '</table>' +
+        '</div>' +
+        (isPending ? '<div style="margin-top:12px"><a class="btn btn-primary btn-sm" href="store-approval.html"><i class="fa-solid fa-check"></i> Review & Issue</a></div>' : '') +
+      '</div>' +
+    '</td>' +
+  '</tr>';
+}
+
+function renderPage(){
+  var filtered = getFiltered();
+  document.getElementById('tblCount').textContent = filtered.length + ' requisition' + (filtered.length !== 1 ? 's' : '');
+
+  var start = (currentPage - 1) * PAGE_SIZE;
+  var rows = filtered.slice(start, start + PAGE_SIZE);
+  var body = document.getElementById('reqBody');
+
+  if(rows.length === 0){
+    body.innerHTML = '<tr class="empty-row"><td colspan="8">No store-issue requisitions found.</td></tr>';
+  } else {
+    body.innerHTML = rows.map(rowHtml).join('');
   }
-  const next = document.createElement('button');
-  next.className='page-btn'; next.innerHTML='<i class="fa-solid fa-chevron-right"></i>'; next.disabled = (page>=totalPages);
-  next.onclick = () => { page++; render(); };
-  wrap.appendChild(next);
+
+  renderPagination();
 }
 
 function render(){
-  const rows = getFiltered();
-  document.getElementById('tableCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
-
-  const start = (page-1)*PAGE_SIZE;
-  const pageRows = rows.slice(start, start+PAGE_SIZE);
-
-  document.getElementById('tbody').innerHTML = pageRows.length === 0
-    ? `<tr class="empty-row"><td colspan="9">No requisitions match your filters.</td></tr>`
-    : pageRows.map(r => `
-      <tr onclick="viewReq('${r.no}')">
-        <td class="req-link">${r.no}</td>
-        <td><span class="type-chip ${r.mode==='purchase'?'type-purchase':'type-store'}"><i class="fa-solid fa-circle"></i>${r.mode==='purchase'?'Purchase Order Request':'Requisition'}</span></td>
-        <td>${fmtDate(r.dateRaised)}</td>
-        <td>${r.by}</td>
-        <td><span class="dept-chip"><span class="dept-dot ${DEPT_DOT[r.dept]||''}"></span>${r.dept}</span></td>
-        <td>${fmtDate(r.needed)}</td>
-        <td class="center"><span class="items-count">${r.items.length}</span></td>
-        <td>
-          <span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>
-          ${r.mode==='purchase' && r.procurementPrId ? `<div class="po-ref">PO: ${r.procurementPrId}</div>` : ''}
-        </td>
-        <td class="center" onclick="event.stopPropagation()"><button class="act-btn" onclick="viewReq('${r.no}')"><i class="fa-solid fa-eye"></i> View</button></td>
-      </tr>
-    `).join('');
-
-  renderPagination(rows.length);
+  renderKpis();
+  renderPage();
 }
-window.render = render;
 
-window.viewReq = function(no){
-  const r = StoreService.getRequisition(no);
-  if (r && r.mode === 'purchase') { openPurchaseDetailModal(no); }
-  else { openApprovalModal(no); }
-};
+function printFilteredTable(){
+  var stamp = new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  var filtered = getFiltered();
+  document.getElementById('printMeta').textContent = filtered.length + ' requisition' + (filtered.length !== 1 ? 's' : '') + ' \u00B7 Printed ' + stamp;
+  document.getElementById('tblCount').textContent = filtered.length + ' requisition' + (filtered.length !== 1 ? 's' : '') + ' (print view)';
+  var savedGroup = statusGroup;
+  var savedExpanded = expandedRow;
+  statusGroup = '';
+  expandedRow = null;
+  document.getElementById('pageLabel').textContent = 'Showing all ' + filtered.length;
+  document.getElementById('pageBtns').innerHTML = '';
 
-/* ═══ New Requisition / Create PO (GraceHotelRequestForm) ═══ */
-let requestFormInstance = null;
-
-window.openNewRequestModal = function(){
-  document.getElementById('reqFormModal').classList.add('show');
-  if (!requestFormInstance) {
-    requestFormInstance = GraceHotelRequestForm.attach('#requestFormPlaceholder', {
-      defaultMode: 'store_issue',
-      storeService: StoreService,
-      service: StoreService,
-      onSubmit: async () => {
-        closeNewRequestModal();
-        REQUISITIONS = StoreService.getRequisitions();
-        renderKPIs();
-        render();
-        showToast('Requisition submitted.', 'success');
-      },
-    });
+  var allFiltered = getFiltered();
+  var body = document.getElementById('reqBody');
+  if(allFiltered.length === 0){
+    body.innerHTML = '<tr class="empty-row"><td colspan="8">No store-issue requisitions found.</td></tr>';
   } else {
-    requestFormInstance.reset();
+    body.innerHTML = allFiltered.map(rowHtml).join('');
   }
-};
-window.closeNewRequestModal = function(){ document.getElementById('reqFormModal').classList.remove('show'); };
 
-/* ═══ Store Approval (GraceHotelStoreApproval) — store_issue only ═══ */
-let approvalInstance = null;
+  window.print();
 
-window.openApprovalModal = async function(no){
-  document.getElementById('approvalModal').classList.add('show');
-
-  if (!approvalInstance) {
-    approvalInstance = GraceHotelStoreApproval.attach('#approvalPlaceholder', {
-      reqNo: no,
-      storeService: StoreService,
-      preparedBy: 'Store Keeper',
-      showBackButton: false,
-      onApprove: async () => {
-        REQUISITIONS = StoreService.getRequisitions();
-        renderKPIs();
-        render();
-        showToast('Requisition approved and issued.', 'success');
-      },
-      onReject: async () => {
-        REQUISITIONS = StoreService.getRequisitions();
-        renderKPIs();
-        render();
-        showToast('Requisition rejected.', 'info');
-      },
-    });
-  } else {
-    approvalInstance.load(no);
-  }
-};
-window.closeApprovalModal = function(){ document.getElementById('approvalModal').classList.remove('show'); };
-
-/* ═══ Purchase Request detail (read-only) ═══ */
-window.openPurchaseDetailModal = function(no){
-  const r = StoreService.getRequisition(no);
-  if (!r) return;
-  const el = document.getElementById('purchaseDetailContainer');
-  const itemsHtml = (r.items||[]).map(i => `
-    <tr>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--border);">${i.name}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;">${i.qty}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;">${i.unit||''}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;">${StoreService.fmtN(i.cost||0)}</td>
-    </tr>`).join('');
-  el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <div>
-        <div style="font-size:17px;font-weight:800;color:var(--text);">${r.no}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;">Purchase Order Request — routed to Procurement</div>
-      </div>
-      <span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;padding:14px;background:var(--surface2);border-radius:10px;">
-      <div><div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Requested By</div><div style="font-size:13px;color:var(--text);">${r.by}</div></div>
-      <div><div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Department</div><div style="font-size:13px;color:var(--text);">${r.dept}</div></div>
-      <div><div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Date Raised</div><div style="font-size:13px;color:var(--text);">${fmtDate(r.dateRaised)}</div></div>
-      <div><div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Needed By</div><div style="font-size:13px;color:var(--text);">${fmtDate(r.needed)}</div></div>
-      <div><div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Supplier</div><div style="font-size:13px;color:var(--text);">${r.supplier||'—'}</div></div>
-      <div><div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">PO Reference</div><div style="font-size:13px;color:var(--text);">${r.procurementPrId || 'Not yet issued'}</div></div>
-    </div>
-    ${r.remark ? `<div style="font-size:12.5px;color:var(--text2);background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:14px;">${r.remark}</div>` : ''}
-    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px;">
-      <thead><tr>
-        <th style="text-align:left;padding:8px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Item</th>
-        <th style="text-align:center;padding:8px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Qty</th>
-        <th style="text-align:center;padding:8px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Unit</th>
-        <th style="text-align:right;padding:8px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Est. Cost</th>
-      </tr></thead>
-      <tbody>${itemsHtml}</tbody>
-    </table>
-    ${r.status==='Rejected' && r.rejectReason ? `<div style="margin-top:10px;font-size:12px;color:var(--red);background:var(--red-bg);border-radius:8px;padding:10px 12px;"><strong>Rejection reason:</strong> ${r.rejectReason}</div>` : ''}
-  `;
-  document.getElementById('purchaseDetailModal').classList.add('show');
-};
-window.closePurchaseDetailModal = function(){ document.getElementById('purchaseDetailModal').classList.remove('show'); };
-
-['reqFormModal','approvalModal','purchaseDetailModal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', function(e){
-    if (e.target === this) {
-      if (id === 'reqFormModal') closeNewRequestModal();
-      else if (id === 'approvalModal') closeApprovalModal();
-      else closePurchaseDetailModal();
-    }
-  });
-});
-
-/* ═══════════════════════════════════════════════════════════════
-   Single-box date filter — anchored popover calendar (same as
-   po-history.html).
-═══════════════════════════════════════════════════════════════ */
-let calYear, calMonth;
-let rangeStart = null, rangeEnd = null;
-
-function positionDatePanel(){
-  const btn = document.getElementById('dateFilterBtn');
-  const panel = document.getElementById('dateFilterPanel');
-  const rect = btn.getBoundingClientRect();
-  const panelWidth = panel.offsetWidth || 260;
-  let left = rect.left;
-  const maxLeft = window.innerWidth - panelWidth - 12;
-  if (left > maxLeft) left = Math.max(12, maxLeft);
-  if (left < 12) left = 12;
-  let top = rect.bottom + 6;
-  const panelHeight = panel.offsetHeight || 320;
-  if (top + panelHeight > window.innerHeight - 12) {
-    top = Math.max(12, rect.top - panelHeight - 6);
-  }
-  panel.style.left = left + 'px';
-  panel.style.top = top + 'px';
-}
-
-function toggleDatePanel(e){
-  e.stopPropagation();
-  const panel = document.getElementById('dateFilterPanel');
-  const opening = !panel.classList.contains('show');
-  if (opening){
-    rangeStart = dateFrom || null;
-    rangeEnd = dateTo || null;
-    const base = rangeStart ? new Date(rangeStart) : new Date();
-    calYear = base.getFullYear();
-    calMonth = base.getMonth();
-    renderCalendar();
-    panel.classList.add('show');
-    positionDatePanel();
-  } else {
-    panel.classList.remove('show');
-  }
-}
-
-function closeDatePanel(){
-  document.getElementById('dateFilterPanel').classList.remove('show');
-}
-
-document.addEventListener('click', (e) => {
-  const wrap = document.getElementById('dateFilterWrap');
-  const panel = document.getElementById('dateFilterPanel');
-  if (wrap && panel && !wrap.contains(e.target) && !panel.contains(e.target)) closeDatePanel();
-});
-window.addEventListener('resize', () => {
-  if (document.getElementById('dateFilterPanel').classList.contains('show')) positionDatePanel();
-});
-window.addEventListener('scroll', () => {
-  if (document.getElementById('dateFilterPanel').classList.contains('show')) positionDatePanel();
-}, true);
-
-function renderCalendar(){
-  document.getElementById('calLabel').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
-
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
-  const todayStr = ymd(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-
-  let cells = [];
-  for (let i=firstDay-1;i>=0;i--) cells.push({ day: daysInPrevMonth-i, muted:true });
-  for (let d=1; d<=daysInMonth; d++) cells.push({ day:d, muted:false, ym: ymd(calYear,calMonth,d) });
-  let next = 1;
-  while (cells.length < 42) cells.push({ day: next++, muted:true });
-
-  document.getElementById('calGrid').innerHTML = cells.map(c => {
-    if (c.muted) return `<div class="cal-cell muted">${c.day}</div>`;
-    let cls = 'cal-cell';
-    if (c.ym === todayStr) cls += ' today';
-    if (rangeStart && rangeEnd && c.ym > rangeStart && c.ym < rangeEnd) cls += ' in-range';
-    if (rangeStart && c.ym === rangeStart) cls += ' start';
-    if (rangeEnd && c.ym === rangeEnd) cls += ' end';
-    return `<div class="${cls}" onclick="pickCalDate(event,'${c.ym}')">${c.day}</div>`;
-  }).join('');
-
-  const summary = document.getElementById('calSummary');
-  if (rangeStart && rangeEnd) summary.textContent = `${fmtDateShort(rangeStart)} – ${fmtDateShort(rangeEnd)}`;
-  else if (rangeStart) summary.textContent = `${fmtDateShort(rangeStart)} – select end date`;
-  else summary.textContent = 'Select start date';
-}
-
-function pickCalDate(e, ym){
-  if (e) e.stopPropagation();
-  if (!rangeStart || (rangeStart && rangeEnd)) { rangeStart = ym; rangeEnd = null; }
-  else if (ym < rangeStart) { rangeStart = ym; rangeEnd = null; }
-  else if (ym === rangeStart) { rangeEnd = ym; }
-  else { rangeEnd = ym; }
-  renderCalendar();
-  positionDatePanel();
-}
-
-function calPrevMonth(e){ e.stopPropagation(); calMonth--; if (calMonth<0){ calMonth=11; calYear--; } renderCalendar(); }
-function calNextMonth(e){ e.stopPropagation(); calMonth++; if (calMonth>11){ calMonth=0; calYear++; } renderCalendar(); }
-
-function updateDateFilterLabel(){
-  const btn = document.getElementById('dateFilterBtn');
-  const label = document.getElementById('dateFilterLabel');
-  if (dateFrom && dateTo) label.textContent = `${fmtDateShort(dateFrom)} – ${fmtDateShort(dateTo)}`;
-  else if (dateFrom) label.textContent = `From ${fmtDateShort(dateFrom)}`;
-  else label.textContent = 'All Dates';
-  btn.classList.toggle('active', !!(dateFrom || dateTo));
-}
-function applyDateFilter(e){
-  if (e) e.stopPropagation();
-  dateFrom = rangeStart || '';
-  dateTo = rangeEnd || rangeStart || '';
-  updateDateFilterLabel();
-  closeDatePanel();
-  page = 1;
-  render();
-}
-function clearDateFilter(e){
-  if (e) e.stopPropagation();
-  dateFrom = ''; dateTo = ''; rangeStart = null; rangeEnd = null;
-  updateDateFilterLabel();
-  if (document.getElementById('dateFilterPanel').classList.contains('show')) renderCalendar();
-  page = 1;
-  render();
-}
-window.toggleDatePanel = toggleDatePanel;
-window.pickCalDate = pickCalDate;
-window.calPrevMonth = calPrevMonth;
-window.calNextMonth = calNextMonth;
-window.applyDateFilter = applyDateFilter;
-window.clearDateFilter = clearDateFilter;
-
-/* ═══════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════ */
-async function init(){
-  try {
-    await StoreService.loadAll();
-    REQUISITIONS = StoreService.getRequisitions();
-  } catch (err) {
-    console.error('[AllRequisitions] Failed to load store data:', err);
-    setOffline(true);
-    showToast(err.message || 'Could not load requisitions.', 'error');
-    REQUISITIONS = [];
-  }
-  updateDateFilterLabel();
-  renderKPIs();
-  render();
-
-  StoreService.onChange(() => {
-    REQUISITIONS = StoreService.getRequisitions();
-    renderKPIs();
+  window.addEventListener('afterprint', function handler(){
+    window.removeEventListener('afterprint', handler);
+    statusGroup = savedGroup;
+    expandedRow = savedExpanded;
     render();
   });
+}
+
+function showToast(msg, type){
+  type = type || 'success';
+  var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--surface,#fff);border:1px solid var(--border,#eef0f6);border-radius:10px;padding:11px 16px;font-size:12.5px;color:var(--text,#1c2440);box-shadow:var(--shadow-lg,0 8px 28px rgba(15,34,55,.15));z-index:999;display:flex;align-items:center;gap:8px;animation:fadeUp .3s ease;max-width:calc(100vw - 40px);font-family:inherit;border-left:3px solid ' + (type === 'success' ? 'var(--green)' : type === 'error' ? 'var(--red)' : 'var(--blue)') + ';';
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3400);
+}
+
+async function init(){
+  if(!svc){
+    showToast('StoreService not loaded.', 'error');
+    document.getElementById('reqBody').innerHTML = '<tr class="empty-row"><td colspan="8" style="color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> StoreService not loaded.</td></tr>';
+    return;
+  }
+  try {
+    await svc.loadAll();
+  } catch(err){
+    console.error('[Requisitions] Failed to load store data:', err);
+    showToast(err.message || 'Failed to load requisitions.', 'error');
+  }
+  allReqs = svc.getRequisitions({ mode: 'store_issue' });
+  populateDeptFilter();
+  bindStatusPills();
+  render();
+
+  if(svc.onChange){
+    svc.onChange(function(){
+      allReqs = svc.getRequisitions({ mode: 'store_issue' });
+      populateDeptFilter();
+      render();
+    });
+  }
 }
 init();
 </script>

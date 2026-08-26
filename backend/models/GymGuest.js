@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const gymGuestSchema = new mongoose.Schema(
   {
     id: { type: String, default: uuidv4 },
+    memberId: { type: String, default: null },
     name: { type: String, required: true, trim: true },
     room: { type: String, default: '', trim: true },
     phone: { type: String, default: '', trim: true },

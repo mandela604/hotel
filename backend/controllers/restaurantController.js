@@ -1,7 +1,9 @@
+const { v4: uuidv4 } = require('uuid');
 const MenuItem = require('../models/MenuItem');
 const RestaurantStock = require('../models/RestaurantStock'); // NOTE: model not yet supplied — created, see models/RestaurantStock.js
 const RestaurantMovement = require('../models/RestaurantMovement'); // NOTE: model not yet supplied — created, see models/RestaurantMovement.js
 const Sale = require('../models/Sale');
+const Order = require('../models/Order');
 const Transfer = require('../models/Transfer');
 const Requisition = require('../models/Requisition');
 const Guest = require('../models/Guest');
@@ -58,7 +60,7 @@ exports.addMenuItem = asyncHandler(async (req, res) => {
 });
 
 exports.updateMenuItem = asyncHandler(async (req, res) => {
-  const item = await MenuItem.findOne({ _id: req.params.id, department: DEPT });
+  const item = await MenuItem.findOne({ id: req.params.id, department: DEPT });
   if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
 
   const { name, price, category, avail } = req.body;
@@ -76,7 +78,7 @@ exports.updateMenuItem = asyncHandler(async (req, res) => {
 exports.patchMenuItem = exports.updateMenuItem;
 
 exports.deleteMenuItem = asyncHandler(async (req, res) => {
-  const item = await MenuItem.findOneAndDelete({ _id: req.params.id, department: DEPT });
+  const item = await MenuItem.findOneAndDelete({ id: req.params.id, department: DEPT });
   if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
   res.json({ success: true, message: `"${item.name}" removed from the menu` });
 });
@@ -184,14 +186,20 @@ exports.createSale = asyncHandler(async (req, res) => {
   for (const it of items) {
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
     if (!stockItem) continue; // not every menu item is stock-tracked
-    stockItem.qty = Math.max(0, stockItem.qty - Number(it.qty));
+    const qty = Number(it.qty);
+    if (stockItem.qty < qty) {
+      const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
+      err.statusCode = 400;
+      throw err;
+    }
+    stockItem.qty -= qty;
     await stockItem.save();
 
     await RestaurantMovement.create({
       date: nowStamp(),
       item: stockItem.name,
       qtyIn: 0,
-      qtyOut: Number(it.qty),
+      qtyOut: qty,
       balance: stockItem.qty,
       reason: `Sale ${id}`,
     });
@@ -356,6 +364,7 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
   const requisitionNo = `REQ-${String(count + 1).padStart(5, '0')}`;
 
   const requisition = await Requisition.create({
+    id: uuidv4(),
     requisitionNo,
     mode: 'store_issue',
     requester,
@@ -366,8 +375,179 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
     items: items.map((i) => ({ name: i.name, unit: i.unit || 'Pieces', qty: Number(i.qty) })),
     status: 'Pending',
     dateRaised: new Date(),
+    dateRaisedDisplay: todayDDMMYY(),
   });
 
   await logActivity('blue', `Requisition ${requisitionNo} sent to Store`, 'restaurant-transfer-history.html');
   res.status(201).json({ success: true, data: requisition });
+});
+
+/* ═══════════════════════════════════════════════
+   Orders (Open Tab / Active Orders)
+   Lifecycle: open → served → paid (deducts stock,
+   creates Sale record, optional Room Charge)
+   or cancelled (no stock movement).
+   ID prefix RSO- mirrors Sale's RST- pattern.
+═══════════════════════════════════════════════ */
+exports.listOrders = asyncHandler(async (req, res) => {
+  const { status } = req.query;
+  const filter = { department: DEPT };
+  if (status) filter.status = status;
+
+  const list = await Order.find(filter).sort({ date: -1 });
+  res.json({ success: true, count: list.length, data: list });
+});
+
+exports.openTab = asyncHandler(async (req, res) => {
+  const { items, discount, staff, table, notes, method, payMethod, roomNumber, guestName, guestPhone } = req.body;
+
+  const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
+  const discountPct = Number(discount) || 0;
+  const total = subtotal * (1 - discountPct / 100);
+
+  const count = await Order.countDocuments({ department: DEPT });
+  const id = `RSO-${String(count + 1).padStart(5, '0')}`;
+
+  const order = await Order.create({
+    id,
+    department: DEPT,
+    items: items.map((i) => ({ name: i.name, qty: Number(i.qty), price: Number(i.price) })),
+    subtotal,
+    discount: discountPct,
+    total,
+    staff: staff || (req.user ? req.user.name : ''),
+    table: table || '',
+    notes: notes || '',
+    date: new Date(),
+    status: 'open',
+    method: method || null,
+    payMethod: payMethod || method || null,
+    roomNumber: roomNumber || null,
+    guestName: guestName || null,
+    guestPhone: guestPhone || null,
+  });
+
+  await logActivity('gold', `Tab ${id} opened — ${items.length} item(s)`, 'restaurant-orders.html');
+  res.status(201).json({ success: true, data: order });
+});
+
+exports.markOrderServed = asyncHandler(async (req, res) => {
+  const order = await Order.findOne({ id: req.params.id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status !== 'open') {
+    return res.status(400).json({ success: false, error: `Cannot mark a '${order.status}' order as served` });
+  }
+
+  order.status = 'served';
+  await order.save();
+
+  await logActivity('green', `Tab ${order.id} marked as served`, 'restaurant-orders.html');
+  res.json({ success: true, data: order });
+});
+
+exports.payOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findOne({ id: req.params.id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order already paid' });
+  if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
+
+  const { method, roomNumber, guestName, guestPhone } = req.body;
+  const payMethod = method || 'Cash';
+
+  /* ── Deduct RestaurantStock per item (same as createSale) ── */
+  for (const it of order.items) {
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    if (!stockItem) continue;
+    const qty = Number(it.qty);
+    if (stockItem.qty < qty) {
+      const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
+      err.statusCode = 400;
+      throw err;
+    }
+    stockItem.qty -= qty;
+    await stockItem.save();
+
+    await RestaurantMovement.create({
+      date: nowStamp(),
+      item: stockItem.name,
+      qtyIn: 0,
+      qtyOut: qty,
+      balance: stockItem.qty,
+      reason: `Tab ${order.id} paid`,
+    });
+  }
+
+  /* ── Create Sale record (source = tab) ── */
+  const saleCount = await Sale.countDocuments({ department: DEPT });
+  const saleId = `RST-${String(saleCount + 1).padStart(5, '0')}`;
+
+  const sale = await Sale.create({
+    id: saleId,
+    source: order.id,
+    department: DEPT,
+    items: order.items.map((i) => ({ name: i.name, qty: Number(i.qty), price: Number(i.price) })),
+    subtotal: order.subtotal,
+    discount: order.discount,
+    total: order.total,
+    method: payMethod,
+    staff: order.staff,
+    table: order.table,
+    notes: order.notes,
+    date: new Date(),
+    status: 'completed',
+    roomNumber: roomNumber || null,
+    guestName: guestName || null,
+    guestPhone: guestPhone || null,
+  });
+
+  /* ── Room Charge → post to guest folio ── */
+  if (payMethod === 'Room Charge') {
+    const guest = await Guest.findOne({ name: guestName });
+    if (guest) {
+      guest.charges.push({
+        date: todayDDMMYY(),
+        source: 'Restaurant',
+        desc: order.items.map((i) => `${i.qty}x ${i.name}`).join(', '),
+        room: roomNumber,
+        amount: order.total,
+        paid: 0,
+        by: order.staff,
+        status: 'Pending',
+        payments: [],
+      });
+      await guest.save();
+    } else {
+      await logActivity('amber', `Room Charge tab ${order.id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-orders.html');
+    }
+  }
+
+  /* ── Mark order as paid ── */
+  order.status = 'paid';
+  order.method = payMethod;
+  order.payMethod = payMethod;
+  if (roomNumber) order.roomNumber = roomNumber;
+  if (guestName) order.guestName = guestName;
+  if (guestPhone) order.guestPhone = guestPhone;
+  order.paidSaleId = saleId;
+  await order.save();
+
+  await logActivity('green', `Tab ${order.id} paid — ${order.total} (${payMethod})`, 'restaurant-orders.html');
+  res.json({ success: true, data: order, sale });
+});
+
+exports.cancelOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findOne({ id: req.params.id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status === 'paid') {
+    return res.status(400).json({ success: false, error: 'Cannot cancel a paid order' });
+  }
+  if (order.status === 'cancelled') {
+    return res.status(400).json({ success: false, error: 'Order already cancelled' });
+  }
+
+  order.status = 'cancelled';
+  await order.save();
+
+  await logActivity('red', `Tab ${order.id} cancelled`, 'restaurant-orders.html');
+  res.json({ success: true, data: order });
 });

@@ -4,6 +4,7 @@ const Guest = require('../models/Guest');
 const Activity = require('../models/Activity');
 const asyncHandler = require('../middleware/asyncHandler');
 const { STATUS_TRANSITIONS } = require('../middleware/bookingValidators');
+const { v4: uuidv4 } = require('uuid');
 
 /* ═══════════════════════════════════════════════
    Helpers — same math used client-side in every
@@ -18,7 +19,7 @@ function nights(ci, co) {
 }
 function calcTotal(b) {
   const n = nights(b.checkin, b.checkout) || 1;
-  return b.rate * n * (1 - (b.discount || 0) / 100);
+  return ((b.rate || 0) - (b.discount || 0)) * n;
 }
 function calcPaid(b) {
   return (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
@@ -378,6 +379,10 @@ exports.checkinBooking = asyncHandler(async (req, res) => {
   }
 
   booking.status = 'checkedin';
+  // Record the actual moment of check-in so revenue calculations and
+  // activity logs always reflect when the guest physically arrived,
+  // not when the reservation was originally made.
+  booking.checkin = new Date().toISOString().split('T')[0];
   booking.updatedAt = Date.now();
   await booking.save();
 
@@ -426,7 +431,7 @@ exports.addPayment = asyncHandler(async (req, res) => {
 
   const { amount, mode } = req.body;
   const entry = {
-    id: `PMT-${Date.now()}`,
+    id: `PMT-${uuidv4()}`,
     amount: Number(amount),
     mode: mode || 'Cash',
     date: todayDDMMYY(),
@@ -474,7 +479,7 @@ exports.listGuests = asyncHandler(async (req, res) => {
 });
 
 exports.getGuest = asyncHandler(async (req, res) => {
-  const guest = await Guest.findOne({ $or: [{ _id: req.params.id }, { guestId: req.params.id }] });
+  const guest = await Guest.findOne({ id: req.params.id });
   if (!guest) return res.status(404).json({ success: false, error: 'Guest not found' });
   res.json({ success: true, data: guest });
 });
@@ -483,7 +488,7 @@ exports.getGuest = asyncHandler(async (req, res) => {
 // for toggling VIP and saving notes from guests.html as well as full
 // profile edits.
 exports.saveGuest = asyncHandler(async (req, res) => {
-  const guest = await Guest.findOne({ $or: [{ _id: req.params.id }, { guestId: req.params.id }] });
+  const guest = await Guest.findOne({ id: req.params.id });
   if (!guest) return res.status(404).json({ success: false, error: 'Guest not found' });
 
   const fields = ['name', 'phone', 'email', 'address', 'idType', 'idNum', 'vip', 'notes'];
@@ -497,7 +502,7 @@ exports.saveGuest = asyncHandler(async (req, res) => {
 // Posts a room charge onto a guest's folio (called by other departments —
 // restaurant/poolbar/gym — when a guest charges something to their room).
 exports.addCharge = asyncHandler(async (req, res) => {
-  const guest = await Guest.findOne({ $or: [{ _id: req.params.id }, { guestId: req.params.id }] });
+  const guest = await Guest.findOne({ id: req.params.id });
   if (!guest) return res.status(404).json({ success: false, error: 'Guest not found' });
 
   const { desc, amount, source, room } = req.body;
@@ -519,13 +524,10 @@ exports.addCharge = asyncHandler(async (req, res) => {
 
 // Settles a single pending charge (fully, or partially if amount < balance).
 exports.settleCharge = asyncHandler(async (req, res) => {
-  const guest = await Guest.findOne({ $or: [{ _id: req.params.id }, { guestId: req.params.id }] });
+  const guest = await Guest.findOne({ id: req.params.id });
   if (!guest) return res.status(404).json({ success: false, error: 'Guest not found' });
 
-  // charges now carry a normal Mongo _id (chargeSchema no longer sets
-  // { _id: false }), matching what booking-service.js's
-  // _resolveChargeId() actually reads — DocumentArray.id() works here.
-  const charge = guest.charges.id(req.params.chargeId);
+  const charge = guest.charges.find(c => c.id === req.params.chargeId);
   if (!charge) return res.status(404).json({ success: false, error: 'Charge not found' });
   if (charge.status === 'Settled') return res.status(400).json({ success: false, error: 'Charge already settled' });
 
@@ -534,7 +536,7 @@ exports.settleCharge = asyncHandler(async (req, res) => {
   const pay = amount !== undefined ? Math.min(Number(amount), remaining) : remaining;
 
   charge.payments.push({
-    id: `PMT-${Date.now()}`,
+    id: `PMT-${uuidv4()}`,
     amount: pay,
     mode: mode || 'Cash',
     date: todayDDMMYY(),
@@ -550,7 +552,7 @@ exports.settleCharge = asyncHandler(async (req, res) => {
 
 // Settles every pending charge on the guest's folio in one call.
 exports.settleAllCharges = asyncHandler(async (req, res) => {
-  const guest = await Guest.findOne({ $or: [{ _id: req.params.id }, { guestId: req.params.id }] });
+  const guest = await Guest.findOne({ id: req.params.id });
   if (!guest) return res.status(404).json({ success: false, error: 'Guest not found' });
 
   const { mode } = req.body;
@@ -560,7 +562,7 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
     const remaining = charge.amount - charge.paid;
     if (remaining <= 0) continue;
     charge.payments.push({
-      id: `PMT-${Date.now()}-${settledCount}`,
+      id: `PMT-${uuidv4()}`,
       amount: remaining,
       mode: mode || 'Cash',
       date: todayDDMMYY(),

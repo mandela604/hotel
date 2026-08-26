@@ -23,7 +23,7 @@ const productionSchema = new mongoose.Schema({
   remarks:           { type: String, default: '' },
   date:              { type: String, default: '' },
   time:              { type: String, default: '' },
-  status:            { type: String, enum: ['draft', 'sent', 'accepted', 'in-progress', 'completed', 'voided'], default: 'n-progress' },
+  status:            { type: String, enum: ['draft', 'sent', 'accepted', 'in-progress', 'completed', 'voided'], default: 'in-progress' },
   destination:       { type: String, default: 'Main Restaurant / POS' },
   transferNo:        { type: String, default: '' },
   voidReason:        { type: String, default: '' },

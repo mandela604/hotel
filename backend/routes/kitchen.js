@@ -1,8 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const ctrl    = require('../controllers/kitchenController');
-const auth    = require('../middleware/auth');
-const roleGuard = require('../middleware/roleGuard');
+const { roleGuard, departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const {
   validateAddStock,
   validateUpdateStock,
@@ -16,36 +15,36 @@ const {
   validateObjectIdParam,
 } = require('../middleware/kitchenValidators');
 
-router.use(auth);
+// auth is already applied at the mount point in server.js — no router.use(auth) here
+
+const inDept  = departmentGuard('Kitchen');
+const isAdmin = roleGuard('admin');
 
 /* ── Stock ──────────────────────────────────── */
 router.get('/stock',   ctrl.listStock);
-router.post('/stock',  roleGuard('admin','manager','head_chef'), validateAddStock,  ctrl.addStock);
-router.put('/stock/:id', roleGuard('admin','manager','head_chef'), validateObjectIdParam('id'), validateUpdateStock, ctrl.updateStock);
-router.delete('/stock/:id', roleGuard('admin'), validateObjectIdParam('id'), ctrl.deleteStock);
-router.post('/stock/deduct', validateDeductStock, ctrl.deductStock);
+router.post('/stock',  inDept, privilegeGuard('kitchen', 'canCreate'), validateAddStock,  ctrl.addStock);
+router.put('/stock/:id', inDept, privilegeGuard('kitchen', 'canEdit'), validateObjectIdParam('id'), validateUpdateStock, ctrl.updateStock);
+router.delete('/stock/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteStock);
+router.post('/stock/deduct', inDept, privilegeGuard('kitchen', 'canEdit'), validateDeductStock, ctrl.deductStock);
 
 /* ── Production ─────────────────────────────── */
 router.get('/production', ctrl.listProduction);
-router.post('/production', roleGuard('admin','manager','head_chef'), validateRecordProduction, ctrl.recordProduction);
-router.put('/production/:id/complete', roleGuard('admin','manager','head_chef'), validateObjectIdParam('id'), validateCompleteProduction, ctrl.completeProduction);
-router.post('/production/:id/void', roleGuard('admin','manager'), validateObjectIdParam('id'), validateVoidProduction, ctrl.voidProduction);
+router.post('/production', inDept, privilegeGuard('kitchen', 'canCreate'), validateRecordProduction, ctrl.recordProduction);
+router.put('/production/:id/complete', inDept, privilegeGuard('kitchen', 'canEdit'), validateObjectIdParam('id'), validateCompleteProduction, ctrl.completeProduction);
+router.post('/production/:id/void', inDept, privilegeGuard('kitchen', 'canVoid'), validateObjectIdParam('id'), validateVoidProduction, ctrl.voidProduction);
 
 /* ── Transfers ──────────────────────────────── */
 router.get('/transfers',  ctrl.listTransfers);
-router.post('/transfers', validateAddTransfer, ctrl.addTransfer);
-router.patch('/transfers/:id/status', validateObjectIdParam('id'), validateTransferStatus, ctrl.updateTransferStatus);
+router.post('/transfers', inDept, privilegeGuard('kitchen', 'canCreate'), validateAddTransfer, ctrl.addTransfer);
+router.patch('/transfers/:id/status', inDept, privilegeGuard('kitchen', 'canEdit'), validateObjectIdParam('id'), validateTransferStatus, ctrl.updateTransferStatus);
 
 /* ── Recipes ────────────────────────────────── */
 router.get('/recipes',  ctrl.listRecipes);
-router.post('/recipes', roleGuard('admin','manager','head_chef'), validateCreateRecipe, ctrl.createRecipe);
-router.put('/recipes/:id', roleGuard('admin','manager','head_chef'), validateObjectIdParam('id'), ctrl.editRecipe);
-router.delete('/recipes/:id', roleGuard('admin'), validateObjectIdParam('id'), ctrl.deleteRecipe);
+router.post('/recipes', inDept, privilegeGuard('kitchen', 'canCreate'), validateCreateRecipe, ctrl.createRecipe);
+router.put('/recipes/:id', inDept, privilegeGuard('kitchen', 'canEdit'), validateObjectIdParam('id'), ctrl.editRecipe);
+router.delete('/recipes/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteRecipe);
 
 /* ── Requisitions ───────────────────────────── */
-// Was missing entirely — kitchen-service.js's getKitchenRequisitions()
-// (dashboard's "Incoming Store Requisitions" panel) has nothing to call
-// without this route, and would 404 on every load.
 router.get('/requisitions', ctrl.listKitchenRequisitions);
 
 /* ── Movements ──────────────────────────────── */

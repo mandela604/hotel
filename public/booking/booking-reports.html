@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Grace Hotel — Reports & Revenue</title>
+<title>Aurum Hotel — Reports & Revenue</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
@@ -209,7 +209,6 @@ body {
 
 <!-- ─── SCRIPTS ─── -->
 <script src="../services/permissions.js"></script>
-<script src="data/booking-demo-seed.js"></script>
 <script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
 <script src="../component/booking-modal.js"></script>
@@ -341,6 +340,17 @@ function applyInlineFilters() {
     bounds.start = fp.selectedDates[0];
     bounds.end = fp.selectedDates[1];
     bounds.label = 'Custom Range';
+  }
+
+  // Non-privileged staff are restricted to today's data regardless of
+  // what the date picker shows — the UI notice is decorative, this is
+  // the real enforcement boundary.
+  if (!isPrivileged()) {
+    const todayStart = new Date(TODAY);
+    const todayEnd   = new Date(TODAY);
+    bounds = { start: todayStart, end: todayEnd, label: "Today's Report" };
+    // Lock the date picker to today so the UI reflects the restriction
+    if (fp) fp.setDate([TODAY, TODAY]);
   }
 
   const filtered = bookings.filter(b => {
@@ -496,15 +506,19 @@ async function init() {
 
     applyInlineFilters();
 
-    // Keep the report live if bookings change on another page/tab.
-    if (BookingData.onChange) {
-      BookingData.onChange(async () => {
-        const fresh = await BookingData.getBookingData();
-        allRooms = fresh.rooms;
-        bookings = fresh.bookings;
-        applyInlineFilters();
+    // For non-privileged staff: lock the date range picker and period pills
+    // so the restriction is visible in the UI as well as enforced in code.
+    applyRoleUI();
+    if (!isPrivileged()) {
+      const dateInput = document.getElementById('fbDateRange');
+      if (dateInput) dateInput.setAttribute('disabled', 'disabled');
+      document.querySelectorAll('#periodPills .fb-pill').forEach(b => {
+        b.setAttribute('disabled', 'disabled');
+        b.style.pointerEvents = 'none';
+        b.style.opacity = '0.4';
       });
     }
+
   } catch (err) {
     console.error('[Reports] Failed to load:', err);
     document.getElementById('tableSlot').innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);">Could not load report data.</div>';

@@ -192,7 +192,6 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/restaurant-seed.js"></script>
 <script src="services/restaurant-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script>
@@ -212,8 +211,7 @@ var shell = RestaurantShell.attach({
  * instead" fallback branches, no locally redefined LEVEL_CHIP/LEVEL_LABEL,
  * no hardcoded payment-method list/colors, no hardcoded 'voided' string,
  * no hand-typed OUT/LOW short labels. If RestaurantService fails to load,
- * init() below shows a clear error instead of silently degrading to
- * demo-shaped logic living on the page.
+ * init() below shows a clear error instead of silently degrading.
  */
 var svc = RestaurantService;
 

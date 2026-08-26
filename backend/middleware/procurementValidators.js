@@ -101,6 +101,14 @@ exports.validateCreatePO = (req, res, next) => {
   next();
 };
 
+exports.validateVoidAndCorrect = (req, res, next) => {
+  const { items, reason } = req.body;
+  if (!isNonEmptyString(reason)) return fail(res, 'A reason for voiding is required', 'reason');
+  const itemsErr = validateItemsArray(res, items, { required: true });
+  if (itemsErr) return itemsErr;
+  next();
+};
+
 /* ── Suppliers ── */
 
 exports.validateCreateSupplier = (req, res, next) => {

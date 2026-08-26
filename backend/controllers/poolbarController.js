@@ -1,13 +1,33 @@
 const { v4: uuidv4 } = require('uuid');
 const PoolbarStock   = require('../models/PoolbarStock');
 const Sale           = require('../models/Sale');
-const PoolbarOrder   = require('../models/PoolbarOrder');
+const Order           = require('../models/Order');
 const PoolbarMovement = require('../models/PoolbarMovement');
 const Requisition    = require('../models/Requisition');
 const Booking        = require('../models/Booking');
 const asyncHandler   = require('../middleware/asyncHandler');
 
 /* ── helpers ────────────────────────────────── */
+
+/**
+ * Recomputes a booking's payStatus from its payments array + paid field,
+ * matching the same logic in bookingController.js. Called after any
+ * room-charge write so the booking record stays consistent.
+ */
+function recomputePayStatus(booking) {
+  const total = ((booking.rate || 0) - (booking.discount || 0)) *
+    (Math.max(1, (new Date(booking.checkout) - new Date(booking.checkin)) / 86400000) || 1);
+  const paid = Array.isArray(booking.payments) && booking.payments.length
+    ? booking.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+    : (Number(booking.paid) || 0);
+  if (paid <= 0) booking.payStatus = 'Pending';
+  else if (paid >= total) booking.payStatus = 'Fully Paid';
+  else booking.payStatus = 'Deposit Paid';
+}
+
+function sanitizeRegex(str) {
+  return String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 function todayDDMMYY() {
   const d = new Date();
@@ -38,7 +58,7 @@ async function resolveStockForItems(items) {
   const resolved = [];
   for (const it of items) {
     const q = Number(it.qty);
-    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
     if (!stockItem) continue;
     if (stockItem.qty < q) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${q}`);
@@ -67,9 +87,10 @@ exports.listStock = asyncHandler(async (req, res) => {
   const filter = {};
   if (category) filter.category = category;
   if (search) {
+    const safe = sanitizeRegex(search);
     filter.$or = [
-      { name: new RegExp(search, 'i') },
-      { batch: new RegExp(search, 'i') },
+      { name: new RegExp(safe, 'i') },
+      { batch: new RegExp(safe, 'i') },
     ];
   }
 
@@ -82,7 +103,7 @@ exports.listStock = asyncHandler(async (req, res) => {
 exports.addStock = asyncHandler(async (req, res) => {
   const { name, category, cat, unit, qty, min, price, cost, batch, received, desc } = req.body;
 
-  const existing = await PoolbarStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  const existing = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(name.trim())}$`, 'i') });
   if (existing) {
     return res.status(409).json({ success: false, error: `"${name}" is already tracked in Pool Bar inventory` });
   }
@@ -139,8 +160,33 @@ exports.deleteStock = asyncHandler(async (req, res) => {
 exports.deductStock = asyncHandler(async (req, res) => {
   const { name, qty, reason, notes } = req.body;
 
-  const item = await PoolbarStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  const item = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(name.trim())}$`, 'i') });
   if (!item) return res.status(404).json({ success: false, error: `"${name}" not found in Pool Bar stock` });
+  if (item.qty < Number(qty)) {
+    return res.status(400).json({ success: false, error: `Cannot deduct ${qty} ${item.unit}. Only ${item.qty} on hand.` });
+  }
+
+  item.qty -= Number(qty);
+  await item.save();
+
+  const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
+  await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
+
+  res.json({ success: true, data: item });
+});
+
+/**
+ * Deduct stock by the item's :id param (as opposed to /stock/deduct,
+ * which looks the item up by name). Added so routes/poolbarRoutes.js's
+ * `POST /stock/:id/deduct` (paired with validateDeductById) actually has
+ * a handler to call — it referenced ctrl.deductStockById before this
+ * existed.
+ */
+exports.deductStockById = asyncHandler(async (req, res) => {
+  const { qty, reason, notes } = req.body;
+
+  const item = await PoolbarStock.findOne({ id: req.params.id });
+  if (!item) return res.status(404).json({ success: false, error: 'Stock item not found' });
   if (item.qty < Number(qty)) {
     return res.status(400).json({ success: false, error: `Cannot deduct ${qty} ${item.unit}. Only ${item.qty} on hand.` });
   }
@@ -160,7 +206,7 @@ exports.deductStock = asyncHandler(async (req, res) => {
 
 exports.listSales = asyncHandler(async (req, res) => {
   const { status, method, from, to } = req.query;
-  const filter = { source: 'Poolbar' };
+  const filter = { department: 'poolbar' };
   if (status) filter.status = status;
   if (method) filter.method = method;
   if (from || to) {
@@ -189,7 +235,7 @@ exports.createSale = asyncHandler(async (req, res) => {
   /* Room Charge → attach to active booking folio */
   const effectiveMethod = (roomNumber && method === 'Room Charge') ? 'Room Charge' : (method || 'Cash');
   if (effectiveMethod === 'Room Charge' && roomNumber) {
-    const booking = await Booking.findOne({ room: roomNumber.trim(), status: 'checkedin' });
+    const booking = await Booking.findOne({ room: String(roomNumber).trim(), status: 'checkedin' });
     if (booking) {
       booking.payments.push({
         id: uuidv4(),
@@ -200,6 +246,7 @@ exports.createSale = asyncHandler(async (req, res) => {
         ts: Date.now(),
       });
       booking.paid = (booking.paid || 0) + total;
+      recomputePayStatus(booking);
       await booking.save();
     }
   }
@@ -229,13 +276,13 @@ exports.createSale = asyncHandler(async (req, res) => {
 exports.voidSale = asyncHandler(async (req, res) => {
   // Looked up by the app-level `id` (e.g. "PBS-001042"), never Mongo's
   // `_id` — the frontend only ever knows this id.
-  const sale = await Sale.findOne({ id: req.params.id, source: 'Poolbar' });
+  const sale = await Sale.findOne({ id: req.params.id, department: 'poolbar' });
   if (!sale) return res.status(404).json({ success: false, error: 'Sale record not found' });
   if (sale.status === 'voided') return res.status(400).json({ success: false, error: 'Sale is already voided' });
 
   /* restore stock + log movements */
   for (const it of (sale.items || [])) {
-    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
     if (stockItem) {
       stockItem.qty += Number(it.qty) || 0;
       await stockItem.save();
@@ -258,10 +305,10 @@ exports.voidSale = asyncHandler(async (req, res) => {
 
 exports.listOrders = asyncHandler(async (req, res) => {
   const { status } = req.query;
-  const filter = {};
+  const filter = { department: 'poolbar' };
   if (status) filter.status = status;
 
-  const orders = await PoolbarOrder.find(filter).sort({ date: -1 });
+  const orders = await Order.find(filter).sort({ date: -1 });
   res.json({ success: true, count: orders.length, data: orders });
 });
 
@@ -270,10 +317,11 @@ exports.openTab = asyncHandler(async (req, res) => {
 
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const total = subtotal * (1 - (Number(discount) || 0) / 100);
-  const orderId = await nextId('PB-ORD', PoolbarOrder);
+  const orderId = await nextId('PB', Order);
 
-  const order = await PoolbarOrder.create({
+  const order = await Order.create({
     id: orderId,
+    department: 'poolbar',
     items: items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) })),
     subtotal,
     discount: Number(discount) || 0,
@@ -298,7 +346,7 @@ exports.openTab = asyncHandler(async (req, res) => {
  * equivalent and tabs need to be correctable before checkout.
  */
 exports.updateOrder = asyncHandler(async (req, res) => {
-  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
   if (order.status !== 'open') {
     return res.status(400).json({ success: false, error: 'Only an open order can be edited' });
@@ -320,7 +368,7 @@ exports.updateOrder = asyncHandler(async (req, res) => {
 });
 
 exports.markServed = asyncHandler(async (req, res) => {
-  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
   if (order.status !== 'open') {
     return res.status(400).json({ success: false, error: `Cannot mark "${order.status}" order as served` });
@@ -332,7 +380,7 @@ exports.markServed = asyncHandler(async (req, res) => {
 });
 
 exports.payOrder = asyncHandler(async (req, res) => {
-  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order is already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
@@ -352,7 +400,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   /* Room Charge → attach to active booking folio */
   const effectiveMethod = (effectiveRoom && payMethod === 'Room Charge') ? 'Room Charge' : payMethod;
   if (effectiveMethod === 'Room Charge' && effectiveRoom) {
-    const booking = await Booking.findOne({ room: effectiveRoom.trim(), status: 'checkedin' });
+    const booking = await Booking.findOne({ room: String(effectiveRoom).trim(), status: 'checkedin' });
     if (booking) {
       booking.payments.push({
         id: uuidv4(),
@@ -363,6 +411,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
         ts: Date.now(),
       });
       booking.paid = (booking.paid || 0) + order.total;
+      recomputePayStatus(booking);
       await booking.save();
     }
   }
@@ -400,7 +449,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
 });
 
 exports.cancelOrder = asyncHandler(async (req, res) => {
-  const order = await PoolbarOrder.findOne({ id: req.params.id });
+  const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
   if (order.status === 'paid') {
     return res.status(400).json({ success: false, error: 'Cannot cancel a paid order' });
@@ -464,7 +513,7 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
     const addQty = Number(it.issuedQty || it.qty) || 0;
     if (addQty <= 0) continue;
 
-    let stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    let stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
     if (stockItem) {
       stockItem.qty += addQty;
       await stockItem.save();
@@ -496,7 +545,7 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
 exports.listMovements = asyncHandler(async (req, res) => {
   const { item, from, to } = req.query;
   const filter = {};
-  if (item) filter.item = new RegExp(item, 'i');
+  if (item) filter.item = new RegExp(sanitizeRegex(item), 'i');
   if (from || to) {
     filter.date = {};
     if (from) filter.date.$gte = new Date(from);
@@ -517,9 +566,9 @@ exports.getDashboard = asyncHandler(async (req, res) => {
 
   const [stockList, salesToday, pendingReqs, activeOrders] = await Promise.all([
     PoolbarStock.find(),
-    Sale.find({ source: 'Poolbar', status: 'completed', date: { $gte: today } }),
+    Sale.find({ department: 'poolbar', status: 'completed', date: { $gte: today } }),
     Requisition.countDocuments({ dept: /pool/i, status: 'Pending' }),
-    PoolbarOrder.countDocuments({ status: { $in: ['open', 'served'] } }),
+    Order.countDocuments({ department: 'poolbar', status: { $in: ['open', 'served'] } }),
   ]);
 
   const salesCount = salesToday.length;

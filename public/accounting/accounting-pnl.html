@@ -419,7 +419,7 @@
 </div>
 
 <script src="../component/accounting-shell.js"></script>
-<script src="accounting-seed.js"></script>
+
 <script>
 const shell = AccountingShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -431,17 +431,13 @@ const shell = AccountingShell.attach({
 });
 
 /* ═══════════════════════════════════════════════
-   DATA SERVICE — same try-API/catch-demo shape used across the
-   platform. Flip CONFIG.USE_DEMO to false (and set CONFIG.API_BASE)
-   once a real ledger API exists — nothing else on this page changes.
-   Demo fixtures now live in accounting-seed.js (INCOME_DEPARTMENTS /
-   EXPENSE_CATEGORIES / DEMO_INCOME / DEMO_EXPENSES) — nothing is
-   hardcoded on this page anymore.
+   DATA SERVICE — production API client.
+   Income/expense categories from AccountingSeed.
 ═══════════════════════════════════════════════ */
-const CONFIG = { USE_DEMO: true, API_BASE: '', API_KEY: '' };
-shell.setApiMode(CONFIG.USE_DEMO ? 'Demo' : 'Live');
+const CONFIG = { API_BASE: '', API_KEY: '' };
+shell.setApiMode('Live');
 
-const { INCOME_DEPARTMENTS, EXPENSE_CATEGORIES, DEMO_INCOME, DEMO_EXPENSES } = AccountingSeed;
+const { INCOME_DEPARTMENTS, EXPENSE_CATEGORIES } = AccountingSeed;
 
 const storage = window.storage || {
   async get(key){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v}; },
@@ -451,9 +447,9 @@ const KEY_INCOME   = 'accounting-income';
 const KEY_EXPENSES = 'accounting-expenses';
 const PAGE_SIZE = 7;
 
-async function loadShared(key, fallback) {
+async function loadShared(key) {
   try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p) && p.length) return p; } } catch(e) {}
-  return fallback;
+  return [];
 }
 async function saveShared(key, value) { try { await storage.set(key, JSON.stringify(value), true); } catch(e) {} }
 async function apiFetch(method, path, body) {
@@ -466,52 +462,33 @@ async function apiFetch(method, path, body) {
 }
 
 async function getAccountingData() {
-  if (!CONFIG.USE_DEMO) {
-    try {
-      const data = await apiFetch('GET', '/api/accounting/pnl');
-      return { income: data.income || [], expenses: data.expenses || [] };
-    } catch (err) {
-      console.warn('[P&L] API unavailable, falling back to demo data:', err.message);
-    }
+  try {
+    const data = await apiFetch('GET', '/api/accounting/pnl');
+    return { income: data.income || [], expenses: data.expenses || [] };
+  } catch (err) {
+    console.warn('[P&L] API unavailable, falling back to stored data:', err.message);
   }
-  const income   = await loadShared(KEY_INCOME, DEMO_INCOME);
-  const expenses = await loadShared(KEY_EXPENSES, DEMO_EXPENSES);
-  await Promise.all([ saveShared(KEY_INCOME, income), saveShared(KEY_EXPENSES, expenses) ]);
+  const income   = await loadShared(KEY_INCOME);
+  const expenses = await loadShared(KEY_EXPENSES);
   return { income, expenses };
 }
 async function apiAddIncome(entry) {
-  if (!CONFIG.USE_DEMO) return apiFetch('POST', '/api/accounting/pnl/income', entry);
-  const list = await loadShared(KEY_INCOME, []);
-  const row = { id: uid('inc'), ...entry };
-  list.push(row); await saveShared(KEY_INCOME, list); return row;
+  return apiFetch('POST', '/api/accounting/pnl/income', entry);
 }
 async function apiUpdateIncome(id, entry) {
-  if (!CONFIG.USE_DEMO) return apiFetch('PUT', '/api/accounting/pnl/income/' + id, entry);
-  const list = await loadShared(KEY_INCOME, []);
-  const row = list.find(e => e.id === id); if (row) Object.assign(row, entry);
-  await saveShared(KEY_INCOME, list); return row;
+  return apiFetch('PUT', '/api/accounting/pnl/income/' + id, entry);
 }
 async function apiDeleteIncome(id) {
-  if (!CONFIG.USE_DEMO) return apiFetch('DELETE', '/api/accounting/pnl/income/' + id);
-  const list = (await loadShared(KEY_INCOME, [])).filter(e => e.id !== id);
-  await saveShared(KEY_INCOME, list); return true;
+  return apiFetch('DELETE', '/api/accounting/pnl/income/' + id);
 }
 async function apiAddExpense(entry) {
-  if (!CONFIG.USE_DEMO) return apiFetch('POST', '/api/accounting/pnl/expense', entry);
-  const list = await loadShared(KEY_EXPENSES, []);
-  const row = { id: uid('exp'), ...entry };
-  list.push(row); await saveShared(KEY_EXPENSES, list); return row;
+  return apiFetch('POST', '/api/accounting/pnl/expense', entry);
 }
 async function apiUpdateExpense(id, entry) {
-  if (!CONFIG.USE_DEMO) return apiFetch('PUT', '/api/accounting/pnl/expense/' + id, entry);
-  const list = await loadShared(KEY_EXPENSES, []);
-  const row = list.find(e => e.id === id); if (row) Object.assign(row, entry);
-  await saveShared(KEY_EXPENSES, list); return row;
+  return apiFetch('PUT', '/api/accounting/pnl/expense/' + id, entry);
 }
 async function apiDeleteExpense(id) {
-  if (!CONFIG.USE_DEMO) return apiFetch('DELETE', '/api/accounting/pnl/expense/' + id);
-  const list = (await loadShared(KEY_EXPENSES, [])).filter(e => e.id !== id);
-  await saveShared(KEY_EXPENSES, list); return true;
+  return apiFetch('DELETE', '/api/accounting/pnl/expense/' + id);
 }
 
 let income = [];

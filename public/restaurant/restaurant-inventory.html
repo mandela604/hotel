@@ -264,7 +264,6 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/restaurant-seed.js"></script>
 <script src="services/restaurant-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script src="../component/inventory-table.js"></script>
@@ -618,12 +617,18 @@ function closeModal(id) {
   });
 });
 
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(s));
+  return d.innerHTML;
+}
+
 function showToast(msg, type) {
   type = type || 'success';
   var t = document.createElement('div');
   t.className = 'toast ' + type;
   var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + escapeHtml(msg);
   document.body.appendChild(t);
   setTimeout(function () { t.remove(); }, 3400);
 }

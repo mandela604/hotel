@@ -68,9 +68,14 @@ exports.validateAddStock = (req, res, next) => {
 // (approveAndIssue) or a goods receipt. Reject it here rather than
 // silently ignoring it, same as restaurantValidators.validateUpdateStock.
 exports.validateUpdateStock = (req, res, next) => {
-  const { qty, cat, category, unit, min, cost, price } = req.body;
+  const { qty, name, cat, category, unit, min, cost, price } = req.body;
 
   if (qty !== undefined) return fail(res, 'qty cannot be edited directly — it is set by issuing requisitions or goods receipts', 'qty');
+
+  if (name !== undefined) {
+    if (!isNonEmptyString(name)) return fail(res, 'Item name must be a non-empty string', 'name');
+    if (name.trim().length > 120) return fail(res, 'Item name is too long (max 120 chars)', 'name');
+  }
 
   const catVal = cat !== undefined ? cat : category;
   if (catVal !== undefined && (!isNonEmptyString(catVal) || catVal.trim().length > 60)) {
@@ -139,6 +144,28 @@ exports.validateSubmitRequisition = (req, res, next) => {
 
   const itemsErr = validateItemsArray(res, items);
   if (itemsErr) return itemsErr;
+
+  next();
+};
+
+exports.validateUpdateRequisition = (req, res, next) => {
+  const { by, dept, needed, priority, remark, fulfillStore, supplier, linked, items } = req.body;
+
+  if (by !== undefined && !isNonEmptyString(by)) return fail(res, 'by must be a non-empty string', 'by');
+  if (dept !== undefined && !isNonEmptyString(dept)) return fail(res, 'dept must be a non-empty string', 'dept');
+  if (needed !== undefined && !isNonEmptyString(needed)) return fail(res, 'needed must be a non-empty string', 'needed');
+  if (priority !== undefined && !REQ_PRIORITIES.includes(priority)) {
+    return fail(res, `priority must be one of: ${REQ_PRIORITIES.join(', ')}`, 'priority');
+  }
+  if (remark !== undefined && typeof remark !== 'string') return fail(res, 'remark must be a string', 'remark');
+  if (fulfillStore !== undefined && typeof fulfillStore !== 'string') return fail(res, 'fulfillStore must be a string', 'fulfillStore');
+  if (supplier !== undefined && typeof supplier !== 'string') return fail(res, 'supplier must be a string', 'supplier');
+  if (linked !== undefined && typeof linked !== 'string') return fail(res, 'linked must be a string', 'linked');
+
+  if (items !== undefined) {
+    const itemsErr = validateItemsArray(res, items);
+    if (itemsErr) return itemsErr;
+  }
 
   next();
 };

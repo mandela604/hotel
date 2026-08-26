@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>New Store Request | Grace Hotel HMS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
+  html{ height:auto; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text);
+  }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  .section-title{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:8px; }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .panel-title i{ color:var(--gold); font-size:12px; }
+  .panel-body{ padding:18px 20px 20px; }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:18px; }
+  @media (max-width:900px){ .form-grid{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:520px){ .form-grid{ grid-template-columns:1fr; } }
+  .form-group{ display:flex; flex-direction:column; gap:5px; }
+  .form-label{ font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .form-input, .form-select, textarea.form-input{ background:var(--input-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
+  .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
+  .form-input:read-only, .form-select:disabled{ opacity:.7; cursor:not-allowed; }
+
+  .items-head-row, .entry-row{ display:grid; grid-template-columns:1fr 80px 90px 130px 130px 34px; gap:10px; align-items:center; }
+  .items-head-row{ padding:0 4px 8px; }
+  .items-head-row span{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; }
+  .entry-row{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:10px; padding:8px; transition:border-color .2s, background .2s; }
+  .entry-row.editing{ background:var(--blue-bg); border-color:rgba(47,111,237,.45); }
+  .entry-subtotal{ font-weight:700; color:var(--text3); font-size:13px; text-align:right; padding-right:4px; }
+  .item-add{ width:28px; height:28px; border-radius:8px; border:1px solid var(--gold-border); background:var(--gold); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .15s; flex-shrink:0; }
+  .item-add:hover{ background:var(--gold-light); transform:translateY(-1px); }
+
+  .entry-edit-banner{ display:none; align-items:center; gap:8px; font-size:11.5px; color:var(--blue); font-weight:600; padding:2px 4px 10px; }
+  .entry-edit-banner.show{ display:flex; }
+  .entry-edit-banner b{ color:var(--text); font-weight:700; }
+  .entry-edit-cancel{ background:none; border:none; color:var(--text3); font-size:11.5px; font-weight:700; cursor:pointer; text-decoration:underline; padding:0; }
+  .entry-edit-cancel:hover{ color:var(--red); }
+
+  .entry-name-wrap{ position:relative; }
+  .item-suggest-dropdown{ display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:50; background:var(--modal-bg); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-lg); max-height:220px; overflow-y:auto; }
+  .item-suggest-dropdown.show{ display:block; }
+  .item-suggest-opt{ padding:9px 12px; cursor:pointer; font-size:13px; color:var(--text); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .item-suggest-opt:last-child{ border-bottom:none; }
+  .item-suggest-opt:hover{ background:var(--surface2); }
+  .item-suggest-opt .sn{ font-weight:600; }
+  .item-suggest-opt .sp{ font-size:11px; color:var(--text3); white-space:nowrap; }
+
+  .items-table-wrap{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:14px 0 6px; }
+  .items-table{ width:100%; border-collapse:collapse; background:var(--surface); }
+  .items-table thead th{ text-align:left; padding:9px 12px; font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+  .items-table thead th.center{ text-align:center; }
+  .items-table thead th.right{ text-align:right; }
+  .items-table tbody tr{ border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+  .items-table tbody tr:last-child{ border-bottom:none; }
+  .items-table tbody tr:hover{ background:var(--gold-dim); }
+  .items-table tbody tr.editing-row{ background:var(--blue-bg); }
+  .items-table tbody td{ padding:10px 12px; font-size:13px; color:var(--text); vertical-align:middle; }
+  .items-table tbody td.center{ text-align:center; }
+  .items-table tbody td.right{ text-align:right; }
+  .items-table td.item-subtotal{ font-weight:700; color:var(--text); }
+  .items-table .item-remove{ width:28px; height:28px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .15s; margin:0 auto; }
+  .items-table .item-remove:hover{ border-color:rgba(240,68,56,.4); color:var(--red); }
+  .items-empty{ display:none; padding:14px; text-align:center; color:var(--text3); font-size:12px; border:1px dashed var(--border2); border-radius:10px; margin:14px 0 6px; }
+  .items-empty.show{ display:block; }
+  .items-hint{ font-size:10.5px; color:var(--text3); padding:0 4px; margin-top:-2px; }
+
+  .total-row{ display:flex; align-items:center; justify-content:flex-end; gap:14px; padding:14px 4px 4px; border-top:1px solid var(--border); margin-top:14px; }
+  .total-label{ font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
+  .total-value{ font-size:24px; font-weight:800; color:var(--gold); }
+  .total-hint{ font-size:10.5px; color:var(--text3); font-weight:600; text-align:right; margin-top:-2px; }
+
+  .next-step-note{ display:flex; align-items:flex-start; gap:10px; background:var(--blue-bg); border:1px solid rgba(47,111,237,.3); border-radius:10px; padding:11px 13px; margin-top:12px; }
+  .next-step-note i{ color:var(--blue); font-size:15px; margin-top:1px; flex-shrink:0; }
+  .next-step-note-title{ font-size:12.5px; font-weight:700; color:var(--text); }
+  .next-step-note-sub{ font-size:11.5px; color:var(--text2); margin-top:2px; line-height:1.5; }
+
+  .form-actions{ display:flex; justify-content:flex-end; gap:10px; padding-top:18px; margin-top:6px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  @media (max-width:480px){ .form-actions{ flex-direction:column-reverse; } .form-actions button{ width:100%; justify-content:center; } }
+
+  .btn{ display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; font-family:inherit; text-decoration:none; }
+  .btn-primary{ background:var(--gold); color:#fff; }
+  .btn-primary:hover{ background:var(--gold-light); transform:translateY(-1px); }
+  .btn-primary:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  #backToHistoryBtn{ text-decoration:none !important; font-weight:700; }
+  #backToHistoryBtn:hover{ text-decoration:none !important; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm); padding:11px 16px; font-size:13px; color:#1c2440; box-shadow:0 8px 28px rgba(15,20,40,0.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-weight:600; }
+  .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
+  .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
+  .toast.info{ border-left:3px solid #2f6fed; } .toast.info i{ color:#2f6fed; }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div class="section-title" id="pageSectionTitle">New Store Request</div>
+        <a class="btn btn-outline" id="backToHistoryBtn" href="all-requisitions.html"><i class="fa-solid fa-arrow-left"></i> Back to Requisitions</a>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><i class="fa-solid fa-box-open"></i> <span>Store Issue Request Details</span></div>
+        </div>
+        <div class="panel-body">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Department Needing Items</label>
+              <select class="form-select" id="fDept">
+                <option value="">Select department…</option>
+                <option>Kitchen</option>
+                <option>Housekeeping</option>
+                <option>Pool Bar</option>
+                <option>Front Desk</option>
+                <option>Gym</option>
+                <option>Store</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Priority</label>
+              <select class="form-select" id="fPriority">
+                <option>Normal</option>
+                <option>Urgent</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Needed By</label>
+              <input class="form-input" type="date" id="fNeeded">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Requested By</label>
+              <input class="form-input" type="text" id="fRequestedBy" placeholder="Staff name">
+            </div>
+          </div>
+
+          <div class="items-head-row">
+            <span>Item Name</span><span>Qty</span><span>Unit</span><span>Est. Cost (₦, optional)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
+          </div>
+
+          <div class="entry-edit-banner" id="entryEditBanner">
+            Editing <b id="entryEditName"></b> — update the fields and click the check to save, or
+            <button type="button" class="entry-edit-cancel" id="entryEditCancel">cancel</button>
+          </div>
+
+          <div class="entry-row" id="entryRow">
+            <div class="entry-name-wrap">
+              <input class="form-input" type="text" id="entryName" placeholder="e.g. Cooking Oil" autocomplete="off">
+              <div class="item-suggest-dropdown" id="itemSuggestDropdown"></div>
+            </div>
+            <input class="form-input" type="number" min="1" value="1" id="entryQty">
+            <input class="form-input" type="text" id="entryUnit" placeholder="e.g. litre">
+            <input class="form-input" type="number" min="0" step="0.01" placeholder="Optional" id="entryPrice">
+            <div class="entry-subtotal" id="entrySubtotal">₦0</div>
+            <button class="item-add" type="button" id="addEntryBtn" title="Add item to list"><i class="fa-solid fa-plus" id="addEntryIcon"></i></button>
+          </div>
+
+          <div class="items-hint" id="itemsHint" style="display:none;">Click any item below to edit it.</div>
+
+          <div class="items-empty" id="itemsEmptyMsg">No items added yet — enter an item above and click the + button.</div>
+          <div class="items-table-wrap" id="itemsTableWrap">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Item Name</th>
+                  <th class="center">Qty</th>
+                  <th class="center">Unit</th>
+                  <th class="right">Est. Cost (₦)</th>
+                  <th class="right">Subtotal (₦)</th>
+                  <th class="center"></th>
+                </tr>
+              </thead>
+              <tbody id="itemsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="total-row">
+            <span class="total-label">Estimated Total</span>
+            <span class="total-value" id="grandTotal">₦0</span>
+          </div>
+          <div class="total-hint">Optional — Store will confirm stock availability when processing.</div>
+
+          <div class="next-step-note">
+            <i class="fa-solid fa-circle-info"></i>
+            <div>
+              <div class="next-step-note-title">What happens next</div>
+              <div class="next-step-note-sub">This request goes to the Store team for review. They'll check stock availability and issue items to your department. You'll be notified when items are ready for collection.</div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:16px">
+            <label class="form-label">Notes (optional)</label>
+            <textarea class="form-input" id="fNotes" style="min-height:56px;resize:vertical" placeholder="Justification, urgency context, specific requirements…"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-outline" id="cancelFormBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+            <button class="btn btn-primary" id="createBtn"><i class="fa-solid fa-paper-plane"></i> <span>Submit Store Request</span></button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script src="services/store-service.js"></script>
+<script src="../component/store-shell.js"></script>
+<script>
+const shell = StoreShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'store-new-request.html',
+  pageTitle:     'New Store Request',
+  pageSubtitle:  'Raise a request for items from Central Store',
+});
+
+const fmtN = StoreService.fmtN;
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function showToast(msg, type='success'){
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + escapeHtml(msg);
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3200);
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM AUTOCOMPLETE — sourced from StoreService's catalog
+═══════════════════════════════════════════════ */
+var itemCatalog = [];
+
+function loadItemCatalog(){
+  itemCatalog = StoreService.state.catalog || [];
+}
+
+function showItemSuggestions(query){
+  var dd = document.getElementById('itemSuggestDropdown');
+  var q = query.trim().toLowerCase();
+  if (!q){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
+  var matches = itemCatalog.filter(function(it){ return (it.name||'').toLowerCase().indexOf(q) !== -1; }).slice(0, 6);
+  if (!matches.length){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
+  dd._matches = matches;
+  dd.innerHTML = matches.map(function(it, i){
+    return '<div class="item-suggest-opt" data-i="' + i + '">' +
+      '<span class="sn">' + escapeHtml(it.name) + '</span>' +
+      '<span class="sp">' + escapeHtml(it.unit || '') + '</span>' +
+    '</div>';
+  }).join('');
+  dd.classList.add('show');
+  dd.querySelectorAll('.item-suggest-opt').forEach(function(opt){
+    opt.addEventListener('click', function(){
+      var m = dd._matches[parseInt(opt.dataset.i, 10)];
+      document.getElementById('entryName').value = m.name;
+      document.getElementById('entryUnit').value = m.unit || '';
+      updateEntryPreview();
+      dd.classList.remove('show');
+      document.getElementById('entryQty').focus();
+    });
+  });
+}
+function hideItemSuggestions(){
+  document.getElementById('itemSuggestDropdown').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════
+   ITEMS LIST — add/edit/remove
+═══════════════════════════════════════════════ */
+var items = [];
+var editingIndex = null;
+
+function updateEntryPreview(){
+  var qty = parseFloat(document.getElementById('entryQty').value) || 0;
+  var price = parseFloat(document.getElementById('entryPrice').value) || 0;
+  document.getElementById('entrySubtotal').textContent = fmtN(qty * price);
+}
+
+function setEntryEditingState(idx){
+  editingIndex = idx;
+  var banner = document.getElementById('entryEditBanner');
+  var row = document.getElementById('entryRow');
+  var icon = document.getElementById('addEntryIcon');
+  var addBtn = document.getElementById('addEntryBtn');
+
+  if (idx == null) {
+    banner.classList.remove('show');
+    row.classList.remove('editing');
+    icon.className = 'fa-solid fa-plus';
+    addBtn.title = 'Add item to list';
+  } else {
+    document.getElementById('entryEditName').textContent = items[idx].name;
+    banner.classList.add('show');
+    row.classList.add('editing');
+    icon.className = 'fa-solid fa-check';
+    addBtn.title = 'Save changes to this item';
+  }
+  renderItemsList();
+}
+
+function loadItemIntoEntry(idx){
+  var it = items[idx];
+  if (!it) return;
+  document.getElementById('entryName').value = it.name;
+  document.getElementById('entryQty').value = it.qty;
+  document.getElementById('entryUnit').value = it.unit || '';
+  document.getElementById('entryPrice').value = it.price || '';
+  updateEntryPreview();
+  hideItemSuggestions();
+  setEntryEditingState(idx);
+  document.getElementById('entryName').focus();
+  document.getElementById('entryName').select();
+}
+
+function cancelEntryEdit(){
+  document.getElementById('entryName').value = '';
+  document.getElementById('entryQty').value = 1;
+  document.getElementById('entryUnit').value = '';
+  document.getElementById('entryPrice').value = '';
+  updateEntryPreview();
+  hideItemSuggestions();
+  setEntryEditingState(null);
+}
+
+function addItemFromEntry(){
+  var nameEl = document.getElementById('entryName');
+  var qtyEl = document.getElementById('entryQty');
+  var unitEl = document.getElementById('entryUnit');
+  var priceEl = document.getElementById('entryPrice');
+  var name = nameEl.value.trim();
+  var qty = parseFloat(qtyEl.value) || 0;
+  var unit = unitEl.value.trim();
+  var price = parseFloat(priceEl.value) || 0;
+
+  if (!name){ showToast('Enter an item name.', 'error'); nameEl.focus(); return; }
+  if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
+  if (!unit){ showToast('Enter a unit (e.g. kg, litre, pack).', 'error'); unitEl.focus(); return; }
+
+  var entry = { name: name, qty: qty, unit: unit, price: price, subtotal: qty * price };
+
+  if (editingIndex != null) {
+    items[editingIndex] = entry;
+  } else {
+    items.push(entry);
+  }
+  recalcTotals();
+
+  nameEl.value = '';
+  qtyEl.value = 1;
+  unitEl.value = '';
+  priceEl.value = '';
+  updateEntryPreview();
+  hideItemSuggestions();
+  setEntryEditingState(null);
+  nameEl.focus();
+}
+
+function removeItem(idx){
+  items.splice(idx, 1);
+  if (editingIndex === idx) {
+    cancelEntryEdit();
+  } else {
+    if (editingIndex != null && editingIndex > idx) editingIndex--;
+    renderItemsList();
+  }
+  recalcTotals();
+}
+
+function renderItemsList(){
+  var wrap  = document.getElementById('itemsTableWrap');
+  var empty = document.getElementById('itemsEmptyMsg');
+  var hint  = document.getElementById('itemsHint');
+  var tbody = document.getElementById('itemsBody');
+
+  if (!items.length){
+    wrap.style.display = 'none';
+    empty.classList.add('show');
+    hint.style.display = 'none';
+    tbody.innerHTML = '';
+    return;
+  }
+  empty.classList.remove('show');
+  wrap.style.display = 'block';
+  hint.style.display = '';
+  tbody.innerHTML = items.map(function(it, i){
+    return '<tr class="' + (i === editingIndex ? 'editing-row' : '') + '" data-idx="' + i + '">' +
+      '<td>' + escapeHtml(it.name) + '</td>' +
+      '<td class="center">' + it.qty + '</td>' +
+      '<td class="center">' + escapeHtml(it.unit || '') + '</td>' +
+      '<td class="right">' + (it.price ? fmtN(it.price) : '—') + '</td>' +
+      '<td class="right item-subtotal">' + (it.price ? fmtN(it.subtotal) : '—') + '</td>' +
+      '<td class="center"><button class="item-remove" type="button" data-idx="' + i + '" title="Remove item"><i class="fa-solid fa-trash"></i></button></td>' +
+    '</tr>';
+  }).join('');
+
+  tbody.querySelectorAll('tr[data-idx]').forEach(function(tr){
+    tr.addEventListener('click', function(e){
+      if (e.target.closest('.item-remove')) return;
+      loadItemIntoEntry(parseInt(tr.dataset.idx, 10));
+    });
+  });
+  tbody.querySelectorAll('.item-remove').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      removeItem(parseInt(btn.dataset.idx, 10));
+    });
+  });
+}
+
+function recalcTotals(){
+  renderItemsList();
+  var total = items.reduce(function(s, i){ return s + (i.subtotal || 0); }, 0);
+  document.getElementById('grandTotal').textContent = fmtN(total);
+}
+
+function resetForm(){
+  document.getElementById('fDept').value = '';
+  document.getElementById('fPriority').value = 'Normal';
+  document.getElementById('fNeeded').value = '';
+  document.getElementById('fRequestedBy').value = (shell.getUser && shell.getUser().name) || '';
+  document.getElementById('fNotes').value = '';
+  document.getElementById('entryName').value = '';
+  document.getElementById('entryQty').value = 1;
+  document.getElementById('entryUnit').value = '';
+  document.getElementById('entryPrice').value = '';
+  updateEntryPreview();
+  hideItemSuggestions();
+  items = [];
+  setEntryEditingState(null);
+  recalcTotals();
+}
+
+async function handleSubmit(){
+  var dept = document.getElementById('fDept').value;
+  var needed = document.getElementById('fNeeded').value;
+  var by = document.getElementById('fRequestedBy').value.trim();
+
+  if (!dept){ showToast('Please select the department needing these items.', 'error'); return; }
+  if (!needed){ showToast('Please choose a needed-by date.', 'error'); return; }
+  if (!by){ showToast('Please enter who is requesting.', 'error'); return; }
+  if (!items.length){ showToast('Add at least one item before submitting.', 'error'); return; }
+
+  var payload = {
+    mode: 'store_issue',
+    dept: dept,
+    needed: needed,
+    by: by,
+    priority: document.getElementById('fPriority').value,
+    remark: document.getElementById('fNotes').value.trim(),
+    items: items.map(function(i){ return { name: i.name, qty: i.qty, unit: i.unit, cost: i.price || 0 }; }),
+  };
+
+  var createBtn = document.getElementById('createBtn');
+  createBtn.disabled = true;
+
+  try {
+    var req = await StoreService.submitRequisition(payload);
+    showToast(req.no + ' submitted to Store.', 'success');
+    window.location.href = 'all-requisitions.html';
+  } catch (err) {
+    showToast(err.message || 'Failed to submit this request.', 'error');
+  } finally {
+    createBtn.disabled = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+document.getElementById('addEntryBtn').addEventListener('click', addItemFromEntry);
+document.getElementById('entryEditCancel').addEventListener('click', cancelEntryEdit);
+['entryQty','entryPrice'].forEach(function(id){ document.getElementById(id).addEventListener('input', updateEntryPreview); });
+document.getElementById('entryName').addEventListener('input', function(e){ showItemSuggestions(e.target.value); });
+document.getElementById('entryName').addEventListener('focus', function(e){ if (e.target.value) showItemSuggestions(e.target.value); });
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.entry-name-wrap')) hideItemSuggestions();
+});
+['entryName','entryQty','entryUnit','entryPrice'].forEach(function(id){
+  document.getElementById(id).addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){ hideItemSuggestions(); if (editingIndex != null) cancelEntryEdit(); return; }
+    if (e.key === 'Enter'){ e.preventDefault(); addItemFromEntry(); }
+  });
+});
+document.getElementById('cancelFormBtn').addEventListener('click', function(){
+  resetForm();
+  showToast('Form cleared.', 'info');
+});
+document.getElementById('createBtn').addEventListener('click', handleSubmit);
+
+async function init(){
+  await StoreService.loadAll();
+  loadItemCatalog();
+  resetForm();
+}
+init();
+</script>
+</body>
+</html>

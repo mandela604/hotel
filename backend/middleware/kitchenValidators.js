@@ -156,7 +156,7 @@ exports.validateCompleteProduction = (req, res, next) => {
   if (notes !== undefined && typeof notes !== 'string') {
     return fail(res, 'notes must be a string', 'notes');
   }
-  const allowedStatus = ['draft', 'sent', 'accepted', 'in-progress', 'completed', 'voided'];
+  const allowedStatus = ['in-progress', 'completed'];
   if (status !== undefined && !allowedStatus.includes(status)) {
     return fail(res, `status must be one of: ${allowedStatus.join(', ')}`, 'status');
   }

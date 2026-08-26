@@ -402,6 +402,12 @@ const shell = PoolBarShell.attach({
 const PBS = window.PoolBarService;
 const SS  = window.StoreService;
 
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // Integration contract with GraceHotelRequestForm's SECTION_META.poolbar
 // (component-internal, not seed config) — must stay 'Pool Bar' to match
 // section:'poolbar' below, independent of PBS.getDepartmentName().
@@ -467,7 +473,7 @@ function rowNeeded(r) {
   return isNaN(d.getTime()) ? r.needed : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 function itemsSummary(r) {
-  const names = (r.items || []).map(function (i) { return (i.name || '—') + ' ×' + (i.qty != null ? i.qty : (i.issuedQty || 0)); });
+  const names = (r.items || []).map(function (i) { return escapeHtml(i.name || '—') + ' ×' + (i.qty != null ? i.qty : (i.issuedQty || 0)); });
   if (names.length <= 2) return names.join(', ');
   return names.slice(0, 2).join(', ') + ' <span class="more">+' + (names.length - 2) + ' more</span>';
 }
@@ -573,16 +579,16 @@ function renderTable() {
     ? '<tr class="empty-row"><td colspan="9">No history matches your filters.</td></tr>'
     : pageRows.map(function (r) {
         const st = displayStatus(r), src = displaySource(r);
-        return '<tr data-no="' + r.no + '">' +
-          '<td style="font-weight:700;">' + r.no + '</td>' +
-          '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + src.label + '</span></td>' +
-          '<td>' + rowByLine(r) + '</td>' +
+        return '<tr data-no="' + escapeHtml(r.no) + '">' +
+          '<td style="font-weight:700;">' + escapeHtml(r.no) + '</td>' +
+          '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></td>' +
+          '<td>' + escapeHtml(rowByLine(r)) + '</td>' +
           '<td class="items-summary">' + itemsSummary(r) + '</td>' +
-          '<td>' + rowDate(r) + '</td>' +
-          '<td>' + rowNeeded(r) + '</td>' +
-          '<td><span class="chip chip-' + (r.priority || 'Normal').toLowerCase() + '"><i class="fa-solid fa-circle"></i>' + (r.priority || 'Normal') + '</span></td>' +
-          '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + st.label + '</span></td>' +
-          '<td class="no-print"><button class="act-btn" data-view="' + r.no + '"><i class="fa-solid fa-eye"></i> View</button></td>' +
+          '<td>' + escapeHtml(rowDate(r)) + '</td>' +
+          '<td>' + escapeHtml(rowNeeded(r)) + '</td>' +
+          '<td><span class="chip chip-' + escapeHtml((r.priority || 'Normal').toLowerCase()) + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(r.priority || 'Normal') + '</span></td>' +
+          '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
+          '<td class="no-print"><button class="act-btn" data-view="' + escapeHtml(r.no) + '"><i class="fa-solid fa-eye"></i> View</button></td>' +
         '</tr>';
       }).join('');
   renderPagination(rows.length);
@@ -713,7 +719,7 @@ function showToast(msg, type) {
   const t = document.createElement('div');
   t.className = 'toast ' + type;
   const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
-  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + escapeHtml(msg);
   document.body.appendChild(t);
   setTimeout(function () { t.remove(); }, 3400);
 }

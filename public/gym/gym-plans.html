@@ -135,7 +135,6 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-<script src="data/gym-seed.js"></script>
 <script src="services/gym-service.js"></script>
 <script src="../component/gym-shell.js"></script>
 <script>
@@ -305,7 +304,7 @@ async function confirmDelete() {
     await GymService.deletePlan(deleteTarget.id);
     closeModal('deleteModal');
     renderPlanList();
-    showToast('Plan deleted.', 'error');
+    showToast('Plan deleted.', 'success');
   } catch (err) {
     showToast(err.message || 'Delete failed.', 'error');
   }
@@ -334,7 +333,7 @@ async function init() {
   }
   try {
     // Load data (seeds automatically if empty)
-    await GymService.loadAll(GymSeed);
+    await GymService.loadAll();
     // Subscribe to changes from other tabs/pages
     GymService.onChange(() => renderPlanList());
     renderPlanList();

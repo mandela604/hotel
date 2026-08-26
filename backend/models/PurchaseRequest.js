@@ -41,11 +41,15 @@ const purchaseRequestSchema = new mongoose.Schema({
   unitCost:        { type: Number, default: 0 },
   totalAmount:     { type: Number, default: 0 },
   priority:        { type: String, enum: ['Normal', 'Urgent'], default: 'Normal' },
-  approvalStage:   { type: String, enum: ['pending', 'accountant', 'gm', 'md', 'approved', 'rejected', 'fulfilled'], default: 'pending' },
+  approvalStage:   { type: String, enum: ['pending', 'accountant', 'gm', 'md', 'approved', 'sent_to_store', 'rejected', 'fulfilled', 'voided'], default: 'pending' },
   status:          { type: String, default: 'pending' },
   needsMDApproval: { type: Boolean, default: false },
   supplier:        { type: String, default: '' },
   notes:           { type: String, default: '' },
+  rejectReason:    { type: String, default: '' },
+  voidReason:      { type: String, default: '' },
+  correctionOfPrId:{ type: String, default: '' },
+  voidedIntoPrId:  { type: String, default: '' },
   // Line items — what po-form.html's item-entry table actually edits.
   // Missing from the original schema (only the singular item/qty/unitCost
   // legacy fields existed), which is why totals/pricing had nowhere real

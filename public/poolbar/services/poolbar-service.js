@@ -1,41 +1,36 @@
 /**
  * services/poolbar-service.js — Production Pool Bar service.
- * Talks to the real backend (routes/poolbarRoutes.js + controllers/poolbarController.js)
- * over HTTP instead of window.storage/localStorage. Every page keeps calling
- * the exact same PoolBarService.* functions as before — only what happens
- * INSIDE them changed (fetch() + JWT instead of shared-storage JSON blobs).
+ * Talks to the real backend (routes/poolbar.js + controllers/poolbarController.js)
+ * over HTTP. Every page calls the same PoolBarService.* functions — all
+ * mutations are real HTTP calls; state is only updated from server responses.
  *
  * ── CONFIG ────────────────────────────────────────────────────────────
  * API base path:   PoolBarSeed.API_BASE            (default '/api/poolbar')
- * Auth token:      window.Auth.getToken()          if present, else
- *                  localStorage 'gh_token' / 'token'
- * All requests send `Authorization: Bearer <token>` — matches middleware/auth.js.
+ * Auth:            httpOnly cookie sent automatically via credentials:'include'
  *
- * ── WHAT CHANGED FROM THE DEMO VERSION ──────────────────────────────────
- * - state.stock / state.sales / state.orders / state.requisitions /
- *   state.movements are now hydrated from the API on loadAll(), not seeded
- *   from data/poolbar-seed.js + localStorage.
- * - Every mutation (add/edit/delete stock, deduct, sale, void, open/pay/
- *   cancel order, submit requisition) is a real HTTP call; state is only
- *   updated from what the server actually persisted (the response body),
- *   never optimistically assumed.
- * - The old "pending store transfers" accept/reject flow (state.pending,
- *   acceptRequisition/rejectRequisition/logRequisitionRaised) had no
- *   backend endpoint and is removed — Store→PoolBar stock now only moves
- *   through the real requisition lifecycle (submitRequisition +
- *   receiveRequisition, see below).
+ * ── STATE ──────────────────────────────────────────────────────────────
+ * state.stock / state.sales / state.orders / state.requisitions /
+ * state.movements are hydrated from the API on loadAll(), using config
+ * properties from PoolBarSeed (PAYMENT_METHODS, ORDER_STATUS_OPTIONS, etc.).
+ *
+ * Every mutation (add/edit/delete stock, deduct, sale, void, open/pay/
+ * cancel order, submit requisition) is a real HTTP call; state is only
+ * updated from what the server actually persisted (the response body),
+ * never optimistically assumed.
+ *
+ * receiveRequisition() calls the real
+ * POST /requisitions/:id/receive endpoint — the backend credits stock,
+ * logs the movement, and flips the requisition to 'Full' atomically.
+ * - Room Charge folio posting happens ONLY server-side now
+ *   (poolbarController's createSale/payOrder already push to the
+ *   booking's payments array). postToGuestFolio() is not used —
+ *   Room Charge sales are posted server-side.
  * - Category management (addCategory/renameCategory/deleteCategory) has
  *   no dedicated backend collection for Pool Bar (unlike Procurement's
  *   ProcurementCategory) — categories are still derived from
  *   PoolbarStock.category values. "Extra" categories a manager pre-creates
  *   before any item uses them are now session-only (in-memory), since
  *   there's nowhere on the server to persist a category with zero items.
- * - receiveRequisition() credits Pool Bar's own stock via
- *   PUT /stock/:id (or POST /stock if the item doesn't exist yet) since
- *   there's no dedicated "receive" endpoint. Already-received lines are
- *   tracked in memory for this session to avoid double-crediting a repeat
- *   click; that tracking does not survive a page reload — if that matters,
- *   add a real POST /requisitions/:no/receive endpoint server-side instead.
  *
  * Everything else — KPI math, filters, formatting, permission checks,
  * shift-report helpers, sale-detail shaping — is pure computation over
@@ -49,25 +44,14 @@
     const s = global.PoolBarSeed || {};
     return s.API_BASE || '/api/poolbar';
   }
-  function getAuthToken() {
-    if (global.Auth && typeof global.Auth.getToken === 'function') {
-      try { return global.Auth.getToken() || ''; } catch (e) { /* fall through */ }
-    }
-    try {
-      return localStorage.getItem('gh_token') || localStorage.getItem('token') || '';
-    } catch (e) { return ''; }
-  }
-
   async function apiFetch(path, options) {
     options = options || {};
-    const token = getAuthToken();
+    // httpOnly cookie is sent automatically — no Authorization header needed.
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
-    if (token) headers.Authorization = 'Bearer ' + token;
 
     let res;
     try {
-      res = await fetch(getApiBase() + path, Object.assign({}, options, { headers }));
-    } catch (networkErr) {
+      res = await fetch(getApiBase() + path, Object.assign({}, options, { headers, credentials: 'include' }));    } catch (networkErr) {
       const err = new Error('Network error contacting server: ' + networkErr.message);
       err.code = 'NETWORK_ERROR';
       throw err;
@@ -90,10 +74,12 @@
   function apiPut(path, data) { return apiFetch(path, { method: 'PUT', body: JSON.stringify(data || {}) }); }
   function apiDelete(path) { return apiFetch(path, { method: 'DELETE' }); }
 
-  /* ── Booking module (Room Charge folio posting) — unchanged from the
-   *    demo version; dynamically loads BookingData if it's not already
-   *    on the page, same as before. Orthogonal to the API-ification
-   *    above. ── */
+  /* ── Booking module (Room Charge guest lookup for the UI picker) —
+   *    unchanged from the demo version; dynamically loads BookingData if
+   *    it's not already on the page. This is ONLY used to populate the
+   *    "select a room/guest" dropdown in poolbar-orders.html — it does
+   *    NOT post charges (that happens server-side in
+   *    poolbarController's createSale/payOrder, see file header). ── */
   var OWN_SCRIPT_SRC = (document.currentScript && document.currentScript.src) || '';
   function resolveRelative(rel) {
     if (!OWN_SCRIPT_SRC) return rel;
@@ -126,6 +112,21 @@
     return bookingDataLoadPromise;
   }
 
+  async function getInHouseGuests() {
+    let bookingData;
+    try { bookingData = await ensureBookingData(); }
+    catch (e) {
+      const err = new Error('BookingData could not be loaded automatically: ' + e.message);
+      err.code = 'BOOKING_DATA_UNAVAILABLE';
+      throw err;
+    }
+    const data = await bookingData.getBookingData();
+    const bookings = (data && data.bookings) || [];
+    return bookings.filter(b => b.status === 'checkedin' && b.guest).map(b => ({
+      room: String(b.room || ''), name: b.guest || '', phone: b.phone || '', status: 'In-House',
+    }));
+  }
+
   /* ── Formatting / small helpers ─────────────────────────────────── */
   function pad2(n) { return String(n).padStart(2, '0'); }
   function getCurrencyConfig() {
@@ -149,8 +150,6 @@
 
   function parseStamp(str) {
     if (!str) return null;
-    // Accept ISO dates straight from Mongo (createdAt/date) as well as the
-    // dd/mm/yy hh:mm AM/PM stamp format used by demo data.
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
       const d = new Date(str);
       return isNaN(d.getTime()) ? null : d;
@@ -353,9 +352,6 @@
         listManagedCategories().some(c => c.toLowerCase() === n.toLowerCase())) {
       throw new Error(`Category "${n}" already exists.`);
     }
-    // Persist the rename onto every stock item currently using it — this
-    // part IS real (goes through the API), only the "not-yet-used" extra
-    // category bookkeeping is session-only.
     const affected = state.stock.filter(i => i.category === oldName);
     for (const item of affected) {
       const idForApi = item.id || item._id;
@@ -429,43 +425,6 @@
   function findStock(name) { return state.stock.find(i => i.name === name); }
   function findStockRecordId(item) { return item.id || item._id; }
 
-  async function postToGuestFolio(sale) {
-    if (!sale || sale.method !== getRoomChargeMethodName()) return;
-    if (!sale.roomNumber) return;
-    let bookingData;
-    try { bookingData = await ensureBookingData(); }
-    catch (e) { console.warn('[PoolBarService] BookingData unavailable — folio not updated:', e.message); return; }
-    if (typeof bookingData.addRoomCharge !== 'function') {
-      console.warn('[PoolBarService] BookingData.addRoomCharge unavailable — folio not updated.');
-      return;
-    }
-    const desc = (sale.items || []).map(i => (i.qty || 1) + 'x ' + (i.name || '')).join(', ') || sale.id;
-    const guestKey = sale.guestName || sale.roomNumber;
-    try {
-      await bookingData.addRoomCharge(guestKey, {
-        source: getModuleName(), desc, room: sale.roomNumber, amount: sale.total,
-        by: sale.staff || getModuleName(),
-      });
-    } catch (e) {
-      console.warn('[PoolBarService] folio charge failed:', e && e.message ? e.message : e);
-    }
-  }
-
-  async function getInHouseGuests() {
-    let bookingData;
-    try { bookingData = await ensureBookingData(); }
-    catch (e) {
-      const err = new Error('BookingData could not be loaded automatically: ' + e.message);
-      err.code = 'BOOKING_DATA_UNAVAILABLE';
-      throw err;
-    }
-    const data = await bookingData.getBookingData();
-    const bookings = (data && data.bookings) || [];
-    return bookings.filter(b => b.status === 'checkedin' && b.guest).map(b => ({
-      room: String(b.room || ''), name: b.guest || '', phone: b.phone || '', status: 'In-House',
-    }));
-  }
-
   /* ── Stock CRUD (real API) ───────────────────────────────────────── */
   async function addStockItem({ name, category, unit, min = 0, price = 0, desc = '' }) {
     if (!name || !name.trim()) throw new Error('Item name is required.');
@@ -507,19 +466,6 @@
     return item || res.data;
   }
 
-  /**
-   * Client-side stock restore used only as a local mirror right after a
-   * void/cancel API call already told us the new server-side qty — never
-   * called on its own to mutate the server. See voidSale() below, which
-   * uses the qty the server actually returned instead of guessing.
-   */
-  function restoreStockLocal(name, qty) {
-    const i = findStock(name);
-    if (!i) return null;
-    i.qty += qty;
-    return i;
-  }
-
   /* ── Requisitions (Pool Bar → Store) ─────────────────────────────── */
   async function submitRequisition({ items, requester, dept, priority, remark, neededBy }) {
     const res = await apiPost('/requisitions', {
@@ -530,47 +476,36 @@
     return res.data;
   }
 
-  // In-memory only — see file header. Prevents double-crediting stock if
-  // the same requisition's "Accept Delivery" is triggered twice in one
-  // session; does not survive a reload.
-  const _receivedReqLinesThisSession = {};
-
   /**
-   * Credits Pool Bar's own stock with whatever Store issued on a
-   * requisition, via PUT /stock/:id (or POST /stock for a brand-new
-   * item) since there's no dedicated "receive" endpoint yet.
+   * FIX: now calls the real POST /requisitions/:id/receive endpoint —
+   * the backend credits stock, logs the movement, and flips the
+   * requisition to 'Full' atomically. Previously this looped client-side
+   * over PUT /stock/:id calls, which bypassed server validation and
+   * could double-credit stock if two people clicked "Receive" on the
+   * same requisition around the same time (the old in-memory "already
+   * received" tracking didn't survive a reload and did nothing to stop
+   * two different browser tabs/sessions from racing each other).
    */
   async function receiveRequisition(req) {
-    if (!req || !Array.isArray(req.items)) throw new Error('Invalid requisition — nothing to receive.');
-    const reqNo = req.no || req.requisitionNo;
-    let receivedAny = false;
+    if (!req) throw new Error('Invalid requisition — nothing to receive.');
+    const id = req.id || req._id;
+    if (!id) throw new Error('Requisition has no id.');
 
-    for (const it of req.items) {
-      const issued = Number(it.issuedQty) || 0;
-      const already = (_receivedReqLinesThisSession[reqNo] && _receivedReqLinesThisSession[reqNo][it.name]) || 0;
-      const delta = issued - already;
-      if (delta <= 0) continue;
-      receivedAny = true;
+    const res = await apiPost('/requisitions/' + id + '/receive');
+    const idx = state.requisitions.findIndex(r => (r.id || r._id) === id);
+    if (idx > -1) state.requisitions[idx] = res.data; else state.requisitions.unshift(res.data);
 
-      const existing = findStock(it.name);
-      if (existing) {
-        const res = await apiPut('/stock/' + findStockRecordId(existing), { qty: (existing.qty || 0) + delta });
-        Object.assign(existing, res.data);
-      } else {
-        const res = await apiPost('/stock', {
-          name: it.name, category: getFallbackCategoryName(), unit: it.unit || 'unit',
-          min: 0, price: Number(it.cost) || 0, qty: delta,
-        });
-        state.stock.push(res.data);
-      }
+    // Stock was credited server-side — refresh the affected items
+    // locally so the UI reflects it without a full reload.
+    (res.data.items || []).forEach(function (it) {
+      const addQty = Number(it.issuedQty || it.qty) || 0;
+      if (addQty <= 0) return;
+      const stockItem = findStock(it.name);
+      if (stockItem) stockItem.qty += addQty;
+    });
 
-      _receivedReqLinesThisSession[reqNo] = _receivedReqLinesThisSession[reqNo] || {};
-      _receivedReqLinesThisSession[reqNo][it.name] = issued;
-    }
-
-    if (!receivedAny) return null;
     emitChange('requisition:received');
-    return req;
+    return res.data;
   }
 
   function cartTotals(cart, discountPct) {
@@ -580,6 +515,12 @@
   }
 
   /* ── Sales (real API) ────────────────────────────────────────────── */
+  /**
+   * FIX: no longer calls postToGuestFolio() after recordSale() —
+   * poolbarController.createSale already posts Room Charge sales to the
+   * guest's booking folio server-side. Calling it again here posted
+   * every Room Charge sale to the folio twice.
+   */
   async function recordSale({ items, discount = 0, method, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null }) {
     if (!items || !items.length) throw new Error('Add at least one item.');
     if (!staff) throw new Error('Please enter the staff name.');
@@ -593,7 +534,6 @@
     });
     state.sales.unshift(res.data);
     emitChange('sale:record');
-    await postToGuestFolio(res.data);
     return res.data;
   }
 
@@ -626,11 +566,19 @@
   }
 
   async function markServed(orderId) {
-    const res = await updateOrder(orderId, { status: 'served' });
+    const res = await apiPost('/orders/' + orderId + '/serve');
+    const idx = state.orders.findIndex(o => o.id === orderId || o._id === orderId);
+    if (idx > -1) state.orders[idx] = res.data;
     emitChange('order:served');
-    return res;
+    return res.data;
   }
 
+  /**
+   * FIX: no longer calls postToGuestFolio() after payOrder() —
+   * poolbarController.payOrder already posts Room Charge tab payments
+   * to the guest's booking folio server-side. Calling it again here
+   * double-posted the charge, same bug as recordSale().
+   */
   async function payOrder(orderId, methodOrOpts) {
     const body = (methodOrOpts && typeof methodOrOpts === 'object') ? methodOrOpts : { method: methodOrOpts };
     const res = await apiPost('/orders/' + orderId + '/pay', body);
@@ -638,7 +586,6 @@
     if (idx > -1) state.orders[idx] = res.data.order;
     state.sales.unshift(res.data.sale);
     emitChange('order:paid');
-    await postToGuestFolio(res.data.sale);
     return res.data;
   }
 
@@ -853,11 +800,6 @@
     return 'Report: ' + periodLabel;
   }
 
-  /* ── Requisition history (Pool Bar → Store) ──────────────────────────
-   * Sourced entirely from state.requisitions (the real API) now — the
-   * old demo merged in a separate "Store push transfer" list that had no
-   * backend model wired up for Pool Bar; that concept is gone until a
-   * real transfers endpoint exists. */
   function getDepartmentHistory(dept) {
     return (state.requisitions || [])
       .filter(r => !dept || r.dept === dept)
@@ -944,7 +886,6 @@
     can, canVoidSale, canDiscount,
     listStaffNames,
     getShiftSales, isManagerLike,
-    postToGuestFolio,
     getInHouseGuests,
     getPaymentMethods,
     getRoomChargeMethodName,

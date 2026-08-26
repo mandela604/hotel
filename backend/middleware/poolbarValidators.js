@@ -103,8 +103,8 @@ exports.validateCreateSale = (req, res, next) => {
   if (!isNonEmptyString(method)) return fail(res, 'payment method is required', 'method');
   if (!isNonEmptyString(staff)) return fail(res, 'staff name is required', 'staff');
 
-  if (total !== undefined && !isPositiveNumber(total)) {
-    return fail(res, 'total must be a number > 0', 'total');
+  if (total !== undefined && !isNonNegativeNumber(total)) {
+    return fail(res, 'total must be a number >= 0', 'total');
   }
 
   next();

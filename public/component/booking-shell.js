@@ -2,29 +2,10 @@
    BookingShell — sidebar + topbar for Front Desk / Booking module.
    Drop this in as component/booking-shell.js.
 
-   Session rules (same as PoolBar / Restaurant):
-     USE_DEMO true  → always DEMO_USER
-     USE_DEMO false → GET /api/auth/session
-                      success → real user
-                      failure → redirect to LOGIN_URL (no demo fallback)
+   Session: GET /api/auth/session (credentials: 'include' for httpOnly cookie)
+            success → real user
+            failure → redirect to LOGIN_URL
    Pages read session only via shell.getUser().
-
-   FIXES vs. the previous version of this file:
-   1. USE_DEMO now derives from window.BookingData.CONFIG.USE_PROD when
-      that's available, instead of being a second, independent toggle.
-      Before, booking-service.js's USE_PROD and this file's USE_DEMO
-      could disagree — e.g. USE_PROD:true (real API calls) with
-      USE_DEMO:true (still shows the fake "Front Desk Staff" user in the
-      topbar and never actually hits /api/auth/session). Flipping
-      booking-service.js's USE_PROD is now the ONLY switch needed.
-   2. fetchSession() now authenticates the SAME way every other module
-      shell (poolbar-shell.js) and every other API call in this app does:
-      Authorization: Bearer <token> read from localStorage, matching
-      middleware/auth.js exactly. The previous version sent
-      credentials:'include' (cookies) and only attached a header if
-      CONFIG.API_KEY was set (it never is) — against a Bearer-only
-      auth.js, that 401'd every time, so live-mode session fetch could
-      never succeed.
 ═══════════════════════════════════════════════════════════════ */
 (function (global) {
 
@@ -178,36 +159,10 @@
   }
 
   // ── CONFIG ──
-  // USE_DEMO is resolved lazily inside resolveUseDemo() rather than fixed
-  // here, so it can follow booking-service.js's own CONFIG.USE_PROD flag
-  // when that script is loaded (script order per booking-service.js's own
-  // header comment: booking-service.js loads before this shell attaches).
   const CONFIG = {
     API_BASE: '',
-    USE_DEMO: true, // fallback only, used if BookingData isn't found — see resolveUseDemo()
     LOGIN_URL: '../login.html',
-    DEMO_USER: { name: 'Front Desk Staff', initials: 'FD', role: 'staff', privilege: 'front_desk' },
   };
-
-  // Single source of truth: if booking-service.js is loaded, its
-  // CONFIG.USE_PROD flag decides demo vs. live for the WHOLE module —
-  // this shell no longer has its own independent toggle that can drift
-  // out of sync with it.
-  function resolveUseDemo() {
-    if (global.BookingData && global.BookingData.CONFIG && typeof global.BookingData.CONFIG.USE_PROD === 'boolean') {
-      return !global.BookingData.CONFIG.USE_PROD;
-    }
-    return CONFIG.USE_DEMO;
-  }
-
-  // Same token lookup as every other module shell (poolbar-shell.js) and
-  // every other API call in this app — matches middleware/auth.js exactly
-  // (Authorization: Bearer <token>, no cookies).
-  function getAuthToken() {
-    try {
-      return localStorage.getItem('gh_token') || localStorage.getItem('token') || '';
-    } catch (e) { return ''; }
-  }
 
   function goLogin(reason) {
     console.warn('[BookingShell] Auth failed — redirecting to login:', reason || '');
@@ -216,36 +171,16 @@
     location.href = base + (base.indexOf('?') >= 0 ? '&' : '?') + 'next=' + next;
   }
 
-  /**
-   * Demo  → DEMO_USER
-   * Live  → real user from API, authenticated the SAME way as every
-   *         other API call in this module: Authorization: Bearer <token>,
-   *         matching middleware/auth.js exactly. No cookies.
-   * Live fail (no token, 401/403, bad response) → redirect (never
-   * returns demo).
-   */
   async function fetchSession() {
-    if (resolveUseDemo()) {
-      return CONFIG.DEMO_USER;
-    }
-
-    const token = getAuthToken();
-    if (!token) {
-      goLogin('no auth token in localStorage');
-      return null;
-    }
-
     try {
-      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', {
-        headers: { Authorization: 'Bearer ' + token },
-      });
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', { credentials: 'include' });
       if (res.status === 401 || res.status === 403) {
         goLogin('HTTP ' + res.status);
         return null;
       }
       if (!res.ok) throw new Error('Session API returned ' + res.status);
       const data = await res.json();
-      const user = (data && data.data) ? data.data : data; // tolerate {success,data:{...}} or a bare user object
+      const user = (data && data.data) ? data.data : data;
       if (!user || !user.role) {
         goLogin('missing role');
         return null;
@@ -269,10 +204,9 @@
     const sidebarTarget = document.querySelector(opts.sidebarTarget);
     const topbarTarget  = document.querySelector(opts.topbarTarget);
     const activeFile    = opts.activeFile || '';
-    const useDemo       = resolveUseDemo();
 
-    // Demo: start with DEMO_USER. Live: start empty until API responds (or redirect).
-    let user = useDemo ? (opts.user || CONFIG.DEMO_USER) : (opts.user || null);
+    // Start empty until API responds (or redirect).
+    let user = opts.user || null;
     let initials = user
       ? (user.initials || (user.name || 'FD').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join(''))
       : '…';
@@ -319,7 +253,7 @@
         <div class="bks-topright">
           ${opts.topbarActionsHtml || ''}
           <div class="bks-date" id="bks-date"></div>
-          <div class="bks-apibadge" id="bks-apiBadge"><span class="dot"></span><span id="bks-apiLabel">${useDemo ? 'Demo' : 'Live'}</span></div>
+          <div class="bks-apibadge" id="bks-apiBadge"><span class="dot"></span><span id="bks-apiLabel">Live</span></div>
           <div class="bks-notif"><i class="fa-regular fa-bell"></i><div class="bks-notifdot"></div></div>
           <div class="bks-avatar" id="bks-avatar" title="${user ? (user.name || '') : ''}">${initials}</div>
         </div>
@@ -401,7 +335,7 @@
         return user;
       },
       getConfig() {
-        return Object.assign({}, CONFIG, { USE_DEMO: useDemo });
+        return Object.assign({}, CONFIG);
       },
     };
 
@@ -414,7 +348,7 @@
         avatar.textContent = initials;
         avatar.title = user.name || '';
       }
-      handle.setApiMode(useDemo ? 'Demo' : 'Live');
+      handle.setApiMode('Live');
     });
 
     return handle;

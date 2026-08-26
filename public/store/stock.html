@@ -378,7 +378,7 @@ tfoot td{ padding:11px 14px; font-weight:800; font-size:12.5px; color:var(--text
   </div>
 </div>
 
-<script src="data/store-seed.js"></script>
+
 <script src="services/store-service.js"></script>
 <script src="../component/store-shell.js"></script>
 <script src="component/store-item-form.js"></script>
@@ -715,18 +715,20 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') ['categoryModal','editCatModal','deleteModal'].forEach(closeModal);
 });
 
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function showToast(msg, type='success'){
   const icon = type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info';
   const t = document.createElement('div');
   t.className = 'toast '+type;
-  t.innerHTML = '<i class="fa-solid '+icon+'"></i> '+msg;
+  t.innerHTML = '<i class="fa-solid '+escapeHtml(icon)+'"></i> '+escapeHtml(msg);
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 3400);
 }
 
 async function init(){
   if (!svc) {
-    console.error('[Stock] StoreService not loaded — check script order: data/store-seed.js → services/store-service.js → this page.');
+    console.error('[Stock] StoreService not loaded — check script order: services/store-service.js → this page.');
     showToast('StoreService not loaded.', 'error');
     return;
   }

@@ -1,41 +1,45 @@
 const express = require('express');
 const router = express.Router();
 const restaurantController = require('../controllers/restaurantController');
-const auth = require('../middleware/auth');
-const roleGuard = require('../middleware/roleGuard');
+const { roleGuard, departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const v = require('../middleware/restaurantValidators');
 
-router.use(auth);
-
-const canManage = roleGuard(['admin', 'manager', 'restaurant_manager']);
-const canSell = roleGuard(['admin', 'manager', 'restaurant_manager', 'waiter', 'cashier']);
+const inDept   = departmentGuard('Restaurant');
+const isAdmin  = roleGuard('admin');
 
 /* Menu */
 router.get('/menu', restaurantController.listMenu);
-router.post('/menu', canManage, v.validateAddMenuItem, restaurantController.addMenuItem);
-router.put('/menu/:id', canManage, v.validateParam('id'), v.validateUpdateMenuItem, restaurantController.updateMenuItem);
-router.patch('/menu/:id', canManage, v.validateParam('id'), v.validateUpdateMenuItem, restaurantController.patchMenuItem);
-router.delete('/menu/:id', canManage, v.validateParam('id'), restaurantController.deleteMenuItem);
+router.post('/menu', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateAddMenuItem, restaurantController.addMenuItem);
+router.put('/menu/:id', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateStrictUuidParam('id'), v.validateUpdateMenuItem, restaurantController.updateMenuItem);
+router.patch('/menu/:id', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateStrictUuidParam('id'), v.validateUpdateMenuItem, restaurantController.patchMenuItem);
+router.delete('/menu/:id', isAdmin, v.validateStrictUuidParam('id'), restaurantController.deleteMenuItem);
 
 /* Stock */
 router.get('/stock', restaurantController.listStock);
-router.post('/stock', canManage, v.validateAddStock, restaurantController.addStockItem);
-router.put('/stock/:name', canManage, v.validateParam('name'), v.validateUpdateStock, restaurantController.editStockItem);
-router.delete('/stock/:name', canManage, v.validateParam('name'), restaurantController.deleteStockItem);
+router.post('/stock', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateAddStock, restaurantController.addStockItem);
+router.put('/stock/:name', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateParam('name'), v.validateUpdateStock, restaurantController.editStockItem);
+router.delete('/stock/:name', isAdmin, v.validateParam('name'), restaurantController.deleteStockItem);
 router.get('/movements', restaurantController.listMovements);
 
 /* Sales */
 router.get('/sales', restaurantController.listSales);
-router.post('/sales', canSell, v.validateCreateSale, restaurantController.createSale);
-router.post('/sales/:id/void', canManage, v.validateParam('id'), v.validateVoidSale, restaurantController.voidSale);
+router.post('/sales', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateCreateSale, restaurantController.createSale);
+router.post('/sales/:id/void', inDept, privilegeGuard('restaurant', 'canVoid'), v.validateParam('id'), v.validateVoidSale, restaurantController.voidSale);
+
+/* Orders (Open Tab / Active Orders) */
+router.get('/orders', restaurantController.listOrders);
+router.post('/orders', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateOpenTab, restaurantController.openTab);
+router.patch('/orders/:id/serve', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateParam('id'), restaurantController.markOrderServed);
+router.post('/orders/:id/pay', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateParam('id'), v.validatePayOrder, restaurantController.payOrder);
+router.patch('/orders/:id/cancel', roleGuard('admin','manager'), v.validateParam('id'), restaurantController.cancelOrder);
 
 /* Transfers (incoming from Kitchen/Store) */
 router.get('/transfers', restaurantController.listTransfers);
-router.post('/transfers/:id/accept', canSell, v.validateParam('id'), restaurantController.acceptTransfer);
-router.post('/transfers/:id/reject', canSell, v.validateParam('id'), v.validateRejectTransfer, restaurantController.rejectTransfer);
+router.post('/transfers/:id/accept', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateParam('id'), restaurantController.acceptTransfer);
+router.post('/transfers/:id/reject', inDept, privilegeGuard('restaurant', 'canReject'), v.validateParam('id'), v.validateRejectTransfer, restaurantController.rejectTransfer);
 
 /* Requisitions (Restaurant -> Store) */
 router.get('/requisitions', restaurantController.listRestaurantRequisitions);
-router.post('/requisitions', canManage, v.validateSubmitRequisition, restaurantController.submitRequisition);
+router.post('/requisitions', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateSubmitRequisition, restaurantController.submitRequisition);
 
 module.exports = router;
