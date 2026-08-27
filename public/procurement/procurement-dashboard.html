@@ -168,8 +168,8 @@
 const svc = window.ProcurementService;
 let shell = null;
 
-function renderKpis(){
-  const kpis = svc.dashboardKPIs();
+async function renderKpis(){
+  const kpis = await svc.dashboardKPIs();
 
   document.getElementById('kpiRow').innerHTML = `
     <a class="kpi-card acc-amber" href="requisition-history.html">
@@ -201,8 +201,8 @@ function renderKpis(){
   shell.setPendingBadge(kpis.pending);
 }
 
-function renderApprovalPipeline(){
-  const counts = svc.approvalPipelineCounts();
+async function renderApprovalPipeline(){
+  const counts = await svc.approvalPipelineCounts();
   // NOTE: this used to list a stage keyed 'approved', but
   // approvalPipelineCounts() only ever populates
   // pending/accountant/gm/md/sent_to_store/fulfilled — 'approved' was
@@ -234,10 +234,10 @@ function renderApprovalPipeline(){
   }).join('');
 }
 
-function paint(){
+async function paint(){
   if (!svc || !svc.state.ready) return;
-  renderKpis();
-  renderApprovalPipeline();
+  await renderKpis();
+  await renderApprovalPipeline();
 }
 
 async function init(){

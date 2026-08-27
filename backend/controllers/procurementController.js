@@ -87,6 +87,7 @@ exports.createPR = async (req, res, next) => {
 
     const pr = await PurchaseRequest.create({
       prNo: body.prNo || nums.prNo,
+      poNo: body.poNo || nums.poNo,
       item: items.map((i) => i.name).join(', ') || body.item || '',
       cat: body.cat || 'General',
       dept: body.dept || '',
@@ -545,6 +546,7 @@ exports.dashboardKPIs = async (req, res, next) => {
       (p.approvalStage === 'approved' || p.approvalStage === 'fulfilled') &&
       new Date(p.date).toISOString().startsWith(monthPrefix));
     const needsMD = prs.filter((p) => p.needsMDApproval && ACTIVE_STAGES.includes(p.approvalStage)).length;
+    const sentToStore = prs.filter((p) => p.approvalStage === 'sent_to_store').length;
 
     res.json({
       success: true,
@@ -553,6 +555,7 @@ exports.dashboardKPIs = async (req, res, next) => {
         approvedThisMonth: closedThisMonth.length,
         spendThisMonth: closedThisMonth.reduce((s, p) => s + (p.totalAmount || 0), 0),
         needsMD,
+        sentToStore,
       },
     });
   } catch (err) { next(err); }
