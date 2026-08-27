@@ -434,11 +434,9 @@
      Init — seed data on first run or version bump
      ═══════════════════════════════════════════════════════════════════ */
   async function init(forceReseed) {
-    // Check version
-    let currentVersion = null;
-    try { currentVersion = localStorage.getItem(VERSION_KEY); } catch (e) {}
-
-    const shouldSeed = forceReseed || currentVersion !== STORAGE_VERSION;
+    // Demo seeding disabled for production — pages render real data (or
+    // empty defaults) instead of fabricated demo numbers.
+    const shouldSeed = !!(forceReseed);
 
     if (shouldSeed) {
       console.log('[DataStore] Seeding demo data (version:', STORAGE_VERSION, ')');
@@ -448,6 +446,17 @@
       }
       try { localStorage.setItem(VERSION_KEY, STORAGE_VERSION); } catch (e) {}
     }
+
+    // One-time cleanup of legacy demo keys left in localStorage by the
+    // old seeder, so previously-seeded demo numbers disappear immediately.
+    try {
+      const cleanupKey = 'ds_demo_cleaned';
+      if (localStorage.getItem(cleanupKey) !== '1') {
+        const seedKeys = Object.keys(_buildSeedData());
+        for (const k of seedKeys) { await del(k); }
+        localStorage.setItem(cleanupKey, '1');
+      }
+    } catch (e) { /* ignore */ }
 
     // Legacy migration: if procurement-api.js has localStorage data, adopt it
     try {
