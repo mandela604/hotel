@@ -493,7 +493,7 @@ function openSupplierModal(id){
   const saveBtn = document.getElementById('fsSaveBtn');
 
   if (editingSupplierId) {
-    const sp = allSuppliers.find(s => s.id === editingSupplierId);
+    const sp = allSuppliers.find(s => (s.id || s._id) === editingSupplierId) || allSuppliers.find(s => (s.id || s._id) === String(editingSupplierId));
     if (!sp) { showToast('Supplier not found.', 'error'); return; }
     titleEl.textContent = 'Edit Supplier';
     saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes';
@@ -679,6 +679,14 @@ async function init(){
       ProcurementService.getSuppliers(),
       ProcurementService.getPRs(),
     ]);
+    allSuppliers = (allSuppliers || []).map(function (s) {
+      return Object.assign({}, s, {
+        id: s.id || s._id,
+        _id: s._id || s.id,
+        cat: s.cat !== undefined ? s.cat : (s.category || 'General'),
+        contact: s.contact !== undefined ? s.contact : (s.contactPerson || '—'),
+      });
+    });
     populateCategorySelects();
     renderKpis();
     renderSuppliers();
