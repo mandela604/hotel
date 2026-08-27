@@ -140,7 +140,57 @@ const ProcurementModals = (function() {
         : '');
 
     init();
-    
+
+    // ── Approval pipeline ─────────────────────────────────────────
+    // Derives who approved each role from pr.history (each history row
+    // records `by` + the stage it moved TO), and shows the current
+    // approver (the user viewing) on the active stage.
+    const stageBy = {};
+    (pr.history || []).forEach(h => { if (h.stage) stageBy[h.stage] = h.by; });
+    const roles = [
+      { key:'accountant', label:'Accountant', icon:'fa-calculator', color:'var(--blue)' },
+      { key:'gm',         label:'Manager (GM)', icon:'fa-user-tie', color:'var(--green)' },
+      { key:'md',         label:'MD', icon:'fa-star', color:'var(--purple)' },
+    ];
+    const approvedSet = {};
+    Object.keys(stageBy).forEach(s => {
+      if (s==='accountant') approvedSet['accountant']=true;
+      if (s==='gm'||s==='sent_to_store') approvedSet['gm']=true;
+      if (s==='md'||s==='sent_to_store') approvedSet['md']=true;
+    });
+    const session = (typeof ProcurementService !== 'undefined' && ProcurementService.resolveSession)
+      ? ProcurementService.resolveSession() : {};
+    const sRole = String(session.role || '').toLowerCase();
+    const currentRole = (sRole==='md') ? 'md' : (sRole==='gm' || sRole==='manager') ? 'gm' : (sRole==='accountant') ? 'accountant' : '';
+    const activeStage = pr.approvalStage;
+    const pipelineHtml = `
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px;">Approval Pipeline</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;">
+          ${roles.map(r => {
+            const done = !!approvedSet[r.key];
+            const isActive = activeStage === r.key;
+            const isNext = !done && !isActive && (
+              (r.key==='accountant' && activeStage==='pending') ||
+              (r.key==='gm' && activeStage==='accountant') ||
+              (r.key==='md' && activeStage==='gm' && pr.totalAmount > 100000)
+            );
+            const highlit = done ? r.color : (isActive ? 'var(--amber)' : 'var(--text3)');
+            const who = done ? (stageBy[r.key] || 'Approved') : (isActive && currentRole===r.key ? ((session.name||'You') + ' — now') : (isNext ? 'Next' : 'Pending'));
+            return `
+              <div style="flex:1;min-width:120px;border:1px solid ${done?r.color:'var(--border)'};border-radius:12px;padding:10px 12px;text-align:center;">
+                <div style="font-size:18px;margin-bottom:4px;">
+                  ${done
+                    ? `<i class="fa-solid fa-circle-check" style="color:${r.color};"></i>`
+                    : (isActive ? '<i class="fa-solid fa-spinner fa-spin" style="color:var(--amber);"></i>' : `<i class="fa-solid ${r.icon}" style="color:${highlit};"></i>`)}
+                </div>
+                <div style="font-size:11px;font-weight:700;color:${highlit};">${r.label}</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:3px;">${who}</div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
     modalContainer.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);pointer-events:all;animation:modalIn .3s ease;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
