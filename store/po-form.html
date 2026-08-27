@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>New Store Request | Grace Hotel HMS</title>
+<title>Purchase Request | Aurum Store</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; }
@@ -101,6 +101,12 @@
   .next-step-note-title{ font-size:12.5px; font-weight:700; color:var(--text); }
   .next-step-note-sub{ font-size:11.5px; color:var(--text2); margin-top:2px; line-height:1.5; }
 
+  .locked-banner{ display:none; align-items:flex-start; gap:10px; background:var(--amber-bg); border:1px solid rgba(247,144,9,.3); border-radius:10px; padding:11px 13px; margin-bottom:16px; }
+  .locked-banner.show{ display:flex; }
+  .locked-banner i{ color:var(--amber); font-size:15px; margin-top:1px; flex-shrink:0; }
+  .locked-banner-title{ font-size:12.5px; font-weight:700; color:#7a4a00; }
+  .locked-banner-sub{ font-size:11.5px; color:#8a5a10; margin-top:2px; line-height:1.5; }
+
   .form-actions{ display:flex; justify-content:flex-end; gap:10px; padding-top:18px; margin-top:6px; border-top:1px solid var(--border); flex-wrap:wrap; }
   @media (max-width:480px){ .form-actions{ flex-direction:column-reverse; } .form-actions button{ width:100%; justify-content:center; } }
 
@@ -135,15 +141,24 @@
     <div class="content">
 
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <div class="section-title" id="pageSectionTitle">New Store Request</div>
+        <div class="section-title" id="pageSectionTitle">New Purchase Request</div>
         <a class="btn btn-outline" id="backToHistoryBtn" href="all-requisitions.html"><i class="fa-solid fa-arrow-left"></i> Back to Requisitions</a>
       </div>
 
+      <!-- ═══ FORM ═══ -->
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title"><i class="fa-solid fa-box-open"></i> <span>Store Issue Request Details</span></div>
+          <div class="panel-title"><i class="fa-solid fa-cart-shopping"></i> <span id="panelTitleText">Purchase Request Details</span></div>
         </div>
         <div class="panel-body">
+
+          <div class="locked-banner" id="lockedBanner">
+            <i class="fa-solid fa-lock"></i>
+            <div>
+              <div class="locked-banner-title">Already sent to Procurement</div>
+              <div class="locked-banner-sub" id="lockedBannerSub"></div>
+            </div>
+          </div>
 
           <div class="form-grid">
             <div class="form-group">
@@ -152,9 +167,9 @@
                 <option value="">Select department…</option>
                 <option>Kitchen</option>
                 <option>Housekeeping</option>
-                <option>Pool Bar</option>
+                <option>Bar</option>
                 <option>Front Desk</option>
-                <option>Gym</option>
+                <option>Maintenance</option>
                 <option>Store</option>
               </select>
             </div>
@@ -175,8 +190,15 @@
             </div>
           </div>
 
+          <div class="form-grid" style="grid-template-columns:1fr; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label">Preferred Supplier (optional)</label>
+              <input class="form-input" type="text" id="fSupplier" placeholder="e.g. Fresh Foods Ltd — leave blank if Procurement should choose">
+            </div>
+          </div>
+
           <div class="items-head-row">
-            <span>Item Name</span><span>Qty</span><span>Unit</span><span>Est. Cost (₦, optional)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
+            <span>Item to Purchase</span><span>Qty</span><span>Unit</span><span>Est. Cost (₦, optional)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
           </div>
 
           <div class="entry-edit-banner" id="entryEditBanner">
@@ -184,9 +206,14 @@
             <button type="button" class="entry-edit-cancel" id="entryEditCancel">cancel</button>
           </div>
 
+          <!-- Entry line: type an item here (autocomplete suggests items from
+               Store's own catalog), click + to add it to the table below.
+               Also doubles as the edit box — clicking any row in the table
+               below loads that item back in here to change it, then click
+               the (now ✓) button to save it back into the list. -->
           <div class="entry-row" id="entryRow">
             <div class="entry-name-wrap">
-              <input class="form-input" type="text" id="entryName" placeholder="e.g. Cooking Oil" autocomplete="off">
+              <input class="form-input" type="text" id="entryName" placeholder="e.g. 20L Vegetable Oil" autocomplete="off">
               <div class="item-suggest-dropdown" id="itemSuggestDropdown"></div>
             </div>
             <input class="form-input" type="number" min="1" value="1" id="entryQty">
@@ -203,7 +230,7 @@
             <table class="items-table">
               <thead>
                 <tr>
-                  <th>Item Name</th>
+                  <th>Item to Purchase</th>
                   <th class="center">Qty</th>
                   <th class="center">Unit</th>
                   <th class="right">Est. Cost (₦)</th>
@@ -219,24 +246,24 @@
             <span class="total-label">Estimated Total</span>
             <span class="total-value" id="grandTotal">₦0</span>
           </div>
-          <div class="total-hint">Optional — Store will confirm stock availability when processing.</div>
+          <div class="total-hint">Optional — Procurement will confirm real pricing before approval.</div>
 
           <div class="next-step-note">
             <i class="fa-solid fa-circle-info"></i>
             <div>
               <div class="next-step-note-title">What happens next</div>
-              <div class="next-step-note-sub">This request goes to the Store team for review. They'll check stock availability and issue items to your department. You'll be notified when items are ready for collection.</div>
+              <div class="next-step-note-sub">This goes to Procurement's dashboard as an incoming request. They'll price it, pick a supplier if you didn't, and route it through the usual Accountant → Manager (→ Admin, if above ₦100,000) approval before a PO is created.</div>
             </div>
           </div>
 
           <div class="form-group" style="margin-top:16px">
             <label class="form-label">Notes (optional)</label>
-            <textarea class="form-input" id="fNotes" style="min-height:56px;resize:vertical" placeholder="Justification, urgency context, specific requirements…"></textarea>
+            <textarea class="form-input" id="fNotes" style="min-height:56px;resize:vertical" placeholder="Justification, delivery instructions, urgency context…"></textarea>
           </div>
 
           <div class="form-actions">
             <button class="btn btn-outline" id="cancelFormBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
-            <button class="btn btn-primary" id="createBtn"><i class="fa-solid fa-paper-plane"></i> <span>Submit Store Request</span></button>
+            <button class="btn btn-primary" id="createBtn"><i class="fa-solid fa-paper-plane"></i> <span id="createBtnText">Send to Procurement</span></button>
           </div>
 
         </div>
@@ -246,16 +273,34 @@
   </div>
 </div>
 
-
+<script src="data/store-seed.js"></script>
 <script src="services/store-service.js"></script>
 <script src="../component/store-shell.js"></script>
 <script>
+/* ═══════════════════════════════════════════════
+   EDIT MODE — link here as
+   store-purchase-request.html?no=<no> to edit a
+   purchase request Store raised that Procurement
+   hasn't picked up yet. No `no` in the URL = normal
+   "raise a new purchase request" mode.
+
+   This is the Store-side twin of procurement/po-form.html
+   — same fields, same item-entry UX — but it submits into
+   StoreService (mode:'purchase') instead of ProcurementService,
+   since Store and Procurement are separate, self-contained
+   modules that hand off through the shared 'req:*' storage
+   keys rather than sharing one physical page.
+═══════════════════════════════════════════════ */
+const EDIT_NO = new URLSearchParams(location.search).get('no');
+const EDIT_MODE = !!EDIT_NO;
+let editingReq = null; // populated in init() when EDIT_MODE
+
 const shell = StoreShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
-  activeFile:    'store-new-request.html',
-  pageTitle:     'New Store Request',
-  pageSubtitle:  'Raise a request for items from Central Store',
+  activeFile:    'store-purchase-request.html',
+  pageTitle:     EDIT_MODE ? 'Edit Purchase Request' : 'New Purchase Request',
+  pageSubtitle:  EDIT_MODE ? 'Update a request not yet sent to Procurement' : 'Ask Procurement to buy items for any department',
 });
 
 const fmtN = StoreService.fmtN;
@@ -264,38 +309,39 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;',
 function showToast(msg, type='success'){
   const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t = document.createElement('div');
-  t.className = 'toast ' + type;
-  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + escapeHtml(msg);
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
   document.body.appendChild(t);
-  setTimeout(function(){ t.remove(); }, 3200);
+  setTimeout(()=>t.remove(), 3200);
 }
 
 /* ═══════════════════════════════════════════════
-   ITEM AUTOCOMPLETE — sourced from StoreService's catalog
+   ITEM AUTOCOMPLETE — sourced from StoreService's own
+   catalog (name + unit — Store doesn't carry prices,
+   that's Procurement's job once this is imported).
 ═══════════════════════════════════════════════ */
-var itemCatalog = [];
+let itemCatalog = [];
 
 function loadItemCatalog(){
   itemCatalog = StoreService.state.catalog || [];
 }
 
 function showItemSuggestions(query){
-  var dd = document.getElementById('itemSuggestDropdown');
-  var q = query.trim().toLowerCase();
+  const dd = document.getElementById('itemSuggestDropdown');
+  const q = query.trim().toLowerCase();
   if (!q){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
-  var matches = itemCatalog.filter(function(it){ return (it.name||'').toLowerCase().indexOf(q) !== -1; }).slice(0, 6);
+  const matches = itemCatalog.filter(it => (it.name||'').toLowerCase().includes(q)).slice(0, 6);
   if (!matches.length){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
   dd._matches = matches;
-  dd.innerHTML = matches.map(function(it, i){
-    return '<div class="item-suggest-opt" data-i="' + i + '">' +
-      '<span class="sn">' + escapeHtml(it.name) + '</span>' +
-      '<span class="sp">' + escapeHtml(it.unit || '') + '</span>' +
-    '</div>';
-  }).join('');
+  dd.innerHTML = matches.map((it,i) => `
+    <div class="item-suggest-opt" data-i="${i}">
+      <span class="sn">${escapeHtml(it.name)}</span>
+      <span class="sp">${escapeHtml(it.unit || '')}</span>
+    </div>`).join('');
   dd.classList.add('show');
-  dd.querySelectorAll('.item-suggest-opt').forEach(function(opt){
-    opt.addEventListener('click', function(){
-      var m = dd._matches[parseInt(opt.dataset.i, 10)];
+  dd.querySelectorAll('.item-suggest-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const m = dd._matches[parseInt(opt.dataset.i, 10)];
       document.getElementById('entryName').value = m.name;
       document.getElementById('entryUnit').value = m.unit || '';
       updateEntryPreview();
@@ -309,23 +355,26 @@ function hideItemSuggestions(){
 }
 
 /* ═══════════════════════════════════════════════
-   ITEMS LIST — add/edit/remove
+   ITEMS LIST — same add/edit/remove flow as the
+   Procurement version, plus a Unit column (Store
+   items need a unit; Procurement's PR shape didn't
+   track one) and an optional (not required) price.
 ═══════════════════════════════════════════════ */
-var items = [];
-var editingIndex = null;
+let items = [];
+let editingIndex = null;
 
 function updateEntryPreview(){
-  var qty = parseFloat(document.getElementById('entryQty').value) || 0;
-  var price = parseFloat(document.getElementById('entryPrice').value) || 0;
+  const qty = parseFloat(document.getElementById('entryQty').value) || 0;
+  const price = parseFloat(document.getElementById('entryPrice').value) || 0;
   document.getElementById('entrySubtotal').textContent = fmtN(qty * price);
 }
 
 function setEntryEditingState(idx){
   editingIndex = idx;
-  var banner = document.getElementById('entryEditBanner');
-  var row = document.getElementById('entryRow');
-  var icon = document.getElementById('addEntryIcon');
-  var addBtn = document.getElementById('addEntryBtn');
+  const banner = document.getElementById('entryEditBanner');
+  const row = document.getElementById('entryRow');
+  const icon = document.getElementById('addEntryIcon');
+  const addBtn = document.getElementById('addEntryBtn');
 
   if (idx == null) {
     banner.classList.remove('show');
@@ -343,7 +392,7 @@ function setEntryEditingState(idx){
 }
 
 function loadItemIntoEntry(idx){
-  var it = items[idx];
+  const it = items[idx];
   if (!it) return;
   document.getElementById('entryName').value = it.name;
   document.getElementById('entryQty').value = it.qty;
@@ -367,20 +416,20 @@ function cancelEntryEdit(){
 }
 
 function addItemFromEntry(){
-  var nameEl = document.getElementById('entryName');
-  var qtyEl = document.getElementById('entryQty');
-  var unitEl = document.getElementById('entryUnit');
-  var priceEl = document.getElementById('entryPrice');
-  var name = nameEl.value.trim();
-  var qty = parseFloat(qtyEl.value) || 0;
-  var unit = unitEl.value.trim();
-  var price = parseFloat(priceEl.value) || 0;
+  const nameEl = document.getElementById('entryName');
+  const qtyEl = document.getElementById('entryQty');
+  const unitEl = document.getElementById('entryUnit');
+  const priceEl = document.getElementById('entryPrice');
+  const name = nameEl.value.trim();
+  const qty = parseFloat(qtyEl.value) || 0;
+  const unit = unitEl.value.trim();
+  const price = parseFloat(priceEl.value) || 0;
 
   if (!name){ showToast('Enter an item name.', 'error'); nameEl.focus(); return; }
   if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
   if (!unit){ showToast('Enter a unit (e.g. kg, litre, pack).', 'error'); unitEl.focus(); return; }
 
-  var entry = { name: name, qty: qty, unit: unit, price: price, subtotal: qty * price };
+  const entry = { name, qty, unit, price, subtotal: qty * price };
 
   if (editingIndex != null) {
     items[editingIndex] = entry;
@@ -411,10 +460,10 @@ function removeItem(idx){
 }
 
 function renderItemsList(){
-  var wrap  = document.getElementById('itemsTableWrap');
-  var empty = document.getElementById('itemsEmptyMsg');
-  var hint  = document.getElementById('itemsHint');
-  var tbody = document.getElementById('itemsBody');
+  const wrap  = document.getElementById('itemsTableWrap');
+  const empty = document.getElementById('itemsEmptyMsg');
+  const hint  = document.getElementById('itemsHint');
+  const tbody = document.getElementById('itemsBody');
 
   if (!items.length){
     wrap.style.display = 'none';
@@ -426,25 +475,24 @@ function renderItemsList(){
   empty.classList.remove('show');
   wrap.style.display = 'block';
   hint.style.display = '';
-  tbody.innerHTML = items.map(function(it, i){
-    return '<tr class="' + (i === editingIndex ? 'editing-row' : '') + '" data-idx="' + i + '">' +
-      '<td>' + escapeHtml(it.name) + '</td>' +
-      '<td class="center">' + it.qty + '</td>' +
-      '<td class="center">' + escapeHtml(it.unit || '') + '</td>' +
-      '<td class="right">' + (it.price ? fmtN(it.price) : '—') + '</td>' +
-      '<td class="right item-subtotal">' + (it.price ? fmtN(it.subtotal) : '—') + '</td>' +
-      '<td class="center"><button class="item-remove" type="button" data-idx="' + i + '" title="Remove item"><i class="fa-solid fa-trash"></i></button></td>' +
-    '</tr>';
-  }).join('');
+  tbody.innerHTML = items.map((it, i) => `
+    <tr class="${i === editingIndex ? 'editing-row' : ''}" data-idx="${i}">
+      <td>${escapeHtml(it.name)}</td>
+      <td class="center">${it.qty}</td>
+      <td class="center">${escapeHtml(it.unit || '')}</td>
+      <td class="right">${it.price ? fmtN(it.price) : '—'}</td>
+      <td class="right item-subtotal">${it.price ? fmtN(it.subtotal) : '—'}</td>
+      <td class="center"><button class="item-remove" type="button" data-idx="${i}" title="Remove item"><i class="fa-solid fa-trash"></i></button></td>
+    </tr>`).join('');
 
-  tbody.querySelectorAll('tr[data-idx]').forEach(function(tr){
-    tr.addEventListener('click', function(e){
+  tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+    tr.addEventListener('click', (e) => {
       if (e.target.closest('.item-remove')) return;
       loadItemIntoEntry(parseInt(tr.dataset.idx, 10));
     });
   });
-  tbody.querySelectorAll('.item-remove').forEach(function(btn){
-    btn.addEventListener('click', function(e){
+  tbody.querySelectorAll('.item-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       removeItem(parseInt(btn.dataset.idx, 10));
     });
@@ -453,15 +501,57 @@ function renderItemsList(){
 
 function recalcTotals(){
   renderItemsList();
-  var total = items.reduce(function(s, i){ return s + (i.subtotal || 0); }, 0);
+  const total = items.reduce((s,i)=>s+(i.subtotal||0), 0);
   document.getElementById('grandTotal').textContent = fmtN(total);
 }
 
-function resetForm(){
+/* ═══════════════════════════════════════════════
+   EDIT-MODE LOCKING — once Procurement has imported
+   this request (procurementPrId set), it's their copy
+   now; this form becomes read-only and points to that.
+═══════════════════════════════════════════════ */
+function applyLockedChrome(req){
+  document.getElementById('lockedBanner').classList.add('show');
+  document.getElementById('lockedBannerSub').textContent =
+    `Procurement picked this up as ${req.procurementPrNo || 'a purchase order'}. Further changes need to be made on their side now.`;
+  ['fDept','fPriority','fNeeded','fRequestedBy','fSupplier','fNotes','entryName','entryQty','entryUnit','entryPrice','addEntryBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = true;
+  });
+  document.getElementById('createBtn').disabled = true;
+}
+
+function applyEditModeChrome(){
+  document.getElementById('pageSectionTitle').textContent = 'Edit Purchase Request';
+  document.getElementById('panelTitleText').textContent = `Purchase Request Details — ${editingReq.no}`;
+  document.getElementById('createBtnText').textContent = 'Save Changes';
+}
+
+async function populateFromReq(req){
+  document.getElementById('fDept').value = req.dept || '';
+  document.getElementById('fPriority').value = req.priority || 'Normal';
+  document.getElementById('fNeeded').value = req.needed || '';
+  document.getElementById('fRequestedBy').value = req.by || '';
+  document.getElementById('fSupplier').value = req.supplier || '';
+  document.getElementById('fNotes').value = req.remark || '';
+
+  items = (req.items || []).map(it => {
+    const qty = Number(it.qty) || 0;
+    const price = Number(it.cost) || 0;
+    return { name: it.name, qty, unit: it.unit || '', price, subtotal: qty * price };
+  });
+  setEntryEditingState(null);
+  recalcTotals();
+
+  if (req.procurementPrId) applyLockedChrome(req);
+}
+
+async function resetForm(){
   document.getElementById('fDept').value = '';
   document.getElementById('fPriority').value = 'Normal';
   document.getElementById('fNeeded').value = '';
   document.getElementById('fRequestedBy').value = (shell.getUser && shell.getUser().name) || '';
+  document.getElementById('fSupplier').value = '';
   document.getElementById('fNotes').value = '';
   document.getElementById('entryName').value = '';
   document.getElementById('entryQty').value = 1;
@@ -475,34 +565,40 @@ function resetForm(){
 }
 
 async function handleSubmit(){
-  var dept = document.getElementById('fDept').value;
-  var needed = document.getElementById('fNeeded').value;
-  var by = document.getElementById('fRequestedBy').value.trim();
+  const dept = document.getElementById('fDept').value;
+  const needed = document.getElementById('fNeeded').value;
+  const by = document.getElementById('fRequestedBy').value.trim();
 
   if (!dept){ showToast('Please select the department needing these items.', 'error'); return; }
   if (!needed){ showToast('Please choose a needed-by date.', 'error'); return; }
   if (!by){ showToast('Please enter who is requesting.', 'error'); return; }
-  if (!items.length){ showToast('Add at least one item before submitting.', 'error'); return; }
+  if (!items.length){ showToast('Add at least one item before sending.', 'error'); return; }
 
-  var payload = {
-    mode: 'store_issue',
-    dept: dept,
-    needed: needed,
-    by: by,
+  const payload = {
+    mode: 'purchase',
+    dept, needed, by,
     priority: document.getElementById('fPriority').value,
+    supplier: document.getElementById('fSupplier').value.trim(),
     remark: document.getElementById('fNotes').value.trim(),
-    items: items.map(function(i){ return { name: i.name, qty: i.qty, unit: i.unit, cost: i.price || 0 }; }),
+    items: items.map(i => ({ name: i.name, qty: i.qty, unit: i.unit, cost: i.price || 0 })),
   };
 
-  var createBtn = document.getElementById('createBtn');
+  const createBtn = document.getElementById('createBtn');
   createBtn.disabled = true;
 
   try {
-    var req = await StoreService.submitRequisition(payload);
-    showToast(req.no + ' submitted to Store.', 'success');
-    window.location.href = 'all-requisitions.html';
+    if (EDIT_MODE){
+      const req = await StoreService.updatePurchaseRequest(EDIT_NO, payload);
+      showToast(`${req.no} updated.`, 'success');
+      window.location.href = 'all-requisitions.html';
+      return;
+    }
+
+    const req = await StoreService.submitRequisition(payload);
+    showToast(`${req.no} sent to Procurement.`, 'success');
+    await resetForm();
   } catch (err) {
-    showToast(err.message || 'Failed to submit this request.', 'error');
+    showToast(err.message || 'Failed to send this request.', 'error');
   } finally {
     createBtn.disabled = false;
   }
@@ -513,20 +609,24 @@ async function handleSubmit(){
 ═══════════════════════════════════════════════ */
 document.getElementById('addEntryBtn').addEventListener('click', addItemFromEntry);
 document.getElementById('entryEditCancel').addEventListener('click', cancelEntryEdit);
-['entryQty','entryPrice'].forEach(function(id){ document.getElementById(id).addEventListener('input', updateEntryPreview); });
-document.getElementById('entryName').addEventListener('input', function(e){ showItemSuggestions(e.target.value); });
-document.getElementById('entryName').addEventListener('focus', function(e){ if (e.target.value) showItemSuggestions(e.target.value); });
-document.addEventListener('click', function(e){
+['entryQty','entryPrice'].forEach(id => document.getElementById(id).addEventListener('input', updateEntryPreview));
+document.getElementById('entryName').addEventListener('input', e => showItemSuggestions(e.target.value));
+document.getElementById('entryName').addEventListener('focus', e => { if (e.target.value) showItemSuggestions(e.target.value); });
+document.addEventListener('click', e => {
   if (!e.target.closest('.entry-name-wrap')) hideItemSuggestions();
 });
-['entryName','entryQty','entryUnit','entryPrice'].forEach(function(id){
-  document.getElementById(id).addEventListener('keydown', function(e){
+['entryName','entryQty','entryUnit','entryPrice'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Escape'){ hideItemSuggestions(); if (editingIndex != null) cancelEntryEdit(); return; }
     if (e.key === 'Enter'){ e.preventDefault(); addItemFromEntry(); }
   });
 });
-document.getElementById('cancelFormBtn').addEventListener('click', function(){
-  resetForm();
+document.getElementById('cancelFormBtn').addEventListener('click', async () => {
+  if (EDIT_MODE){
+    window.location.href = 'all-requisitions.html';
+    return;
+  }
+  await resetForm();
   showToast('Form cleared.', 'info');
 });
 document.getElementById('createBtn').addEventListener('click', handleSubmit);
@@ -534,7 +634,19 @@ document.getElementById('createBtn').addEventListener('click', handleSubmit);
 async function init(){
   await StoreService.loadAll();
   loadItemCatalog();
-  resetForm();
+
+  if (EDIT_MODE){
+    editingReq = StoreService.getRequisition(EDIT_NO);
+    if (!editingReq || editingReq.mode !== 'purchase'){
+      showToast('Purchase request not found.', 'error');
+      window.location.href = 'all-requisitions.html';
+      return;
+    }
+    applyEditModeChrome();
+    await populateFromReq(editingReq);
+  } else {
+    await resetForm();
+  }
 }
 init();
 </script>

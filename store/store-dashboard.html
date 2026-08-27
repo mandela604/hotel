@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Store Dashboard | Grace Hotel HMS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{ box-sizing:border-box; margin:0; padding:0; }
+html, body{ height:100%; overflow:hidden; }
+body{
+  font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  font-size:13px; transition:background .3s,color .3s;
+}
+.app{ display:flex; height:100vh; overflow:hidden; }
+.main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+@media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+/* ── Content area — same light palette + tokens as guests.html / booking-list.html ── */
+.content{
+  --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+  --border:#eef0f6; --border2:#dfe3ec;
+  --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+  --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+  --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+  --green:#12b76a; --green-bg:#e9f9f0;
+  --red:#f04438;  --red-bg:#feecec;
+  --amber:#f79009; --amber-bg:#fff4e5;
+  --blue:#2f6fed;  --blue-bg:#eaf1ff;
+  --purple:#8b5cf6; --purple-bg:#f4efff;
+  flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; gap:16px; min-height:0;
+  background:var(--bg); color:var(--text);
+}
+@media (max-width:768px){ .content{ padding:16px 16px 24px; } }
+@media (max-width:480px){ .content{ padding:14px 12px 20px; } }
+
+.section-title{ font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); font-weight:700; margin-bottom:6px; }
+
+/* ── KPI cards — identical structure to guests.html / booking-list.html ── */
+.kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+@media (max-width:1200px){ .kpi-row{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:640px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:380px){ .kpi-row{ grid-template-columns:1fr; } }
+
+.kpi-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:14px 14px 12px; position:relative; overflow:hidden;
+  box-shadow:var(--shadow); cursor:pointer; text-decoration:none; display:flex; flex-direction:column;
+  transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; min-width:0;
+}
+.kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+.kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s} .kpi-card:nth-child(5){animation-delay:.20s}
+.kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+.kpi-card.acc-green::before{  background:linear-gradient(90deg,var(--green),transparent); }
+.kpi-card.acc-blue::before{   background:linear-gradient(90deg,var(--blue),transparent); }
+.kpi-card.acc-red::before{    background:linear-gradient(90deg,var(--red),transparent); }
+.kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+.kpi-card.acc-amber::before{  background:linear-gradient(90deg,var(--amber),transparent); }
+
+.kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+.kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.ic-blue{   background:var(--blue-bg);   color:var(--blue);   }
+.ic-green{  background:var(--green-bg);  color:var(--green);  }
+.ic-amber{  background:var(--amber-bg);  color:var(--amber);  }
+.ic-purple{ background:var(--purple-bg); color:var(--purple); }
+.ic-red{    background:var(--red-bg);    color:var(--red);    }
+.kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+.kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
+@media (max-width:420px){ .kpi-value{ font-size:18px; } }
+.kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
+.kpi-trend.up{      color:var(--green); }
+.kpi-trend.warn{    color:var(--amber); }
+.kpi-trend.down{    color:var(--red);   }
+.kpi-trend.neutral{ color:var(--text3); }
+
+/* ── Panels — same panel/panel-head/panel-title pattern as guests.html ── */
+.row{ display:flex; gap:14px; align-items:stretch; }
+@media (max-width:900px){ .row{ flex-direction:column; } }
+.panel{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; min-width:0; animation:fadeUp .4s ease both; }
+.panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+.panel-title{ font-size:13px; font-weight:800; color:var(--text); }
+.panel-action{ font-size:11.5px; color:var(--gold); text-decoration:none; font-weight:700; white-space:nowrap; }
+.panel-action:hover{ color:var(--gold-light); }
+.panel-body{ padding:6px 20px 16px; }
+.empty-note{ font-size:12.5px; color:var(--text3); padding:20px 0; text-align:center; }
+
+/* list rows inside panels — mirrors guest-cell / chip conventions */
+.list-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; }
+.list-row:last-child{ border-bottom:none; padding-bottom:2px; }
+.list-row:hover .list-name{ color:var(--gold); }
+.list-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.list-body{ flex:1; min-width:0; }
+.list-name{ font-size:12.5px; color:var(--text); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .15s; }
+.list-meta{ font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; flex-shrink:0; }
+.chip i{ font-size:6px; }
+.chip-pending{  background:var(--amber-bg); color:var(--amber); }
+.chip-partial{  background:var(--amber-bg); color:var(--amber); }
+.chip-full{     background:var(--green-bg); color:var(--green); }
+.chip-rejected{ background:var(--red-bg);   color:var(--red);   }
+.chip-low{      background:var(--amber-bg); color:var(--amber); }
+.chip-out{      background:var(--red-bg);   color:var(--red);   }
+
+/* activity feed */
+.activity-item{ display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.activity-item:last-child{ border-bottom:none; padding-bottom:2px; }
+.act-ic{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; margin-top:1px; }
+.act-text{ font-size:12.5px; color:var(--text); line-height:1.4; }
+.act-time{ font-size:10.5px; color:var(--text3); margin-top:1px; }
+
+/* quick actions */
+.quick-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:14px 20px 18px; }
+@media (max-width:900px){ .quick-grid{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:380px){ .quick-grid{ grid-template-columns:1fr; } }
+.quick-btn{
+  background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 12px;
+  cursor:pointer; display:flex; align-items:center; gap:10px; font-family:inherit; font-size:12.5px; font-weight:700;
+  color:var(--text2); text-decoration:none; transition:all .2s; min-width:0;
+}
+.quick-btn:hover{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+.quick-btn i{ font-size:14px; color:var(--gold); flex-shrink:0; }
+
+/* toast — same as guests.html */
+.toast{ position:fixed; bottom:20px; right:20px; background:var(--surface,#fff); border:1px solid var(--border,#eef0f6); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text,#1c2440); box-shadow:var(--shadow-lg,0 8px 28px rgba(15,34,55,.15)); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:inherit; }
+.toast.success{ border-left:3px solid var(--green,#12b76a); }
+.toast.error{   border-left:3px solid var(--red,#f04438); }
+.toast.info{    border-left:3px solid var(--blue,#2f6fed); }
+@keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@media (max-width:480px){ .toast{ left:12px; right:12px; bottom:12px; max-width:none; } }
+
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+@keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+@media print{
+  #sidebarSlot,#topbarSlot,.quick-grid,.panel-action{ display:none !important; }
+  .main{ margin-left:0 !important; }
+  body{ background:#fff !important; color:#000 !important; }
+  .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div>
+        <div class="section-title">At a Glance</div>
+        <div class="kpi-row" id="kpiRow"></div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Pending Requisitions</div>
+            <a class="panel-action" href="store-approval.html">Review <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+          <div class="panel-body" id="pendingList"><div class="empty-note">Loading…</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Stock Alerts</div>
+            <a class="panel-action" href="stock.html">Open Stock <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+          <div class="panel-body" id="stockAlerts"><div class="empty-note">Loading…</div></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Recent Activity</div>
+            <a class="panel-action" href="all-requisitions.html">All Requisitions <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+          <div class="panel-body" id="activityFeed"><div class="empty-note">Loading…</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Quick Actions</div></div>
+          <div class="quick-grid">
+            <a class="quick-btn" href="new-request.html"><i class="fa-solid fa-plus"></i> New Request</a>
+            <a class="quick-btn" href="store-approval.html"><i class="fa-solid fa-check"></i> Approve Issue</a>
+            <a class="quick-btn" href="stock.html"><i class="fa-solid fa-boxes-stacked"></i> Manage Stock</a>
+            <a class="quick-btn" href="all-requisitions.html"><i class="fa-solid fa-list-check"></i> All Requisitions</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Load order: data seed → service → shell → page script (plain scripts, no ES modules — matches every other module shell in this suite) -->
+<script src="data/store-seed.js"></script>
+<script src="services/store-service.js"></script>
+<script src="../component/store-shell.js"></script>
+<script>
+/* ═══════════════════════════════════════════════
+   Shell — same call signature/theme tokens as every other Store page.
+   NOTE: global export is StoreShell (not GraceStoreShell) — see
+   component/store-shell.js: `global.StoreShell = { attach, CONFIG }`.
+═══════════════════════════════════════════════ */
+const shell = StoreShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'store-dashboard.html',
+  pageTitle:     'Store Dashboard',
+  pageSubtitle:  'Central Store operations overview',
+});
+
+const svc = window.StoreService;
+
+/* ═══════════════════════════════════════════════
+   Helpers
+═══════════════════════════════════════════════ */
+function fmtN(n){ if (svc && svc.fmtN) return svc.fmtN(n); return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+// Low/out-of-stock threshold + its chip class/label come from StoreService
+// (single source of truth). This page no longer keeps its own copy of the
+// rule — that local copy is what let a stray `s.reorder` (stock items only
+// ever have `.min`) go unnoticed in the Stock Alerts panel below.
+
+function showToast(msg, type='success'){
+  const icon = type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = 'toast '+type;
+  t.innerHTML = '<i class="fa-solid '+icon+'"></i> '+msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3400);
+}
+
+/* ═══════════════════════════════════════════════
+   Renderers
+═══════════════════════════════════════════════ */
+function renderKPIs(stock, reqs){
+  const lowCount    = stock.filter(s=>svc.stockLevel(s)==='low').length;
+  const outCount    = stock.filter(s=>svc.stockLevel(s)==='out').length;
+  const stockValue  = stock.reduce((s,i)=>s+(i.qty*i.cost),0);
+  // "Pending" (Pending or Partial) is defined once, in StoreService —
+  // this call replaces a hand-rolled filter that used to live here.
+  const pending     = svc.getPendingRequisitions();
+  const storeReqs   = reqs.filter(r => r.mode === 'store_issue');
+
+  document.getElementById('kpiRow').innerHTML = `
+    <a class="kpi-card acc-amber" href="store-approval.html">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-clipboard-list"></i></div><div class="kpi-label">Pending Requisitions</div></div>
+      <div class="kpi-value" style="color:var(--amber)">${pending.length}</div>
+      <div class="kpi-trend ${pending.length?'warn':'up'}">${pending.length>0?'Awaiting store action':'All clear'}</div>
+    </a>
+    <a class="kpi-card acc-blue" href="all-requisitions.html">
+      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-list-check"></i></div><div class="kpi-label">Total Requisitions</div></div>
+      <div class="kpi-value" style="color:var(--blue)">${storeReqs.length}</div>
+      <div class="kpi-trend neutral">Store-issue requests</div>
+    </a>
+    <a class="kpi-card acc-amber" href="stock.html">
+      <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock Items</div></div>
+      <div class="kpi-value" style="color:var(--amber)">${lowCount}</div>
+      <div class="kpi-trend ${lowCount?'warn':'up'}">${lowCount>0?'Needs reordering':'All above threshold'}</div>
+    </a>
+    <a class="kpi-card acc-red" href="stock.html">
+      <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Out of Stock</div></div>
+      <div class="kpi-value" style="color:var(--red)">${outCount}</div>
+      <div class="kpi-trend ${outCount?'down':'up'}">${outCount>0?'Unavailable to issue':'None'}</div>
+    </a>
+    <a class="kpi-card acc-green" href="stock.html">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Stock Value</div></div>
+      <div class="kpi-value" style="color:var(--green);font-size:${stockValue>=1000000?'17px':'22px'}">${fmtN(stockValue)}</div>
+      <div class="kpi-trend up">At current unit cost</div>
+    </a>`;
+
+  shell.setPendingBadge(pending.length);
+}
+
+function renderPendingList(){
+  // svc.getPendingRequisitions is the single definition of "pending"
+  // (Pending or Partial status) — same helper used in renderKPIs above.
+  const pending = svc.getPendingRequisitions({ mode: 'store_issue' }).slice(0, 6);
+  const el = document.getElementById('pendingList');
+  if (pending.length === 0) { el.innerHTML = '<div class="empty-note">No requisitions waiting on Store right now.</div>'; return; }
+  el.innerHTML = pending.map(r => `
+    <a class="list-row" href="store-approval.html">
+      <div class="list-ic ${r.priority==='Urgent'?'ic-red':'ic-amber'}"><i class="fa-solid ${r.priority==='Urgent'?'fa-bolt':'fa-clock'}"></i></div>
+      <div class="list-body">
+        <div class="list-name">${r.no} — ${r.dept}</div>
+        <div class="list-meta">${r.items.length} item${r.items.length!==1?'s':''} · by ${r.by} · needed ${fmtDate(r.needed)}</div>
+      </div>
+      <span class="chip chip-${r.status.toLowerCase()}"><i class="fa-solid fa-circle"></i>${r.status}</span>
+    </a>`).join('');
+}
+
+function renderStockAlerts(stock){
+  // FIX: stock items only ever have `.min` (the reorder threshold) — there
+  // is no `.reorder` field anywhere in this module. The old version here
+  // sorted by `qty / reorder` (always NaN, since reorder was undefined)
+  // and displayed "reorder at undefined" on every row. Both now use
+  // svc.stockLevel()/`.min`, the same rule stock.html uses.
+  const alerts = stock.filter(s => svc.stockLevel(s) !== 'ok')
+    .sort((a,b) => (a.qty / Math.max(a.min, 1)) - (b.qty / Math.max(b.min, 1)))
+    .slice(0, 6);
+  const el = document.getElementById('stockAlerts');
+  if (alerts.length === 0) { el.innerHTML = '<div class="empty-note">All items are above their reorder level.</div>'; return; }
+  el.innerHTML = alerts.map(s => {
+    const lvl = svc.stockLevel(s);
+    return `<a class="list-row" href="stock.html">
+      <div class="list-ic ${lvl==='out'?'ic-red':'ic-amber'}"><i class="fa-solid fa-box"></i></div>
+      <div class="list-body">
+        <div class="list-name">${s.name}</div>
+        <div class="list-meta">${s.qty} on hand · reorder at ${s.min}</div>
+      </div>
+      <span class="chip chip-${lvl}"><i class="fa-solid fa-circle"></i>${svc.LEVEL_LABEL[lvl]}</span>
+    </a>`;
+  }).join('');
+}
+
+function renderActivity(reqs){
+  const el = document.getElementById('activityFeed');
+  const recent = [...reqs].slice(0, 8);
+  if (recent.length === 0) { el.innerHTML = '<div class="empty-note">No requisition activity yet.</div>'; return; }
+  const ICON = { Pending:'ic-amber', Partial:'ic-amber', Full:'ic-green', Rejected:'ic-red' };
+  const FA   = { Pending:'fa-hourglass-half', Partial:'fa-truck-ramp-box', Full:'fa-circle-check', Rejected:'fa-circle-xmark' };
+  el.innerHTML = recent.map(r => {
+    const verb = r.status==='Pending' ? 'submitted' : r.status==='Rejected' ? 'rejected' : r.status==='Full' ? 'fully issued' : 'partially issued';
+    return `<div class="activity-item">
+      <div class="act-ic ${ICON[r.status]||'ic-blue'}"><i class="fa-solid ${FA[r.status]||'fa-circle-info'}"></i></div>
+      <div>
+        <div class="act-text"><strong>${r.no}</strong> (${r.dept}) ${verb} — ${r.items.length} item${r.items.length!==1?'s':''}</div>
+        <div class="act-time">${fmtDate(r.dateRaised)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   Init — pulls stock + requisitions from the shared store-data service
+═══════════════════════════════════════════════ */
+function paint(){
+  const stock = svc.state.stock || [];
+  const reqs = svc.state.requests || [];
+  renderKPIs(stock, reqs);
+  renderPendingList();
+  renderStockAlerts(stock);
+  renderActivity(reqs);
+}
+
+async function init(){
+  if (!svc) {
+    console.error('[Dashboard] StoreService not loaded — check script order: data/store-seed.js → services/store-service.js → this page.');
+    showToast('StoreService not loaded.', 'error');
+    ['pendingList','stockAlerts','activityFeed'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="empty-note">Could not load data. Please refresh.</div>';
+    });
+    return;
+  }
+  try {
+    await svc.loadAll();
+    paint();
+    if (svc.onChange) svc.onChange(paint);
+  } catch (err) {
+    console.error('[Dashboard] Failed to load store data:', err);
+    showToast(err.message || 'Failed to load store data.', 'error');
+    ['pendingList','stockAlerts','activityFeed'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="empty-note">Could not load data. Please refresh.</div>';
+    });
+  }
+}
+init();
+</script>
+</body>
+</html>
