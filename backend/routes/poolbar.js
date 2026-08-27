@@ -14,6 +14,7 @@ const {
   validateCreateRequisition,
   validateObjectIdParam,
 } = require('../middleware/poolbarValidators');
+const { validateAddCategory, validateRenameCategory, validateParam } = require('../middleware/storeValidators');
 
 // auth is already applied at the mount point in server.js — no router.use(auth) here
 
@@ -31,6 +32,12 @@ router.put('/stock/:id',   inDept, privilegeGuard('poolbar', 'canEdit'),   valid
 router.delete('/stock/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteStock);
 router.post('/stock/deduct', inDept, privilegeGuard('poolbar', 'canEdit'), validateDeductStock, ctrl.deductStock);
 router.post('/stock/:id/deduct', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), validateDeductById, ctrl.deductStockById);
+
+/* ── Categories ─────────────────────────────── */
+router.get('/categories', ...inDeptCanView, ctrl.listCategories);
+router.post('/categories', inDept, privilegeGuard('poolbar', 'canCreate'), validateAddCategory, ctrl.addCategory);
+router.put('/categories/:name', inDept, privilegeGuard('poolbar', 'canEdit'), validateParam('name'), validateRenameCategory, ctrl.renameCategory);
+router.delete('/categories/:name', isAdmin, validateParam('name'), ctrl.deleteCategory);
 
 /* ── Sales ──────────────────────────────────── */
 router.get('/sales',  ...inDeptCanView, ctrl.listSales);

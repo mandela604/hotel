@@ -5,7 +5,9 @@ const Order           = require('../models/Order');
 const PoolbarMovement = require('../models/PoolbarMovement');
 const Requisition    = require('../models/Requisition');
 const Booking        = require('../models/Booking');
+const Category       = require('../models/Category');
 const asyncHandler   = require('../middleware/asyncHandler');
+const { ApiError }   = require('../middleware/errorHandler');
 
 /* ── helpers ────────────────────────────────── */
 
@@ -590,4 +592,39 @@ exports.getDashboard = asyncHandler(async (req, res) => {
       activeOrders,
     },
   });
+});
+
+/* ── Categories (persisted in the shared Category collection) ── */
+
+exports.listCategories = asyncHandler(async (req, res) => {
+  const derived = await PoolbarStock.distinct('category');
+  const saved = await Category.find({ module: 'poolbar' }).lean();
+  const set = new Set(derived.filter(Boolean));
+  saved.forEach(c => set.add(c.name));
+  res.json({ success: true, data: Array.from(set).sort((a, b) => a.localeCompare(b)) });
+});
+
+exports.addCategory = asyncHandler(async (req, res) => {
+  const name = req.body.name.trim();
+  const existing = await Category.findOne({ module: 'poolbar', name });
+  if (existing) throw new ApiError(409, `Category "${name}" already exists.`);
+  await Category.create({ module: 'poolbar', name });
+  res.status(201).json({ success: true, data: { name } });
+});
+
+exports.renameCategory = asyncHandler(async (req, res) => {
+  const oldName = req.params.name;
+  const newName = req.body.name.trim();
+  await PoolbarStock.updateMany({ category: oldName }, { $set: { category: newName, cat: newName } });
+  await Category.updateMany({ module: 'poolbar', name: oldName }, { $set: { name: newName } });
+  res.json({ success: true, data: { name: newName } });
+});
+
+exports.deleteCategory = asyncHandler(async (req, res) => {
+  const name = req.params.name;
+  const reassignTo = (req.body && req.body.reassignTo) || 'Uncategorized';
+  if (name === reassignTo) throw new ApiError(400, `Cannot delete "${name}" — it is the fallback category.`);
+  await PoolbarStock.updateMany({ category: name }, { $set: { category: reassignTo, cat: reassignTo } });
+  await Category.deleteMany({ module: 'poolbar', name });
+  res.json({ success: true, data: { reassignedTo: reassignTo } });
 });
