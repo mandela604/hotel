@@ -283,7 +283,6 @@
     getEffectivePermission,
     labelize,
     initials,
-    pickPrivilege,
     normalize,
     toPayload,
   };
