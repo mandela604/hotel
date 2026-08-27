@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Overview | Aurum Hotel</title>
+<title>Overview | Grace Hotel</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -156,7 +156,7 @@ body.aur-sb-collapsed .main { margin-left:68px; }
     <div class="welcome-banner">
       <div class="welcome-text">
         <div class="wt-hi" id="welcomeHi">Good day, General Manager</div>
-        <div class="wt-sub">Here's how Aurum Hotel is running across every department right now.</div>
+        <div class="wt-sub">Here's how Grace Hotel is running across every department right now.</div>
       </div>
       <div class="welcome-date"><b id="welcomeDate"></b><span id="welcomeTime"></span></div>
     </div>
@@ -306,8 +306,14 @@ async function init(){
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   // Get logged-in user
-  let userName = 'Guest';
-  try { const raw = localStorage.getItem('aurum_user'); if (raw) { const u = JSON.parse(raw); if (u && u.name) userName = u.name; } } catch (e) {}
+let userName = 'Guest';
+try {
+  const raw = localStorage.getItem('aurum_user');
+  if (raw) {
+    const u = JSON.parse(raw);
+    if (u && u.name) userName = u.name;
+  }
+} catch (e) {}
 
   document.getElementById('welcomeHi').textContent = `${greeting}, ${userName}`;
   document.getElementById('welcomeDate').textContent = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -334,14 +340,7 @@ async function init(){
   renderActivity(activity);
 }
 
-/* ── Boot ──
-   The root route (/ ) always serves login.html, so reaching this
-   dashboard page only happens after a successful login. No extra
-   client-side session redirect here — same simple pattern as the rest
-   of the suite. */
-(async function boot() {
-  await init();
-})();
+
 </script>
 
 <!-- Platform menu shell — shared sidebar + topbar across all Aurum Hotel pages -->
@@ -356,6 +355,19 @@ async function init(){
     apiMode:       'Live',
     user:          { name: _user.name, initials: _user.initials || 'G' },
   });
+
+  /* ── Boot ──
+   The root route (/ ) always serves login.html, so reaching this
+   dashboard page only happens after a successful login. No extra
+   client-side session redirect here — same simple pattern as the rest
+   of the suite. */
+(async function boot() {
+  await init();
+})();
+
 </script>
+
+
+
 </body>
 </html>

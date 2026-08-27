@@ -334,13 +334,14 @@
   function categoryItemCount(name) {
     return (state.stock || []).filter(function (i) { return i.category === name; }).length;
   }
-  // Session-only — see file header. Persists nothing server-side.
+  // Persists to the DB via /categories (real collection), then reflects locally.
   async function addCategory(name) {
     const n = (name || '').trim();
     if (!n) throw new Error('Category name is required.');
     if (listManagedCategories().some(c => c.toLowerCase() === n.toLowerCase())) {
       throw new Error(`Category "${n}" already exists.`);
     }
+    await apiPost('/categories', { name: n });
     state.extraCategories.push(n);
     emitChange('category:add');
     return n;
@@ -358,9 +359,12 @@
       const res = await apiPut('/stock/' + idForApi, { category: n });
       Object.assign(item, res.data);
     }
+    if (state.extraCategories.indexOf(oldName) > -1) {
+      await apiPut('/categories/' + encodeURIComponent(oldName), { name: n }).catch(function () {});
+    }
     const idx = state.extraCategories.indexOf(oldName);
     if (idx > -1) state.extraCategories[idx] = n;
-    else if (affected.length === 0) state.extraCategories.push(n);
+    else if (affected.length === 0 && n !== oldName) state.extraCategories.push(n);
     emitChange('category:rename');
     return n;
   }
@@ -372,6 +376,9 @@
       const idForApi = item.id || item._id;
       const res = await apiPut('/stock/' + idForApi, { category: reassignTo });
       Object.assign(item, res.data);
+    }
+    if (state.extraCategories.indexOf(name) > -1) {
+      await apiDelete('/categories/' + encodeURIComponent(name), { reassignTo: reassignTo }).catch(function () {});
     }
     state.extraCategories = state.extraCategories.filter(c => c !== name);
     emitChange('category:delete');
@@ -400,18 +407,21 @@
 
   /* ── Load everything from the real API ──────────────────────────── */
   async function loadAll() {
-    const [stockRes, salesRes, ordersRes, reqRes, movRes] = await Promise.all([
+    const [stockRes, salesRes, ordersRes, reqRes, movRes, catRes] = await Promise.all([
       apiGet('/stock'),
       apiGet('/sales'),
       apiGet('/orders'),
       apiGet('/requisitions'),
       apiGet('/movements'),
+      apiGet('/categories').catch(function () { return { data: [] }; }),
     ]);
     state.stock = stockRes.data || [];
     state.sales = salesRes.data || [];
     state.orders = ordersRes.data || [];
     state.requisitions = reqRes.data || [];
     state.movements = movRes.data || [];
+    // Persisted categories (includes categories with no stock items yet).
+    state.extraCategories = (catRes && Array.isArray(catRes.data)) ? catRes.data.slice() : [];
     state.ready = true;
 
     ensureBookingData().catch(function (e) {

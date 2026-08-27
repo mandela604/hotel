@@ -230,6 +230,17 @@
     state.categories = deriveCategories(state.stock);
     rebuildCatalog();
 
+    // Merge in categories persisted in the DB (the /categories endpoint
+    // already unions DB + derived), so pre-created empty categories that
+    // have no stock item yet still show up after a reload.
+    try {
+      const catApi = await apiFetch('/categories?_=' + Date.now());
+      if (Array.isArray(catApi) && catApi.length) {
+        const set = new Set(state.categories.concat(catApi));
+        state.categories = Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
+      }
+    } catch (e) { /* non-fatal */ }
+
     try {
       const reqData = await apiFetch('/requisitions?_=' + Date.now());
       state.requests = (Array.isArray(reqData) ? reqData : []).map(normalizeRequisition);
