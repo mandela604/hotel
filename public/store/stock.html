@@ -634,13 +634,20 @@ function renderCategoryList(){
   }).join('');
 }
 
-window.addCategory = function(){
+window.addCategory = async function(){
   const name = document.getElementById('newCatName').value.trim();
   if (!name) { showToast('Enter a category name.', 'error'); return; }
   if (svc.getCategories().some(c => c.toLowerCase() === name.toLowerCase())) {
     showToast('Category already exists.', 'error'); return;
   }
-  showToast('Category "' + name + '" will appear once you add or move an item into it.', 'info');
+  try {
+    await svc.addCategory(name);
+    showToast('Category "' + name + '" added.', 'success');
+    renderCategoryList();
+    populateCategoryFilter();
+  } catch (e) {
+    showToast(e.message || 'Could not add category.', 'error');
+  }
   document.getElementById('newCatName').value = '';
 };
 
