@@ -146,9 +146,9 @@ const ProcurementModals = (function() {
         </div>
 
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-          ${canApprove ? `<button onclick="approvePR('${pr.id}')" style="padding:8px 20px;background:var(--green);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Approve</button>` : ''}
-          ${canReject ? `<button onclick="rejectPR('${pr.id}')" style="padding:8px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✕ Reject</button>` : ''}
-          ${canCreatePO ? `<button onclick="createPO('${pr.id}')" style="padding:8px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📋 Create PO</button>` : ''}
+          ${canApprove ? `<button onclick="ProcurementModals.approvePR(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--green);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Approve</button>` : ''}
+          ${canReject ? `<button onclick="ProcurementModals.rejectPR(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✕ Reject</button>` : ''}
+          ${canCreatePO ? `<button onclick="ProcurementModals.createPO(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📋 Create PO</button>` : ''}
           ${canVoid ? `<button onclick="ProcurementModals.showVoidCorrectModal('${pr.id}')" style="padding:8px 20px;background:var(--amber);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">↺ Void &amp; Correct</button>` : ''}
           <button onclick="ProcurementModals.close()" style="padding:8px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Close</button>
         </div>
@@ -164,7 +164,7 @@ const ProcurementModals = (function() {
     if (note === null) return; // Cancelled
     
     try {
-      await ProcurementAPI.approvePR(id, 'current', note || '');
+      await ProcurementService.approvePR(id, 'current', note || '');
       ProcurementModals.alert('Purchase request approved successfully!', 'Success');
       location.reload();
     } catch (error) {
@@ -181,7 +181,7 @@ const ProcurementModals = (function() {
     }
     
     try {
-      await ProcurementAPI.rejectPR(id, 'current', note);
+      await ProcurementService.rejectPR(id, 'current', note);
       ProcurementModals.alert('Purchase request rejected.', 'Rejected');
       location.reload();
     } catch (error) {
@@ -205,7 +205,7 @@ const ProcurementModals = (function() {
     }
     
     try {
-      await ProcurementAPI.createPO(id, poNo.trim(), supplier.trim());
+      await ProcurementService.createPO(id, poNo.trim(), supplier.trim());
       ProcurementModals.alert(`Purchase Order ${poNo} created successfully!\n\nSupplier: ${supplier}\nStatus: Fulfilled`, 'Success');
       location.reload();
     } catch (error) {
@@ -225,7 +225,7 @@ const ProcurementModals = (function() {
    * as any other incoming PO.
    */
   function showVoidCorrectModal(prId) {
-    const pr = (ProcurementAPI.state.prs || []).find(p => p.id === prId);
+    const pr = (ProcurementService.state.prs || []).find(p => p.id === prId);
     if (!pr) return;
     const items = (pr.items && pr.items.length)
       ? pr.items
@@ -279,7 +279,7 @@ const ProcurementModals = (function() {
       return;
     }
 
-    const pr = (ProcurementAPI.state.prs || []).find(p => p.id === prId);
+    const pr = (ProcurementService.state.prs || []).find(p => p.id === prId);
     const sourceItems = (pr && pr.items && pr.items.length) ? pr.items : [{ name: pr.item, qty: pr.qty, price: pr.unitCost }];
 
     const items = [];
@@ -292,7 +292,7 @@ const ProcurementModals = (function() {
     }
 
     try {
-      await ProcurementAPI.voidAndCorrectPO(prId, { items, reason }, 'current');
+      await ProcurementService.voidAndCorrectPO(prId, { items, reason }, 'current');
       ProcurementModals.alert('PO voided. A corrected request has been raised and sent to Store.', 'Success');
       location.reload();
     } catch (error) {
