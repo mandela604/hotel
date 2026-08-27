@@ -28,7 +28,13 @@ app.use(express.json({ limit: '2mb' }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Root always serves the login page — the frontend redirects to the
+// dashboard only after a successful login. Matches the behavior of the
+// rest of the suite (visit the site → login first, always).
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
+
+app.use(express.static(PUBLIC_DIR));
 
 app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 600, standardHeaders: true, legacyHeaders: false }));
 app.use('/api', sanitize); // strip Mongo operators + trim/sanitize all incoming strings
