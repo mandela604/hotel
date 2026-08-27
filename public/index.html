@@ -202,11 +202,9 @@ body.aur-sb-collapsed .main { margin-left:68px; }
   </div>
 </div>
 
-<script src="component/data-store.js"></script>
 <script>
 /* ═══════════════════════════════════════
-   DATA — reads from the unified DataStore,
-    which reads from the unified DataStore.
+   DATA — loads live data from the backend API (see init() below).
 ═══════════════════════════════════════ */
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtNShort(n){ n = Math.round(n||0); if (n>=1000000) return '₦'+(n/1000000).toFixed(1)+'M'; if (n>=1000) return '₦'+(n/1000).toFixed(0)+'k'; return '₦'+n.toLocaleString('en-NG'); }
@@ -272,11 +270,11 @@ function renderRevenue(roomRev, restRev, poolRev){
    ROOM STATUS
 ═══════════════════════════════════════ */
 function renderRoomStatus(rooms){
-  const r = rooms || { total:0, occupied:0, vacant:0, dirty:0, maintenance:0 };
+  const r = rooms || { total:0, occupied:0, vacant:0, cleaning:0, maintenance:0 };
   document.getElementById('roomStatusGrid').innerHTML = `
     <div class="rs-card occ"><div class="rs-lbl">Occupied</div><div class="rs-val">${r.occupied}</div></div>
     <div class="rs-card vac"><div class="rs-lbl">Vacant &amp; Ready</div><div class="rs-val">${r.vacant}</div></div>
-    <div class="rs-card dirty"><div class="rs-lbl">Needs Housekeeping</div><div class="rs-val">${r.dirty}</div></div>
+    <div class="rs-card dirty"><div class="rs-lbl">Needs Housekeeping</div><div class="rs-val">${r.cleaning}</div></div>
     <div class="rs-card maint"><div class="rs-lbl">Under Maintenance</div><div class="rs-val">${r.maintenance}</div></div>`;
 }
 
@@ -300,7 +298,7 @@ function renderActivity(activity){
 }
 
 /* ═══════════════════════════════════════
-   INIT — loads live data from DataStore
+   INIT — loads live data from the backend API
 ═══════════════════════════════════════ */
 async function init(){
   const now = new Date();
@@ -315,29 +313,20 @@ async function init(){
   document.getElementById('welcomeDate').textContent = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   document.getElementById('welcomeTime').textContent = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 
-  // Load data from DataStore (no demo fallbacks — show real data or zeros)
-  const roomTx    = await DataStore.get('ds_accounting_room_tx').catch(() => null) || [];
-  const restSales = await DataStore.get('ds_restaurant_sales').catch(() => null) || [];
-  const poolSales = await DataStore.get('ds_poolbar_sales').catch(() => null) || [];
-  const activity  = await DataStore.get(DataStore.ACTIVITY_KEY).catch(() => null);
-  const rooms     = await DataStore.get('ds_bookings_rooms').catch(() => null) || [];
-  const prs       = await DataStore.get('ds_procurement_prs').catch(() => null) || [];
-  const kitchenInv = await DataStore.get('ds_kitchen_inventory').catch(() => null) || [];
+  // Load live dashboard data from the backend (same source as the module pages).
+  let d = null;
+  try {
+    const res = await fetch('/api/dashboard/overview', { credentials: 'include', headers: { 'Accept': 'application/json' } });
+    if (res.ok) { const body = await res.json(); d = body.data; }
+  } catch (e) { /* fall through to zeros on network error */ }
 
-  // Compute room stats from live data
-  const totalRooms = rooms.length;
-  const occupiedRooms = rooms.filter(r => r.status === 'occupied').length;
-  const vacantRooms = rooms.filter(r => r.status === 'available').length;
-  const dirtyRooms = rooms.filter(r => r.status === 'dirty' || r.status === 'cleaning').length;
-  const maintRooms = rooms.filter(r => r.status === 'maintenance' || r.status === 'out_of_service').length;
-  const roomsData = { total: totalRooms, occupied: occupiedRooms, vacant: vacantRooms, dirty: dirtyRooms, maintenance: maintRooms };
-
-  const roomRev = roomTx.reduce((s,t)=>s+(t.amount||0), 0);
-  const restRev = restSales.filter(s=>s.status!=='voided').reduce((s,t)=>s+(t.total||0), 0);
-  const poolRev = poolSales.reduce((s,t)=>s+(t.total||0), 0);
-
-  const procPending = prs.filter(p => p.status === 'pending' || p.status === 'accountant' || p.status === 'gm').length;
-  const lowStock = kitchenInv.filter(i => i.qty <= i.reorder).length;
+  const roomsData = (d && d.rooms) || { total:0, occupied:0, vacant:0, cleaning:0, maintenance:0, reserved:0 };
+  const roomRev = Math.max(0, (d ? d.totalRevenueToday : 0) - (d ? d.restaurantSalesToday : 0) - (d ? d.poolbarSalesToday : 0));
+  const restRev = (d && d.restaurantSalesToday) || 0;
+  const poolRev = (d && d.poolbarSalesToday) || 0;
+  const procPending = (d && d.pendingProcurement) || 0;
+  const lowStock = (d && d.lowStock) || 0;
+  const activity = (d && d.recentActivity) || [];
 
   renderKPIs(roomRev, restRev, poolRev, roomsData, procPending, lowStock);
   renderRevenue(roomRev, restRev, poolRev);
@@ -345,14 +334,13 @@ async function init(){
   renderActivity(activity);
 }
 
-/* ── Boot: init DataStore, then render ──
+/* ── Boot ──
    The root route (/ ) always serves login.html, so reaching this
    dashboard page only happens after a successful login. No extra
    client-side session redirect here — same simple pattern as the rest
    of the suite. */
 (async function boot() {
-  await DataStore.init();
-  init();
+  await init();
 })();
 </script>
 
