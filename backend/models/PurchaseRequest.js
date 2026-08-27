@@ -16,7 +16,8 @@ const prItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   qty:  { type: Number, default: 0 },
   unit: { type: String, default: 'Units' },
-  cost: { type: Number, default: 0 },
+  price: { type: Number, default: 0 },
+  cost:  { type: Number, default: 0 },
 }, { _id: false });
 
 const purchaseRequestSchema = new mongoose.Schema({
