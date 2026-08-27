@@ -350,12 +350,17 @@ async function init(){
 
 /* ── Boot: login check, init DataStore, then render ── */
 (async function boot() {
-  // Redirect to login if not authenticated
+  // Redirect to login unless the server says we have a valid session.
+  // The auth token lives in an httpOnly cookie (sent automatically) —
+  // localStorage 'aurum_user' is only a display cache and is NOT trusted
+  // as proof of authentication.
   try {
-    const raw = localStorage.getItem('aurum_user');
-    if (!raw) { window.location.href = 'login.html'; return; }
-    const u = JSON.parse(raw);
-    if (!u || !u.name) { window.location.href = 'login.html'; return; }
+    const res = await fetch('/api/auth/session', { credentials: 'include' });
+    if (!res.ok) { window.location.href = 'login.html'; return; }
+    const body = await res.json().catch(() => ({}));
+    const u = body.user || null;
+    if (!u) { window.location.href = 'login.html'; return; }
+    try { localStorage.setItem('aurum_user', JSON.stringify(u)); } catch (e) {}
   } catch (e) { window.location.href = 'login.html'; return; }
 
   await DataStore.init();

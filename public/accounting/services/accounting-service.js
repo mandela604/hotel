@@ -310,6 +310,11 @@
         expectedCash: s.expectedCash || 0,
         variance: s.variance || 0,
         notes: s.notes || '',
+        reconciliationLog: (s.reconciliationLog || []).map(l => ({
+          actor: l.actor || '', actualCash: l.actualCash || 0, expectedCash: l.expectedCash || 0,
+          variance: l.variance || 0, notes: l.notes || '', type: l.type || 'initial',
+          date: l.date || null,
+        })),
         _id: s._id,
       }));
     } catch (e) { console.warn('[AccountingService] shifts load failed:', e.message); }
@@ -432,10 +437,24 @@
 
     const res = await apiFetch('/shifts/' + (shift._id || '') + '/reconcile', {
       method: 'PUT',
-      body: JSON.stringify({ actualCash: Number(payload.actualCash) || 0, expectedCash: payload.expectedCash || 0, notes: payload.notes || '' }),
+      body: JSON.stringify({
+        actualCash: Number(payload.actualCash) || 0,
+        expectedCash: payload.expectedCash || 0,
+        notes: payload.notes || '',
+        actor: payload.actor || '',
+        type: payload.type || 'initial',
+      }),
     });
     const row = res.data;
-    Object.assign(shift, { actualCash: row.actualCash, expectedCash: row.expectedCash, variance: row.variance, status: row.status, notes: row.notes || payload.notes || '' });
+    Object.assign(shift, {
+      actualCash: row.actualCash, expectedCash: row.expectedCash,
+      variance: row.variance, status: row.status, notes: row.notes || payload.notes || '',
+      reconciliationLog: (row.reconciliationLog || []).map(l => ({
+        actor: l.actor || '', actualCash: l.actualCash || 0, expectedCash: l.expectedCash || 0,
+        variance: l.variance || 0, notes: l.notes || '', type: l.type || 'initial',
+        date: l.date || null,
+      })),
+    });
     emitChange('shift:reconcile');
     return { shift: clone(shift), variance: shift.variance, isCorrection: false, health: Math.abs(shift.variance) <= 500 ? 'ok' : 'bad', rangeLabel: shiftRangeLabel(shift.key) };
   }

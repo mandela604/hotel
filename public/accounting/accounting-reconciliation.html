@@ -343,6 +343,7 @@
 </div>
 
 <script src="../component/accounting-shell.js"></script>
+<script src="services/accounting-service.js"></script>
 
 <!-- Shift Reconciliation detail/reconcile modal — Accounting-module component,
      not the shared /component folder, since it speaks accounting vocabulary
@@ -356,7 +357,7 @@ const shell = AccountingShell.attach({
   pageTitle:     'Shift Reconciliation',
   pageSubtitle:  'One cashier, one department, one shift — count cash against expected revenue',
   apiMode:       'Live',
-  user:          { name: 'Finance Manager', initials: 'FM' },
+  user:          AccountingData.getSession(),
 });
 
 /* ═══════════════════════════════════════════
@@ -398,32 +399,9 @@ function parseTxDate(str){
 function nowStamp(){ return new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ''); }
 
 /* ═══════════════════════════════════════════
-   STORAGE + CONFIG
-═══════════════════════════════════════════ */
-const CFG = { API_BASE:'', API_KEY:'', PAGE_SIZE:8 };
-async function apiFetch(method, path, body=null){
-  if (!CFG.API_BASE) throw new Error('No API_BASE configured');
-  const opts = { method, headers:{ 'Content-Type':'application/json' } };
-  if (CFG.API_KEY) opts.headers['Authorization'] = `Bearer ${CFG.API_KEY}`;
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(CFG.API_BASE + path, opts);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-function apiSave(method, path, body){ apiFetch(method, path, body).catch(e => console.warn('[API write]', e.message)); }
-
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p)) return p; } } catch(e){}
-  return fallback;
-}
-async function saveShared(key, value){ try { await storage.set(key, JSON.stringify(value), true); } catch(e){ console.warn('[sync]', key, e); } }
-
-const KEY_RECON_LOG = 'accounting-reconciliation-log';
-const KEY_SHIFTS = 'accounting-shifts';
+   CONFIG
+════════════════════════════════════════════ */
+const CFG = { PAGE_SIZE: 8 };
 
 /* ═══════════════════════════════════════════
    SHAPE VALIDATION — this is what actually fixes the "undefined" cells.
@@ -474,6 +452,20 @@ let page = 1;
 let statusFilter = '';
 let deptFilter = '';
 
+function buildReconLog(shiftsArr){
+  const log = [];
+  (shiftsArr || []).forEach(s => {
+    (s.reconciliationLog || []).forEach(l => {
+      const dt = l.date ? new Date(l.date) : null;
+      const dateStr = dt ? dt.toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '') : '';
+      log.push({ key: s.key, dept: s.dept, actor: l.actor, actualCash: l.actualCash,
+        expected: l.expectedCash, variance: l.variance, notes: l.notes,
+        type: l.type || 'initial', date: dateStr });
+    });
+  });
+  return log.sort((a,b) => new Date(b.date) - new Date(a.date));
+}
+
 function findShift(key, dept){ return shifts.find(s => s.key === key && s.dept === dept); }
 function txForShift(dept, key){ return transactions.filter(t => t.dept === dept && shiftKeyFor(t.date) === key); }
 function cashForShift(dept, key){ return txForShift(dept, key).filter(t => t.method === 'Cash').reduce((s,t)=>s+t.amount,0); }
@@ -491,7 +483,7 @@ function shiftHealth(shift){
   return Math.abs(v) <= VARIANCE_TOLERANCE ? 'ok' : 'bad';
 }
 function historyForShift(dept, key){
-  return reconLog.filter(h => h.key === key && h.dept === dept).sort((a,b) => parseTxDate(b.date) - parseTxDate(a.date));
+  return reconLog.filter(h => h.key === key && h.dept === dept).sort((a,b) => new Date(b.date) - new Date(a.date));
 }
 
 /* ═══════════════════════════════════════════
@@ -536,22 +528,20 @@ async function handleReconcile(result){
   const s = findShift(result.key, result.dept);
   if (!s) throw new Error('Shift record not found — please refresh and try again.');
 
-  s.actualCash = result.actualCash;
-  s.status = 'reconciled';
-  s.notes = result.notes;
-
-  reconLog.unshift({
-    key: result.key, dept: result.dept, actor: result.actor,
-    actualCash: result.actualCash, expected: result.expected, variance: result.variance,
-    notes: result.notes, type: result.isCorrection ? 'correction' : 'initial',
-    date: nowStamp(),
+  const res = await AccountingData.reconcileShift({
+    key: result.key, dept: result.dept,
+    actualCash: result.actualCash, expectedCash: result.expected,
+    notes: result.notes || '', actor: result.actor || '',
+    type: result.isCorrection ? 'correction' : 'initial',
   });
 
-  await Promise.all([ saveShared(KEY_SHIFTS, shifts), saveShared(KEY_RECON_LOG, reconLog) ]);
-  apiSave('PATCH', `/api/accounting/shifts/${result.dept}/${result.key}`, {
-    actualCash: result.actualCash, notes: result.notes, status:'reconciled',
-    actor: result.actor, type: result.isCorrection ? 'correction' : 'initial',
+  Object.assign(s, {
+    actualCash: res.shift.actualCash, status: res.shift.status,
+    notes: res.shift.notes, variance: res.shift.variance,
+    reconciliationLog: res.shift.reconciliationLog || [],
   });
+
+  reconLog = buildReconLog(shifts);
 }
 
 function handleReconcileSuccess(result){
@@ -874,52 +864,19 @@ function printReport(){
 }
 
 /* ═══════════════════════════════════════════
-   INIT — demo shifts marked actualCash:'auto' get their actual cash
-   computed from the real ledger (expected + a small deliberate
-   demoVariance where provided), so the numbers on screen always tie
-   out to the transactions above instead of being hand-typed and
-   possibly inconsistent. Loaded storage data is shape-validated
-   (isValidShiftsArray) before use — anything that doesn't look like a
-   real shift record triggers a clean reseed instead of rendering
-   "undefined" cells.
-═══════════════════════════════════════════ */
+   INIT — everything comes from the backend.
+════════════════════════════════════════════ */
 async function init(){
   initSelects();
   bindDeptPills();
   bindStatusPills();
   bindTableDelegation();
 
-  const roomTx    = await loadShared('accounting-room-tx', []);
-  const restSales = await loadShared('restaurant-sales', []);
-  const poolSales = await loadShared('poolbar-sales', []);
+  const { roomTx, restSales, poolSales, shifts: backendShifts } = await AccountingData.getAccountingData();
   transactions = buildTransactions(roomTx, restSales, poolSales);
 
-  let loadedShifts = await loadShared(KEY_SHIFTS, null);
-  if (!isValidShiftsArray(loadedShifts)) {
-    loadedShifts = null;
-  }
-  shifts = loadedShifts;
-
-  let loadedLog = await loadShared(KEY_RECON_LOG, null);
-  reconLog = Array.isArray(loadedLog) ? loadedLog : null;
-
-  if (!shifts) {
-    shifts = [];
-  }
-  if (!reconLog) {
-    reconLog = shifts.filter(s => s.status === 'reconciled').map(s => ({
-      key: s.key, dept: s.dept, actor: s.staff, actualCash: s.actualCash,
-      expected: expectedCash(s), variance: s.actualCash - expectedCash(s),
-      notes: s.notes, type: 'initial',
-      date: (() => { const [y,m,d] = s.key.split('-').map(Number); return `${pad2(d)}/${pad2(m)}/${String(y).slice(-2)} 09:05 AM`; })(),
-    }));
-  }
-
-  await Promise.all([
-    saveShared('accounting-room-tx', roomTx),
-    saveShared(KEY_SHIFTS, shifts),
-    saveShared(KEY_RECON_LOG, reconLog),
-  ]);
+  shifts = backendShifts || [];
+  reconLog = buildReconLog(shifts);
 
   render();
 }

@@ -8,6 +8,14 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 
 const connectDB = require('./config/db');
+
+// Helmet's default Content-Security-Policy (`script-src 'self'`) blocks
+// every inline <script> block this app's static HTML pages rely on.
+// Disable that one policy so the frontend works; keep the rest of
+// helmet's response headers (X-Frame-Options, nosniff, etc.).
+const helmetConfig = {
+  contentSecurityPolicy: false,
+};
 const auth = require('./middleware/auth');
 const sanitize = require('./middleware/sanitize');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
@@ -15,7 +23,7 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const app = express();
 app.use(cookieParser());
 
-app.use(helmet());
+app.use(helmet(helmetConfig));
 app.use(express.json({ limit: '2mb' }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
