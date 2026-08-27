@@ -1,9 +1,8 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/accountingController');
-const auth = require('../middleware/auth');
 const { departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 
-router.use(auth);
+// auth is already applied at the mount point in server.js — no router.use(auth) here
 
 /* ── Read-only (any authenticated user) ────────────────────── */
 router.get('/summary',              ctrl.summary);

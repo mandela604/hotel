@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const staffController = require('../controllers/staffController');
-const auth = require('../middleware/auth');
 const roleGuard = require('../middleware/roleGuard');
 
-router.use(auth);
+// auth is already applied at the mount point in server.js — no router.use(auth) here
 
 router.get('/', staffController.listStaff);
 router.get('/:id', staffController.getStaffById);

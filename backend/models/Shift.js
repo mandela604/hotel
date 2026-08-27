@@ -11,6 +11,15 @@ const shiftSchema = new mongoose.Schema({
   expectedCash:  { type: Number, default: 0 },
   variance:      { type: Number, default: 0 },
   notes:         { type: String, default: '' },
+  reconciliationLog: [{
+    actor:        { type: String, default: '' },
+    actualCash:   { type: Number, default: 0 },
+    expectedCash: { type: Number, default: 0 },
+    variance:     { type: Number, default: 0 },
+    notes:        { type: String, default: '' },
+    type:         { type: String, enum: ['initial', 'correction'], default: 'initial' },
+    date:         { type: Date, default: Date.now },
+  }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Shift', shiftSchema);

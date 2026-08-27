@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const storeController = require('../controllers/storeController');
-const auth = require('../middleware/auth');
 const { roleGuard, departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const sanitize = require('../middleware/sanitize');
 const {
@@ -17,7 +16,7 @@ const {
   validateParam,
 } = require('../middleware/storeValidators');
 
-router.use(auth);
+// auth is already applied at the mount point in server.js — no router.use(auth) here
 router.use(sanitize);
 
 const inDept  = departmentGuard('Store');

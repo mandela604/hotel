@@ -1,7 +1,6 @@
 'use strict';
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
 const { departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const v = require('../middleware/gymvalidators');
 const {
@@ -22,8 +21,6 @@ const {
   deleteGuest,
   revenue,
 } = require('../controllers/gymController');
-
-router.use(auth);
 
 const inDept  = departmentGuard('Gym');
 

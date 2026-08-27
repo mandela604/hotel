@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const procurementController = require('../controllers/procurementController');
-const auth = require('../middleware/auth');
 const { roleGuard, departmentGuard, privilegeGuard } = require('../middleware/roleGuard');
 const {
   validateCreatePR, validateUpdatePR, validateApprove, validateReject, validateCreatePO,
@@ -10,7 +9,7 @@ const {
   validateObjectIdParam, validateStringParam,
 } = require('../middleware/procurementValidators');
 
-router.use(auth);
+// auth is already applied at the mount point in server.js — no router.use(auth) here
 
 const inDept  = departmentGuard('Procurement');
 const isAdmin = roleGuard('admin');

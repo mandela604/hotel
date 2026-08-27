@@ -274,12 +274,25 @@ exports.openShift = asyncHandler(async (req, res) => {
 });
 
 exports.reconcileShift = asyncHandler(async (req, res) => {
-  const { actualCash, expectedCash } = req.body;
+  const { actualCash, expectedCash, notes, actor, type } = req.body;
   const actual = Number(actualCash) || 0;
   const expected = Number(expectedCash) || 0;
+  const logEntry = {
+    actor: actor || (req.user ? req.user.name : ''),
+    actualCash: actual,
+    expectedCash: expected,
+    variance: actual - expected,
+    notes: notes || '',
+    type: type === 'correction' ? 'correction' : 'initial',
+    date: new Date(),
+  };
   const shift = await Shift.findByIdAndUpdate(
     req.params.id,
-    { actualCash: actual, expectedCash: expected, variance: actual - expected, status: 'reconciled' },
+    {
+      actualCash: actual, expectedCash: expected, variance: actual - expected,
+      status: 'reconciled', notes: notes || '',
+      $push: { reconciliationLog: logEntry },
+    },
     { new: true, runValidators: true }
   );
   if (!shift) return res.status(404).json({ success: false, error: 'Shift not found' });
