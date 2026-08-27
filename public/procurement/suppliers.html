@@ -425,8 +425,8 @@ function renderKpis(){
 /* Category <select> options — shared by the toolbar filter and the
    Add/Edit Supplier modal. Always rebuilt from
    ProcurementService.getCategories(), never hardcoded. */
-function populateCategorySelects(){
-  allCategories = ProcurementService.getCategories();
+async function populateCategorySelects(){
+  allCategories = await ProcurementService.getCategories() || [];
 
   const filterSel = document.getElementById('spCat');
   const curFilter = filterSel.value;
@@ -585,8 +585,8 @@ function closeCategoryModal(){
 }
 document.getElementById('categoryModal').addEventListener('click', function(e){ if (e.target === this) closeCategoryModal(); });
 
-function renderCategoryList(){
-  const cats = ProcurementService.getCategories();
+async function renderCategoryList(){
+  const cats = await ProcurementService.getCategories() || [];
   const list = document.getElementById('catList');
   if (!cats.length) { list.innerHTML = `<div class="cat-empty">No categories yet.</div>`; return; }
 
