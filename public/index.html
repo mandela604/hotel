@@ -362,7 +362,7 @@ async function init(){
 <!-- Platform menu shell — shared sidebar + topbar across all Aurum Hotel pages -->
 <script src="component/aurum-shell.js"></script>
 <script>
-  const _user = (function(){ try{ return JSON.parse(localStorage.getItem('aurum_user')); }catch(e){} return {name:'Guest',initials:'G'}; })();
+  const _user = (function(){ try{ const v = JSON.parse(localStorage.getItem('aurum_user')); return (v && v.name) ? v : null; }catch(e){ return null; } })() || {name:'Guest',initials:'G'};
   const shell = AurumShell.attach({
     sidebarTarget: '#sidebarSlot',
     topbarTarget:  '#topbarSlot',
