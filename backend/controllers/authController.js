@@ -191,7 +191,9 @@ exports.createUser = asyncHandler(async (req, res) => {
  * department, or active/inactive status for an existing account.
  */
 exports.updateUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  // Match on the user's UUID `id` field (same field auth tokens carry),
+  // not the Mongo _id — listUsers exposes `id`, and the admin panel uses it.
+  const user = await User.findOne({ id: req.params.id });
   if (!user) return res.status(404).json({ success: false, error: 'User not found' });
 
   const { role, privileges, department, status, name, phone } = req.body;

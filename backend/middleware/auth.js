@@ -15,7 +15,10 @@ async function auth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, getSecret());
-    const user = await User.findById(decoded.id).select('-password');
+    // The token carries the user's UUID `id` field (not the Mongo _id).
+    // findById would try to cast it as an ObjectId and fail — so look up
+    // by the custom `id` field instead.
+    const user = await User.findOne({ id: decoded.id }).select('-password');
     if (!user || user.status === 'inactive') {
       return res.status(401).json({ success: false, error: 'Account inactive or session invalid' });
     }
