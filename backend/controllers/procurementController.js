@@ -2,6 +2,7 @@ const PurchaseRequest = require('../models/PurchaseRequest');
 const Requisition = require('../models/Requisition');
 const Supplier = require('../models/Supplier');
 const ProcurementCategory = require('../models/ProcurementCategory');
+const mongoose = require('mongoose');
 const { ApiError } = require('../middleware/errorHandler');
 const { ROLES, STAGE_APPROVER_ROLE } = require('../middleware/procurementRoles');
 
@@ -33,8 +34,9 @@ function todayISO() {
 function computeItemsTotal(items) {
   return (items || []).reduce((sum, i) => {
     const qty = Number(i.qty) || 0;
-    const cost = Number(i.cost) || 0;
-    return sum + qty * cost;
+    const price = i.price != null ? Number(i.price) : Number(i.cost) || 0;
+    const subtotal = i.subtotal != null ? Number(i.subtotal) : qty * price;
+    return sum + (isNaN(subtotal) ? 0 : subtotal);
   }, 0);
 }
 async function nextPurchaseOrderNumbers() {
@@ -55,7 +57,13 @@ exports.listPRs = async (req, res, next) => {
 
 exports.getPR = async (req, res, next) => {
   try {
-    const pr = await PurchaseRequest.findById(req.params.id);
+    const id = req.params.id;
+    let pr = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      pr = await PurchaseRequest.findById(id);
+    }
+    if (!pr) pr = await PurchaseRequest.findOne({ prNo: id }).orFail().catch(() => null);
+    if (!pr) pr = await PurchaseRequest.findOne({ poNo: id }).orFail().catch(() => null);
     if (!pr) return next(new ApiError(404, 'Purchase request not found'));
     res.json({ success: true, data: pr });
   } catch (err) { next(err); }
