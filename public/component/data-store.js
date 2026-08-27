@@ -434,38 +434,15 @@
      Init — seed data on first run or version bump
      ═══════════════════════════════════════════════════════════════════ */
   async function init(forceReseed) {
-    // Demo seeding disabled for production — pages render real data (or
-    // empty defaults) instead of fabricated demo numbers.
-    const shouldSeed = !!(forceReseed);
+    // Demo seeding disabled — pages render real data (or empty defaults).
+    if (!forceReseed) return;
 
-    if (shouldSeed) {
-      console.log('[DataStore] Seeding demo data (version:', STORAGE_VERSION, ')');
-      const seed = _buildSeedData();
-      for (const [key, value] of Object.entries(seed)) {
-        await set(key, value);
-      }
-      try { localStorage.setItem(VERSION_KEY, STORAGE_VERSION); } catch (e) {}
+    console.log('[DataStore] Seeding demo data (version:', STORAGE_VERSION, ')');
+    const seed = _buildSeedData();
+    for (const [key, value] of Object.entries(seed)) {
+      await set(key, value);
     }
-
-    // One-time cleanup of legacy demo keys left in localStorage by the
-    // old seeder, so previously-seeded demo numbers disappear immediately.
-    try {
-      const cleanupKey = 'ds_demo_cleaned';
-      if (localStorage.getItem(cleanupKey) !== '1') {
-        const seedKeys = Object.keys(_buildSeedData());
-        for (const k of seedKeys) { await del(k); }
-        localStorage.setItem(cleanupKey, '1');
-      }
-    } catch (e) { /* ignore */ }
-
-    // Legacy migration: if procurement-api.js has localStorage data, adopt it
-    try {
-      const legacyProcPR = localStorage.getItem('hotel-procurement');
-      if (legacyProcPR && !await get('ds_procurement_migrated')) {
-        // Keep existing procurement data, mark as migrated
-        await set('ds_procurement_migrated', true);
-      }
-    } catch (e) { /* ignore */ }
+    try { localStorage.setItem(VERSION_KEY, STORAGE_VERSION); } catch (e) {}
   }
 
   /* ═══════════════════════════════════════════════════════════════════
