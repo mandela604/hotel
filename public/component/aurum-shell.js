@@ -28,7 +28,7 @@
 
   async function fetchSession() {
     try {
-      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`);
+      const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || `Session API returned ${res.status}`);
       return { name: data.name, initials: data.initials, role: data.role, privilege: data.privilege, department: data.department };

@@ -25,7 +25,11 @@ function cookieOptions() {
   return {
     httpOnly: true,
     secure: isSecure(),
-    sameSite: isSecure() ? 'strict' : 'lax',
+    // 'lax' — sends the cookie on same-site top-level navigations (the
+    // login → dashboard redirect) while still blocking cross-site POSTs.
+    // 'strict' could refuse to send the token during that redirect, which
+    // is exactly the "login succeeded but then I'm logged back out" loop.
+    sameSite: 'lax',
     path: '/',
     maxAge: maxAge,
   };
