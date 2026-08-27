@@ -617,6 +617,7 @@ function renderPOs(){
    (e.g. Procurement pricing a Store-raised PO that came in with no
    amount set). */
 function openPODetail(id){
+  if (!id) return;
   window.location.href = 'po-form.html?id=' + encodeURIComponent(id);
 }
 

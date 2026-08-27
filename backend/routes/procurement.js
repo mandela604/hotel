@@ -19,20 +19,20 @@ const isAdmin = roleGuard('admin');
    eventual PO are the same record (poNo/supplier get set on it once
    createPO fires), matching ProcurementService's single-object model. */
 router.get('/requests', procurementController.listPRs);
-router.get('/requests/:id', validateObjectIdParam('id'), procurementController.getPR);
+router.get('/requests/:id', validateStringParam('id'), procurementController.getPR);
 router.post('/requests', inDept, privilegeGuard('procurement', 'canCreate'), validateCreatePR, procurementController.createPR);
-router.put('/requests/:id', inDept, privilegeGuard('procurement', 'canEdit'), validateObjectIdParam('id'), validateUpdatePR, procurementController.updatePR);
-router.post('/requests/:id/approve', inDept, privilegeGuard('procurement', 'canApprove'), validateObjectIdParam('id'), validateApprove, procurementController.approvePR);
-router.post('/requests/:id/reject', inDept, privilegeGuard('procurement', 'canReject'), validateObjectIdParam('id'), validateReject, procurementController.rejectPR);
-router.post('/requests/:id/create-po', inDept, privilegeGuard('procurement', 'canCreate'), validateObjectIdParam('id'), validateCreatePO, procurementController.createPO);
-router.post('/requests/:id/void-correct', inDept, privilegeGuard('procurement', 'canEdit'), validateObjectIdParam('id'), validateVoidAndCorrect, procurementController.voidAndCorrectPO);
+router.put('/requests/:id', inDept, privilegeGuard('procurement', 'canEdit'), validateStringParam('id'), validateUpdatePR, procurementController.updatePR);
+router.post('/requests/:id/approve', inDept, privilegeGuard('procurement', 'canApprove'), validateStringParam('id'), validateApprove, procurementController.approvePR);
+router.post('/requests/:id/reject', inDept, privilegeGuard('procurement', 'canReject'), validateStringParam('id'), validateReject, procurementController.rejectPR);
+router.post('/requests/:id/create-po', inDept, privilegeGuard('procurement', 'canCreate'), validateStringParam('id'), validateCreatePO, procurementController.createPO);
+router.post('/requests/:id/void-correct', inDept, privilegeGuard('procurement', 'canEdit'), validateStringParam('id'), validateVoidAndCorrect, procurementController.voidAndCorrectPO);
 
 /* po-form.html create/edit modes call these two directly — same as
    /requests above but named to match the frontend's
    createPurchaseOrder()/updatePurchaseOrder() calls one-to-one. */
 router.get('/purchase-orders', procurementController.listPOs);
 router.post('/purchase-orders', inDept, privilegeGuard('procurement', 'canCreate'), validateCreatePR, procurementController.createPR);
-router.put('/purchase-orders/:id', inDept, privilegeGuard('procurement', 'canEdit'), validateObjectIdParam('id'), validateUpdatePR, procurementController.updatePR);
+router.put('/purchase-orders/:id', inDept, privilegeGuard('procurement', 'canEdit'), validateStringParam('id'), validateUpdatePR, procurementController.updatePR);
 
 router.get('/item-catalog', procurementController.getItemCatalog);
 

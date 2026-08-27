@@ -62,6 +62,7 @@ exports.getPR = async (req, res, next) => {
     if (mongoose.Types.ObjectId.isValid(id)) {
       pr = await PurchaseRequest.findById(id);
     }
+    if (!pr) pr = await PurchaseRequest.findOne({ id });
     if (!pr) pr = await PurchaseRequest.findOne({ prNo: id }).orFail().catch(() => null);
     if (!pr) pr = await PurchaseRequest.findOne({ poNo: id }).orFail().catch(() => null);
     if (!pr) return next(new ApiError(404, 'Purchase request not found'));
@@ -136,7 +137,7 @@ exports.createPR = async (req, res, next) => {
  */
 exports.updatePR = async (req, res, next) => {
   try {
-    const pr = await PurchaseRequest.findById(req.params.id);
+    const pr = await PurchaseRequest.findOne({ id: req.params.id });
     if (!pr) return next(new ApiError(404, 'Purchase request not found'));
 
     const body = req.body;
@@ -167,7 +168,7 @@ exports.updatePR = async (req, res, next) => {
  */
 exports.approvePR = async (req, res, next) => {
   try {
-    const pr = await PurchaseRequest.findById(req.params.id);
+    const pr = await PurchaseRequest.findOne({ id: req.params.id });
     if (!pr) return next(new ApiError(404, 'Purchase request not found'));
     assertCanActOnStage(req, pr.approvalStage);
 
@@ -203,7 +204,7 @@ exports.approvePR = async (req, res, next) => {
 
 exports.rejectPR = async (req, res, next) => {
   try {
-    const pr = await PurchaseRequest.findById(req.params.id);
+    const pr = await PurchaseRequest.findOne({ id: req.params.id });
     if (!pr) return next(new ApiError(404, 'Purchase request not found'));
     assertCanActOnStage(req, pr.approvalStage);
 
@@ -222,7 +223,7 @@ exports.rejectPR = async (req, res, next) => {
  */
 exports.createPO = async (req, res, next) => {
   try {
-    const pr = await PurchaseRequest.findById(req.params.id);
+    const pr = await PurchaseRequest.findOne({ id: req.params.id });
     if (!pr) return next(new ApiError(404, 'Purchase request not found'));
     if (pr.approvalStage !== 'approved') {
       return next(new ApiError(400, 'PR must be fully approved before creating a PO'));
@@ -253,7 +254,7 @@ exports.createPO = async (req, res, next) => {
  */
 exports.voidAndCorrectPO = async (req, res, next) => {
   try {
-    const pr = await PurchaseRequest.findById(req.params.id);
+    const pr = await PurchaseRequest.findOne({ id: req.params.id });
     if (!pr) return next(new ApiError(404, 'Purchase request not found'));
     if (pr.approvalStage !== 'fulfilled') {
       return next(new ApiError(400, 'Only fulfilled POs can be voided and corrected'));
