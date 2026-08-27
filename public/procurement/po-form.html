@@ -265,7 +265,6 @@ const EDIT_ID = new URLSearchParams(location.search).get('id');
 const EDIT_MODE = !!EDIT_ID;
 let editingPR = null; // populated in init() when EDIT_MODE
 
-const session = ProcurementService.resolveSession();
 
 const shell = ProcurementShell.attach({
   sidebarTarget: '#sidebarSlot',
@@ -575,8 +574,8 @@ async function resetForm(){
   document.getElementById('fDept').value = '';
   document.getElementById('fPriority').value = 'Normal';
   await loadSupplierOptions('');
-  document.getElementById('fRequestedBy').value = (shell.getUser && shell.getUser().name) || session.name;
-  document.getElementById('fNotes').value = '';
+const user = shell.getUser();
+document.getElementById('fRequestedBy').value = (user && user.name) || 'Procurement Officer';  document.getElementById('fNotes').value = '';
   document.getElementById('entryName').value = '';
   document.getElementById('entryQty').value = 1;
   document.getElementById('entryPrice').value = '';
@@ -612,8 +611,7 @@ async function handleSubmit(){
   createBtn.disabled = true;
 
   try {
-    const activeSession = ProcurementService.resolveSession();
-
+const activeSession = shell.getUser() || ProcurementService.resolveSession();
     if (EDIT_MODE){
       const pr = await ProcurementService.updatePurchaseOrder(EDIT_ID, basePayload, activeSession);
       showToast(`${pr.poNo || pr.prNo} updated.`, 'success');

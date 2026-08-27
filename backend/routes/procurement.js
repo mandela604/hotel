@@ -26,6 +26,7 @@ router.post('/requests/:id/approve', inDept, privilegeGuard('procurement', 'canA
 router.post('/requests/:id/reject', inDept, privilegeGuard('procurement', 'canReject'), validateStringParam('id'), validateReject, procurementController.rejectPR);
 router.post('/requests/:id/create-po', inDept, privilegeGuard('procurement', 'canCreate'), validateStringParam('id'), validateCreatePO, procurementController.createPO);
 router.post('/requests/:id/void-correct', inDept, privilegeGuard('procurement', 'canEdit'), validateStringParam('id'), validateVoidAndCorrect, procurementController.voidAndCorrectPO);
+router.delete('/requests/:id', inDept, privilegeGuard('procurement', 'canCreate'), validateStringParam('id'), procurementController.deletePR);
 
 /* po-form.html create/edit modes call these two directly — same as
    /requests above but named to match the frontend's

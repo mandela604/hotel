@@ -456,6 +456,13 @@
 
   // ─── Purchase Order create/edit (used by po-form.html) ─────────
 
+  function deletePR(id, session) {
+    requirePermission('canCreate', session);
+    return apiFetch('/requests/' + encodeURIComponent(id), {
+      method: 'DELETE',
+    });
+  }
+
   function createPurchaseOrder(payload, session) {
     var totalAmount = computeItemsTotal(payload.items);
     return createPR(
@@ -529,6 +536,7 @@
     createPO: createPO,
     createPurchaseOrder: createPurchaseOrder,
     updatePurchaseOrder: updatePurchaseOrder,
+    deletePR: deletePR,
     getItemCatalog: getItemCatalog,
     getSuppliers: getSuppliers,
     getSupplierById: getSupplierById,

@@ -580,3 +580,19 @@ exports.approvalPipelineCounts = async (req, res, next) => {
     res.json({ success: true, data: counts });
   } catch (err) { next(err); }
 };
+
+exports.deletePR = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const pr = await PurchaseRequest.findOne({ id });
+    if (!pr) return next(new ApiError(404, 'Purchase order not found'));
+
+    const deletable = ['pending', 'accountant', 'gm', 'md'].includes(pr.approvalStage);
+    if (!deletable) {
+      return next(new ApiError(400, 'Only pending or in-review purchase orders can be deleted.'));
+    }
+
+    await PurchaseRequest.deleteOne({ id });
+    res.json({ success: true, data: { id } });
+  } catch (err) { next(err); }
+};
