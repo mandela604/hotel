@@ -15,18 +15,20 @@ exports.overview = asyncHandler(async (req, res) => {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   const [
-    roomsByStatus,
+    bookingStatusCounts,
     totalRooms,
     todayBookings,
     restaurantSales,
     poolbarSales,
-    totalRevenue,
     pendingProcurement,
     lowStock,
     staffOnDuty,
     recentActivity,
   ] = await Promise.all([
-    Room.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    // Count rooms by status from Booking (not Room)
+    Booking.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]),
     Room.countDocuments(),
     Booking.countDocuments({ createdAt: { $gte: today.getTime() } }),
     Sale.aggregate([
@@ -37,38 +39,48 @@ exports.overview = asyncHandler(async (req, res) => {
       { $match: { source: 'Poolbar', status: 'completed', createdAt: { $gte: today } } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]),
-    LedgerEntry.aggregate([
-      { $match: { type: 'income', date: { $gte: today } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
-    PurchaseRequest.countDocuments({ status: { $in: ['pending', 'accountant', 'gm', 'Pending'] } }),
+    PurchaseRequest.countDocuments({ status: { $in: ['pending', 'accountant', 'gm'] } }),
     KitchenStock.countDocuments({ $expr: { $lte: ['$qty', '$min'] } }),
     Staff.countDocuments({ status: 'on_duty' }),
     Activity.find().sort({ createdAt: -1 }).limit(10),
   ]);
 
+  // Map booking statuses to readable counts
   const statusMap = {};
-  for (const entry of roomsByStatus) {
+  for (const entry of bookingStatusCounts) {
     statusMap[entry._id] = entry.count;
   }
+
+  // Room revenue: sum of paid from checkedin & checkout bookings (completed stays)
+  const roomRevenueAgg = await Booking.aggregate([
+    { $match: { status: { $in: ['checkedin', 'checkout'] } } },
+    { $project: { paid: 1 } },
+    { $group: { _id: null, total: { $sum: '$paid' } } }
+  ]);
+  const roomRevenueToday = roomRevenueAgg[0]?.total || 0;
+
+  // Restaurant & poolbar revenue (from Sales collection)
+  const restaurantRevenueToday = restaurantSales[0]?.total || 0;
+  const poolbarRevenueToday = poolbarSales[0]?.total || 0;
+  const totalRevenueToday = roomRevenueToday + restaurantRevenueToday + poolbarRevenueToday;
 
   res.json({
     success: true,
     data: {
       rooms: {
-        vacant: statusMap.vacant || statusMap.available || 0,
-        available: statusMap.vacant || statusMap.available || 0,
-        occupied: statusMap.occupied || statusMap.checkedin || 0,
-        checkedin: statusMap.checkedin || statusMap.occupied || 0,
+        vacant: statusMap.vacant || 0,
+        available: statusMap.vacant || 0,
+        occupied: statusMap.checkedin || 0,
+        checkedin: statusMap.checkedin || 0,
         maintenance: statusMap.maintenance || 0,
         reserved: statusMap.reserved || 0,
         cleaning: statusMap.cleaning || 0,
         total: totalRooms,
       },
       todayBookings,
-      restaurantSalesToday: restaurantSales[0]?.total || 0,
-      poolbarSalesToday: poolbarSales[0]?.total || 0,
-      totalRevenueToday: totalRevenue[0]?.total || 0,
+      restaurantSalesToday: restaurantRevenueToday,
+      poolbarSalesToday: poolbarRevenueToday,
+      totalRevenueToday,
       pendingProcurement,
       lowStock,
       staffOnDuty,

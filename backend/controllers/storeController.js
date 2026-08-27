@@ -3,6 +3,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const StoreStock = require('../models/StoreStock');
 const Requisition = require('../models/Requisition');
 const Counter = require('../models/Counter');
+const Category = require('../models/Category');
 
 const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
 
@@ -122,21 +123,26 @@ exports.deleteStock = asyncHandler(async (req, res) => {
    item actually uses it (rename/delete just re-point every stock row). */
 
 exports.listCategories = asyncHandler(async (req, res) => {
-  const cats = await StoreStock.distinct('cat');
-  res.json({ success: true, data: cats.filter(Boolean).sort((a, b) => a.localeCompare(b)) });
+  const derived = await StoreStock.distinct('cat');
+  const saved = await Category.find({ module: 'store' }).lean();
+  const set = new Set(derived.filter(Boolean));
+  saved.forEach(c => set.add(c.name));
+  res.json({ success: true, data: Array.from(set).sort((a, b) => a.localeCompare(b)) });
 });
 
 exports.addCategory = asyncHandler(async (req, res) => {
-  // No-op beyond validation: a category only really "exists" once a
-  // stock item is tagged with it (see listCategories). Returned so the
-  // frontend can optimistically show it in a picker before that happens.
-  res.status(201).json({ success: true, data: { name: req.body.name.trim() } });
+  const name = req.body.name.trim();
+  const existing = await Category.findOne({ module: 'store', name });
+  if (existing) throw new ApiError(409, `Category "${name}" already exists.`);
+  await Category.create({ module: 'store', name });
+  res.status(201).json({ success: true, data: { name } });
 });
 
 exports.renameCategory = asyncHandler(async (req, res) => {
   const oldName = req.params.name;
   const newName = req.body.name.trim();
   const result = await StoreStock.updateMany({ cat: oldName }, { $set: { cat: newName } });
+  await Category.updateMany({ module: 'store', name: oldName }, { $set: { name: newName } });
   res.json({ success: true, data: { name: newName, stockUpdated: result.modifiedCount || result.nModified || 0 } });
 });
 
@@ -145,6 +151,7 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
   const reassignTo = (req.body && req.body.reassignTo) || 'Other';
   if (name === reassignTo) throw new ApiError(400, `Cannot delete "${name}" — it is the fallback category.`);
   const result = await StoreStock.updateMany({ cat: name }, { $set: { cat: reassignTo } });
+  await Category.deleteMany({ module: 'store', name });
   res.json({ success: true, data: { reassignedTo: reassignTo, stockUpdated: result.modifiedCount || result.nModified || 0 } });
 });
 
