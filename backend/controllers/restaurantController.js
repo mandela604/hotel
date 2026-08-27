@@ -8,6 +8,7 @@ const Transfer = require('../models/Transfer');
 const Requisition = require('../models/Requisition');
 const Guest = require('../models/Guest');
 const Activity = require('../models/Activity');
+const Category = require('../models/Category');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const DEPT = 'restaurant';
