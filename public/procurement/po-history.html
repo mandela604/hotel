@@ -647,6 +647,16 @@ function rowHtml(p){
       </tr>`;
 }
 
+function showToast(msg, type){
+  var t = document.getElementById('toastHost');
+  if (!t){ t = document.createElement('div'); t.id='toastHost'; t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;'; document.body.appendChild(t); }
+  var el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'padding:11px 16px;border-radius:10px;color:#fff;font-size:13px;font-weight:600;box-shadow:0 6px 22px rgba(0,0,0,.25);background:' + (type==='error' ? '#f04438' : '#12b76a') + ';';
+  t.appendChild(el);
+  setTimeout(function(){ el.remove(); }, 3200);
+}
+
 async function deletePO(id){
   if (!ProcurementModals || !ProcurementModals.confirm) return;
   const ok = await ProcurementModals.confirm(
