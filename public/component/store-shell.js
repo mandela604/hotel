@@ -14,8 +14,6 @@
   const NAV = [
     { key: 'dashboard',    label: 'Dashboard',          href: 'store-dashboard.html',       icon: 'fa-solid fa-gauge-high' },
     { key: 'stock',        label: 'Stock',              href: 'stock.html',                 icon: 'fa-solid fa-box' },
-    { key: 'approval',     label: 'Approve Issue',      href: 'store-approval.html',        icon: 'fa-solid fa-check-double', badgeKey: 'pending' },
-    { key: 'newrequest',   label: 'New Request',        href: 'store-new-request.html',     icon: 'fa-solid fa-plus-circle' },
     { key: 'requisitions', label: 'All Requisitions',   href: 'all-requisitions.html',      icon: 'fa-solid fa-clipboard-list' },
   ];
 
