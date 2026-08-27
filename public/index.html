@@ -348,21 +348,12 @@ async function init(){
   renderActivity(activity);
 }
 
-/* ── Boot: login check, init DataStore, then render ── */
+/* ── Boot: init DataStore, then render ──
+   The root route (/ ) always serves login.html, so reaching this
+   dashboard page only happens after a successful login. No extra
+   client-side session redirect here — same simple pattern as the rest
+   of the suite. */
 (async function boot() {
-  // Redirect to login unless the server says we have a valid session.
-  // The auth token lives in an httpOnly cookie (sent automatically) —
-  // localStorage 'aurum_user' is only a display cache and is NOT trusted
-  // as proof of authentication.
-  try {
-    const res = await fetch('/api/auth/session', { credentials: 'include' });
-    if (!res.ok) { window.location.href = 'login.html'; return; }
-    const body = await res.json().catch(() => ({}));
-    const u = body.user || null;
-    if (!u) { window.location.href = 'login.html'; return; }
-    try { localStorage.setItem('aurum_user', JSON.stringify(u)); } catch (e) {}
-  } catch (e) { window.location.href = 'login.html'; return; }
-
   await DataStore.init();
   init();
 })();
