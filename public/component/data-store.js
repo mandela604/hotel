@@ -435,14 +435,26 @@
      ═══════════════════════════════════════════════════════════════════ */
   async function init(forceReseed) {
     // Demo seeding disabled — pages render real data (or empty defaults).
-    if (!forceReseed) return;
-
-    console.log('[DataStore] Seeding demo data (version:', STORAGE_VERSION, ')');
-    const seed = _buildSeedData();
-    for (const [key, value] of Object.entries(seed)) {
-      await set(key, value);
+    if (forceReseed) {
+      console.log('[DataStore] Seeding demo data (version:', STORAGE_VERSION, ')');
+      const seed = _buildSeedData();
+      for (const [key, value] of Object.entries(seed)) {
+        await set(key, value);
+      }
+      try { localStorage.setItem(VERSION_KEY, STORAGE_VERSION); } catch (e) {}
     }
-    try { localStorage.setItem(VERSION_KEY, STORAGE_VERSION); } catch (e) {}
+
+    // One-time wipe of legacy demo keys left by the old seeder, so any
+    // previously-seeded demo numbers disappear immediately.
+    try {
+      const cleanupKey = 'ds_demo_cleaned_v2';
+      if (localStorage.getItem(cleanupKey) !== '1') {
+        const demoKeys = Object.keys(_buildSeedData());
+        for (const k of demoKeys) { await del(k); }
+        await del(ACTIVITY_KEY);
+        localStorage.setItem(cleanupKey, '1');
+      }
+    } catch (e) { /* ignore */ }
   }
 
   /* ═══════════════════════════════════════════════════════════════════
