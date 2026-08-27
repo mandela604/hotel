@@ -446,7 +446,10 @@ async function init() {
   try {
     const data = await BookingData.getBookingData();
     allRooms = data.rooms;
-    bookings = data.bookings;
+    // Exclude the vacant "room keeper" booking records (created alongside
+    // every room). They are placeholders, not real bookings — the report
+    // should only show actual booked rooms with revenue.
+    bookings = (data.bookings || []).filter(b => b.status !== 'vacant');
     currentSession = shell.getUser();
     bookingModal.setSession(currentSession);
 
