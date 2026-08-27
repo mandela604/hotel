@@ -128,7 +128,51 @@
   function getCategories() {
     const cats = new Set();
     (state.stock || []).forEach(function (i) { if (i.category || i.cat) cats.add(i.category || i.cat); });
+    (state.extraCategories || []).forEach(function (c) { if (c) cats.add(c); });
     return [...cats].sort();
+  }
+
+  function listManagedCategories() {
+    const set = new Set([...(state.extraCategories || [])]);
+    (state.stock || []).forEach(function (i) { if (i.category) set.add(i.category); });
+    return [...set];
+  }
+
+  async function addCategory(name) {
+    const n = (name || '').trim();
+    if (!n) throw new Error('Category name is required.');
+    if (listManagedCategories().some(c => String(c).toLowerCase() === n.toLowerCase())) {
+      throw new Error(`Category "${n}" already exists.`);
+    }
+    const res = await post('/categories', { name: n });
+    const saved = (res && res.data && res.data.name) || n;
+    state.extraCategories.push(saved);
+    emitChange('category:add');
+    return saved;
+  }
+
+  async function renameCategory(oldName, newName) {
+    const n = (newName || '').trim();
+    if (!n) throw new Error('Category name is required.');
+    if (String(n).toLowerCase() !== String(oldName || '').toLowerCase() &&
+        listManagedCategories().some(c => String(c).toLowerCase() === n.toLowerCase())) {
+      throw new Error(`Category "${n}" already exists.`);
+    }
+    await put('/categories/' + encodeURIComponent(oldName), { name: n });
+    (state.stock || []).forEach(function (i) { if (i.category === oldName) i.category = n; });
+    const idx = state.extraCategories.indexOf(oldName);
+    if (idx > -1) state.extraCategories[idx] = n;
+    emitChange('category:rename');
+    return n;
+  }
+
+  async function deleteCategory(name, opts) {
+    opts = opts || {};
+    const reassignTo = opts.reassignTo || 'Uncategorized';
+    await del('/categories/' + encodeURIComponent(name));
+    (state.stock || []).forEach(function (i) { if (i.category === name) i.category = reassignTo; });
+    state.extraCategories = state.extraCategories.filter(function (c) { return c !== name; });
+    emitChange('category:delete');
   }
 
   function getTodaysCompletedSales() {
@@ -261,7 +305,7 @@
   /* ══════════════════════════════════════════════════════════════
      State + change listeners
   ══════════════════════════════════════════════════════════════ */
-  const state = { stock: [], sales: [], orders: [], pending: [], history: [], movements: [], menu: [], ready: false };
+  const state = { stock: [], sales: [], orders: [], pending: [], history: [], movements: [], menu: [], extraCategories: [], ready: false };
   const listeners = [];
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(function (fn) { try { fn(state, reason); } catch (e) { console.warn('[RestaurantService] listener error', e); } }); }
@@ -274,6 +318,10 @@
     state.sales = salesRes.data || [];
     state.orders = ordersRes.data || [];
     state.menu = menuRes.data || [];
+    try {
+      const catRes = await get('/categories');
+      state.extraCategories = (catRes && catRes.data) ? catRes.data : [];
+    } catch (e) { state.extraCategories = []; }
     const transfers = transfersRes.data || [];
     // 'sent' = awaiting review (pending); everything else (accepted/
     // rejected/cancelled) is history — same status vocabulary as
@@ -447,6 +495,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     fmtN, nowStamp, fmtStamp, parseStamp, dateOnly, todayDDMMYY,
     stockLevel, LEVEL_CHIP, LEVEL_LABEL, getLevelLabelsShort,
     getEmptyValuePlaceholder, getCurrencyConfig, getCategories,
+    addCategory, renameCategory, deleteCategory,
     findStock, addStockItem, editStockItem, deleteStockItem,
     listMenu, addMenuItem, updateMenuItem, patchMenuItem, deleteMenuItem,
     recordSale, voidSale,
