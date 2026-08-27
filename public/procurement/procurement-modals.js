@@ -41,9 +41,61 @@ const ProcurementModals = (function() {
 
   function confirm(message, title = 'Confirm') {
     return new Promise((resolve) => {
-      init();
-      
-      modalContainer.innerHTML = `
+    init();
+
+    // ── Approval pipeline ─────────────────────────────────────────
+    // Derives who approved each role from pr.history (each history row
+    // records `by` + the stage it moved TO), and shows the current
+    // approver (the user viewing) on the active stage.
+    const stageBy = {};
+    (pr.history || []).forEach(h => { if (h.stage) stageBy[h.stage] = h.by; });
+    const roles = [
+      { key:'accountant', label:'Accountant', icon:'fa-calculator', color:'var(--blue)' },
+      { key:'gm',         label:'Manager (GM)', icon:'fa-user-tie', color:'var(--green)' },
+      { key:'md',         label:'MD', icon:'fa-star', color:'var(--purple)' },
+    ];
+    const approvedSet = {};
+    Object.keys(stageBy).forEach(s => {
+      if (s==='accountant') approvedSet['accountant']=true;
+      if (s==='gm'||s==='sent_to_store') approvedSet['gm']=true;
+      if (s==='md'||s==='sent_to_store') approvedSet['md']=true;
+    });
+    const session = (typeof ProcurementService !== 'undefined' && ProcurementService.resolveSession)
+      ? ProcurementService.resolveSession() : {};
+    const currentRole = ((session.role || '').toLowerCase()==='md') ? 'md'
+      : ((session.role || '').toLowerCase()==='gm' || (session.role||'').toLowerCase()==='manager' || session.role==='manager') ? 'gm'
+      : ((session.role||'').toLowerCase()==='accountant') ? 'accountant' : '';
+    const activeStage = pr.approvalStage; // pending|accountant|gm|md|approved|sent_to_store|fulfilled|rejected|voided
+    const pipelineHtml = `
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px;">Approval Pipeline</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;">
+          ${roles.map(r => {
+            const done = !!approvedSet[r.key];
+            const isActive = activeStage === r.key;
+            const isNext = !done && !isActive && (
+              (r.key==='accountant' && activeStage==='pending') ||
+              (r.key==='gm' && activeStage==='accountant') ||
+              (r.key==='md' && activeStage==='gm' && pr.totalAmount > 100000) ||
+              (r.key==='gm' && activeStage==='accountant')
+            );
+            const highlit = done ? r.color : (isActive ? 'var(--amber)' : 'var(--text3)');
+            const who = done ? (stageBy[r.key] || 'Approved') : (isActive && currentRole===r.key ? ((session.name||'You') + ' — now') : (isNext ? 'Next' : 'Pending'));
+            return `
+              <div style="flex:1;min-width:120px;border:1px solid ${done?r.color:'var(--border)'};border-radius:12px;padding:10px 12px;text-align:center;">
+                <div style="font-size:18px;margin-bottom:4px;">
+                  ${done
+                    ? `<i class="fa-solid fa-circle-check" style="color:${r.color};"></i>`
+                    : (isActive ? '<i class="fa-solid fa-spinner fa-spin" style="color:var(--amber);"></i>' : `<i class="fa-solid ${r.icon}" style="color:${highlit};"></i>`)}
+                </div>
+                <div style="font-size:11px;font-weight:700;color:${highlit};">${r.label}</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:3px;">${who}</div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
+    modalContainer.innerHTML = `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);pointer-events:all;animation:modalIn .3s ease;">
           <div style="font-size:16px;font-weight:700;color:var(--gold);margin-bottom:12px;font-family:'Cormorant Garamond',serif;">${title}</div>
           <div style="color:var(--text);line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">${message}</div>
@@ -64,6 +116,30 @@ const ProcurementModals = (function() {
 
   function alert(message, title = '') {
     show(message, title);
+  }
+
+  // Custom styled input prompt (matching modal) — replaces browser prompt().
+  function askInput(message, title = 'Input', defaultValue = '') {
+    return new Promise((resolve) => {
+      init();
+      modalContainer.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);pointer-events:all;animation:modalIn .3s ease;">
+          <div style="font-size:16px;font-weight:700;color:var(--gold);margin-bottom:12px;font-family:'Cormorant Garamond',serif;">${title}</div>
+          <div style="color:var(--text);line-height:1.6;margin-bottom:14px;white-space:pre-wrap;">${message}</div>
+          <textarea id="modal-input" rows="2" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);font-size:13px;font-family:'Outfit',sans-serif;resize:vertical;">${defaultValue}</textarea>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+            <button id="modal-cancel" style="padding:8px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+            <button id="modal-ok" style="padding:8px 20px;background:var(--gold);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Continue</button>
+          </div>
+        </div>
+      `;
+      overlay.style.display = 'flex';
+      modalContainer.style.display = 'flex';
+      const input = document.getElementById('modal-input');
+      input.focus();
+      document.getElementById('modal-cancel').onclick = () => { close(); resolve(null); };
+      document.getElementById('modal-ok').onclick = () => { resolve(input.value); close(); };
+    });
   }
 
   function close() {
@@ -136,6 +212,8 @@ const ProcurementModals = (function() {
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Needs MD Approval</div><div style="font-size:13px;color:${pr.needsMDApproval ? 'var(--purple)' : 'var(--text)'};">${pr.needsMDApproval ? 'Yes (>₦100k)' : 'No'}</div></div>
         </div>
 
+        ${pipelineHtml}
+
         ${awaitingStoreNote}
         ${voidLinkNote}
         ${pr.notes ? `<div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--text2);font-style:italic;">"${pr.notes}"</div>` : ''}
@@ -160,7 +238,7 @@ const ProcurementModals = (function() {
   }
 
   async function approvePR(id) {
-    const note = prompt('Add approval note (optional):');
+    const note = await askInput('Write an approval note (optional):', 'Approve Purchase Request');
     if (note === null) return; // Cancelled
     
     try {
@@ -173,7 +251,7 @@ const ProcurementModals = (function() {
   }
 
   async function rejectPR(id) {
-    const note = prompt('Add rejection reason:');
+    const note = await askInput('Reason for rejection:', 'Reject Purchase Request');
     if (note === null) return; // Cancelled
     if (!note.trim()) {
       ProcurementModals.alert('Please provide a rejection reason.', 'Error');
@@ -190,14 +268,14 @@ const ProcurementModals = (function() {
   }
 
   async function createPO(id) {
-    const poNo = prompt('Enter PO Number:');
+    const poNo = await askInput('Enter PO Number:', 'Create Purchase Order');
     if (poNo === null) return; // Cancelled
     if (!poNo.trim()) {
       ProcurementModals.alert('Please enter a PO number.', 'Error');
       return;
     }
     
-    const supplier = prompt('Enter Supplier Name:');
+    const supplier = await askInput('Enter Supplier Name:', 'Create Purchase Order');
     if (supplier === null) return;
     if (!supplier.trim()) {
       ProcurementModals.alert('Please enter a supplier name.', 'Error');
