@@ -6,6 +6,13 @@ const v = require('../middleware/restaurantValidators');
 
 const inDept   = departmentGuard('Restaurant');
 const isAdmin  = roleGuard('admin');
+const { validateAddCategory, validateRenameCategory } = require('../middleware/storeValidators');
+
+/* Categories (persisted in the shared Category collection) */
+router.get('/categories', inDept, restaurantController.listCategories);
+router.post('/categories', inDept, privilegeGuard('restaurant', 'canCreate'), validateAddCategory, restaurantController.addCategory);
+router.put('/categories/:name', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateParam('name'), validateRenameCategory, restaurantController.renameCategory);
+router.delete('/categories/:name', isAdmin, v.validateParam('name'), restaurantController.deleteCategory);
 
 /* Menu */
 router.get('/menu', restaurantController.listMenu);

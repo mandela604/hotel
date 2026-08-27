@@ -10,6 +10,7 @@ const Guest = require('../models/Guest');
 const Activity = require('../models/Activity');
 const Category = require('../models/Category');
 const asyncHandler = require('../middleware/asyncHandler');
+const { ApiError } = require('../middleware/errorHandler');
 
 const DEPT = 'restaurant';
 const DESTINATION = 'Main Restaurant / POS';
@@ -551,4 +552,39 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
 
   await logActivity('red', `Tab ${order.id} cancelled`, 'restaurant-orders.html');
   res.json({ success: true, data: order });
+});
+
+/* ── Categories (persisted in the shared Category collection) ── */
+
+exports.listCategories = asyncHandler(async (req, res) => {
+  const derived = await RestaurantStock.distinct('category');
+  const saved = await Category.find({ module: 'restaurant' }).lean();
+  const set = new Set(derived.filter(Boolean));
+  saved.forEach(c => set.add(c.name));
+  res.json({ success: true, data: Array.from(set).sort((a, b) => a.localeCompare(b)) });
+});
+
+exports.addCategory = asyncHandler(async (req, res) => {
+  const name = req.body.name.trim();
+  const existing = await Category.findOne({ module: 'restaurant', name });
+  if (existing) throw new ApiError(409, `Category "${name}" already exists.`);
+  await Category.create({ module: 'restaurant', name });
+  res.status(201).json({ success: true, data: { name } });
+});
+
+exports.renameCategory = asyncHandler(async (req, res) => {
+  const oldName = req.params.name;
+  const newName = req.body.name.trim();
+  await RestaurantStock.updateMany({ category: oldName }, { $set: { category: newName } });
+  await Category.updateMany({ module: 'restaurant', name: oldName }, { $set: { name: newName } });
+  res.json({ success: true, data: { name: newName } });
+});
+
+exports.deleteCategory = asyncHandler(async (req, res) => {
+  const name = req.params.name;
+  const reassignTo = (req.body && req.body.reassignTo) || 'Uncategorized';
+  if (name === reassignTo) throw new ApiError(400, `Cannot delete "${name}" — it is the fallback category.`);
+  await RestaurantStock.updateMany({ category: name }, { $set: { category: reassignTo } });
+  await Category.deleteMany({ module: 'restaurant', name });
+  res.json({ success: true, data: { reassignedTo: reassignTo } });
 });
