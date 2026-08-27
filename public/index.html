@@ -216,7 +216,7 @@ function fmtNShort(n){ n = Math.round(n||0); if (n>=1000000) return '₦'+(n/100
 ═══════════════════════════════════════ */
 function renderKPIs(roomRev, restRev, poolRev, rooms, procPending, lowStock){
   const r = rooms || { total:0, occupied:0, vacant:0, dirty:0, maintenance:0 };
-  const occPct = Math.round(r.occupied / r.total * 100);
+  const occPct = r.total > 0 ? Math.round(r.occupied / r.total * 100) : 0;
 
   document.getElementById('kpiGrid').innerHTML = `
     <a class="kpi-card acc-blue" href="accounting/accounting-dashboard.html">

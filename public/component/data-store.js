@@ -447,7 +447,7 @@
     // One-time wipe of legacy demo keys left by the old seeder, so any
     // previously-seeded demo numbers disappear immediately.
     try {
-      const cleanupKey = 'ds_demo_cleaned_v2';
+      const cleanupKey = 'ds_demo_cleaned_v3';
       if (localStorage.getItem(cleanupKey) !== '1') {
         const demoKeys = Object.keys(_buildSeedData());
         for (const k of demoKeys) { await del(k); }
