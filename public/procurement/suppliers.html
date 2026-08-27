@@ -371,6 +371,17 @@ function fmtN(n){ return ProcurementService.fmtN(n); }
 
 /* Suppliers without status set default to Active. */
 function supplierStatus(sp){ return sp.status || 'Active'; }
+function normalizeSuppliers(list){
+  return (list || []).map(function (s) {
+    return Object.assign({}, s, {
+      id: s.id || s._id,
+      _id: s._id || s.id,
+      cat: s.cat !== undefined ? s.cat : (s.category || 'General'),
+      contact: s.contact !== undefined ? s.contact : (s.contactPerson || '—'),
+      status: s.status || 'Active',
+    });
+  });
+}
 
 function renderPagination(btnId,labelId,page,total,size,cb){
   const totalPages=Math.max(1,Math.ceil(total/size));
@@ -556,7 +567,7 @@ async function saveSupplier(){
       await ProcurementService.createSupplier(entry, ProcurementService.resolveSession());
       showToast(`${name} added to supplier directory.`, 'success');
     }
-    allSuppliers = await ProcurementService.getSuppliers();
+    allSuppliers = normalizeSuppliers(await ProcurementService.getSuppliers());
     closeSupplierModal();
     spPage = 1;
     renderSuppliers();
@@ -679,14 +690,7 @@ async function init(){
       ProcurementService.getSuppliers(),
       ProcurementService.getPRs(),
     ]);
-    allSuppliers = (allSuppliers || []).map(function (s) {
-      return Object.assign({}, s, {
-        id: s.id || s._id,
-        _id: s._id || s.id,
-        cat: s.cat !== undefined ? s.cat : (s.category || 'General'),
-        contact: s.contact !== undefined ? s.contact : (s.contactPerson || '—'),
-      });
-    });
+    allSuppliers = normalizeSuppliers(allSuppliers);
     populateCategorySelects();
     renderKpis();
     renderSuppliers();
