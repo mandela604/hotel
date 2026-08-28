@@ -349,6 +349,9 @@ exports.rejectTransfer = asyncHandler(async (req, res) => {
   res.json({ success: true, data: transfer });
 });
 
+const Counter = require('../models/Counter');
+const sanitizeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /* ═══════════════════════════════════════════════
    Requisitions — Restaurant raising a request to Store.
    Restaurant only submits + watches status; fulfillment
@@ -362,26 +365,87 @@ exports.listRestaurantRequisitions = asyncHandler(async (req, res) => {
 exports.submitRequisition = asyncHandler(async (req, res) => {
   const { items, requester, neededBy, priority, remark } = req.body;
 
-  const count = await Requisition.countDocuments();
-  const requisitionNo = `REQ-${String(count + 1).padStart(5, '0')}`;
+  const counter = await Counter.findOneAndUpdate(
+    { key: 'req:RREQ' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+  const requisitionNo = `RREQ-${new Date().getFullYear()}-${String(counter.seq).padStart(5, '0')}`;
+  const now = new Date();
+  const dateRaisedDisplay = todayDDMMYY();
 
   const requisition = await Requisition.create({
     id: uuidv4(),
     requisitionNo,
     mode: 'store_issue',
-    requester,
+    requester: requester || 'Restaurant Staff',
     dept: 'Restaurant',
     neededBy: neededBy || '',
     priority: priority || 'Normal',
     remark: remark || '',
-    items: items.map((i) => ({ name: i.name, unit: i.unit || 'Pieces', qty: Number(i.qty) })),
+    items: (items || []).map((i) => ({
+      name: i.name,
+      stockId: i.stockId || '',
+      unit: i.unit || 'Pieces',
+      qty: Number(i.qty) || 0,
+      issuedQty: 0,
+      cost: Number(i.cost) || 0,
+      remark: i.remark || '',
+    })),
     status: 'Pending',
-    dateRaised: new Date(),
-    dateRaisedDisplay: todayDDMMYY(),
+    dateRaised: now,
+    dateRaisedDisplay,
   });
 
   await logActivity('blue', `Requisition ${requisitionNo} sent to Store`, 'restaurant-transfer-history.html');
   res.status(201).json({ success: true, data: requisition });
+});
+
+exports.receiveRequisition = asyncHandler(async (req, res) => {
+  const reqDoc = await Requisition.findOne({ $or: [{ id: req.params.id }, { requisitionNo: req.params.id }] });
+  if (!reqDoc) return res.status(404).json({ success: false, error: 'Requisition not found' });
+
+  /* credit issued items to stock + log movements */
+  for (const it of (reqDoc.items || [])) {
+    const addQty = Number(it.issuedQty > 0 ? it.issuedQty : (it.issuedQty !== 0 ? it.qty : 0)) || 0;
+    if (addQty <= 0) continue;
+
+    let stockItem = null;
+    if (it.stockId) {
+      stockItem = await RestaurantStock.findOne({ id: it.stockId }).catch(() => null);
+    }
+    if (!stockItem) {
+      stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+    }
+
+    if (stockItem) {
+      stockItem.qty += addQty;
+      await stockItem.save();
+    } else {
+      stockItem = await RestaurantStock.create({
+        name: it.name.trim(),
+        category: 'General',
+        unit: it.unit || 'portion',
+        qty: addQty,
+        min: 10,
+        price: Number(it.cost) || 0,
+      });
+    }
+
+    await RestaurantMovement.create({
+      date: nowStamp(),
+      item: stockItem.name,
+      qtyIn: addQty,
+      qtyOut: 0,
+      balance: stockItem.qty,
+      reason: `Requisition Received (${reqDoc.requisitionNo})`,
+    });
+  }
+
+  reqDoc.status = 'Completed';
+  await reqDoc.save();
+
+  res.json({ success: true, data: reqDoc });
 });
 
 /* ═══════════════════════════════════════════════

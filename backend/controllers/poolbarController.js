@@ -525,16 +525,23 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
 
   /* credit issued items to stock + log movements */
   for (const it of (reqDoc.items || [])) {
-    const addQty = Number(it.issuedQty || it.qty) || 0;
+    const addQty = Number(it.issuedQty > 0 ? it.issuedQty : (it.issuedQty !== 0 ? it.qty : 0)) || 0;
     if (addQty <= 0) continue;
 
-    let stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+    let stockItem = null;
+    if (it.stockId) {
+      stockItem = await PoolbarStock.findOne({ id: it.stockId });
+    }
+    if (!stockItem) {
+      stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+    }
+
     if (stockItem) {
       stockItem.qty += addQty;
       await stockItem.save();
     } else {
       stockItem = await PoolbarStock.create({
-        id: uuidv4(),
+        id: it.stockId || uuidv4(),
         name: it.name.trim(),
         category: 'Beverages',
         unit: it.unit || 'bottle',

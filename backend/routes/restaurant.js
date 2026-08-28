@@ -48,5 +48,6 @@ router.post('/transfers/:id/reject', inDept, privilegeGuard('restaurant', 'canRe
 /* Requisitions (Restaurant -> Store) */
 router.get('/requisitions', restaurantController.listRestaurantRequisitions);
 router.post('/requisitions', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateSubmitRequisition, restaurantController.submitRequisition);
+router.post('/requisitions/:id/receive', inDept, privilegeGuard('restaurant', 'canCreate'), restaurantController.receiveRequisition);
 
 module.exports = router;

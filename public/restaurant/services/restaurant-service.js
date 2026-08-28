@@ -459,10 +459,27 @@
     const res = await get('/requisitions');
     return res.data || [];
   }
+  function getRequisition(no) {
+    if (!no) return null;
+    return (state.history || []).concat(state.pending || []).find(function (r) { return r.no === no || r.requisitionNo === no || r.id === no; }) || null;
+  }
   async function submitRequisition(payload) {
     const res = await post('/requisitions', payload);
     emitChange('requisition:submit');
     return res.data;
+  }
+  async function receiveRequisition(req) {
+    if (!req) throw new Error('Invalid requisition — nothing to receive.');
+    const id = (typeof req === 'string' ? req : (req.no || req.requisitionNo || req.id || req._id));
+    if (!id) throw new Error('Requisition has no id/number.');
+
+    const res = await post('/requisitions/' + encodeURIComponent(id) + '/receive');
+    await loadAll().catch(function () {});
+    emitChange('requisition:received');
+    return res.data || res;
+  }
+  async function confirmReceipt(no) {
+    return receiveRequisition(no);
   }
 
   /* ══════════════════════════════════════════════════════════════

@@ -136,6 +136,10 @@
   .form-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:#9aa1b3; font-weight:700; }
   .form-input, .form-select{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:10px; padding:9px 12px; color:#1c2440; font-family:inherit; font-size:13px; outline:none; width:100%; }
   .form-input:focus, .form-select:focus{ border-color:rgba(47,111,237,0.25); }
+  .pw-wrap{ position:relative; }
+  .pw-wrap .form-input{ padding-right:38px; }
+  .pw-toggle{ position:absolute; top:50%; right:10px; transform:translateY(-50%); border:none; background:none; color:#9aa1b3; cursor:pointer; font-size:13px; padding:2px; }
+  .pw-toggle:hover{ color:#2f6fed; }
   .form-hint{ font-size:10px; color:#9aa1b3; margin-top:2px; }
   .modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid #eef0f6; flex-wrap:wrap; }
   .field-error{ font-size:10.5px; color:#f04438; display:none; }
@@ -290,7 +294,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Privilege</label>
-        <select class="form-select" id="fsPrivilege"></select>
+        <select class="form-select" id="fsPrivilege" onchange="onPrivilegeChange()"></select>
         <span class="form-hint" id="fsPrivilegeHint">Only applies to staff-level accounts</span>
       </div>
       <div class="form-group">
@@ -310,12 +314,18 @@
     <div class="form-row" id="fsPasswordRow">
       <div class="form-group">
         <label class="form-label" id="fsPwLabel">Password</label>
-        <input class="form-input" type="password" id="fsPassword" placeholder="Min. 6 characters" autocomplete="new-password">
+        <div class="pw-wrap">
+          <input class="form-input" type="password" id="fsPassword" placeholder="Min. 6 characters" autocomplete="new-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('fsPassword', this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
         <span class="field-error" id="fsPasswordErr">Password must be at least 6 characters.</span>
       </div>
       <div class="form-group">
         <label class="form-label">Confirm Password</label>
-        <input class="form-input" type="password" id="fsPasswordConfirm" placeholder="Re-enter password" autocomplete="new-password">
+        <div class="pw-wrap">
+          <input class="form-input" type="password" id="fsPasswordConfirm" placeholder="Re-enter password" autocomplete="new-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('fsPasswordConfirm', this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
         <span class="field-error" id="fsPasswordConfirmErr">Passwords don't match.</span>
       </div>
     </div>
@@ -464,6 +474,32 @@ function onFormRoleChange(){
     : `${labelize(role)} accounts use the base role permissions, not a privilege`;
 }
 window.onFormRoleChange = onFormRoleChange;
+
+/* ── Privilege → Department auto-select ── */
+const PRIVILEGE_DEPT = {
+  front_desk: 'booking',
+  accountant: 'accounting',
+  procurement_manager: 'procurement',
+  store_keeper: 'store',
+  chef: 'kitchen',
+  gym_attendant: 'gym',
+  pool_bar_staff: 'poolbar',
+  restaurant_staff: 'restaurant',
+};
+function onPrivilegeChange(){
+  const p = document.getElementById('fsPrivilege').value;
+  if (p && PRIVILEGE_DEPT[p]) document.getElementById('fsDept').value = PRIVILEGE_DEPT[p];
+}
+window.onPrivilegeChange = onPrivilegeChange;
+
+/* ── Password visibility toggle ── */
+function togglePw(inputId, btn){
+  const inp = document.getElementById(inputId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+}
+window.togglePw = togglePw;
 
 function renderKpis(){
   const kpis = StaffService.dashboardKPIs();

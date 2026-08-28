@@ -538,24 +538,21 @@
    */
   async function receiveRequisition(req) {
     if (!req) throw new Error('Invalid requisition — nothing to receive.');
-    const id = req.id || req._id;
-    if (!id) throw new Error('Requisition has no id.');
+    const id = (typeof req === 'string' ? req : (req.no || req.requisitionNo || req.id || req._id));
+    if (!id) throw new Error('Requisition has no id/number.');
 
-    const res = await apiPost('/requisitions/' + id + '/receive');
-    const idx = state.requisitions.findIndex(r => (r.id || r._id) === id);
-    if (idx > -1) state.requisitions[idx] = res.data; else state.requisitions.unshift(res.data);
+    const res = await apiPost('/requisitions/' + encodeURIComponent(id) + '/receive');
+    const norm = normalizeRequisition(res.data || res);
+    const idx = state.requisitions.findIndex(r => r.no === id || r.requisitionNo === id || r.id === id);
+    if (idx > -1) state.requisitions[idx] = norm; else state.requisitions.unshift(norm);
 
-    // Stock was credited server-side — refresh the affected items
-    // locally so the UI reflects it without a full reload.
-    (res.data.items || []).forEach(function (it) {
-      const addQty = Number(it.issuedQty || it.qty) || 0;
-      if (addQty <= 0) return;
-      const stockItem = findStock(it.name);
-      if (stockItem) stockItem.qty += addQty;
-    });
-
+    await loadAll().catch(function () {});
     emitChange('requisition:received');
-    return res.data;
+    return norm;
+  }
+
+  async function confirmReceipt(no) {
+    return receiveRequisition(no);
   }
 
   function cartTotals(cart, discountPct) {
@@ -992,5 +989,6 @@
     getLowStockItems,
     getRequisition,
     normalizeRequisition,
+    confirmReceipt,
   };
 })(window);

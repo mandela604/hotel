@@ -56,16 +56,6 @@
           canApprove: true, canReject: true,
         },
       },
-      sales_rep: {
-        restaurant: {
-          canView: true, canCreate: true, canEdit: false, canDelete: false,
-          canVoid: false, canReject: true, canGiveDiscount: false,
-        },
-        poolbar: {
-          canView: true, canCreate: true, canEdit: false, canDelete: false,
-          canVoid: false, canGiveDiscount: false,
-        },
-      },
       store_keeper: {
         store: {
           canView: true, canCreate: true, canEdit: true, canDelete: false,
@@ -129,6 +119,10 @@
     options = options || {};
     // httpOnly cookie is sent automatically — no Authorization header needed.
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+
+    if (options.body !== undefined && options.body !== null && typeof options.body !== 'string') {
+      options.body = JSON.stringify(options.body);
+    }
 
     let res;
     try {

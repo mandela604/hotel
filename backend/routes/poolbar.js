@@ -55,7 +55,7 @@ router.post('/orders/:id/cancel', inDept, privilegeGuard('poolbar', 'canManageOr
 /* ── Requisitions (Pool Bar → Store) ─────────── */
 router.get('/requisitions',  ...inDeptCanView, ctrl.listRequisitions);
 router.post('/requisitions', inDept, privilegeGuard('poolbar', 'canCreate'), validateCreateRequisition, ctrl.createRequisition);
-router.post('/requisitions/:id/receive', inDept, privilegeGuard('poolbar', 'canCreate'), validateObjectIdParam('id'), ctrl.receiveRequisition);
+router.post('/requisitions/:id/receive', inDept, privilegeGuard('poolbar', 'canCreate'), ctrl.receiveRequisition);
 
 /* ── Movements ──────────────────────────────── */
 router.get('/movements', ...inDeptCanView, ctrl.listMovements);
