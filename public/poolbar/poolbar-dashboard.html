@@ -224,6 +224,26 @@ function getSession() {
   return u;
 }
 
+function waitForSession(maxMs) {
+  maxMs = maxMs || 800;
+  return new Promise(function (resolve) {
+    const started = Date.now();
+    const tick = function () {
+      const u = shell.getUser && shell.getUser();
+      if (u && u.role) {
+        resolve(u);
+        return;
+      }
+      if (Date.now() - started >= maxMs) {
+        resolve(shell.getUser && shell.getUser());
+        return;
+      }
+      setTimeout(tick, 40);
+    };
+    tick();
+  });
+}
+
 function renderKPIs() {
   const k = svc.dashboardKPIs();
 
@@ -403,7 +423,8 @@ async function init() {
     return;
   }
   try {
-    session = getSession();
+    session = await waitForSession(800);
+    if (!session) throw new Error('No session – redirecting to login');
     canViewReports = svc.can(session, 'canViewReports');
     canVoid = svc.canVoidSale(session);
 
