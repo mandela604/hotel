@@ -1046,117 +1046,48 @@ function bindHeaderSort() {
 }
 
 /* ── Detail — branches by kind ─────────────────────────── */
+let detailWidget = null;
 function openDetail(no) {
-  activeNo = no;
-  const t = getAllRecords().find((x) => x.no === no);
-  if (!t) return;
+  const row = getAllRows().find(function (r) { return r.no === no; });
+  const container = document.getElementById('detailContainer');
+  container.innerHTML = '';
+  if (detailWidget) { try { detailWidget.destroy(); } catch (e) {} detailWidget = null; }
 
-  if (isRequisition(t)) {
-    openRequisitionDetail(no);
-    return;
-  }
+  if (!row) return;
 
-  const src = displaySource(t);
-
-  const modalEl = document.querySelector('#detailModal .modal');
-  modalEl.classList.remove('status-pending', 'status-accepted', 'status-rejected');
-  modalEl.classList.add('status-' + t.status);
-
-  document.getElementById('dTitle').textContent = 'Transfer ' + t.no;
-  document.getElementById('dGrid').innerHTML = `
-    <div class="detail-item"><div class="detail-label">Source</div><div class="detail-value"><span class="chip ${src.cls}"><i class="fa-solid fa-circle"></i>${src.label}</span></div></div>
-    <div class="detail-item"><div class="detail-label">From</div><div class="detail-value">${t.from || '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">Restaurant</div><div class="detail-value">${t.restaurant || 'Main Restaurant'}</div></div>
-    <div class="detail-item"><div class="detail-label">Sent By</div><div class="detail-value">${t.sentBy || '—'}</div></div>
-    ${t.batchNo ? `<div class="detail-item"><div class="detail-label">Batch No.</div><div class="detail-value">${t.batchNo}</div></div>` : ''}
-    <div class="detail-item"><div class="detail-label">Date Sent</div><div class="detail-value">${t.date || '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-${t.status}"><i class="fa-solid fa-circle"></i>${t.status === 'pending' ? 'Pending' : t.status === 'accepted' ? 'Accepted' : 'Rejected'}</span></div></div>
-    ${
-      t.status !== 'pending'
-        ? `
-    <div class="detail-item"><div class="detail-label">Action Date</div><div class="detail-value">${t.actionDate || '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">${t.status === 'accepted' ? 'Received By' : 'Rejected — no receiver'}</div><div class="detail-value" style="color:${t.status === 'accepted' ? 'var(--green)' : 'var(--red)'};">${t.status === 'accepted' ? t.receivedBy || '—' : '—'}</div></div>`
-        : ''
-    }`;
-
-  document.getElementById('dItems').innerHTML = (t.items || [])
-    .map(
-      (i) =>
-        '<tr><td>' +
-        (i.name || '—') +
-        '</td><td class="r">' +
-        (i.qty || 0) +
-        '</td><td class="r">' +
-        (i.unit || '—') +
-        '</td></tr>'
-    )
-    .join('');
-
-  const remarksEl = document.getElementById('dRemarks');
-  remarksEl.classList.remove('status-pending', 'status-accepted', 'status-rejected');
-  remarksEl.classList.add('status-' + t.status);
-  remarksEl.textContent =
-    t.status === 'pending'
-      ? t.remarks
-        ? 'Remarks: ' + t.remarks
-        : 'No remarks on this transfer.'
-      : t.actionRemarks
-        ? 'Remarks: ' + t.actionRemarks
-        : t.remarks
-          ? 'Original remarks: ' + t.remarks
-          : 'No remarks on this transfer.';
-
-  const acceptBtn = document.getElementById('dAcceptBtn');
-  const rejectBtn = document.getElementById('dRejectBtn');
-  if (t.status === 'pending') {
-    acceptBtn.style.display = canAccept ? '' : 'none';
-    rejectBtn.style.display = canReject ? '' : 'none';
-    rejectBtn.onclick = () => {
-      closeModal('detailModal');
-      openReject(t.no);
-    };
-    acceptBtn.onclick = () => {
-      closeModal('detailModal');
-      openAccept(t.no);
-    };
+  if (isTransfer(row)) {
+    const src = displaySource(row);
+    document.getElementById('dTitle').textContent = row.no + ' — ' + (src.label === 'Restaurant Requisition' ? 'Requisition' : src.label);
+    document.getElementById('dGrid').innerHTML =
+      '<div class="detail-item"><div class="detail-label">Source</div><div class="detail-value"><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></div></div>' +
+      '<div class="detail-item"><div class="detail-label">Requester</div><div class="detail-value">' + escapeHtml(row.requester || row.by || '—') + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">' + escapeHtml(rowDate(row)) + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-' + displayStatus(row).cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(displayStatus(row).label) + '</span></div></div>';
+    document.getElementById('dItems').innerHTML =
+      (row.items || [])
+        .map(function (i) { return '<tr><td>' + escapeHtml(i.name || '—') + '</td><td class="r">' + (i.qty || 0) + '</td><td class="r">' + (i.unit || '') + '</td></tr>'; })
+        .join('');
+    document.getElementById('dRemarks').innerHTML = (row.remark || '');
   } else {
-    acceptBtn.style.display = 'none';
-    rejectBtn.style.display = 'none';
+    detailWidget = GraceHotelStoreApproval.attach('#detailContainer', {
+      reqNo: no,
+      storeService: window.StoreService,
+      viewerService: RS,
+      viewerRole: 'requester',
+      showBackButton: false,
+      onConfirm: async function (req) {
+        try {
+          await RS.receiveRequisition(req);
+          showToast('Delivery accepted — stock updated.', 'success');
+        } catch (err) {
+          showToast((err && err.message) || 'Accepted, but stock could not be updated.', 'error');
+        }
+        render();
+      },
+      onDispute: function () { render(); },
+    });
   }
   document.getElementById('detailModal').classList.add('show');
-}
-
-/* ── Requisition detail — GraceHotelStoreApproval, viewerRole:'requester' ── */
-let reqDetailWidget = null;
-function openRequisitionDetail(no) {
-  const container = document.getElementById('reqDetailContainer');
-  container.innerHTML = '';
-  if (reqDetailWidget) { try { reqDetailWidget.destroy(); } catch (e) {} reqDetailWidget = null; }
-
-  if (!window.GraceHotelStoreApproval || !window.StoreService) {
-    container.innerHTML = '<div style="padding:24px;color:var(--text3);text-align:center;">Approval component or Store service unavailable.</div>';
-    document.getElementById('reqDetailModal').classList.add('show');
-    return;
-  }
-
-  reqDetailWidget = GraceHotelStoreApproval.attach('#reqDetailContainer', {
-    reqNo: no,
-    storeService: window.StoreService,
-    viewerService: RS,
-    viewerRole: 'requester',
-    showBackButton: false,
-    onConfirm: async function (req) {
-      try {
-        await RS.receiveRequisition(req);
-        showToast('Delivery accepted — stock updated.', 'success');
-      } catch (err) {
-        showToast((err && err.message) || 'Accepted, but stock could not be updated automatically.', 'error');
-      }
-      render();
-    },
-    onDispute: function () { render(); },
-  });
-  document.getElementById('reqDetailModal').classList.add('show');
 }
 
 /* ── Accept / Reject (transfer mutations only) ─────────── */
