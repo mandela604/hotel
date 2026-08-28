@@ -1329,7 +1329,9 @@ function buildRequestForm() {
     service: RS,
     storeService: window.StoreService,
     currentUser: { name: (session && session.name) || '' },
-    onSubmit: function () {
+    onSubmit: async function () {
+      closeModal('reqModal');
+      if (window.StoreService) await StoreService.loadAll().catch(function () {});
       renderRecentRequests();
       render();
     },
