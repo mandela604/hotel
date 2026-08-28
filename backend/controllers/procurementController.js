@@ -145,8 +145,9 @@ exports.updatePR = async (req, res, next) => {
     const totalAmount = computeItemsTotal(items);
     const needsMDApproval = totalAmount > MD_APPROVAL_THRESHOLD;
 
-    const updatable = ['dept', 'priority', 'supplier', 'notes', 'needed', 'unit', 'unitCost', 'qty'];
+    const updatable = ['dept', 'priority', 'supplier', 'notes', 'needed', 'unit', 'unitCost', 'qty', 'approvalStage', 'status', 'rejectReason'];
     updatable.forEach((k) => { if (body[k] !== undefined) pr[k] = body[k]; });
+    if (body.history !== undefined) pr.history = body.history;
 
     pr.items = items;
     pr.totalAmount = totalAmount;
