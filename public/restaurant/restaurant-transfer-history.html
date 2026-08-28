@@ -701,7 +701,6 @@ function getAllRecords() {
   let requisitions = [];
   if (window.StoreService && typeof StoreService.getRequisitions === 'function') {
     requisitions = StoreService.getRequisitions({ mode: 'store_issue' })
-      .filter((r) => r.dept === REQ_DEPT_LABEL)
       .map((r) => Object.assign({}, r, { _kind: 'requisition' }));
   }
 
@@ -1364,7 +1363,6 @@ function renderRecentRequests() {
     return;
   }
   const rows = StoreService.getRequisitions({ mode: 'store_issue' })
-    .filter((r) => r.dept === REQ_DEPT_LABEL)
     .slice(0, 5);
   if (!rows.length) {
     el.innerHTML = '<div class="req-recent-empty">No requisitions submitted yet.</div>';
