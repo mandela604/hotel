@@ -166,6 +166,15 @@
     return n;
   }
 
+  async function deleteCategory(name) {
+    const n = (name || '').trim();
+    if (!n) throw new Error('Category name is required.');
+    await del('/categories/' + encodeURIComponent(n));
+    state.extraCategories = state.extraCategories.filter(function (c) { return c !== n; });
+    emitChange('category:delete');
+    return n;
+  }
+
   function salesKPIs(list) {
     const rows = list || state.sales || [];
     const completed = rows.filter(function (s) { return s.status === 'completed'; });
