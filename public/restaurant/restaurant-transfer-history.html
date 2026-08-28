@@ -1048,28 +1048,14 @@ function bindHeaderSort() {
 /* ── Detail — branches by kind ─────────────────────────── */
 let detailWidget = null;
 function openDetail(no) {
-  const row = getAllRows().find(function (r) { return r.no === no; });
-  const container = document.getElementById('detailContainer');
-  container.innerHTML = '';
-  if (detailWidget) { try { detailWidget.destroy(); } catch (e) {} detailWidget = null; }
-
+  const row = getAllRecords().find(function (r) { return r.no === no; });
   if (!row) return;
 
-  if (isTransfer(row)) {
-    const src = displaySource(row);
-    document.getElementById('dTitle').textContent = row.no + ' — ' + (src.label === 'Restaurant Requisition' ? 'Requisition' : src.label);
-    document.getElementById('dGrid').innerHTML =
-      '<div class="detail-item"><div class="detail-label">Source</div><div class="detail-value"><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></div></div>' +
-      '<div class="detail-item"><div class="detail-label">Requester</div><div class="detail-value">' + escapeHtml(row.requester || row.by || '—') + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">' + escapeHtml(rowDate(row)) + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-' + displayStatus(row).cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(displayStatus(row).label) + '</span></div></div>';
-    document.getElementById('dItems').innerHTML =
-      (row.items || [])
-        .map(function (i) { return '<tr><td>' + escapeHtml(i.name || '—') + '</td><td class="r">' + (i.qty || 0) + '</td><td class="r">' + (i.unit || '') + '</td></tr>'; })
-        .join('');
-    document.getElementById('dRemarks').innerHTML = (row.remark || '');
-  } else {
-    detailWidget = GraceHotelStoreApproval.attach('#detailContainer', {
+  if (isRequisition(row)) {
+    const container = document.getElementById('reqDetailContainer');
+    container.innerHTML = '';
+    if (detailWidget) { try { detailWidget.destroy(); } catch (e) {} detailWidget = null; }
+    detailWidget = GraceHotelStoreApproval.attach('#reqDetailContainer', {
       reqNo: no,
       storeService: window.StoreService,
       viewerService: RS,
@@ -1086,8 +1072,22 @@ function openDetail(no) {
       },
       onDispute: function () { render(); },
     });
+    document.getElementById('reqDetailModal').classList.add('show');
+  } else {
+    const src = displaySource(row);
+    document.getElementById('dTitle').textContent = row.no + ' — ' + (src.label === 'Restaurant Requisition' ? 'Requisition' : src.label);
+    document.getElementById('dGrid').innerHTML =
+      '<div class="detail-item"><div class="detail-label">Source</div><div class="detail-value"><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></div></div>' +
+      '<div class="detail-item"><div class="detail-label">Requester</div><div class="detail-value">' + escapeHtml(row.requester || row.by || '—') + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">' + escapeHtml(rowDate(row)) + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-' + displayStatus(row).cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(displayStatus(row).label) + '</span></div></div>';
+    document.getElementById('dItems').innerHTML =
+      (row.items || [])
+        .map(function (i) { return '<tr><td>' + escapeHtml(i.name || '—') + '</td><td class="r">' + (i.qty || 0) + '</td><td class="r">' + (i.unit || '') + '</td></tr>'; })
+        .join('');
+    document.getElementById('dRemarks').innerHTML = (row.remark || '');
+    document.getElementById('detailModal').classList.add('show');
   }
-  document.getElementById('detailModal').classList.add('show');
 }
 
 /* ── Accept / Reject (transfer mutations only) ─────────── */
