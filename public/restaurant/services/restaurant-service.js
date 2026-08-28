@@ -161,20 +161,9 @@
     await put('/categories/' + encodeURIComponent(oldName), { name: n });
     (state.stock || []).forEach(function (i) { if (i.category === oldName) i.category = n; });
     const idx = state.extraCategories.indexOf(oldName);
-        const mq = (s.id || '').toLowerCase().indexOf(q) !== -1
-          || (s.staff || '').toLowerCase().indexOf(q) !== -1
-          || (s.table || '').toLowerCase().indexOf(q) !== -1
-          || items.some(function (i) { return (i.name || '').toLowerCase().indexOf(q) !== -1; });
-        if (!mq) return false;
-      }
-      if (bounds.start || bounds.end) {
-        const d = parseStamp(s.date);
-        if (!d) return false;
-        if (bounds.start && d < new Date(bounds.start)) return false;
-        if (bounds.end && d > new Date(bounds.end)) return false;
-      }
-      return true;
-    });
+    if (idx > -1) state.extraCategories[idx] = n;
+    emitChange('category:rename');
+    return n;
   }
 
   function salesKPIs(list) {
@@ -427,6 +416,7 @@
   async function getRequisitions() {
     const res = await get('/requisitions');
     return res.data || [];
+  }
   function getRequisition(no) {
     if (!no) return null;
     return (state.history || []).concat(state.pending || []).find(function (r) { return r.no === no || r.requisitionNo === no || r.id === no; }) || null;
