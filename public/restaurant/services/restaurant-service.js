@@ -125,7 +125,24 @@
     });
   }
 
-  function getCategories() {
+  function getFilteredSales(filters) {
+  const { status, source, payment, search, bounds } = filters || {};
+  return (state.sales || []).filter(function (s) {
+    if (status && s.status !== status) return false;
+    if (source && s.source !== source) return false;
+    if (payment && s.payment !== payment) return false;
+    if (search && s.name && s.name.toLowerCase().indexOf(search.toLowerCase()) === -1) return false;
+    if (bounds) {
+      const d = parseStamp(s.date);
+      if (!d) return false;
+      if (bounds.start && d < new Date(bounds.start)) return false;
+      if (bounds.end && d > new Date(bounds.end)) return false;
+    }
+    return true;
+  }).sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+}
+
+function getCategories() {
     const cats = new Set();
     (state.stock || []).forEach(function (i) { if (i.category || i.cat) cats.add(i.category || i.cat); });
     (state.extraCategories || []).forEach(function (c) { if (c) cats.add(c); });
