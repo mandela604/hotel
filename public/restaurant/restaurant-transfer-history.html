@@ -1142,16 +1142,19 @@ function openRequisitionDetail(no) {
   reqDetailWidget = GraceHotelStoreApproval.attach('#reqDetailContainer', {
     reqNo: no,
     storeService: window.StoreService,
+    viewerService: RS,
     viewerRole: 'requester',
     showBackButton: false,
-    onConfirm: function () {
-      showToast(no + ' marked Completed.', 'success');
+    onConfirm: async function (req) {
+      try {
+        await RS.receiveRequisition(req);
+        showToast('Delivery accepted — stock updated.', 'success');
+      } catch (err) {
+        showToast((err && err.message) || 'Accepted, but stock could not be updated automatically.', 'error');
+      }
       render();
     },
-    onDispute: function () {
-      showToast(no + ' marked Disputed.', 'error');
-      render();
-    },
+    onDispute: function () { render(); },
   });
   document.getElementById('reqDetailModal').classList.add('show');
 }
