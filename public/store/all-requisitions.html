@@ -253,6 +253,7 @@ tbody td.center { text-align: center; }
                 <option value="Partial">Partial</option>
                 <option value="Full">Full</option>
                 <option value="Approved">Approved</option>
+                <option value="Awaiting Store">Awaiting Store</option>
                 <option value="Fulfilled">Fulfilled</option>
                 <option value="Rejected">Rejected</option>
               </select>
@@ -296,35 +297,9 @@ tbody td.center { text-align: center; }
         </div>
       </div>
 
-      <div class="table-card" id="incomingPOCard" style="display:none;">
-        <div class="table-head-row">
-          <div class="table-title">Incoming Procurement Orders <span style="font-size:10.5px;color:var(--text3);font-weight:500;">(fully approved — awaiting Store)</span></div>
-          <div class="table-count" id="poCount">—</div>
-        </div>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>PO No.</th>
-                <th>Item(s)</th>
-                <th>Requested By</th>
-                <th>Department</th>
-                <th>Date Raised</th>
-                <th class="center">Items</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th class="center">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="poTbody"><tr class="state-row"><td colspan="9"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
-          </table>
-        </div>
-        <div class="pagination"><span id="poPaginLabel">—</span><div class="page-btns" id="poPageBtns"></div></div>
-      </div>
-
       <div class="table-card">
         <div class="table-head-row">
-          <div class="table-title">Requisition List</div>
+          <div class="table-title">Requisition List <span style="font-size:10.5px;color:var(--text3);font-weight:500;">(requisitions + procurement PO forms)</span></div>
           <div class="table-count" id="tableCount">—</div>
         </div>
         <div class="table-scroll">
@@ -339,7 +314,7 @@ tbody td.center { text-align: center; }
                 <th>Required Date</th>
                 <th class="center">Items</th>
                 <th>Status</th>
-                <th class="center">Actions</th>
+                <th class="center">Total</th>
               </tr>
             </thead>
             <tbody id="tbody"><tr class="state-row"><td colspan="9"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
@@ -541,21 +516,22 @@ function render(){
   const pageRows = rows.slice(start, start+PAGE_SIZE);
 
   document.getElementById('tbody').innerHTML = pageRows.length === 0
-    ? `<tr class="empty-row"><td colspan="9">No requisitions match your filters.</td></tr>`
+    ? `<tr class="empty-row"><td colspan="9">No records match your filters.</td></tr>`
     : pageRows.map(r => `
-      <tr onclick="viewReq('${r.no}')">
+      <tr onclick="openRow('${r.no}','${r._poId||''}')">
         <td class="req-link">${r.no}</td>
-        <td><span class="type-chip ${r.mode==='purchase'?'type-purchase':'type-store'}"><i class="fa-solid fa-circle"></i>${r.mode==='purchase'?'Purchase Order Request':'Requisition'}</span></td>
+        <td><span class="type-chip ${r._po?'type-purchase':(r.mode==='purchase'?'type-purchase':'type-store')}"><i class="fa-solid fa-circle"></i>${r._po?'Procurement PO':(r.mode==='purchase'?'Purchase Order Request':'Requisition')}</span></td>
         <td>${fmtDate(r.dateRaised)}</td>
         <td>${r.by}</td>
         <td><span class="dept-chip"><span class="dept-dot ${DEPT_DOT[r.dept]||''}"></span>${r.dept}</span></td>
         <td>${fmtDate(r.needed)}</td>
         <td class="center"><span class="items-count">${r.items.length}</span></td>
         <td>
-          <span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>
-          ${r.mode==='purchase' && r.procurementPrId ? `<div class="po-ref">PO: ${r.procurementPrId}</div>` : ''}
+          ${r._po
+            ? `<span class="status-chip chip-accountant" style="background:var(--blue-bg);color:var(--blue);"><i class="fa-solid fa-circle"></i>Awaiting Store</span>`
+            : `<span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>`}
         </td>
-        <td class="center" onclick="event.stopPropagation()"><button class="act-btn" onclick="viewReq('${r.no}')"><i class="fa-solid fa-eye"></i> View</button></td>
+        <td class="center">${r._po ? `<span style="color:var(--gold);font-weight:700;white-space:nowrap;">${fmtMoney(Number(r.totalAmount)||0)}</span>` : '—'}</td>
       </tr>
     `).join('');
 
@@ -563,101 +539,44 @@ function render(){
 }
 window.render = render;
 
-/* ═══ Incoming Procurement Orders (sent_to_store) ─ awaiting Store ═══ */
+/* ═══ Procurement PO forms (sent_to_store) — merged into the main table ═══ */
 let PO_INCOMING = [];
-let poPage = 1;
-const PO_PAGE_SIZE = 8;
 
 function fmtMoney(n){ n = Number(n)||0; return '\u20A6' + n.toLocaleString('en-NG'); }
 function fmtPoDate(d){ if(!d) return '—'; return fmtDate(d); }
 
-function poRowHtml(p){
-  const items = (p.items||[]).length;
-  return `
-    <tr>
-      <td class="req-link">${p.poNo || p.prNo || p.id || '—'}</td>
-      <td>${p.item || ((p.items||[]).map(i=>i.name).join(', ')) || '—'}</td>
-      <td>${p.by || '—'}</td>
-      <td><span class="dept-chip"><span class="dept-dot ${DEPT_DOT[p.dept]||''}"></span>${p.dept||'—'}</span></td>
-      <td>${fmtPoDate(p.date)}</td>
-      <td class="center"><span class="items-count">${items}</span></td>
-      <td style="color:var(--gold);font-weight:700;">${fmtMoney(p.totalAmount||0)}</td>
-      <td><span class="status-chip chip-accountant" style="background:var(--blue-bg);color:var(--blue);"><i class="fa-solid fa-circle"></i>Awaiting Store</span></td>
-      <td class="center" style="min-width:230px;">
-        <button class="act-btn" style="background:#3b4a6b;color:#fff;border:none;" onclick="event.stopPropagation();openPODetailModal('${p.id}')"><i class="fa-solid fa-eye"></i> View</button>
-        <button class="act-btn" style="background:var(--green);color:#0a1520;border:none;" onclick="event.stopPropagation();acceptIncomingPO('${p.id}','${(p.poNo||p.prNo||'')}')"><i class="fa-solid fa-check"></i> Accept</button>
-        <button class="act-btn" style="background:var(--red);color:#fff;border:none;" onclick="event.stopPropagation();rejectIncomingPO('${p.id}')"><i class="fa-solid fa-xmark"></i> Reject</button>
-      </td>
-    </tr>`;
-}
-
-function renderIncomingPOs(){
-  const rows = PO_INCOMING;
-  document.getElementById('poTbody').innerHTML = rows.length === 0
-    ? `<tr class="empty-row"><td colspan="9">No procurement orders awaiting Store approval.</td></tr>`
-    : rows.map(poRowHtml).join('');
-  document.getElementById('poCount').textContent = rows.length + ' order' + (rows.length!==1?'s':'');
-  const totalPages = Math.max(1, Math.ceil(rows.length / PO_PAGE_SIZE));
-  document.getElementById('poPaginLabel').textContent = rows.length === 0 ? '—' : `${Math.min(rows.length,(poPage-1)*PO_PAGE_SIZE+1)}–${Math.min(rows.length,poPage*PO_PAGE_SIZE)} of ${rows.length}`;
-  const wrap = document.getElementById('poPageBtns');
-  wrap.innerHTML = '';
-  const prev = document.createElement('button');
-  prev.className='page-btn'; prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>'; prev.disabled=(poPage===1);
-  prev.onclick=()=>{ poPage--; renderIncomingPOs(); };
-  wrap.appendChild(prev);
-  for (let i=1;i<=totalPages;i++){
-    const b=document.createElement('button');
-    b.className='page-btn'+(i===poPage?' active':'');
-    b.textContent=i;
-    b.onclick=(function(p){return()=>{poPage=p;renderIncomingPOs();};})(i);
-    wrap.appendChild(b);
-  }
-  const next=document.createElement('button');
-  next.className='page-btn'; next.innerHTML='<i class="fa-solid fa-chevron-right"></i>'; next.disabled=(poPage>=totalPages);
-  next.onclick=()=>{ poPage++; renderIncomingPOs(); };
-  wrap.appendChild(next);
+/* Normalize a procurement PO into the shared requisition-row shape so the
+   main table + all filters (dept / type / status / search / date) just work. */
+function poToRequisition(p){
+  const no = p.poNo || p.prNo || ('PO-' + (p.id||'').slice(0,6));
+  const items = p.items || [];
+  return {
+    no: no,
+    mode: 'purchase',
+    dateRaised: p.date || '',
+    by: p.by || '',
+    dept: p.dept || '',
+    needed: p.needed || '',
+    items: items,
+    status: 'Awaiting Store',
+    totalAmount: Number(p.totalAmount) || items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.cost)||0),0),
+    _po: true,
+    _poId: p.id,
+  };
 }
 
 async function loadIncomingPOs(){
+  PO_INCOMING = [];
   try {
-    if (typeof window.ProcurementService === 'undefined' || !ProcurementService.getPRs){
-      document.getElementById('incomingPOCard').style.display = 'none';
-      return;
-    }
+    if (typeof window.ProcurementService === 'undefined' || !ProcurementService.getPRs) return;
     const all = await ProcurementService.getPRs();
     const arr = Array.isArray(all) ? all : (all && all.data ? (Array.isArray(all.data)?all.data:[]) : []);
     PO_INCOMING = (arr||[]).filter(p => p.approvalStage === 'sent_to_store');
-    document.getElementById('incomingPOCard').style.display = PO_INCOMING.length ? '' : 'none';
-    poPage = 1;
-    renderIncomingPOs();
+    REQUISITIONS = REQUISITIONS.concat(PO_INCOMING.map(poToRequisition));
   } catch(e){
-    document.getElementById('incomingPOCard').style.display = 'none';
+    PO_INCOMING = [];
   }
 }
-
-window.acceptIncomingPO = async function(id, label){
-  if (!confirm(`Accept and receive this order into Store stock?\n\n${label}`)) return;
-  try {
-    await StoreService.acceptPO(id);
-    await loadAll();
-    showToast('Order received — items added to store stock.', 'success');
-  } catch (err){
-    showToast('Error: ' + (err.message || 'Could not accept order'), 'error');
-  }
-};
-
-window.rejectIncomingPO = async function(id){
-  const reason = prompt('Reason for rejecting this order:');
-  if (reason === null) return;
-  if (!String(reason||'').trim()) { showToast('Please provide a rejection reason.', 'error'); return; }
-  try {
-    await StoreService.rejectPO(id, reason);
-    await loadAll();
-    showToast('Order rejected.', 'info');
-  } catch (err){
-    showToast('Error: ' + (err.message || 'Could not reject order'), 'error');
-  }
-};
 
 /* ═══ Incoming Procurement PO — full detail modal ═══
    Fetches the PO by id so we show everything saved on the form:
@@ -729,7 +648,6 @@ function renderPODetailModal(){
         <div><div class="dt-lbl">Requested By</div><div style="font-size:13px;color:var(--text);">${p.by||'—'}</div></div>
         <div><div class="dt-lbl">Department</div><div style="font-size:13px;color:var(--text);">${p.dept||'—'}</div></div>
         <div><div class="dt-lbl">Source</div><div style="font-size:13px;color:var(--text);">${p.source||'Procurement'}</div></div>
-        <div><div class="dt-lbl">Category</div><div style="font-size:13px;color:var(--text);">${p.cat||'General'}</div></div>
         <div><div class="dt-lbl">Date Raised</div><div style="font-size:13px;color:var(--text);">${fmtPoDate(p.date)}</div></div>
         <div><div class="dt-lbl">Needed By</div><div style="font-size:13px;color:var(--text);">${fmtPoDate(p.needed)}</div></div>
         <div><div class="dt-lbl">Priority</div><div style="font-size:13px;color:var(--text);">${p.priority||'Normal'}</div></div>
@@ -861,6 +779,13 @@ window.viewReq = function(no){
   const r = StoreService.getRequisition(no);
   if (r && r.mode === 'purchase') { openPurchaseDetailModal(no); }
   else { openApprovalModal(no); }
+};
+
+/* Row is clickable — PO forms open the procurement detail modal, everything
+   else routes through the existing requisition detail flow. */
+window.openRow = function(no, poId){
+  if (poId) { openPODetailModal(poId); }
+  else { viewReq(no); }
 };
 
 /* ═══ New Requisition / Create PO (GraceHotelRequestForm) ═══ */
