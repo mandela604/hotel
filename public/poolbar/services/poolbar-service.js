@@ -405,6 +405,44 @@
     return rows;
   }
 
+  function normalizeRequisition(r) {
+    if (!r) return r;
+    const no = r.requisitionNo || r.no || '';
+    return {
+      id: r.id || r._id || no,
+      no: no,
+      requisitionNo: no,
+      mode: r.mode || 'store_issue',
+      by: r.requester || r.by || '',
+      requester: r.requester || r.by || '',
+      dept: r.dept || 'Pool Bar',
+      needed: r.neededBy || r.needed || '',
+      neededBy: r.neededBy || r.needed || '',
+      priority: r.priority || 'Normal',
+      remark: r.remark || '',
+      fulfillStore: r.fulfillStore || null,
+      supplier: r.supplier || null,
+      linked: r.linked || null,
+      items: (r.items || []).map(function (it) {
+        return {
+          name: it.name || '', stockId: it.stockId || '', unit: it.unit || 'unit', qty: Number(it.qty) || 0,
+          cost: Number(it.cost) || 0, remark: it.remark || '', issuedQty: Number(it.issuedQty) || 0,
+        };
+      }),
+      status: r.status || 'Pending',
+      rejectReason: r.rejectReason || '',
+      disputeReason: r.disputeReason || '',
+      dateRaised: r.dateRaised || r.createdAt || '',
+      dateRaisedDisplay: r.dateRaisedDisplay || '',
+      _kind: 'requisition',
+    };
+  }
+
+  function getRequisition(no) {
+    if (!no) return null;
+    return (state.requisitions || []).find(r => r.no === no || r.requisitionNo === no || r.id === no) || null;
+  }
+
   /* ── Load everything from the real API ──────────────────────────── */
   async function loadAll() {
     const [stockRes, salesRes, ordersRes, reqRes, movRes, catRes] = await Promise.all([
@@ -418,7 +456,7 @@
     state.stock = stockRes.data || [];
     state.sales = salesRes.data || [];
     state.orders = ordersRes.data || [];
-    state.requisitions = reqRes.data || [];
+    state.requisitions = (reqRes.data || []).map(normalizeRequisition);
     state.movements = movRes.data || [];
     // Persisted categories (includes categories with no stock items yet).
     state.extraCategories = (catRes && Array.isArray(catRes.data)) ? catRes.data.slice() : [];
@@ -482,19 +520,7 @@
       items, requester, dept: dept || getDepartmentName(), priority, remark, neededBy,
     });
     const doc = res.data || res;
-    const normalized = {
-      no: doc.requisitionNo || doc.no || '',
-      by: doc.requester || doc.by || '',
-      dept: doc.dept || 'Pool Bar',
-      needed: doc.neededBy || doc.needed || '',
-      priority: doc.priority || 'Normal',
-      remark: doc.remark || '',
-      items: (doc.items || []).map(i => ({ name: i.name, stockId: i.stockId || '', unit: i.unit, qty: i.qty, cost: i.cost, remark: i.remark || '', issuedQty: i.issuedQty || 0 })),
-      status: doc.status || 'Pending',
-      dateRaised: doc.dateRaised || doc.createdAt || '',
-      dateRaisedDisplay: doc.dateRaisedDisplay || '',
-      _kind: 'requisition',
-    };
+    const normalized = normalizeRequisition(doc);
     state.requisitions.unshift(normalized);
     emitChange('requisition:submit');
     return normalized;
@@ -964,5 +990,7 @@
     getHistoryKPIs,
     getHistoryStatusDisplay,
     getLowStockItems,
+    getRequisition,
+    normalizeRequisition,
   };
 })(window);

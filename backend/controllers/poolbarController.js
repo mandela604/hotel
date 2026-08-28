@@ -6,6 +6,7 @@ const PoolbarMovement = require('../models/PoolbarMovement');
 const Requisition    = require('../models/Requisition');
 const Booking        = require('../models/Booking');
 const Category       = require('../models/Category');
+const Counter        = require('../models/Counter');
 const asyncHandler   = require('../middleware/asyncHandler');
 const { ApiError }   = require('../middleware/errorHandler');
 
@@ -480,11 +481,19 @@ exports.listRequisitions = asyncHandler(async (req, res) => {
 exports.createRequisition = asyncHandler(async (req, res) => {
   const { requester, dept, priority, remark, neededBy, items } = req.body;
 
-  const count = await Requisition.countDocuments();
-  const requisitionNo = `REQ-${String(count + 1).padStart(5, '0')}`;
+  const counter = await Counter.findOneAndUpdate(
+    { key: 'req:BREQ' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+  const requisitionNo = `BREQ-${new Date().getFullYear()}-${String(counter.seq).padStart(5, '0')}`;
+  const now = new Date();
+  const dateRaisedISO = now.toISOString().split('T')[0];
+  const dateRaisedDisplay = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ' ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   const reqDoc = await Requisition.create({
-    id: uuidv4(),
+    id: requisitionNo,
     requisitionNo,
     mode: 'store_issue',
     requester: requester || (req.user ? req.user.name : 'Pool Bar Supervisor'),
@@ -492,8 +501,10 @@ exports.createRequisition = asyncHandler(async (req, res) => {
     priority: priority || 'Normal',
     remark: remark || '',
     neededBy: neededBy || '',
+    fulfillStore: 'Central Store',
     items: items.map(i => ({
       name: i.name,
+      stockId: i.stockId || '',
       unit: i.unit || 'bottles',
       qty: Number(i.qty) || 0,
       cost: Number(i.cost) || 0,
@@ -501,13 +512,15 @@ exports.createRequisition = asyncHandler(async (req, res) => {
       issuedQty: 0,
     })),
     status: 'Pending',
+    dateRaised: dateRaisedISO,
+    dateRaisedDisplay,
   });
 
   res.status(201).json({ success: true, data: reqDoc });
 });
 
 exports.receiveRequisition = asyncHandler(async (req, res) => {
-  const reqDoc = await Requisition.findOne({ id: req.params.id });
+  const reqDoc = await Requisition.findOne({ $or: [{ id: req.params.id }, { requisitionNo: req.params.id }] });
   if (!reqDoc) return res.status(404).json({ success: false, error: 'Requisition not found' });
 
   /* credit issued items to stock + log movements */
@@ -534,7 +547,7 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
     await logMovement(stockItem.name, addQty, 0, stockItem.qty, `Requisition Received (${reqDoc.requisitionNo})`);
   }
 
-  reqDoc.status = 'Full';
+  reqDoc.status = 'Completed';
   await reqDoc.save();
 
   res.json({ success: true, data: reqDoc });

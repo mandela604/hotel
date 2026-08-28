@@ -461,7 +461,7 @@ function displaySource(r) {
     : { label: 'Pool Bar', cls: 'chip-src-poolbar' };
 }
 function rowByLine(r) {
-  return isTransfer(r) ? ((r.sentBy || 'Store') + ' · ' + (r.from || 'Central Store')) : (r.by || '—');
+  return isTransfer(r) ? ((r.sentBy || 'Store') + ' · ' + (r.from || 'Central Store')) : (r.by || r.requester || '—');
 }
 function rowDate(r) {
   return r.dateDisplay || r.dateRaisedDisplay || r.date || r.dateRaised || '—';
@@ -671,7 +671,9 @@ function buildRequestForm() {
     service: PBS,                       // Pool Bar's own stock -> item catalog
     storeService: SS,                   // owns numbering + persistence
     currentUser: { name: (session && session.name) || '' },
-    onSubmit: function () {
+    onSubmit: async function () {
+      closeModal('reqModal');
+      if (SS) await SS.loadAll().catch(function () {});
       renderRecentRequests();
       render();
     },

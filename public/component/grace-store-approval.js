@@ -416,18 +416,15 @@
       const totalReq = workingItems.reduce((s, i) => s + i.qty, 0);
       const totalIssued = workingItems.reduce((s, i) => s + (parseFloat(i.issuedQty) || 0), 0);
       const totalBalance = totalReq - totalIssued;
-      const overall = req.status === 'Rejected' ? 'rejected'
-        : req.status === 'Disputed' ? 'disputed'
-        : req.status === 'Completed' ? 'completed'
-        : (totalIssued <= 0 ? 'pending' : totalIssued >= totalReq ? 'full' : 'partial');
+      const overall = (req.status || 'Pending').toLowerCase();
       const overallLabel = {
         rejected: '<i class="fa-solid fa-ban"></i> REJECTED',
         disputed: '<i class="fa-solid fa-triangle-exclamation"></i> DISPUTED',
         completed: '<i class="fa-solid fa-circle-check"></i> COMPLETED',
-        pending: 'AWAITING ISSUE',
+        pending: '<i class="fa-solid fa-hourglass-half"></i> AWAITING ISSUE',
         full: '<i class="fa-solid fa-circle-check"></i> FULLY ISSUED',
         partial: '<i class="fa-solid fa-rotate"></i> PARTIALLY ISSUED',
-      }[overall];
+      }[overall] || 'AWAITING ISSUE';
       const pill = document.getElementById(instId + '-overallStatus');
       pill.className = `ghsa-status-pill ${overall}`;
       pill.innerHTML = overallLabel;
