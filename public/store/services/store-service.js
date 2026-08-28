@@ -275,7 +275,6 @@
     if (updates.unit !== undefined) payload.unit = updates.unit;
     if (updates.min !== undefined) payload.min = updates.min;
     if (updates.cost !== undefined) payload.cost = updates.cost;
-    if (updates.qty !== undefined) payload.qty = updates.qty;
 
     const updated = await apiFetch('/stock/' + id, { method: 'PUT', body: JSON.stringify(payload) });
     const norm = normalizeStock(updated);
