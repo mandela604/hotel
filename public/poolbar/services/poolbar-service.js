@@ -288,8 +288,8 @@
     const completedStatus = getStatusConstants().SALE_COMPLETED;
     return (state.sales || []).filter(function (s) {
       const d = s.date ? new Date(s.date) : null;
-      const dStr = d ? `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)}` : (s.dateDisplay || '');
-      return s.status === completedStatus && dStr === today;
+      const dStr = (d && !isNaN(d.getTime())) ? `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)}` : (s.dateDisplay || '');
+      return s.status === completedStatus && (dStr === today || (s.date && String(s.date).startsWith(today)));
     });
   }
 
@@ -683,8 +683,15 @@
   function ordersKPIs() {
     const todayStr = todayDDMMYY();
     const isToday = (d) => {
-      const dt = d ? new Date(d) : null;
-      return dt && `${pad2(dt.getDate())}/${pad2(dt.getMonth() + 1)}/${String(dt.getFullYear()).slice(-2)}` === todayStr;
+      if (!d) return false;
+      const dt = new Date(d);
+      if (!isNaN(dt.getTime())) {
+        const today = new Date();
+        return dt.getDate() === today.getDate() &&
+               dt.getMonth() === today.getMonth() &&
+               dt.getFullYear() === today.getFullYear();
+      }
+      return String(d).startsWith(todayStr);
     };
     const completedToday = state.sales.filter(s => s.status === getStatusConstants().SALE_COMPLETED && isToday(s.date));
     const rejectedToday = state.orders.filter(o => o.status === getStatusConstants().ORDER_CANCELLED && isToday(o.date));
@@ -728,10 +735,17 @@
   }
 
   function getShiftSales(session) {
-    const today = todayDDMMYY();
+    const todayStr = todayDDMMYY();
     const isToday = (d) => {
-      const dt = d ? new Date(d) : null;
-      return dt && `${pad2(dt.getDate())}/${pad2(dt.getMonth() + 1)}/${String(dt.getFullYear()).slice(-2)}` === today;
+      if (!d) return false;
+      const dt = new Date(d);
+      if (!isNaN(dt.getTime())) {
+        const today = new Date();
+        return dt.getDate() === today.getDate() &&
+               dt.getMonth() === today.getMonth() &&
+               dt.getFullYear() === today.getFullYear();
+      }
+      return String(d).startsWith(todayStr);
     };
     const me = ((session && session.name) || '').toLowerCase();
     const allStaff = isManagerLike(session);

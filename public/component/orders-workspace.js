@@ -262,11 +262,14 @@
     .ow-val-total{ font-size:22px; font-weight:800; color:var(--ow-gold); margin-bottom:14px; }
     .ow-modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--ow-border); }
 
-    .ow-toast{ position:fixed; bottom:20px; right:20px; background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--ow-text); box-shadow:var(--ow-shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; animation:owToastIn .3s ease; max-width:calc(100vw - 40px); }
-    .ow-toast.success{ border-left:3px solid var(--ow-green); }
-    .ow-toast.error{ border-left:3px solid var(--ow-red); }
-    .ow-toast.info{ border-left:3px solid var(--ow-blue); }
-    @keyframes owToastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .ow-toast{ position:fixed; bottom:24px; right:24px; background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:12px; padding:13px 20px; font-size:13.5px; color:var(--ow-text); box-shadow:0 8px 30px rgba(0,0,0,0.25); z-index:999999; display:flex; align-items:center; gap:10px; animation:owToastIn .3s cubic-bezier(0.18, 0.89, 0.32, 1.28); max-width:calc(100vw - 40px); font-weight:600; }
+    .ow-toast.success{ background:#12b76a !important; color:#ffffff !important; border:1px solid #0e9355 !important; font-weight:700 !important; box-shadow:0 10px 30px rgba(18,183,106,0.4) !important; }
+    .ow-toast.success i{ color:#ffffff !important; font-size:17px !important; }
+    .ow-toast.error{ background:#f04438 !important; color:#ffffff !important; border:1px solid #d92d20 !important; font-weight:700 !important; box-shadow:0 10px 30px rgba(240,68,56,0.4) !important; }
+    .ow-toast.error i{ color:#ffffff !important; font-size:17px !important; }
+    .ow-toast.info{ background:#2f6fed !important; color:#ffffff !important; border:1px solid #1554d1 !important; font-weight:700 !important; box-shadow:0 10px 30px rgba(47,111,237,0.4) !important; }
+    .ow-toast.info i{ color:#ffffff !important; font-size:17px !important; }
+    @keyframes owToastIn{ from{opacity:0;transform:translateY(12px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
     @keyframes owFadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   `;
 
@@ -374,10 +377,12 @@
       try {
         if (shell && typeof shell.getUser === 'function') {
           const u = shell.getUser();
-          if (u && u.name) return u.name;
+          if (u && (u.name || u.username)) return u.name || u.username;
         }
       } catch (e) { /* ignore */ }
-      if (options.currentUser && options.currentUser.name) return options.currentUser.name;
+      if (options.currentUser && (options.currentUser.name || options.currentUser.username)) {
+        return options.currentUser.name || options.currentUser.username;
+      }
       return demoStaffName;
     }
 
@@ -603,7 +608,7 @@
       const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
       t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + esc(msg);
       document.body.appendChild(t);
-      setTimeout(function () { t.remove(); }, 3400);
+      setTimeout(function () { t.remove(); }, 4500);
     }
 
     function setMode(m) {
@@ -672,22 +677,32 @@
       return null;
     }
 
+    function isTodayDate(d) {
+      if (!d) return false;
+      const dt = new Date(d);
+      if (!isNaN(dt.getTime())) {
+        const today = new Date();
+        return dt.getDate() === today.getDate() &&
+               dt.getMonth() === today.getMonth() &&
+               dt.getFullYear() === today.getFullYear();
+      }
+      return String(d).startsWith(todayDDMMYY());
+    }
+
     function unitsSoldToday() {
-      const today = todayDDMMYY();
       return sales
-        .filter(function (s) { return s.status === 'completed' && (s.date || '').startsWith(today); })
+        .filter(function (s) { return s.status === 'completed' && isTodayDate(s.date); })
         .reduce(function (sum, s) {
           return sum + (s.items || []).reduce(function (a, i) { return a + (i.qty || 0); }, 0);
         }, 0);
     }
 
     function renderKPIs() {
-      const today = todayDDMMYY();
       const completedToday = sales.filter(function (s) {
-        return s.status === 'completed' && (s.date || '').startsWith(today);
+        return s.status === 'completed' && isTodayDate(s.date);
       });
       const cancelledToday = orders.filter(function (o) {
-        return o.status === 'cancelled' && (o.date || '').startsWith(today);
+        return o.status === 'cancelled' && isTodayDate(o.date);
       });
       const activeTabs = orders.filter(function (o) {
         return o.status === 'open' || o.status === 'served';
@@ -1450,13 +1465,18 @@
     function finish() {
       const staffInput = $('[data-role="fStaff"]');
       if (staffInput) staffInput.value = resolveStaffName();
-      // Retry once shortly after in case shell session arrives async
-      setTimeout(function () {
-        const elStaff = $('[data-role="fStaff"]');
-        if (elStaff && (!elStaff.value || elStaff.value === demoStaffName)) {
-          elStaff.value = resolveStaffName();
+      // Continuously poll every 100ms up to 2.5s for session user to arrive from shell
+      const pollStart = Date.now();
+      const staffPoll = setInterval(function () {
+        const resolved = resolveStaffName();
+        if (resolved && resolved !== demoStaffName) {
+          const elStaff = $('[data-role="fStaff"]');
+          if (elStaff) elStaff.value = resolved;
+          clearInterval(staffPoll);
+        } else if (Date.now() - pollStart > 2500) {
+          clearInterval(staffPoll);
         }
-      }, 400);
+      }, 100);
       toggleRoomChargeUI();
       renderKPIs();
       renderPicker();

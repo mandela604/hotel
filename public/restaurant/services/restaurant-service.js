@@ -161,37 +161,6 @@
     await put('/categories/' + encodeURIComponent(oldName), { name: n });
     (state.stock || []).forEach(function (i) { if (i.category === oldName) i.category = n; });
     const idx = state.extraCategories.indexOf(oldName);
-    if (idx > -1) state.extraCategories[idx] = n;
-    emitChange('category:rename');
-    return n;
-  }
-
-  async function deleteCategory(name, opts) {
-    opts = opts || {};
-    const reassignTo = opts.reassignTo || 'Uncategorized';
-    await del('/categories/' + encodeURIComponent(name));
-    (state.stock || []).forEach(function (i) { if (i.category === name) i.category = reassignTo; });
-    state.extraCategories = state.extraCategories.filter(function (c) { return c !== name; });
-    emitChange('category:delete');
-  }
-
-  function getTodaysCompletedSales() {
-    const today = todayDDMMYY();
-    return (state.sales || []).filter(function (s) {
-      return s.status === 'completed' && (s.date || '').startsWith(today);
-    });
-  }
-
-  function getFilteredSales(filters) {
-    filters = filters || {};
-    const q = (filters.search || '').trim().toLowerCase();
-    const bounds = filters.bounds || {};
-    return (state.sales || []).filter(function (s) {
-      if (filters.status && s.status !== filters.status) return false;
-      if (filters.payment && s.method !== filters.payment) return false;
-      if (filters.source && s.source !== filters.source) return false;
-      if (q) {
-        const items = s.items || [];
         const mq = (s.id || '').toLowerCase().indexOf(q) !== -1
           || (s.staff || '').toLowerCase().indexOf(q) !== -1
           || (s.table || '').toLowerCase().indexOf(q) !== -1

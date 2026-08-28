@@ -148,6 +148,25 @@ const emptyValue = svc.getEmptyValuePlaceholder ? svc.getEmptyValuePlaceholder()
 // same pattern as poolbar-dashboard.html.
 let session = null;
 let canViewReports = false;
+function waitForSession(maxMs) {
+  maxMs = maxMs || 1000;
+  return new Promise(function (resolve) {
+    const started = Date.now();
+    const tick = function () {
+      const u = shell.getUser && shell.getUser();
+      if (u && u.role) {
+        resolve(u);
+        return;
+      }
+      if (Date.now() - started >= maxMs) {
+        resolve(shell.getUser && shell.getUser());
+        return;
+      }
+      setTimeout(tick, 40);
+    };
+    tick();
+  });
+}
 function getSession() {
   const u = shell.getUser && shell.getUser();
   if (!u) throw new Error('No session — please sign in again.');
@@ -294,11 +313,8 @@ function mountTable() {
 }
 async function init() {
   try {
-    // Real session only — throws (and is caught below) if the shell has
-    // no user yet, same as poolbar-dashboard.html. No hardcoded fallback.
-    session = getSession();
-    // No manager/admin OR-bypass — canViewReports is exactly what the
-    // service's permission check says, nothing more.
+    session = await waitForSession(1000);
+    if (!session) throw new Error('No session — please sign in again.');
     canViewReports = svc.can(session, 'canViewReports');
     applyPermissionGate();
     if (!canViewReports) return;
