@@ -318,4 +318,17 @@ exports.disputeDelivery = asyncHandler(async (req, res) => {
   res.json({ success: true, data: row });
 });
 
+exports.receiveStock = asyncHandler(async (req, res) => {
+  const { qty, cost } = req.body;
+  const addQty = Number(qty) || 0;
+  if (addQty <= 0) throw new ApiError(400, 'qty must be a positive number');
+  const item = await StoreStock.findByIdAndUpdate(
+    req.params.id,
+    { $inc: { qty: addQty }, ...(Number(cost) > 0 ? { $set: { cost: Number(cost) } } : {}) },
+    { new: true }
+  );
+  if (!item) throw new ApiError(404, 'Stock item not found.');
+  res.json({ success: true, data: item });
+});
+
 exports._internal = { peekNumber, nextNumber, findStockFuzzy, actorName };

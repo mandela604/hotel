@@ -469,15 +469,19 @@
       }
 
       if (stockItem) {
-        const newQty = (stockItem.qty || 0) + qty;
-        const payload = { qty: newQty };
+        const payload = { qty: qty };
         if (cost > 0) payload.cost = cost;
-        await apiFetch('/stock/' + stockItem.id, {
-          method: 'PUT',
+        const updated = await apiFetch('/stock/' + stockItem.id + '/receive', {
+          method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        stockItem.qty = newQty;
-        if (cost > 0) stockItem.cost = cost;
+        if (updated) {
+          stockItem.qty = (updated.qty != null ? updated.qty : stockItem.qty);
+          if (updated.cost != null) stockItem.cost = updated.cost;
+        } else {
+          stockItem.qty = (stockItem.qty || 0) + qty;
+          if (cost > 0) stockItem.cost = cost;
+        }
       } else {
         const created = await apiFetch('/stock', {
           method: 'POST',

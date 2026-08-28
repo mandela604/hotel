@@ -26,6 +26,7 @@ const isAdmin = roleGuard('admin');
 router.get('/stock', storeController.listStock);
 router.post('/stock', inDept, privilegeGuard('store', 'canCreate'), validateAddStock, storeController.addStock);
 router.put('/stock/:id', inDept, privilegeGuard('store', 'canEdit'), validateParam('id'), validateUpdateStock, storeController.updateStock);
+router.patch('/stock/:id/receive', inDept, privilegeGuard('store', 'canEdit'), validateParam('id'), storeController.receiveStock);
 router.delete('/stock/:id', isAdmin, validateParam('id'), storeController.deleteStock);
 
 /* Categories */
