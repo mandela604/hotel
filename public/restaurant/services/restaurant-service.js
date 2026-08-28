@@ -456,13 +456,42 @@ function dashboardKPIs() {
     if (!no) return null;
     return (state.history || []).concat(state.pending || []).find(function (r) { return r.no === no || r.requisitionNo === no || r.id === no; }) || null;
   }
+  function normalizeRequisition(r) {
+    if (!r) return r;
+    const no = r.requisitionNo || r.no || '';
+    return {
+      id: r.id || r._id || no,
+      no: no,
+      requisitionNo: no,
+      mode: r.mode || 'store_issue',
+      by: r.requester || r.by || '',
+      requester: r.requester || r.by || '',
+      dept: r.dept || 'Restaurant / Bar',
+      needed: r.neededBy || r.needed || '',
+      neededBy: r.neededBy || r.needed || '',
+      priority: r.priority || 'Normal',
+      remark: r.remark || '',
+      fulfillStore: r.fulfillStore || null,
+      supplier: r.supplier || null,
+      linked: r.linked || null,
+      items: (r.items || []).map(function (it) {
+        return {
+          name: it.name || '', stockId: it.stockId || '', unit: it.unit || 'unit', qty: Number(it.qty) || 0,
+          cost: Number(it.cost) || 0, remark: it.remark || '', issuedQty: Number(it.issuedQty) || 0,
+        };
+      }),
+      status: r.status || 'Pending',
+      rejectReason: r.rejectReason || '',
+      disputeReason: r.disputeReason || '',
+    };
+  }
   async function submitRequisition(payload) {
     payload = payload || {};
     payload.requester = payload.requester || payload.by || 'Restaurant Staff';
     payload.neededBy = payload.neededBy || payload.needed || '';
     const res = await post('/requisitions', payload);
     emitChange('requisition:submit');
-    return res.data;
+    return normalizeRequisition(res.data);
   }
   async function receiveRequisition(req) {
     if (!req) throw new Error('Invalid requisition — nothing to receive.');
