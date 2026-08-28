@@ -181,8 +181,7 @@ tbody td.center { text-align: center; }
 .modal-close { position: absolute; top: 14px; right: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; color: var(--text2); cursor: pointer; font-size: 14px; z-index: 2; display: flex; align-items: center; justify-content: center; }
 .modal-close:hover { border-color: var(--red); color: var(--red); }
 .dt-lbl { font-size: 9.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; font-weight: 700; }
-#poDetailModal .btn { font-family: inherit; }
-#poRejectPanel textarea::-webkit-input-placeholder { color: var(--text3); }
+
 
 .toast { position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999; display: flex; align-items: center; gap: 8px; animation: toastIn .3s ease; max-width: calc(100vw - 40px); font-weight: 600; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; }
 .toast.success { border-left: 3px solid #12b76a; } .toast.success i { color: #12b76a; }
@@ -355,15 +354,10 @@ tbody td.center { text-align: center; }
   </div>
 </div>
 
-<!-- ═══ Incoming Procurement PO detail — full item list + approvers, then Accept/Reject ═══ -->
-<div class="modal-overlay" id="poDetailModal">
-  <div class="modal-box modal-box-lg">
-    <button class="modal-close" onclick="closePODetailModal()"><i class="fa-solid fa-xmark"></i></button>
-    <div id="poDetailContainer"></div>
-  </div>
-</div>
 
-        <script src="services/store-service.js"></script>
+
+        <script src="../component/grace-po-detail.js"></script>
+<script src="services/store-service.js"></script>
         <script src="../services/permissions.js"></script>
         <script src="../procurement/services/procurement-service.js"></script>       <script src="../component/store-shell.js"></script>
 <script src="../component/grace-request-form.js"></script>
@@ -593,191 +587,33 @@ async function loadIncomingPOs(){
   }
 }
 
-/* ═══ Incoming Procurement PO — full detail modal ═══
-   Fetches the PO by id so we show everything saved on the form:
-   header info, every line item, and the full approval trail
-   (who approved at each stage). Accept/Reject live here too. */
-let PO_DETAIL = null;
-
-function poDetailApprovalHtml(p){
-  const hist = p.history || [];
-  if (!hist.length) return '<div style="font-size:12px;color:var(--text3);">No approval records yet.</div>';
-  const entries = hist.map(h => {
-    const actorIcon = (h.action||'').toLowerCase().indexOf('reject') >= 0
-      ? '<i class="fa-solid fa-circle-xmark" style="color:var(--red);"></i>'
-      : (h.action||'').toLowerCase().indexOf('submitted') >= 0 || (h.action||'').toLowerCase().indexOf('imported') >= 0
-        ? '<i class="fa-solid fa-file-pen" style="color:var(--text3);"></i>'
-        : '<i class="fa-solid fa-circle-check" style="color:var(--green);"></i>';
-    return `
-      <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);align-items:flex-start;">
-        <div style="width:24px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">${actorIcon}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;color:var(--text);font-weight:600;">${h.action||'Step'}</div>
-          <div style="font-size:11.5px;color:var(--text2);margin-top:1px;">by <strong>${h.by||'—'}</strong> · ${fmtPoDate(h.date)}</div>
-          ${h.note ? `<div style="font-size:11.5px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:6px 8px;margin-top:5px;"><i class="fa-solid fa-quote-left" style="font-size:9px;"></i> ${h.note}</div>` : ''}
-        </div>
-      </div>`;
-  }).join('');
-  return `<div style="max-height:220px;overflow-y:auto;padding-right:4px;">${entries}</div>`;
-}
-
-async function openPODetailModal(id){
-  const el = document.getElementById('poDetailContainer');
-  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);"><i class="fa-solid fa-spinner fa-spin"></i> Loading order details…</div>';
-  document.getElementById('poDetailModal').classList.add('show');
-  try {
-    const p = await ProcurementService.getPR(id);
-    if (!p) throw new Error('Order not found.');
-    PO_DETAIL = p;
-    renderPODetailModal();
-  } catch (err){
-    el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message||'Could not load order details.'}</div>`;
-  }
-}
-
-function renderPODetailModal(){
-  const p = PO_DETAIL;
-  if (!p) return;
-  const items = p.items || [];
-  const itemsHtml = items.map((i, idx) => `
-    <tr>
-      <td style="padding:9px 10px;border-bottom:1px solid var(--border);">${idx+1}. ${i.name||'—'}</td>
-      <td style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:center;">${i.qty}</td>
-      <td style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:center;">${i.unit||'unit'}</td>
-      <td style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;">${fmtMoney(i.cost||0)}</td>
-      <td style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;">${fmtMoney((Number(i.qty)||0)*(Number(i.cost)||0))}</td>
-    </tr>`).join('');
-
-  const docId = p.poNo || p.prNo || p.id || '—';
-  document.getElementById('poDetailContainer').innerHTML = `
-    <div style="width:100%;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-        <div>
-          <div style="font-size:18px;font-weight:800;color:var(--text);">${docId}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:3px;">Procurement PO — fully approved, awaiting Store receipt</div>
-        </div>
-        <span class="status-chip chip-accountant" style="background:var(--blue-bg);color:var(--blue);"><i class="fa-solid fa-circle"></i>Awaiting Store</span>
-      </div>
-
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;padding:16px;background:var(--surface2);border-radius:12px;">
-        <div><div class="dt-lbl">Requested By</div><div style="font-size:13px;color:var(--text);">${p.by||'—'}</div></div>
-        <div><div class="dt-lbl">Department</div><div style="font-size:13px;color:var(--text);">${p.dept||'—'}</div></div>
-        <div><div class="dt-lbl">Source</div><div style="font-size:13px;color:var(--text);">${p.source||'Procurement'}</div></div>
-        <div><div class="dt-lbl">Date Raised</div><div style="font-size:13px;color:var(--text);">${fmtPoDate(p.date)}</div></div>
-        <div><div class="dt-lbl">Needed By</div><div style="font-size:13px;color:var(--text);">${fmtPoDate(p.needed)}</div></div>
-        <div><div class="dt-lbl">Priority</div><div style="font-size:13px;color:var(--text);">${p.priority||'Normal'}</div></div>
-        <div><div class="dt-lbl">Supplier</div><div style="font-size:13px;color:var(--text);">${p.supplier||'—'}</div></div>
-      </div>
-
-      ${p.notes ? `<div style="font-size:12.5px;color:var(--text2);background:var(--surface2);border-radius:10px;padding:11px 14px;margin-bottom:16px;"><span style="font-weight:700;color:var(--text);">Notes:</span> ${p.notes}</div>` : ''}
-
-      <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px;">Line Items (${items.length})</div>
-      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px;">
-        <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-          <thead><tr>
-            <th style="text-align:left;padding:9px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Item</th>
-            <th style="text-align:center;padding:9px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Qty</th>
-            <th style="text-align:center;padding:9px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Unit</th>
-            <th style="text-align:right;padding:9px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Unit Cost</th>
-            <th style="text-align:right;padding:9px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);">Subtotal</th>
-          </tr></thead>
-          <tbody>${itemsHtml}</tbody>
-          <tfoot><tr>
-            <td colspan="4" style="padding:10px;text-align:right;font-weight:800;color:var(--text);">Total</td>
-            <td style="padding:10px;text-align:right;font-weight:800;color:var(--gold);">${fmtMoney((Number(p.totalAmount)||items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.cost)||0),0)))}</td>
-          </tr></tfoot>
-        </table>
-      </div>
-
-      <div style="font-size:12px;font-weight:800;color:var(--text);margin:16px 0 8px;">Approval Trail</div>
-      <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;">${poDetailApprovalHtml(p)}</div>
-      ${p.needsMDApproval ? '<div style="font-size:11px;color:var(--amber);margin-top:8px;"><i class="fa-solid fa-circle-info"></i> This order exceeded the MD approval threshold (₦100,000) and required MD sign-off.</div>' : ''}
-
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
-        <button class="btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer;" onclick="closePODetailModal()">Cancel</button>
-        <button class="btn" id="poDetailRejectBtn" style="background:var(--red);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer;" onclick="poDetailReject()"><i class="fa-solid fa-xmark"></i> Reject</button>
-        <button class="btn" id="poDetailAcceptBtn" style="background:var(--green);color:#0a1520;border:none;border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer;font-weight:700;" onclick="poDetailAccept()"><i class="fa-solid fa-check"></i> Accept &amp; Receive Stock</button>
-      </div>
-    </div>`;
-
-  const accBtn = document.getElementById('poDetailAcceptBtn');
-  const rejBtn = document.getElementById('poDetailRejectBtn');
-  if (accBtn) accBtn.style.pointerEvents = '';
-  if (rejBtn) rejBtn.style.pointerEvents = '';
-}
-window.closePODetailModal = function(){
-  document.getElementById('poDetailModal').classList.remove('show');
-  PO_DETAIL = null;
-};
-
-async function poDetailAccept(){
-  const p = PO_DETAIL;
-  if (!p) return;
-  const accBtn = document.getElementById('poDetailAcceptBtn');
-  const rejBtn = document.getElementById('poDetailRejectBtn');
-  if (accBtn){ accBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Receiving…'; accBtn.style.pointerEvents='none'; }
-  if (rejBtn) rejBtn.style.pointerEvents = 'none';
-  try {
-    await StoreService.acceptPO(p.id);
-    await loadAll();
-    closePODetailModal();
-    showToast('Order received — items added to store stock.', 'success');
-  } catch (err){
-    if (accBtn){ accBtn.innerHTML = '<i class="fa-solid fa-check"></i> Accept &amp; Receive Stock'; accBtn.style.pointerEvents=''; }
-    if (rejBtn) rejBtn.style.pointerEvents = '';
-    showToast('Error: ' + (err.message || 'Could not accept order'), 'error');
-  }
-}
-
-function poDetailReject(){
-  const p = PO_DETAIL;
-  if (!p) return;
-  if (document.getElementById('poRejectPanel')) { document.getElementById('poRejectPanel').remove(); }
-  const modalBox = document.querySelector('#poDetailModal .modal-box');
-  const panel = document.createElement('div');
-  panel.id = 'poRejectPanel';
-  panel.style.cssText = 'position:absolute;inset:0;background:var(--modal-bg);z-index:5;display:flex;flex-direction:column;justify-content:center;padding:28px;border-radius:18px;';
-  panel.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-      <div style="width:42px;height:42px;background:var(--red-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--red);font-size:18px;"><i class="fa-solid fa-circle-xmark"></i></div>
-      <div>
-        <div style="font-size:16px;font-weight:800;color:var(--text);">Reject this order?</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;">${p.poNo||p.prNo||p.id} — this cannot be undone and stock will NOT be added.</div>
-      </div>
-    </div>
-    <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Reason for rejection</label>
-    <textarea id="poRejectReason" rows="3" placeholder="Required — describe why this order is being rejected…" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;padding:11px 12px;resize:vertical;font-family:inherit;outline:none;"></textarea>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-      <button class="btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer;" onclick="document.getElementById('poRejectPanel').remove()">Cancel</button>
-      <button class="btn" style="background:var(--red);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:700;" onclick="confirmPoReject()"><i class="fa-solid fa-xmark"></i> Confirm Reject</button>
-    </div>`;
-  modalBox.appendChild(panel);
-  setTimeout(() => { const el = document.getElementById('poRejectReason'); if (el) el.focus(); }, 50);
-}
-
-function confirmPoReject(){
-  const reasonEl = document.getElementById('poRejectReason');
-  const reason = reasonEl ? reasonEl.value : '';
-  if (!String(reason||'').trim()) { showToast('Please provide a rejection reason.', 'error'); if (reasonEl) reasonEl.focus(); return; }
-  doRejectPO(PO_DETAIL.id, reason.trim());
-}
-
-async function doRejectPO(id, reason){
-  try {
-    await StoreService.rejectPO(id, reason);
-    await loadAll();
-    closePODetailModal();
-    showToast('Order rejected.', 'info');
-  } catch (err){
-    showToast('Error: ' + (err.message || 'Could not reject order'), 'error');
-  }
-}
-
-document.getElementById('poDetailModal').addEventListener('click', function(e){
-  if (e.target === this) closePODetailModal();
+/* ═══ GracePODetail component — shared PO detail modal ═══ */
+const poDetail = GracePODetail.attach({
+  service: ProcurementService,
+  fmtMoney: fmtMoney,
+  subtitle: 'Procurement PO detail and approval trail',
+  actions: [
+    {
+      key: 'accept',
+      label: 'Accept & Receive Stock',
+      icon: 'fa-check',
+      style: 'primary',
+      show: (po) => po.approvalStage === 'sent_to_store',
+      confirm: false,
+      handler: async (po) => { await StoreService.acceptPO(po.id); },
+    },
+    {
+      key: 'reject',
+      label: 'Reject',
+      icon: 'fa-xmark',
+      style: 'danger',
+      show: (po) => po.approvalStage === 'sent_to_store',
+      requireReason: true,
+      handler: async (po, reason) => { await StoreService.rejectPO(po.id, reason); },
+    },
+  ],
+  onSuccess: async () => { await loadAll(); showToast('Done.', 'success'); },
 });
-
-/* ═══ Row-level Accept / Reject (kept alongside the modal buttons) ═══ */
 
 async function doAcceptPO(id){
   try {
@@ -849,6 +685,16 @@ window.confirmRowReject = function(id){
   doRejectPO(id, reason.trim());
 };
 
+async function doRejectPO(id, reason){
+  try {
+    await StoreService.rejectPO(id, reason);
+    await loadAll();
+    showToast('Order rejected.', 'info');
+  } catch (err){
+    showToast('Error: ' + (err.message || 'Could not reject order'), 'error');
+  }
+}
+
 async function loadAll(){
   try {
     await StoreService.loadAll();
@@ -889,7 +735,7 @@ window.viewReq = function(no){
 /* Row is clickable — PO forms open the procurement detail modal, everything
    else routes through the existing requisition detail flow. */
 window.openRow = function(no, poId){
-  if (poId) { openPODetailModal(poId); }
+  if (poId) { poDetail.open(poId); }
   else { viewReq(no); }
 };
 

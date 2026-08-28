@@ -303,7 +303,8 @@
 </div>
 
 <script src="../services/permissions.js"></script>
-  <script src="services/procurement-service.js"></script>
+<script src="../component/grace-po-detail.js"></script>
+<script src="services/procurement-service.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -315,6 +316,14 @@ const shell = ProcurementShell.attach({
   pageSubtitle:  'Purchase order tracking',
   apiMode:       'Live',
   user:          { name: 'Procurement Officer', initials: 'PO' },
+});
+
+const poDetail = GracePODetail.attach({
+  service: ProcurementService,
+  fmtMoney: fmtN,
+  subtitle: 'Procurement PO detail and approval trail',
+  actions: [],
+  onSuccess: null,
 });
 
 // Single source of truth for this page — populated once by init() via
@@ -620,7 +629,12 @@ function renderPOs(){
    amount set). */
 function openPODetail(id){
   if (!id) return;
-  window.location.href = 'po-form.html?id=' + encodeURIComponent(id);
+  const p = allPOsCache.find(x => x.id === id);
+  if (p && ['fulfilled','rejected','voided','approved'].includes(p.approvalStage)){
+    poDetail.open(id);
+  } else {
+    window.location.href = 'po-form.html?id=' + encodeURIComponent(id);
+  }
 }
 
 function rowHtml(p){

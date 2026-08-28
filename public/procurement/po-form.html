@@ -303,8 +303,8 @@ function showToast(msg, type='success'){
 ═══════════════════════════════════════════════ */
 let itemCatalog = [];
 
-function loadItemCatalog(){
-  itemCatalog = ProcurementService.getItemCatalog();
+async function loadItemCatalog(){
+  itemCatalog = await ProcurementService.getItemCatalog();
 }
 
 function showItemSuggestions(query){
