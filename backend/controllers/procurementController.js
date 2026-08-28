@@ -338,18 +338,31 @@ exports.voidAndCorrectPO = async (req, res, next) => {
  */
 exports.getItemCatalog = async (req, res, next) => {
   try {
-    const prs = await PurchaseRequest.find({}, { items: 1 });
-    const seen = new Set();
-    const list = [];
+    const StoreStock = require('../models/StoreStock');
+    const [prs, stockItems] = await Promise.all([
+      PurchaseRequest.find({}, { items: 1 }),
+      StoreStock.find({}, { name: 1, unit: 1, qty: 1, cost: 1 }),
+    ]);
+
+    const seen = new Map();
+
+    // Store stock items first (they are the source of truth)
+    (stockItems || []).forEach((s) => {
+      const key = (s.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return;
+      seen.set(key, { name: (s.name || '').trim(), unit: s.unit || '', price: s.cost || 0, stockQty: s.qty || 0, stockId: s.id || s._id.toString() });
+    });
+
+    // Then procurement history items (fill in gaps)
     prs.forEach((pr) => {
       (pr.items || []).forEach((it) => {
         const key = (it.name || '').trim().toLowerCase();
         if (!key || seen.has(key)) return;
-        seen.add(key);
-        list.push({ name: (it.name || '').trim(), price: it.cost || 0 });
+        seen.set(key, { name: (it.name || '').trim(), unit: it.unit || '', price: it.cost || 0, stockQty: null, stockId: '' });
       });
     });
-    res.json({ success: true, data: list });
+
+    res.json({ success: true, data: Array.from(seen.values()) });
   } catch (err) { next(err); }
 };
 

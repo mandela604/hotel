@@ -316,14 +316,16 @@ function showItemSuggestions(query){
   dd._matches = matches;
   dd.innerHTML = matches.map((it,i) => `
     <div class="item-suggest-opt" data-i="${i}">
-      <span class="sn">${escapeHtml(it.name)}</span>
-      <span class="sp">${fmtN(it.price)}</span>
+      <span class="sn">${escapeHtml(it.name)}${it.unit ? ' <small style="color:var(--text3);">(' + escapeHtml(it.unit) + ')</small>' : ''}</span>
+      <span class="sp">${it.stockQty != null ? it.stockQty + ' in stock · ' : ''}${fmtN(it.price)}</span>
     </div>`).join('');
   dd.classList.add('show');
   dd.querySelectorAll('.item-suggest-opt').forEach(opt => {
     opt.addEventListener('click', () => {
       const m = dd._matches[parseInt(opt.dataset.i, 10)];
       document.getElementById('entryName').value = m.name;
+      document.getElementById('entryName').dataset.stockId = m.stockId || '';
+      document.getElementById('entryName').dataset.unit = m.unit || '';
       document.getElementById('entryPrice').value = m.price || '';
       updateEntryPreview();
       dd.classList.remove('show');
@@ -393,6 +395,8 @@ function loadItemIntoEntry(idx){
   const it = items[idx];
   if (!it) return;
   document.getElementById('entryName').value = it.name;
+  document.getElementById('entryName').dataset.stockId = it.stockId || '';
+  document.getElementById('entryName').dataset.unit = it.unit || '';
   document.getElementById('entryQty').value = it.qty;
   document.getElementById('entryPrice').value = it.price;
   updateEntryPreview();
@@ -405,6 +409,8 @@ function loadItemIntoEntry(idx){
 function cancelEntryEdit(){
   const nameEl = document.getElementById('entryName');
   nameEl.value = '';
+  nameEl.dataset.stockId = '';
+  nameEl.dataset.unit = '';
   document.getElementById('entryQty').value = 1;
   document.getElementById('entryPrice').value = '';
   updateEntryPreview();
@@ -424,7 +430,7 @@ function addItemFromEntry(){
   if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
   if (price <= 0){ showToast('Enter a unit price.', 'error'); priceEl.focus(); return; }
 
-  const entry = { name, qty, price, subtotal: qty * price };
+  const entry = { name, qty, price, subtotal: qty * price, stockId: nameEl.dataset.stockId || '', unit: nameEl.dataset.unit || '' };
 
   if (editingIndex != null) {
     items[editingIndex] = entry;
@@ -434,6 +440,8 @@ function addItemFromEntry(){
   recalcTotals();
 
   nameEl.value = '';
+  nameEl.dataset.stockId = '';
+  nameEl.dataset.unit = '';
   qtyEl.value = 1;
   priceEl.value = '';
   updateEntryPreview();
