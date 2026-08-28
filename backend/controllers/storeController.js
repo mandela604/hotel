@@ -80,6 +80,11 @@ exports.listStock = asyncHandler(async (req, res) => {
   res.json({ success: true, data: stock });
 });
 
+exports.storeCatalog = asyncHandler(async (req, res) => {
+  const stock = await StoreStock.find({}, { name: 1, unit: 1, qty: 1, cost: 1, cat: 1 }).sort({ name: 1 });
+  res.json({ success: true, data: stock.map(s => ({ id: s._id || s.id, name: s.name, unit: s.unit, qty: s.qty, cost: s.cost, cat: s.cat })) });
+});
+
 exports.addStock = asyncHandler(async (req, res) => {
   const { name, cat, category, unit, min, cost, price, qty } = req.body;
   const existing = await findStockFuzzy(name);
@@ -200,7 +205,7 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
     supplier: finalMode === 'purchase' ? (supplier || '').trim() : null,
     linked: finalMode === 'purchase' ? (linked || '').trim() : null,
     items: items.map((i) => ({
-      name: i.name.trim(), unit: i.unit || 'unit', qty: Number(i.qty) || 0,
+      name: i.name.trim(), stockId: i.stockId || '', unit: i.unit || 'unit', qty: Number(i.qty) || 0,
       cost: Number(i.cost) || 0, remark: i.remark || '', issuedQty: 0,
     })),
     status: 'Pending',
@@ -230,7 +235,7 @@ exports.updateRequisition = asyncHandler(async (req, res) => {
   if (row.mode === 'purchase' && linked !== undefined) row.linked = linked.trim();
   if (Array.isArray(items)) {
     row.items = items.map((i) => ({
-      name: (i.name || '').trim(), unit: i.unit || 'unit', qty: Number(i.qty) || 0,
+      name: (i.name || '').trim(), stockId: i.stockId || '', unit: i.unit || 'unit', qty: Number(i.qty) || 0,
       cost: Number(i.cost) || 0, remark: i.remark || '', issuedQty: i.issuedQty || 0,
     }));
   }
@@ -260,7 +265,13 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
 
   for (const it of row.items) {
     const prevIssued = it.issuedQty || 0;
-    const stockItem = await findStockFuzzy(it.name);
+    let stockItem = null;
+    if (it.stockId) {
+      stockItem = await StoreStock.findById(it.stockId);
+    }
+    if (!stockItem) {
+      stockItem = await findStockFuzzy(it.name);
+    }
     const avail = stockItem ? stockItem.qty : 0;
     const raw = Object.prototype.hasOwnProperty.call(issuedQtyByItem, it.name) ? issuedQtyByItem[it.name] : prevIssued;
     const issued = Math.max(0, Math.min(Number(raw) || 0, avail + prevIssued, it.qty));

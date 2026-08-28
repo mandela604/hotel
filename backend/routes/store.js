@@ -24,6 +24,7 @@ const isAdmin = roleGuard('admin');
 
 /* Stock */
 router.get('/stock', storeController.listStock);
+router.get('/catalog', storeController.storeCatalog);
 router.post('/stock', inDept, privilegeGuard('store', 'canCreate'), validateAddStock, storeController.addStock);
 router.put('/stock/:id', inDept, privilegeGuard('store', 'canEdit'), validateParam('id'), validateUpdateStock, storeController.updateStock);
 router.patch('/stock/:id/receive', inDept, privilegeGuard('store', 'canEdit'), validateParam('id'), storeController.receiveStock);

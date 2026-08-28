@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const reqItemSchema = new mongoose.Schema({
   name:      { type: String, required: true },
+  stockId:   { type: String, default: '' },
   unit:      { type: String, default: 'Pieces' },
   qty:       { type: Number, default: 0 },
   cost:      { type: Number, default: 0 },

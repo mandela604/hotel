@@ -273,6 +273,16 @@
         return Array.isArray(c) ? c : [];
       }
       if (Array.isArray(options.catalog)) return options.catalog;
+      // For store_issue mode (departments requesting from Store), use
+      // Store's stock catalog so departments pick items Store actually has.
+      if (mode === 'store_issue' && storeService && storeService.state) {
+        if (storeService.state.catalog && storeService.state.catalog.length) {
+          return storeService.state.catalog;
+        }
+        if (Array.isArray(storeService.state.stock)) {
+          return storeService.state.stock.map(i => ({ name: i.name, unit: i.unit, id: i.id, stockQty: i.qty }));
+        }
+      }
       if (dataService && dataService.state) {
         if (dataService.state.catalog && dataService.state.catalog.length) {
           return dataService.state.catalog;
@@ -297,7 +307,7 @@
 
     function newItemRow(catalogItem) {
       itemSeq++;
-      return { rid: itemSeq, name: catalogItem.name, unit: catalogItem.unit, qty: '', cost: '', remark: '' };
+      return { rid: itemSeq, name: catalogItem.name, unit: catalogItem.unit, stockId: catalogItem.id || catalogItem.stockId || '', qty: '', cost: '', remark: '' };
     }
 
     // ── Shell ──
@@ -576,7 +586,7 @@
         fulfillStore: mode === 'store_issue' ? root.querySelector('[data-f="fulfillStore"]').value : null,
         supplier: mode === 'purchase' ? (root.querySelector('[data-f="supplier"]')?.value || '').trim() : null,
         linked: mode === 'purchase' ? (root.querySelector('[data-f="linked"]')?.value || '').trim() : null,
-        items: validItems.map(i => ({ name: i.name, unit: i.unit, qty: parseFloat(i.qty) || 0, cost: parseFloat(i.cost) || 0, remark: i.remark, issuedQty: 0 })),
+        items: validItems.map(i => ({ name: i.name, stockId: i.stockId || '', unit: i.unit, qty: parseFloat(i.qty) || 0, cost: parseFloat(i.cost) || 0, remark: i.remark, issuedQty: 0 })),
       };
 
       try {
