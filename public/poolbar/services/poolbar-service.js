@@ -481,9 +481,23 @@
     const res = await apiPost('/requisitions', {
       items, requester, dept: dept || getDepartmentName(), priority, remark, neededBy,
     });
-    state.requisitions.unshift(res.data);
+    const doc = res.data || res;
+    const normalized = {
+      no: doc.requisitionNo || doc.no || '',
+      by: doc.requester || doc.by || '',
+      dept: doc.dept || 'Pool Bar',
+      needed: doc.neededBy || doc.needed || '',
+      priority: doc.priority || 'Normal',
+      remark: doc.remark || '',
+      items: (doc.items || []).map(i => ({ name: i.name, stockId: i.stockId || '', unit: i.unit, qty: i.qty, cost: i.cost, remark: i.remark || '', issuedQty: i.issuedQty || 0 })),
+      status: doc.status || 'Pending',
+      dateRaised: doc.dateRaised || doc.createdAt || '',
+      dateRaisedDisplay: doc.dateRaisedDisplay || '',
+      _kind: 'requisition',
+    };
+    state.requisitions.unshift(normalized);
     emitChange('requisition:submit');
-    return res.data;
+    return normalized;
   }
 
   /**

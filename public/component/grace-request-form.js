@@ -590,9 +590,14 @@
       };
 
       try {
-        // StoreService owns numbering + persistence — this component
-        // never writes storage itself.
-        const entry = await storeService.submitRequisition(payload);
+        // For store_issue mode, use the department's own service (e.g.
+        // PoolBarService, RestaurantService) if it has submitRequisition,
+        // so the record lives in the same data store the page reads from.
+        // purchase mode always goes through StoreService → Procurement.
+        const submitSvc = (mode === 'store_issue' && dataService && typeof dataService.submitRequisition === 'function')
+          ? dataService
+          : storeService;
+        const entry = await submitSvc.submitRequisition(payload);
 
         showToast(`${entry.no} submitted to ${meta ? meta.destTitle : (mode === 'purchase' ? 'Procurement' : 'Store')}.`, 'success');
         resetForm();

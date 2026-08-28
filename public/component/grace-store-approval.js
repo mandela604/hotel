@@ -270,6 +270,7 @@
       container.innerHTML = `<div class="ghsa-empty-state">Store service was not provided. This component cannot load requisitions without it.</div>`;
       return null;
     }
+    const viewerSvc = options.viewerService || null;
 
     const instId = 'ghsa' + (++_instanceCounter);
     const showBack = options.showBackButton !== false;
@@ -385,6 +386,9 @@
       document.getElementById(instId + '-content').innerHTML = `<div class="ghsa-empty-state">Loading requisition…</div>`;
 
       req = currentNo ? svc.getRequisition(currentNo) : null;
+      if (!req && viewerSvc && typeof viewerSvc.getRequisition === 'function') {
+        req = currentNo ? viewerSvc.getRequisition(currentNo) : null;
+      }
       if (!req) {
         const anyStoreIssue = (svc.getRequisitions({ mode: 'store_issue' }) || [])[0];
         document.getElementById(instId + '-content').innerHTML = currentNo
@@ -656,7 +660,8 @@
     // ── Requester actions ──
     async function confirmReq() {
       try {
-        const updated = await svc.confirmReceipt(req.no);
+        const actionSvc = (viewerSvc && typeof viewerSvc.confirmReceipt === 'function') ? viewerSvc : svc;
+        const updated = await actionSvc.confirmReceipt(req.no);
         req = updated;
         workingItems = buildWorkingItems(req);
         render();
@@ -669,7 +674,8 @@
 
     async function disputeReq(reason) {
       try {
-        const updated = await svc.rejectDelivery(req.no, reason);
+        const actionSvc = (viewerSvc && typeof viewerSvc.rejectDelivery === 'function') ? viewerSvc : svc;
+        const updated = await actionSvc.rejectDelivery(req.no, reason);
         req = updated;
         workingItems = buildWorkingItems(req);
         render();

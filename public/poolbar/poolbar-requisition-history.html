@@ -631,6 +631,7 @@ function openDetail(no) {
     detailWidget = GraceHotelStoreApproval.attach('#detailContainer', {
       reqNo: no,
       storeService: SS,
+      viewerService: PBS,
       viewerRole: 'requester',    // Pool Bar is reviewing/accepting delivery, not approving/issuing it
       showBackButton: false,
       onConfirm: async function (req) {
