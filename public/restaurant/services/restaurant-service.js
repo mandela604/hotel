@@ -543,7 +543,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     recordSale, voidSale,
     openTab, markServed, payOrder, cancelOrder,
     acceptTransfer, rejectTransfer, transferKPIs,
-    getRequisitions, submitRequisition,
+    getRequisitions, submitRequisition, receiveRequisition, confirmReceipt,
     dashboardKPIs, salesKPIs, getFilteredSales, getRevenueBreakdown, getTodaysCompletedSales,
     can, canVoidSale, canDiscount,
     getInHouseGuests,
