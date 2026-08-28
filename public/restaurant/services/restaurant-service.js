@@ -201,7 +201,16 @@ function getCategories() {
     return { total: rows.length, completed: completed.length, voided: voided.length, revenue, units };
   }
 
-  function dashboardKPIs() {
+  function getTodaysCompletedSales() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return (state.sales || []).filter(function (s) {
+    const d = parseStamp(s.date);
+    return d && d >= today && s.status === 'completed';
+  });
+}
+
+function dashboardKPIs() {
     const pendingN = (state.pending || []).length;
     const lowStock = (state.stock || []).filter(function (i) { return stockLevel(i) !== 'ok'; }).length;
     const todaySales = getTodaysCompletedSales();
