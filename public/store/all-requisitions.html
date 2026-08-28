@@ -530,15 +530,17 @@ function render(){
         <td class="center"><span class="items-count">${r.items.length}</span></td>
         <td>
           ${r._po
-            ? `<span class="status-chip chip-accountant" style="background:var(--blue-bg);color:var(--blue);"><i class="fa-solid fa-circle"></i>Awaiting Store</span>`
+            ? `<span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>`
             : `<span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>`}
         </td>
         <td class="center">${r._po ? `<span style="color:var(--gold);font-weight:700;white-space:nowrap;">${fmtMoney(Number(r.totalAmount)||0)}</span>` : '—'}</td>
         <td class="center" style="min-width:170px;">
-          ${r._po
+          ${r._po && r._poStage === 'sent_to_store'
             ? `<button class="act-btn" style="background:var(--green);color:#0a1520;border:none;" onclick="event.stopPropagation();acceptPOFromRow('${r._poId}')"><i class="fa-solid fa-check"></i> Accept</button>
                <button class="act-btn" style="background:var(--red);color:#fff;border:none;" onclick="event.stopPropagation();openRowReject('${r._poId}')"><i class="fa-solid fa-xmark"></i> Reject</button>`
-            : `<span style="font-size:11px;color:var(--text3);">Click row to view</span>`}
+            : r._po
+              ? `<span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>`
+              : `<span style="font-size:11px;color:var(--text3);">Click row to view</span>`}
         </td>
       </tr>
     `).join('');
@@ -555,6 +557,10 @@ function fmtPoDate(d){ if(!d) return '—'; return fmtDate(d); }
 
 /* Normalize a procurement PO into the shared requisition-row shape so the
    main table + all filters (dept / type / status / search / date) just work. */
+const PO_STATUS_MAP = {
+  pending: 'Pending', accountant: 'Pending', gm: 'Pending', md: 'Pending',
+  sent_to_store: 'Awaiting Store', fulfilled: 'Fulfilled', rejected: 'Rejected', voided: 'Voided',
+};
 function poToRequisition(p){
   const no = p.poNo || p.prNo || ('PO-' + (p.id||'').slice(0,6));
   const items = p.items || [];
@@ -566,10 +572,11 @@ function poToRequisition(p){
     dept: p.dept || '',
     needed: p.needed || '',
     items: items,
-    status: 'Awaiting Store',
+    status: PO_STATUS_MAP[p.approvalStage] || p.approvalStage || 'Pending',
     totalAmount: Number(p.totalAmount) || items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.cost)||0),0),
     _po: true,
     _poId: p.id,
+    _poStage: p.approvalStage,
   };
 }
 
@@ -579,7 +586,7 @@ async function loadIncomingPOs(){
     if (typeof window.ProcurementService === 'undefined' || !ProcurementService.getPRs) return;
     const all = await ProcurementService.getPRs();
     const arr = Array.isArray(all) ? all : (all && all.data ? (Array.isArray(all.data)?all.data:[]) : []);
-    PO_INCOMING = (arr||[]).filter(p => p.approvalStage === 'sent_to_store');
+    PO_INCOMING = (arr||[]).filter(p => !!p.poNo);
     REQUISITIONS = REQUISITIONS.concat(PO_INCOMING.map(poToRequisition));
   } catch(e){
     PO_INCOMING = [];
