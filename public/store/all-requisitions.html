@@ -315,9 +315,10 @@ tbody td.center { text-align: center; }
                 <th class="center">Items</th>
                 <th>Status</th>
                 <th class="center">Total</th>
+                <th class="center">Actions</th>
               </tr>
             </thead>
-            <tbody id="tbody"><tr class="state-row"><td colspan="9"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+            <tbody id="tbody"><tr class="state-row"><td colspan="10"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
           </table>
         </div>
         <div class="pagination">
@@ -363,6 +364,7 @@ tbody td.center { text-align: center; }
 </div>
 
         <script src="services/store-service.js"></script>
+        <script src="../services/permissions.js"></script>
         <script src="../procurement/services/procurement-service.js"></script>       <script src="../component/store-shell.js"></script>
 <script src="../component/grace-request-form.js"></script>
 <script src="../component/grace-store-approval.js"></script>
@@ -516,7 +518,7 @@ function render(){
   const pageRows = rows.slice(start, start+PAGE_SIZE);
 
   document.getElementById('tbody').innerHTML = pageRows.length === 0
-    ? `<tr class="empty-row"><td colspan="9">No records match your filters.</td></tr>`
+    ? `<tr class="empty-row"><td colspan="10">No records match your filters.</td></tr>`
     : pageRows.map(r => `
       <tr onclick="openRow('${r.no}','${r._poId||''}')">
         <td class="req-link">${r.no}</td>
@@ -532,6 +534,12 @@ function render(){
             : `<span class="status-chip ${STATUS_CHIP[r.status]||''}"><i class="fa-solid fa-circle"></i>${r.status}</span>`}
         </td>
         <td class="center">${r._po ? `<span style="color:var(--gold);font-weight:700;white-space:nowrap;">${fmtMoney(Number(r.totalAmount)||0)}</span>` : '—'}</td>
+        <td class="center" style="min-width:170px;">
+          ${r._po
+            ? `<button class="act-btn" style="background:var(--green);color:#0a1520;border:none;" onclick="event.stopPropagation();acceptPOFromRow('${r._poId}')"><i class="fa-solid fa-check"></i> Accept</button>
+               <button class="act-btn" style="background:var(--red);color:#fff;border:none;" onclick="event.stopPropagation();openRowReject('${r._poId}')"><i class="fa-solid fa-xmark"></i> Reject</button>`
+            : `<span style="font-size:11px;color:var(--text3);">Click row to view</span>`}
+        </td>
       </tr>
     `).join('');
 
@@ -762,17 +770,107 @@ document.getElementById('poDetailModal').addEventListener('click', function(e){
   if (e.target === this) closePODetailModal();
 });
 
+/* ═══ Row-level Accept / Reject (kept alongside the modal buttons) ═══ */
+
+async function doAcceptPO(id){
+  try {
+    await StoreService.acceptPO(id);
+    await loadAll();
+    showToast('Order received — items added to store stock.', 'success');
+  } catch (err){
+    showToast('Error: ' + (err.message || 'Could not accept order'), 'error');
+  }
+}
+window.doAcceptPO = doAcceptPO;
+
+window.acceptPOFromRow = function(id){
+  const p = PO_INCOMING.find(x => x.id === id);
+  const label = (p && (p.poNo || p.prNo)) || 'this order';
+  if (document.getElementById('poRowConfirm')) { document.getElementById('poRowConfirm').remove(); }
+  const overlay = document.createElement('div');
+  overlay.id = 'poRowConfirm';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,40,0.55);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--modal-bg);border:1px solid var(--border);border-radius:16px;padding:24px;width:min(420px,92vw);box-shadow:0 30px 80px rgba(15,20,40,0.3);">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="width:42px;height:42px;background:var(--green-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--green);font-size:18px;"><i class="fa-solid fa-check"></i></div>
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--text);">Accept this order?</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">${label} — items will be added to Store stock.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button class="btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer;" onclick="document.getElementById('poRowConfirm').remove()">Cancel</button>
+        <button class="btn" style="background:var(--green);color:#0a1520;border:none;border-radius:9px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:700;" onclick="document.getElementById('poRowConfirm').remove();doAcceptPO('${id}')"><i class="fa-solid fa-check"></i> Yes, Accept</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+};
+
+window.openRowReject = function(id){
+  const p = PO_INCOMING.find(x => x.id === id);
+  const label = (p && (p.poNo || p.prNo)) || 'this order';
+  if (document.getElementById('poRowConfirm')) { document.getElementById('poRowConfirm').remove(); }
+  const overlay = document.createElement('div');
+  overlay.id = 'poRowConfirm';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,40,0.55);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--modal-bg);border:1px solid var(--border);border-radius:16px;padding:24px;width:min(440px,92vw);box-shadow:0 30px 80px rgba(15,20,40,0.3);">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div style="width:42px;height:42px;background:var(--red-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--red);font-size:18px;"><i class="fa-solid fa-circle-xmark"></i></div>
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--text);">Reject ${label}?</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">Stock will NOT be added.</div>
+        </div>
+      </div>
+      <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:block;">Reason for rejection</label>
+      <textarea id="rowRejectReason" rows="3" placeholder="Required — why is this order being rejected?" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;padding:11px 12px;resize:vertical;font-family:inherit;outline:none;"></textarea>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button class="btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer;" onclick="document.getElementById('poRowConfirm').remove()">Cancel</button>
+        <button class="btn" style="background:var(--red);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:13px;cursor:pointer;font-weight:700;" onclick="confirmRowReject('${id}')"><i class="fa-solid fa-xmark"></i> Confirm Reject</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { const el = document.getElementById('rowRejectReason'); if (el) el.focus(); }, 50);
+};
+
+window.confirmRowReject = function(id){
+  const reasonEl = document.getElementById('rowRejectReason');
+  const reason = reasonEl ? reasonEl.value : '';
+  if (!String(reason||'').trim()) { showToast('Please provide a rejection reason.', 'error'); if (reasonEl) reasonEl.focus(); return; }
+  document.getElementById('poRowConfirm').remove();
+  doRejectPO(id, reason.trim());
+};
+
 async function loadAll(){
   try {
     await StoreService.loadAll();
     REQUISITIONS = StoreService.getRequisitions();
     await loadIncomingPOs();
+    populateDeptFilter();
     renderKPIs();
     render();
   } catch(err){
     setOffline(true);
     REQUISITIONS = [];
   }
+}
+
+/* Department filter options are derived from the live data (requisitions +
+   merged procurement POs) so the dropdown always lists real departments. */
+function populateDeptFilter(){
+  const sel = document.getElementById('fDept');
+  if (!sel) return;
+  const current = sel.value;
+  const depts = [];
+  REQUISITIONS.forEach(r => {
+    const d = (r.dept || '').trim();
+    if (d && depts.indexOf(d) === -1) depts.push(d);
+  });
+  depts.sort((a,b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">All Departments</option>' +
+    depts.map(d => `<option value="${d}">${d}</option>`).join('');
+  if (current && depts.indexOf(current) > -1) sel.value = current;
 }
 
 window.viewReq = function(no){
@@ -1039,7 +1137,8 @@ async function init(){
   updateDateFilterLabel();
 
   StoreService.onChange(() => {
-    REQUISITIONS = StoreService.getRequisitions();
+    REQUISITIONS = StoreService.getRequisitions().concat(PO_INCOMING.map(poToRequisition));
+    populateDeptFilter();
     renderKPIs();
     render();
   });
