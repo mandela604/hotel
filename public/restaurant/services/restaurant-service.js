@@ -458,12 +458,14 @@
   async function getRequisitions() {
     const res = await get('/requisitions');
     return res.data || [];
-  }
   function getRequisition(no) {
     if (!no) return null;
     return (state.history || []).concat(state.pending || []).find(function (r) { return r.no === no || r.requisitionNo === no || r.id === no; }) || null;
   }
   async function submitRequisition(payload) {
+    payload = payload || {};
+    payload.requester = payload.requester || payload.by || 'Restaurant Staff';
+    payload.neededBy = payload.neededBy || payload.needed || '';
     const res = await post('/requisitions', payload);
     emitChange('requisition:submit');
     return res.data;

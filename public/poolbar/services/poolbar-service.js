@@ -515,9 +515,17 @@
   }
 
   /* ── Requisitions (Pool Bar → Store) ─────────────────────────────── */
-  async function submitRequisition({ items, requester, dept, priority, remark, neededBy }) {
+  async function submitRequisition(opts) {
+    opts = opts || {};
+    const items = opts.items || [];
+    const requester = opts.requester || opts.by || 'Pool Bar Staff';
+    const dept = opts.dept || getDepartmentName();
+    const priority = opts.priority || 'Normal';
+    const remark = opts.remark || '';
+    const neededBy = opts.neededBy || opts.needed || '';
+
     const res = await apiPost('/requisitions', {
-      items, requester, dept: dept || getDepartmentName(), priority, remark, neededBy,
+      items, requester, dept, priority, remark, neededBy,
     });
     const doc = res.data || res;
     const normalized = normalizeRequisition(doc);

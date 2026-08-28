@@ -581,7 +581,13 @@
       btn.disabled = true; btn.textContent = 'Submitting…';
 
       const payload = {
-        mode, by, dept, needed, priority,
+        mode,
+        by: by || (currentUser && currentUser.name) || '',
+        requester: by || (currentUser && currentUser.name) || 'Staff',
+        dept,
+        needed,
+        neededBy: needed || '',
+        priority,
         remark: root.querySelector('[data-f="remark"]').value.trim(),
         fulfillStore: mode === 'store_issue' ? root.querySelector('[data-f="fulfillStore"]').value : null,
         supplier: mode === 'purchase' ? (root.querySelector('[data-f="supplier"]')?.value || '').trim() : null,

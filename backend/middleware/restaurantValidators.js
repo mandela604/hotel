@@ -205,9 +205,10 @@ exports.validatePayOrder = (req, res, next) => {
 /* ── Requisitions (Restaurant → Store) ── */
 
 exports.validateSubmitRequisition = (req, res, next) => {
-  const { items, requester, neededBy, priority, remark } = req.body;
+  const { items, requester, by, neededBy, priority, remark } = req.body;
+  const finalRequester = requester || by || (req.user ? req.user.name : 'Restaurant Staff');
+  req.body.requester = finalRequester;
 
-  if (!isNonEmptyString(requester)) return fail(res, 'requester is required', 'requester');
   if (!Array.isArray(items) || items.length === 0) {
     return fail(res, 'items must be a non-empty array', 'items');
   }

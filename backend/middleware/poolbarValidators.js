@@ -147,10 +147,10 @@ exports.validateCancelOrder = (req, res, next) => {
 /* ── Requisitions ── */
 
 exports.validateCreateRequisition = (req, res, next) => {
-  const { items, requester, dept } = req.body;
-
-  if (!isNonEmptyString(requester)) return fail(res, 'requester is required', 'requester');
-  if (!isNonEmptyString(dept)) return fail(res, 'dept is required', 'dept');
+  const { items, requester, by, dept } = req.body;
+  const finalRequester = requester || by || (req.user ? req.user.name : 'Pool Bar Staff');
+  req.body.requester = finalRequester;
+  req.body.dept = dept || 'Pool Bar';
 
   if (!Array.isArray(items) || items.length === 0) {
     return fail(res, 'items must be a non-empty array', 'items');
