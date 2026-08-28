@@ -81,7 +81,7 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.addStock = asyncHandler(async (req, res) => {
-  const { name, cat, category, unit, min, cost, price } = req.body;
+  const { name, cat, category, unit, min, cost, price, qty } = req.body;
   const existing = await findStockFuzzy(name);
   if (existing) throw new ApiError(409, `"${name}" is already tracked — edit it instead.`);
 
@@ -89,7 +89,7 @@ exports.addStock = asyncHandler(async (req, res) => {
     name: name.trim(),
     cat: (cat || category || 'Other').trim(),
     unit: (unit || 'unit').trim(),
-    qty: 0,
+    qty: Number(qty) || 0,
     cost: Number(cost || price) || 0,
     min: Number(min) || 0,
   });
@@ -97,13 +97,14 @@ exports.addStock = asyncHandler(async (req, res) => {
 });
 
 exports.updateStock = asyncHandler(async (req, res) => {
-  const { cat, category, unit, min, cost, price, name } = req.body;
+  const { cat, category, unit, min, cost, price, name, qty } = req.body;
   const updates = {};
   if (name !== undefined) updates.name = name.trim();
   if (cat !== undefined || category !== undefined) updates.cat = (cat || category).trim();
   if (unit !== undefined) updates.unit = unit.trim();
   if (min !== undefined) updates.min = Number(min);
   if (cost !== undefined || price !== undefined) updates.cost = Number(cost !== undefined ? cost : price);
+  if (qty !== undefined) updates.qty = Number(qty);
 
   const item = await StoreStock.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');

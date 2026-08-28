@@ -275,6 +275,7 @@
     if (updates.unit !== undefined) payload.unit = updates.unit;
     if (updates.min !== undefined) payload.min = updates.min;
     if (updates.cost !== undefined) payload.cost = updates.cost;
+    if (updates.qty !== undefined) payload.qty = updates.qty;
 
     const updated = await apiFetch('/stock/' + id, { method: 'PUT', body: JSON.stringify(payload) });
     const norm = normalizeStock(updated);
@@ -469,21 +470,21 @@
       }
 
       if (stockItem) {
-        if (cost > 0) {
-          await apiFetch('/stock/' + stockItem.id, {
-            method: 'PUT',
-            body: JSON.stringify({ cost: cost }),
-          });
-        }
-        stockItem.qty = (stockItem.qty || 0) + qty;
+        const newQty = (stockItem.qty || 0) + qty;
+        const payload = { qty: newQty };
+        if (cost > 0) payload.cost = cost;
+        await apiFetch('/stock/' + stockItem.id, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+        stockItem.qty = newQty;
         if (cost > 0) stockItem.cost = cost;
       } else {
         const created = await apiFetch('/stock', {
           method: 'POST',
-          body: JSON.stringify({ name: name, cat: pr.cat || 'General', unit: unit, cost: cost, min: 0 }),
+          body: JSON.stringify({ name: name, cat: pr.cat || 'General', unit: unit, cost: cost, qty: qty, min: 0 }),
         });
         const norm = normalizeStock(created);
-        norm.qty = qty;
         state.stock.push(norm);
       }
     }
