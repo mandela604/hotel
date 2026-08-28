@@ -18,6 +18,7 @@ const prItemSchema = new mongoose.Schema({
   unit: { type: String, default: 'Units' },
   price: { type: Number, default: 0 },
   cost:  { type: Number, default: 0 },
+  stockId: { type: String, default: '' },
 }, { _id: false });
 
 const purchaseRequestSchema = new mongoose.Schema({

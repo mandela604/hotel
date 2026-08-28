@@ -336,7 +336,7 @@ function showItemSuggestions(query){
   dd.innerHTML = matches.map((it,i) => `
     <div class="item-suggest-opt" data-i="${i}">
       <span class="sn">${escapeHtml(it.name)}</span>
-      <span class="sp">${escapeHtml(it.unit || '')}</span>
+      <span class="sp">${escapeHtml(it.unit || '')} ${it.stockQty != null ? '· ' + it.stockQty + ' in stock' : ''}</span>
     </div>`).join('');
   dd.classList.add('show');
   dd.querySelectorAll('.item-suggest-opt').forEach(opt => {
@@ -344,6 +344,7 @@ function showItemSuggestions(query){
       const m = dd._matches[parseInt(opt.dataset.i, 10)];
       document.getElementById('entryName').value = m.name;
       document.getElementById('entryUnit').value = m.unit || '';
+      document.getElementById('entryName').dataset.stockId = m.id || '';
       updateEntryPreview();
       dd.classList.remove('show');
       document.getElementById('entryQty').focus();
@@ -395,6 +396,7 @@ function loadItemIntoEntry(idx){
   const it = items[idx];
   if (!it) return;
   document.getElementById('entryName').value = it.name;
+  document.getElementById('entryName').dataset.stockId = it.stockId || '';
   document.getElementById('entryQty').value = it.qty;
   document.getElementById('entryUnit').value = it.unit || '';
   document.getElementById('entryPrice').value = it.price || '';
@@ -407,6 +409,7 @@ function loadItemIntoEntry(idx){
 
 function cancelEntryEdit(){
   document.getElementById('entryName').value = '';
+  document.getElementById('entryName').dataset.stockId = '';
   document.getElementById('entryQty').value = 1;
   document.getElementById('entryUnit').value = '';
   document.getElementById('entryPrice').value = '';
@@ -429,7 +432,7 @@ function addItemFromEntry(){
   if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
   if (!unit){ showToast('Enter a unit (e.g. kg, litre, pack).', 'error'); unitEl.focus(); return; }
 
-  const entry = { name, qty, unit, price, subtotal: qty * price };
+  const entry = { name, qty, unit, price, subtotal: qty * price, stockId: nameEl.dataset.stockId || '' };
 
   if (editingIndex != null) {
     items[editingIndex] = entry;
@@ -439,6 +442,7 @@ function addItemFromEntry(){
   recalcTotals();
 
   nameEl.value = '';
+  nameEl.dataset.stockId = '';
   qtyEl.value = 1;
   unitEl.value = '';
   priceEl.value = '';
@@ -538,7 +542,7 @@ async function populateFromReq(req){
   items = (req.items || []).map(it => {
     const qty = Number(it.qty) || 0;
     const price = Number(it.cost) || 0;
-    return { name: it.name, qty, unit: it.unit || '', price, subtotal: qty * price };
+    return { name: it.name, qty, unit: it.unit || '', price, subtotal: qty * price, stockId: it.stockId || '' };
   });
   setEntryEditingState(null);
   recalcTotals();
@@ -580,7 +584,7 @@ async function handleSubmit(){
     priority: document.getElementById('fPriority').value,
     supplier: document.getElementById('fSupplier').value.trim(),
     remark: document.getElementById('fNotes').value.trim(),
-    items: items.map(i => ({ name: i.name, qty: i.qty, unit: i.unit, cost: i.price || 0 })),
+    items: items.map(i => ({ name: i.name, qty: i.qty, unit: i.unit, cost: i.price || 0, stockId: i.stockId || '' })),
   };
 
   const createBtn = document.getElementById('createBtn');

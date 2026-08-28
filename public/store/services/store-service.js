@@ -157,7 +157,7 @@
   }
 
   function rebuildCatalog() {
-    state.catalog = state.stock.map(function (i) { return { name: i.name, unit: i.unit }; });
+    state.catalog = state.stock.map(function (i) { return { name: i.name, unit: i.unit, id: i.id, stockQty: i.qty }; });
   }
 
   function findStock(name) {
@@ -458,8 +458,16 @@
       const qty = parseFloat(it.qty) || 0;
       const cost = parseFloat(it.cost) || 0;
       const unit = it.unit || 'unit';
+      const stockId = it.stockId || '';
 
-      const stockItem = findStock(name);
+      let stockItem = null;
+      if (stockId) {
+        stockItem = findStockById(stockId);
+      }
+      if (!stockItem) {
+        stockItem = findStock(name);
+      }
+
       if (stockItem) {
         if (cost > 0) {
           await apiFetch('/stock/' + stockItem.id, {
