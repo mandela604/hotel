@@ -244,3 +244,21 @@ exports.validateStrictObjectIdParam = (paramName = 'id') => (req, res, next) => 
   if (!isValidObjectId(id)) return fail(res, `${paramName} must be a valid id`, paramName);
   next();
 };
+
+/* ── Create Requisition ── */
+exports.validateCreateRequisition = (req, res, next) => {
+  const { items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return fail(res, 'At least one item is required', 'items');
+  }
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (!it.name || !isNonEmptyString(it.name)) {
+      return fail(res, `items[${i}].name is required`, 'items');
+    }
+    if (!isPositiveNumber(it.qty)) {
+      return fail(res, `items[${i}].qty must be a number > 0`, 'items');
+    }
+  }
+  next();
+};

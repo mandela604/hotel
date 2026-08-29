@@ -12,6 +12,7 @@ const {
   validateAddTransfer,
   validateTransferStatus,
   validateCreateRecipe,
+  validateCreateRequisition,
   validateObjectIdParam,
 } = require('../middleware/kitchenValidators');
 
@@ -46,6 +47,7 @@ router.delete('/recipes/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteR
 
 /* ── Requisitions ───────────────────────────── */
 router.get('/requisitions', ctrl.listKitchenRequisitions);
+router.post('/requisitions', inDept, privilegeGuard('kitchen', 'canCreate'), validateCreateRequisition, ctrl.createRequisition);
 router.post('/requisitions/:id/receive', inDept, privilegeGuard('kitchen', 'canCreate'), ctrl.receiveRequisition);
 
 /* ── Movements ──────────────────────────────── */

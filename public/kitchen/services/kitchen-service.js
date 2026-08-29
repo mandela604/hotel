@@ -517,6 +517,95 @@
     return receiveRequisition(no);
   }
 
+  /* ── Requisition CRUD (Kitchen → Store) ── */
+
+  async function submitRequisition(opts) {
+    opts = opts || {};
+    const items = opts.items || [];
+    const requester = opts.requester || opts.by || 'Kitchen';
+    const dept = opts.dept || 'Kitchen';
+    const priority = opts.priority || 'Normal';
+    const remark = opts.remark || '';
+    const neededBy = opts.neededBy || opts.needed || '';
+
+    const res = await post('/requisitions', {
+      items: items.map(function (i) {
+        return { name: i.name, stockId: i.stockId || '', unit: i.unit || 'kg', qty: Number(i.qty) || 0, cost: Number(i.cost) || 0, remark: i.remark || '' };
+      }),
+      requester: requester,
+      dept: dept,
+      priority: priority,
+      remark: remark,
+      neededBy: neededBy,
+    });
+    const doc = normalizeRequisition(res.data || res);
+    state.requisitions.unshift(doc);
+    emitChange('requisition:submit');
+    return doc;
+  }
+
+  function getDepartmentHistory(dept) {
+    return (state.requisitions || [])
+      .filter(function (r) { return r.dept === dept || (!r.dept && dept === 'Kitchen'); })
+      .map(function (r) { return Object.assign({}, r, { _kind: 'requisition' }); });
+  }
+
+  function filterHistory(rows, filters) {
+    if (!filters) return rows;
+    var search = (filters.search || '').toLowerCase().trim();
+    var status = filters.status || '';
+    var priority = filters.priority || '';
+
+    return rows.filter(function (r) {
+      if (search) {
+        var hay = ((r.no || '') + ' ' + (r.by || '') + ' ' + (r.requester || '') + ' ' + (r.items || []).map(function (i) { return i.name; }).join(' ')).toLowerCase();
+        if (hay.indexOf(search) === -1) return false;
+      }
+      if (status && r.status !== status) return false;
+      if (priority && (r.priority || 'Normal') !== priority) return false;
+      return true;
+    });
+  }
+
+  function sortHistory(rows, sortKey, sortDir) {
+    var dir = sortDir === 'asc' ? 1 : -1;
+    return rows.slice().sort(function (a, b) {
+      if (sortKey === 'date') {
+        var da = a.dateRaised || a.date || '';
+        var db = b.dateRaised || b.date || '';
+        return da < db ? -dir : da > db ? dir : 0;
+      }
+      if (sortKey === 'items') {
+        return ((a.items || []).length - (b.items || []).length) * dir;
+      }
+      return 0;
+    });
+  }
+
+  function getHistoryKPIs(rows) {
+    var pending = 0, completed = 0, rejected = 0, totalUnits = 0;
+    (rows || []).forEach(function (r) {
+      var s = r.status || '';
+      if (s === 'Pending' || s === 'Partial' || s === 'Full' || s === 'Issued') pending++;
+      if (s === 'Completed') { completed++; (r.items || []).forEach(function (i) { totalUnits += Number(i.issuedQty || i.qty) || 0; }); }
+      if (s === 'Rejected' || s === 'Disputed') rejected++;
+    });
+    return { pending: pending, completed: completed, rejected: rejected, transfers: 0, totalUnits: totalUnits };
+  }
+
+  function getHistoryStatusDisplay(kind, status) {
+    var map = {
+      Pending:  { label: 'Pending',              cls: 'chip-pending' },
+      Partial:  { label: 'Partially Issued',     cls: 'chip-partial' },
+      Full:     { label: 'Issued — Awaiting You', cls: 'chip-issued' },
+      Issued:   { label: 'Issued — Awaiting You', cls: 'chip-issued' },
+      Completed:{ label: 'Completed',            cls: 'chip-completed' },
+      Disputed: { label: 'Disputed',             cls: 'chip-disputed' },
+      Rejected: { label: 'Rejected',             cls: 'chip-rejected' },
+    };
+    return map[status] || { label: status || '—', cls: '' };
+  }
+
   global.KitchenService = {
     API_BASE,
     fmtN, nowStamp, fmtStamp, todayDDMMYY, todayISO,
@@ -530,7 +619,8 @@
     recordProduction, voidProduction, startProduction, completeProduction,
     addTransfer, updateTransferStatus,
     getKitchenRequisitions, receivedSoFar,
-    receiveRequisition, confirmReceipt,
+    submitRequisition, receiveRequisition, confirmReceipt,
+    getDepartmentHistory, filterHistory, sortHistory, getHistoryKPIs, getHistoryStatusDisplay,
     dashboardKPIs, productionKPIs, stockKPIs, transferKPIs, recipeKPIs,
     can, canVoidProduction,
     listStaffNames,

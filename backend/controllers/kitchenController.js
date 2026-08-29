@@ -5,6 +5,7 @@ const Transfer = require('../models/Transfer');
 const Recipe = require('../models/Recipe');
 const KitchenMovement = require('../models/KitchenMovement');
 const Requisition = require('../models/Requisition');
+const Counter = require('../models/Counter');
 const asyncHandler = require('../middleware/asyncHandler');
 
 // Escapes regex special characters from user-supplied strings so they
@@ -473,6 +474,48 @@ exports.deleteRecipe = asyncHandler(async (req, res) => {
 exports.listMovements = asyncHandler(async (req, res) => {
   const list = await KitchenMovement.find().sort({ createdAt: -1 }).limit(100);
   res.json({ success: true, count: list.length, data: list });
+});
+
+/* ── Create Requisition (Kitchen → Store) ── */
+exports.createRequisition = asyncHandler(async (req, res) => {
+  const { requester, dept, priority, remark, neededBy, items } = req.body;
+
+  const counter = await Counter.findOneAndUpdate(
+    { key: 'req:KREQ' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+  const requisitionNo = `KREQ-${new Date().getFullYear()}-${String(counter.seq).padStart(5, '0')}`;
+  const now = new Date();
+  const dateRaisedISO = now.toISOString().split('T')[0];
+  const dateRaisedDisplay = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ' ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+  const reqDoc = await Requisition.create({
+    id: requisitionNo,
+    requisitionNo,
+    mode: 'store_issue',
+    requester: requester || (req.user ? req.user.name : 'Kitchen'),
+    dept: dept || 'Kitchen',
+    priority: priority || 'Normal',
+    remark: remark || '',
+    neededBy: neededBy || '',
+    fulfillStore: 'Central Store',
+    items: items.map(i => ({
+      name: i.name,
+      stockId: i.stockId || '',
+      unit: i.unit || 'kg',
+      qty: Number(i.qty) || 0,
+      cost: Number(i.cost) || 0,
+      remark: i.remark || '',
+      issuedQty: 0,
+    })),
+    status: 'Pending',
+    dateRaised: dateRaisedISO,
+    dateRaisedDisplay,
+  });
+
+  res.status(201).json({ success: true, data: reqDoc });
 });
 
 /* ── Requisition receive (mirrors poolbar/restaurant) ── */

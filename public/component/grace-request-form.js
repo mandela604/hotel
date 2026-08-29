@@ -222,6 +222,12 @@
       destSub: 'Issue items already held in stock — the classic department requisition.',
       fixedNote: 'Pool Bar can only requisition from Store.',
     },
+    kitchen: {
+      deptLabel: 'Kitchen', mode: 'store_issue',
+      destIcon: '🏬', destTitle: 'Store',
+      destSub: 'Issue items already held in stock — the classic department requisition.',
+      fixedNote: 'Kitchen can only requisition from Store.',
+    },
     store: {
       deptLabel: 'Store', mode: 'purchase',
       destIcon: '🛒', destTitle: 'Procurement',

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Requisition History | Grace Kitchen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  :root{ --radius:14px; --radius-sm:10px; --transition:.3s cubic-bezier(.4,0,.2,1); }
+  html, body{ height:100%; overflow:hidden; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:14px; transition:background .3s,color .3s; }
+  .app{ display:flex; height:100vh; overflow:hidden; }
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; margin-left:250px; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+
+  .content, .modal-overlay, .toast{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb; --modal-bg:#ffffff;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    --blue:#2f6fed; --blue-bg:#eaf1ff;
+    --purple:#8b5cf6; --purple-bg:#f4efff;
+  }
+  .content{
+    flex:1; padding:20px 24px 28px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:16px; min-height:0;
+    background:var(--bg); color:var(--text);
+  }
+  @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; flex-shrink:0; }
+  @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow); cursor:default; transition:transform .2s,box-shadow .2s,border-color .2s; display:flex; flex-direction:column; animation:fadeUp .4s ease both; }
+  .kpi-card:nth-child(1){animation-delay:.04s} .kpi-card:nth-child(2){animation-delay:.08s}
+  .kpi-card:nth-child(3){animation-delay:.12s} .kpi-card:nth-child(4){animation-delay:.16s}
+  .kpi-card.clickable{ cursor:pointer; }
+  .kpi-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--gold-border); }
+  .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi-card.acc-red::before{ background:linear-gradient(90deg,var(--red),transparent); }
+  .kpi-card.acc-amber::before{ background:linear-gradient(90deg,var(--amber),transparent); }
+  .kpi-card.acc-purple::before{ background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-top{ display:flex; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .kpi-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .ic-blue{ background:var(--blue-bg); color:var(--blue); }
+  .ic-green{ background:var(--green-bg); color:var(--green); }
+  .ic-amber{ background:var(--amber-bg); color:var(--amber); }
+  .ic-purple{ background:var(--purple-bg); color:var(--purple); }
+  .ic-red{ background:var(--red-bg); color:var(--red); }
+  .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
+  .kpi-value{ font-size:24px; font-weight:800; color:var(--text); line-height:1; margin:4px 0 6px; }
+  @media (max-width:420px){ .kpi-value{ font-size:19px; } }
+  .kpi-trend{ font-size:11px; font-weight:600; color:var(--text3); margin-top:auto; }
+  .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.down{ color:var(--red); } .kpi-trend.neutral{ color:var(--text3); } .kpi-trend.info{ color:var(--blue); }
+
+  .pagination{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text3); flex-wrap:wrap; gap:8px; flex-shrink:0; }
+  .page-btns{ display:flex; gap:3px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11.5px; transition:all .15s; font-family:inherit; padding:0 7px; }
+  .page-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .page-btn.active{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
+  .page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
+
+  .toolbar{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px 16px; display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+  .toolbar-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .toolbar-row.top{ justify-content:space-between; }
+  .toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; min-width:0; }
+  .toolbar-top-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .flt-group{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .flt-label{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; padding-left:2px; }
+  .search-box{ display:flex; align-items:center; gap:7px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 12px; transition:border-color .2s; min-width:180px; max-width:260px; flex:1; }
+  .search-box:focus-within{ border-color:var(--gold-border); }
+  .search-box input{ background:none; border:none; outline:none; color:var(--text); font-family:inherit; font-size:13px; width:100%; }
+  .search-box input::placeholder{ color:var(--text3); }
+  .filter-select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; color:var(--text); font-family:inherit; font-size:12.5px; cursor:pointer; outline:none; transition:border-color .2s; }
+  .filter-select:focus{ border-color:var(--gold-border); }
+  .status-pills{ display:flex; gap:6px; flex-wrap:wrap; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill .pdot{ width:6px; height:6px; border-radius:50%; }
+  .status-pill.on.all{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+  .status-pill.on.Pending{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
+  .status-pill.on.Partial{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
+  .status-pill.on.Full{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.Completed{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.Disputed{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
+  .status-pill.on.Rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
+  .toolbar-count{ font-size:11.5px; color:var(--text3); white-space:nowrap; }
+  .btn-ghost{ background:none; border:none; color:var(--text3); font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; padding:8px 6px; display:inline-flex; align-items:center; gap:5px; }
+  .btn-ghost:hover{ color:var(--gold); }
+
+  @media (max-width:700px){
+    .toolbar-row.top{ flex-direction:column; align-items:stretch; }
+    .toolbar-left{ flex-direction:column; align-items:stretch; }
+    .flt-group{ width:100%; }
+    .search-box{ max-width:100%; }
+    .filter-select{ width:100%; }
+    .status-pills{ flex-wrap:wrap; }
+    .toolbar-top-actions{ width:100%; }
+    .toolbar-top-actions .btn{ flex:1; justify-content:center; }
+  }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; flex-shrink:0; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13px; font-weight:800; color:var(--text); }
+  .tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
+  thead th{ text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:700; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; position:sticky; top:0; z-index:2; }
+  thead th[data-sortkey]:hover{ color:var(--gold); }
+  thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:.6; }
+  thead th.no-sort{ cursor:default; }
+  tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+  tbody tr:last-child{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface2); }
+  tbody td{ padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+  .empty-row td{ text-align:center; padding:32px; color:var(--text3); white-space:normal; cursor:default; }
+  .empty-row{ cursor:default; }
+  .items-summary{ max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
+  .items-summary .more{ color:var(--text3); }
+
+  .chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+  .chip i{ font-size:6px; }
+  .chip-completed, .chip-issued{ background:var(--green-bg); color:var(--green); }
+  .chip-rejected, .chip-disputed{ background:var(--red-bg); color:var(--red); }
+  .chip-partial{ background:var(--blue-bg); color:var(--blue); }
+  .chip-pending{ background:var(--amber-bg); color:var(--amber); }
+  .chip-urgent{ background:var(--red-bg); color:var(--red); }
+  .chip-normal{ background:var(--blue-bg); color:var(--blue); }
+  .chip-src-store{ background:var(--amber-bg); color:var(--amber); }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; border:1px solid transparent; }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn-order{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:700; }
+  .btn-order:hover{ background:var(--gold-light); border-color:var(--gold-light); color:#fff; }
+  .btn-sm{ padding:6px 12px; font-size:11.5px; }
+  .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+  .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,34,55,0.45); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal-wide{ width:min(1180px, 96vw); margin:auto; }
+  .modal-close-row{ display:flex; justify-content:flex-end; margin-bottom:8px; }
+  .modal-close-btn{ background:#fff; border:1px solid #eef0f6; color:#6b7280; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .modal-close-btn:hover{ border-color:rgba(47,111,237,0.25); color:#2f6fed; }
+
+  .modal{ background:var(--modal-bg,var(--surface)); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(920px,96vw); box-shadow:0 32px 80px rgba(15,34,55,.22); margin:auto; position:relative; overflow:hidden; max-height:min(92vh,900px); overflow-y:auto; }
+  .modal::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--gold); }
+  .modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-title{ font-size:17px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .modal-close{ background:var(--surface2); border:1px solid var(--border); color:var(--text2); width:30px; height:30px; border-radius:8px; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .modal-close:hover{ border-color:var(--red); color:var(--red); }
+
+  #reqFormHost{
+    --ghrf-gold:#2f6fed; --ghrf-gold-light:#5b8ff9; --ghrf-gold-dim:rgba(47,111,237,.10); --ghrf-gold-border:rgba(47,111,237,.25);
+    --ghrf-green:#12b76a; --ghrf-green-bg:rgba(18,183,106,.12);
+    --ghrf-amber:#f79009; --ghrf-amber-bg:rgba(247,144,9,.12);
+    --ghrf-red:#f04438; --ghrf-red-bg:rgba(240,68,56,.12);
+    --ghrf-blue:#2f6fed; --ghrf-blue-bg:rgba(47,111,237,.12);
+    --ghrf-purple:#8b5cf6; --ghrf-purple-bg:rgba(139,92,246,.12);
+    --ghrf-tx:#1c2440; --ghrf-tx2:#6b7280; --ghrf-tx3:#9aa1b3;
+    --ghrf-border:#eef0f6; --ghrf-card:#ffffff; --ghrf-surface2:#f4f6fb; --ghrf-input-bg:#f4f6fb;
+  }
+  #reqFormHost .ghrf-card{ box-shadow:var(--shadow); }
+  #reqFormHost .ghrf-btn-submit{ color:#fff; }
+
+  .req-recent{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+  .req-recent-title{ font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); font-weight:800; margin-bottom:8px; }
+  .req-recent-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); font-size:12px; }
+  .req-recent-row:last-child{ border-bottom:none; }
+  .req-recent-no{ color:var(--gold); font-weight:700; }
+  .req-recent-empty{ padding:10px 2px; color:var(--text3); font-size:12px; }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:var(--shadow-lg); z-index:999; display:flex; align-items:center; gap:8px; max-width:calc(100vw - 40px); }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:#dfe3ec; border-radius:6px; }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media print{
+    #khs-sidebar, #khs-topbar, .toolbar, .pagination, .no-print{ display:none !important; }
+    .main{ margin-left:0 !important; }
+    body{ background:#fff !important; color:#000 !important; }
+    .content{ overflow:visible !important; height:auto !important; }
+    .panel{ box-shadow:none !important; border:1px solid #ccc !important; }
+    .tbl-wrap{ overflow:visible !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+      <div class="kpi-row" id="kpiRow"></div>
+      <div class="toolbar no-print">
+        <div class="toolbar-row top">
+          <div class="toolbar-left">
+            <div class="flt-group">
+              <span class="flt-label">Status</span>
+              <div class="status-pills" id="statusPills">
+                <div class="status-pill on all" data-status="">All</div>
+                <div class="status-pill" data-status="Pending"><span class="pdot" style="background:var(--amber)"></span>Pending</div>
+                <div class="status-pill" data-status="Partial"><span class="pdot" style="background:var(--blue)"></span>Partial</div>
+                <div class="status-pill" data-status="Full"><span class="pdot" style="background:var(--green)"></span>Issued</div>
+                <div class="status-pill" data-status="Completed"><span class="pdot" style="background:var(--green)"></span>Completed</div>
+                <div class="status-pill" data-status="Disputed"><span class="pdot" style="background:var(--red)"></span>Disputed</div>
+                <div class="status-pill" data-status="Rejected"><span class="pdot" style="background:var(--red)"></span>Rejected</div>
+              </div>
+            </div>
+            <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+              <span class="flt-label">Search</span>
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
+                <input type="text" id="fSearch" placeholder="No., item, by…">
+              </div>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Priority</span>
+              <select class="filter-select" id="fPriority">
+                <option value="">All</option><option>Urgent</option><option>Normal</option>
+              </select>
+            </div>
+            <div class="flt-group">
+              <span class="flt-label">Sort By</span>
+              <select class="filter-select" id="fSort">
+                <option value="date_desc">Date (Newest)</option>
+                <option value="date_asc">Date (Oldest)</option>
+                <option value="items_desc">Items (High → Low)</option>
+              </select>
+            </div>
+            <button class="btn-ghost" id="btnClearFilters"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+          </div>
+          <div class="toolbar-top-actions">
+            <button class="btn btn-order btn-sm" id="btnNewReq"><i class="fa-solid fa-file-circle-plus"></i> New Requisition</button>
+            <button class="btn btn-outline btn-sm" id="btnPrint"><i class="fa-solid fa-print"></i> Print</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">History — Requisitions to Store</div>
+          <span class="toolbar-count" id="tblCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="no-sort">Ref. No.</th>
+                <th class="no-sort">Source</th>
+                <th class="no-sort">By / From</th>
+                <th class="no-sort">Items</th>
+                <th data-sortkey="date">Date <span class="sort-arrow" id="arrow-date"></span></th>
+                <th class="no-sort">Needed By</th>
+                <th class="no-sort">Priority</th>
+                <th class="no-sort">Status</th>
+                <th class="no-print no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW REQUISITION MODAL -->
+<div class="modal-overlay" id="reqModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-file-circle-plus" style="color:var(--gold);"></i> New Requisition</div>
+      <button class="modal-close" id="reqModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="reqFormHost"></div>
+    <div class="req-recent">
+      <div class="req-recent-title">Recently Submitted</div>
+      <div id="reqRecentList"><div class="req-recent-empty">No requisitions submitted yet.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-wide">
+    <div class="modal-close-row">
+      <button class="modal-close-btn" id="detailModalClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="detailContainer" style="background:#fff;border:1px solid #eef0f6;border-radius:14px;box-shadow:0 8px 40px rgba(15,34,55,0.10);overflow:hidden;padding:16px 20px;"></div>
+  </div>
+</div>
+
+<script src="../services/permissions.js"></script>
+<script src="services/kitchen-service.js"></script>
+<script src="../store/data/store-seed.js"></script>
+<script src="../store/services/store-service.js"></script>
+<script src="../component/kitchen-shell.js"></script>
+<script src="../component/grace-store-approval.js"></script>
+<script src="../component/grace-request-form.js"></script>
+<script>
+/**
+ * kitchen-requisition-history.html
+ * -----------------------------------------------------------------
+ * Kitchen module's requisition history page — mirrors poolbar's
+ * requisition history. Kitchen submits requisitions to Store,
+ * Store issues/approves, Kitchen accepts delivery or reports issue.
+ * Stock auto-updates to KitchenStock on accept.
+ */
+
+const shell = KitchenShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'kitchen-requisition-history.html',
+  pageTitle:     'Requisition History',
+  pageSubtitle:  'Requisitions sent to Store and item receipts',
+});
+
+const KS  = window.KitchenService;
+const SS  = window.StoreService;
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const KITCHEN_DEPT_LABEL = 'Kitchen';
+
+/* ── Session ──────────────────────────────────────────────────────── */
+let session = null;
+let canRaiseReq = false;
+
+function waitForSession(maxMs) {
+  maxMs = maxMs || 800;
+  return new Promise(function (resolve) {
+    var started = Date.now();
+    (function tick() {
+      var u = shell.getUser && shell.getUser();
+      if (u && u.role) { resolve(u); return; }
+      if (Date.now() - started >= maxMs) { resolve(shell.getUser && shell.getUser()); return; }
+      setTimeout(tick, 40);
+    })();
+  });
+}
+
+function canRaiseFromSession(s) {
+  if (!s) return false;
+  if (window.Permissions && typeof Permissions.hasPermission === 'function') {
+    if (Permissions.hasPermission(s, 'canCreate', 'kitchen')) return true;
+    if (Permissions.hasPermission(s, 'canCreate', null)) return true;
+  }
+  var role = (s.role || '').toLowerCase();
+  return role === 'admin' || role === 'manager' || role === 'staff';
+}
+
+/* ── Row assembly ─────────────────────────────────────────────────── */
+function getAllRows() {
+  return KS.getDepartmentHistory(KITCHEN_DEPT_LABEL);
+}
+
+function displayStatus(r) {
+  return KS.getHistoryStatusDisplay(r._kind, r.status);
+}
+function displaySource(r) {
+  return { label: 'Store', cls: 'chip-src-store' };
+}
+function rowByLine(r) {
+  return r.by || r.requester || '—';
+}
+function rowDate(r) {
+  return r.dateDisplay || r.dateRaisedDisplay || r.date || r.dateRaised || '—';
+}
+function rowNeeded(r) {
+  if (!r.neededBy) return '—';
+  var d = new Date(r.neededBy);
+  return isNaN(d.getTime()) ? r.neededBy : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function itemsSummary(r) {
+  var names = (r.items || []).map(function (i) { return escapeHtml(i.name || '—') + ' ×' + (i.qty != null ? i.qty : (i.issuedQty || 0)); });
+  if (names.length <= 2) return names.join(', ');
+  return names.slice(0, 2).join(', ') + ' <span class="more">+' + (names.length - 2) + ' more</span>';
+}
+
+/* ── Page state ───────────────────────────────────────────────────── */
+var page = 1, statusFilter = '', sortKey = 'date', sortDir = 'desc';
+var _filteredCache = [];
+var PAGE_SIZE = 20;
+
+function renderKPIs(rows) {
+  var k = KS.getHistoryKPIs(rows);
+
+  document.getElementById('kpiRow').innerHTML =
+    '<div class="kpi-card acc-amber">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending / In Progress</div></div>' +
+      '<div class="kpi-value" style="color:var(--amber);">' + k.pending + '</div>' +
+      '<div class="kpi-trend ' + (k.pending > 0 ? 'warn' : 'up') + '">' + (k.pending > 0 ? 'Awaiting Store' : 'None in progress') + '</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-green">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></div><div class="kpi-label">Completed</div></div>' +
+      '<div class="kpi-value" style="color:var(--green);">' + k.completed + '</div>' +
+      '<div class="kpi-trend up">' + k.totalUnits + ' units received</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-blue">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-file-lines"></i></div><div class="kpi-label">Total Requisitions</div></div>' +
+      '<div class="kpi-value" style="color:var(--blue);">' + rows.length + '</div>' +
+      '<div class="kpi-trend info">All time</div>' +
+    '</div>' +
+    '<div class="kpi-card acc-red">' +
+      '<div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected / Disputed</div></div>' +
+      '<div class="kpi-value" style="color:var(--red);">' + k.rejected + '</div>' +
+      '<div class="kpi-trend ' + (k.rejected > 0 ? 'warn' : 'up') + '">' + (k.rejected > 0 ? 'Needs your attention' : 'None on record') + '</div>' +
+    '</div>';
+}
+
+function bindStatusPills() {
+  document.querySelectorAll('.status-pill').forEach(function (p) {
+    p.addEventListener('click', function () {
+      statusFilter = p.dataset.status;
+      document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
+      p.classList.add('on');
+      page = 1; render();
+    });
+  });
+}
+
+function getFiltered() {
+  var q = document.getElementById('fSearch').value;
+  var priority = document.getElementById('fPriority').value;
+  var parts = document.getElementById('fSort').value.split('_');
+  sortKey = parts[0]; sortDir = parts[1];
+
+  var filtered = KS.filterHistory(getAllRows(), {
+    search: q, status: statusFilter, priority: priority,
+  });
+  return KS.sortHistory(filtered, sortKey, sortDir);
+}
+
+function renderSortArrows() {
+  var el = document.getElementById('arrow-date');
+  if (el) el.textContent = sortKey === 'date' ? (sortDir === 'desc' ? '▼' : '▲') : '';
+}
+
+function clearFilters() {
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fPriority').value = '';
+  document.getElementById('fSort').value = 'date_desc';
+  statusFilter = '';
+  document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
+  document.querySelector('.status-pill.all').classList.add('on');
+  page = 1; render();
+}
+
+function renderPagination(total) {
+  var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  var from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  var to = Math.min(page * PAGE_SIZE, total);
+  document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : (from + '–' + to + ' of ' + total);
+  var wrap = document.getElementById('pageBtns');
+  wrap.innerHTML = '';
+  function mk(label, p, disabled, active) {
+    var b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.innerHTML = label; b.disabled = !!disabled;
+    b.addEventListener('click', function () { page = p; renderTable(); });
+    return b;
+  }
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-left"></i>', page - 1, page === 1, false));
+  var start = Math.max(1, page - 2), end = Math.min(totalPages, start + 4);
+  start = Math.max(1, end - 4);
+  for (var i = start; i <= end; i++) wrap.appendChild(mk(String(i), i, false, i === page));
+  wrap.appendChild(mk('<i class="fa-solid fa-chevron-right"></i>', page + 1, page >= totalPages, false));
+}
+
+function renderTable() {
+  var rows = _filteredCache;
+  document.getElementById('tblCount').textContent = rows.length + ' record' + (rows.length !== 1 ? 's' : '');
+  var pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  document.getElementById('tblBody').innerHTML = pageRows.length === 0
+    ? '<tr class="empty-row"><td colspan="9">No history matches your filters.</td></tr>'
+    : pageRows.map(function (r) {
+        var st = displayStatus(r), src = displaySource(r);
+        return '<tr data-no="' + escapeHtml(r.no) + '">' +
+          '<td style="font-weight:700;">' + escapeHtml(r.no) + '</td>' +
+          '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></td>' +
+          '<td>' + escapeHtml(rowByLine(r)) + '</td>' +
+          '<td class="items-summary">' + itemsSummary(r) + '</td>' +
+          '<td>' + escapeHtml(rowDate(r)) + '</td>' +
+          '<td>' + escapeHtml(rowNeeded(r)) + '</td>' +
+          '<td><span class="chip chip-' + escapeHtml((r.priority || 'Normal').toLowerCase()) + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(r.priority || 'Normal') + '</span></td>' +
+          '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
+          '<td class="no-print"><button class="act-btn" data-view="' + escapeHtml(r.no) + '"><i class="fa-solid fa-eye"></i> View</button></td>' +
+        '</tr>';
+      }).join('');
+  renderPagination(rows.length);
+}
+
+function render() {
+  _filteredCache = getFiltered();
+  renderKPIs(getAllRows());
+  renderSortArrows();
+  renderTable();
+}
+
+/* ── Detail modal — Kitchen uses GraceHotelStoreApproval as requester ── */
+var detailWidget = null;
+function openDetail(no) {
+  var container = document.getElementById('detailContainer');
+  container.innerHTML = '';
+  if (detailWidget) { try { detailWidget.destroy(); } catch (e) {} detailWidget = null; }
+
+  detailWidget = GraceHotelStoreApproval.attach('#detailContainer', {
+    reqNo: no,
+    storeService: SS,
+    viewerService: KS,
+    viewerRole: 'requester',
+    showBackButton: false,
+    onConfirm: async function (req) {
+      try {
+        await KS.receiveRequisition(req);
+        showToast('Delivery accepted — Kitchen stock updated.', 'success');
+      } catch (err) {
+        showToast((err && err.message) || 'Accepted, but stock could not be updated automatically.', 'error');
+      }
+      render();
+    },
+    onDispute: function () { render(); },
+  });
+  document.getElementById('detailModal').classList.add('show');
+}
+
+/* ── New Requisition (GraceHotelRequestForm, section:'kitchen') ──── */
+var reqForm = null;
+
+function buildRequestForm() {
+  if (!window.GraceHotelRequestForm) {
+    console.warn('[RequisitionHistory] GraceHotelRequestForm not loaded');
+    return null;
+  }
+  if (!SS || typeof SS.submitRequisition !== 'function') {
+    showToast('Store service failed to load — cannot open the requisition form.', 'error');
+    return null;
+  }
+  return GraceHotelRequestForm.attach('#reqFormHost', {
+    section: 'kitchen',
+    service: KS,
+    storeService: SS,
+    currentUser: { name: (session && session.name) || '' },
+    onSubmit: async function () {
+      closeModal('reqModal');
+      if (SS) await SS.loadAll().catch(function () {});
+      renderRecentRequests();
+      render();
+    },
+  });
+}
+
+function openRequestForm() {
+  if (!canRaiseReq) {
+    showToast("You don't have permission to raise requisitions.", 'error');
+    return;
+  }
+  if (reqForm) { reqForm.destroy(); reqForm = null; }
+  reqForm = buildRequestForm();
+  if (!reqForm) { showToast('Request form failed to load.', 'error'); return; }
+  renderRecentRequests();
+  document.getElementById('reqModal').classList.add('show');
+}
+
+function renderRecentRequests() {
+  var el = document.getElementById('reqRecentList');
+  if (!el) return;
+  if (!SS) { el.innerHTML = '<div class="req-recent-empty">Store service unavailable.</div>'; return; }
+  var rows = SS.getRequisitions({ mode: 'store_issue' })
+    .filter(function (r) { return r.dept === KITCHEN_DEPT_LABEL; })
+    .slice(0, 5);
+  if (!rows.length) { el.innerHTML = '<div class="req-recent-empty">No requisitions submitted yet.</div>'; return; }
+  el.innerHTML = rows.map(function (r) {
+    var status = r.status || 'Pending';
+    return '<div class="req-recent-row">' +
+      '<div><span class="req-recent-no">' + r.no + '</span> · ' + (r.items || []).length + ' item' + ((r.items || []).length !== 1 ? 's' : '') + '</div>' +
+      '<span class="chip chip-' + status.toLowerCase() + '"><i class="fa-solid fa-circle"></i>' + status + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+/* ── Modal / toast plumbing ────────────────────────────────────────── */
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+['detailModal', 'reqModal'].forEach(function (id) {
+  document.getElementById(id).addEventListener('click', function (e) { if (e.target === this) closeModal(id); });
+});
+document.getElementById('detailModalClose').addEventListener('click', function () { closeModal('detailModal'); });
+document.getElementById('reqModalClose').addEventListener('click', function () { closeModal('reqModal'); });
+
+function showToast(msg, type) {
+  type = type || 'success';
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + escapeHtml(msg);
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 3400);
+}
+
+/* ── Event wiring ──────────────────────────────────────────────────── */
+document.getElementById('tblBody').addEventListener('click', function (e) {
+  var tr = e.target.closest('tr[data-no]');
+  if (tr) openDetail(tr.dataset.no);
+});
+['fSearch'].forEach(function (id) { document.getElementById(id).addEventListener('input', function () { page = 1; render(); }); });
+['fPriority', 'fSort'].forEach(function (id) { document.getElementById(id).addEventListener('change', function () { page = 1; render(); }); });
+document.getElementById('btnClearFilters').addEventListener('click', clearFilters);
+document.getElementById('btnPrint').addEventListener('click', function () { window.print(); });
+document.getElementById('btnNewReq').addEventListener('click', openRequestForm);
+document.querySelectorAll('th[data-sortkey="date"]').forEach(function (th) {
+  th.addEventListener('click', function () {
+    var sel = document.getElementById('fSort');
+    var cur = sel.value.split('_');
+    var nextDir = (cur[0] === 'date' && cur[1] === 'desc') ? 'asc' : 'desc';
+    sel.value = 'date_' + nextDir;
+    page = 1; render();
+  });
+});
+
+/* ── Init ──────────────────────────────────────────────────────────── */
+async function init() {
+  session = await waitForSession(800);
+  canRaiseReq = canRaiseFromSession(session);
+  var btnReq = document.getElementById('btnNewReq');
+  if (btnReq && !canRaiseReq) btnReq.style.display = 'none';
+
+  bindStatusPills();
+
+  await KS.loadAll();
+  if (SS) await SS.loadAll();
+
+  KS.onChange(function () { render(); });
+  if (SS) SS.onChange(function () { render(); });
+
+  render();
+}
+init();
+</script>
+</body>
+</html>
