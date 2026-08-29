@@ -650,7 +650,7 @@ function rowDate(r) {
 function rowNeeded(r) {
   if (isRequisition(r)) {
     if (!r.needed) return '—';
-    const d = new Date(r.needed);
+    const d = new Date(r.needed + (r.needed.includes('T') ? '' : 'T00:00:00'));
     return isNaN(d.getTime()) ? r.needed : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
   return '—';

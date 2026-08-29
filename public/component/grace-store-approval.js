@@ -247,7 +247,7 @@
   }
 
   function _fmtN(n) { return '₦' + Math.round(n || 0).toLocaleString('en-NG'); }
-  function _fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+  function _fmtDate(d) { if (!d) return '—'; return new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
   function _todayDisplay() { return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
   function _esc(s) { return (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 

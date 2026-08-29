@@ -384,8 +384,8 @@ const STATUS_CHIP = {
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function pad2(n){ return String(n).padStart(2,'0'); }
 function ymd(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
-function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
-function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}); }
+function fmtDateShort(d){ if(!d) return ''; return new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}); }
 
 const PAGE_SIZE = 8;
 let page = 1;

@@ -27,7 +27,7 @@
   }
   function fmtDate(d) {
     if (!d) return '\u2014';
-    return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(d + (d.includes && d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   function stockLevel(s) {

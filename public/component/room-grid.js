@@ -178,7 +178,7 @@
   };
 
   function _esc(s) { return (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-  function _fmtDate(d) { if (!d) return '—'; const dt = new Date(d); if (isNaN(dt)) return '—'; return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+  function _fmtDate(d) { if (!d) return '—'; const dt = new Date(d + (d.includes && d.includes('T') ? '' : 'T00:00:00')); if (isNaN(dt)) return '—'; return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
   function _toast(msg) {
     if (typeof window.toast === 'function') { window.toast(msg); return; }
     let el = document.getElementById('drgToast');

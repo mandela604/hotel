@@ -170,7 +170,7 @@
   }
 
   function _defaultFmtMoney(n) { return '\u20A6' + Math.round(n || 0).toLocaleString('en-NG'); }
-  function _defaultFmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+  function _defaultFmtDate(d) { if (!d) return '—'; return new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
   function _esc(s) { return (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   // Loose status → chip class mapping. Host pages can pass their own

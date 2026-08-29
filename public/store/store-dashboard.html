@@ -220,7 +220,7 @@ const svc = window.StoreService;
    Helpers
 ═══════════════════════════════════════════════ */
 function fmtN(n){ if (svc && svc.fmtN) return svc.fmtN(n); return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
-function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+function fmtDate(d){ if(!d) return '—'; return new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
 // Low/out-of-stock threshold + its chip class/label come from StoreService
 // (single source of truth). This page no longer keeps its own copy of the
 // rule — that local copy is what let a stray `s.reorder` (stock items only
