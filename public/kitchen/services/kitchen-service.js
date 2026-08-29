@@ -404,7 +404,6 @@
      storage bucket and no real Store-side workflow). */
   async function getKitchenRequisitions() {
     state.requisitions = await request('/requisitions');
-    emitChange('requisitions:load');
     return state.requisitions;
   }
 
