@@ -567,7 +567,7 @@ function poToRequisition(p){
     needed: p.needed || '',
     items: items,
     status: PO_STATUS_MAP[p.approvalStage] || p.approvalStage || 'Pending',
-    totalAmount: Number(p.totalAmount) || items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.cost)||0),0),
+    totalAmount: Number(p.totalAmount) || items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.price||i.cost)||0),0),
     _po: true,
     _poId: p.id,
     _poStage: p.approvalStage,
@@ -804,7 +804,7 @@ window.openPurchaseDetailModal = function(no){
       <td style="padding:8px 10px;border-bottom:1px solid var(--border);">${i.name}</td>
       <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;">${i.qty}</td>
       <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;">${i.unit||''}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;">${StoreService.fmtN(i.cost||0)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;">${StoreService.fmtN(i.price||i.cost||0)}</td>
     </tr>`).join('');
   el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;">

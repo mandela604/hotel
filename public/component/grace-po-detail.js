@@ -250,10 +250,10 @@
           <td>${idx + 1}. ${_esc(i.name || '—')}</td>
           <td class="center">${_esc(i.qty)}</td>
           <td class="center">${_esc(i.unit || 'unit')}</td>
-          <td class="right">${fmtMoney(i.cost || 0)}</td>
-          <td class="right" style="font-weight:700;">${fmtMoney((Number(i.qty) || 0) * (Number(i.cost) || 0))}</td>
+          <td class="right">${fmtMoney(i.price || 0)}</td>
+          <td class="right" style="font-weight:700;">${fmtMoney((Number(i.qty) || 0) * (Number(i.price) || 0))}</td>
         </tr>`).join('');
-      const total = Number(po.totalAmount) || items.reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.cost) || 0), 0);
+      const total = Number(po.totalAmount) || items.reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.price) || 0), 0);
       return `<div class="gpo-table-wrap"><table class="gpo-table">
           <thead><tr><th>Item</th><th class="center">Qty</th><th class="center">Unit</th><th class="right">Unit Cost</th><th class="right">Subtotal</th></tr></thead>
           <tbody>${rows}</tbody>

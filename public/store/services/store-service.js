@@ -456,7 +456,7 @@
       const name = (it.name || '').trim();
       if (!name) continue;
       const qty = parseFloat(it.qty) || 0;
-      const cost = parseFloat(it.cost) || 0;
+      const cost = parseFloat(it.price || it.cost) || 0;
       const unit = it.unit || 'unit';
       const stockId = it.stockId || '';
 
