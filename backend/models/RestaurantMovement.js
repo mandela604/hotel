@@ -6,7 +6,7 @@
 const mongoose = require('mongoose');
 
 const restaurantMovementSchema = new mongoose.Schema({
-  date:    { type: Date, default: Date.now },
+  date:    { type: String, default: '' },
   item:    { type: String, required: true },
   qtyIn:   { type: Number, default: 0 },
   qtyOut:  { type: Number, default: 0 },
