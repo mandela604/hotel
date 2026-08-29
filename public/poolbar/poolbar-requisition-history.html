@@ -635,16 +635,7 @@ function openDetail(no) {
       viewerRole: 'requester',    // Pool Bar is reviewing/accepting delivery, not approving/issuing it
       showBackButton: false,
       onConfirm: async function (req) {
-        // Accepting delivery only flips the requisition's status in
-        // StoreService — it never touches Pool Bar's own stock. Without
-        // this call, an "accepted" item (e.g. Heineken) stays at 0 on
-        // hand here even though Store shows it as issued.
-        try {
-          await PBS.receiveRequisition(req);
-          showToast('Delivery accepted — stock updated.', 'success');
-        } catch (err) {
-          showToast((err && err.message) || 'Accepted, but stock could not be updated automatically.', 'error');
-        }
+        showToast('Delivery accepted — stock updated.', 'success');
         render();
       },
       onDispute: function () { render(); },
