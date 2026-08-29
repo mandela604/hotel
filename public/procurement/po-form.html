@@ -325,9 +325,10 @@ async function loadItemCatalog(){
 
 function showItemSuggestions(query){
   const dd = document.getElementById('itemSuggestDropdown');
-  const q = query.trim().toLowerCase();
-  if (!q){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
-  const matches = itemCatalog.filter(it => it.name.toLowerCase().includes(q)).slice(0, 6);
+  const q = (query || '').trim().toLowerCase();
+  const matches = q
+    ? itemCatalog.filter(it => it.name.toLowerCase().includes(q)).slice(0, 8)
+    : itemCatalog.slice(0, 8);
   if (!matches.length){ dd.classList.remove('show'); dd.innerHTML = ''; return; }
   dd._matches = matches;
   dd.innerHTML = matches.map((it,i) => `
@@ -688,7 +689,7 @@ document.getElementById('addEntryBtn').addEventListener('click', addItemFromEntr
 document.getElementById('entryEditCancel').addEventListener('click', cancelEntryEdit);
 ['entryUnit','entryPackSize','entryQty','entryPrice'].forEach(id => document.getElementById(id).addEventListener('input', updateEntryPreview));
 document.getElementById('entryName').addEventListener('input', e => showItemSuggestions(e.target.value));
-document.getElementById('entryName').addEventListener('focus', e => { if (e.target.value) showItemSuggestions(e.target.value); });
+document.getElementById('entryName').addEventListener('focus', e => showItemSuggestions(e.target.value));
 document.addEventListener('click', e => {
   if (!e.target.closest('.entry-name-wrap')) hideItemSuggestions();
 });
