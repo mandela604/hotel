@@ -13,6 +13,7 @@ const bookingSchema = new mongoose.Schema({
   room:       { type: String, required: true, unique: true },
   type:       { type: String, enum: ['Standard','Deluxe','Suite','Conference'], default: 'Standard' },
   guest:      { type: String, default: '' },
+  guestId:    { type: String, default: '' },
   phone:      { type: String, default: '' },
   email:      { type: String, default: '' },
   address:    { type: String, default: '' },

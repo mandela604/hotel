@@ -511,6 +511,7 @@
                   <input type="hidden" data-role="fRoomNumber">
                   <input type="hidden" data-role="fGuestName">
                   <input type="hidden" data-role="fGuestPhone">
+                  <input type="hidden" data-role="fGuestId">
                 </div>` : ''}
                 <div class="ow-fg">
                   <label class="ow-label">Notes</label>
@@ -868,12 +869,14 @@
           room: ($('[data-role="payRoomNumber"]') || {}).value || '',
           guest: ($('[data-role="payGuestName"]') || {}).value || '',
           phone: ($('[data-role="payGuestPhone"]') || {}).value || '',
+          guestId: ($('[data-role="payGuestId"]') || {}).value || '',
         };
       }
       return {
         room: ($('[data-role="fRoomNumber"]') || {}).value || '',
         guest: ($('[data-role="fGuestName"]') || {}).value || '',
         phone: ($('[data-role="fGuestPhone"]') || {}).value || '',
+        guestId: ($('[data-role="fGuestId"]') || {}).value || '',
       };
     }
 
@@ -913,6 +916,7 @@
               roomNumber: isRoomCharge ? (room.room || null) : null,
               guestName: isRoomCharge ? (room.guest || null) : null,
               guestPhone: isRoomCharge ? (room.phone || null) : null,
+              guestId: isRoomCharge ? (room.guestId || null) : null,
             });
             syncFromService();
             showToast(
@@ -970,6 +974,7 @@
           const roomNumber = isRoomCharge ? (room.room || null) : null;
           const guestName = isRoomCharge ? (room.guest || null) : null;
           const guestPhone = isRoomCharge ? (room.phone || null) : null;
+          const guestId = isRoomCharge ? (room.guestId || null) : null;
 
           if (service && typeof service.openTab === 'function') {
             const order = await service.openTab({
@@ -983,6 +988,7 @@
               roomNumber: roomNumber,
               guestName: guestName,
               guestPhone: guestPhone,
+              guestId: guestId,
             });
             syncFromService();
             showToast('Tab ' + ((order && order.id) || '') + ' opened' + (table ? ' for ' + table : '') + '.', 'success');
@@ -1126,7 +1132,7 @@
       if (paySel) paySel.value = o.roomNumber ? 'Room Charge' : (paymentMethods[0] || 'Cash');
       clearSelectedRoom('pay');
       if (o.roomNumber) {
-        selectRoom(o.roomNumber, o.guestName || '', o.guestPhone || '', 'pay');
+        selectRoom(o.roomNumber, o.guestName || '', o.guestPhone || '', 'pay', o.guestId || '');
       }
       togglePayRoomChargeUI();
       $('[data-role="payModal"]').classList.add('show');
@@ -1146,7 +1152,7 @@
       try {
         if (service && typeof service.payOrder === 'function') {
           const payArg = isRoomCharge
-            ? { method: method, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null }
+            ? { method: method, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
             : method;
           const result = await service.payOrder(payOrderId, payArg);
           syncFromService();
@@ -1264,18 +1270,19 @@
         return;
       }
       results.innerHTML = list.map(function (g) {
-        return '<div class="ow-room-item" data-pick-room="' + esc(g.room) + '" data-pick-guest="' + esc(g.name) + '" data-pick-phone="' + esc(g.phone || '') + '" data-pick-which="' + which + '">' +
+        return '<div class="ow-room-item" data-pick-room="' + esc(g.room) + '" data-pick-guest="' + esc(g.name) + '" data-pick-phone="' + esc(g.phone || '') + '" data-pick-guest-id="' + esc(g.guestId || '') + '" data-pick-which="' + which + '">' +
           '<div class="rn">Room ' + esc(g.room) + '</div>' +
           '<div class="gn">' + esc(g.name) + (g.phone ? ' · ' + esc(g.phone) : '') + (g.status ? ' · ' + esc(g.status) : '') + '</div></div>';
       }).join('');
       results.classList.add('show');
     }
 
-    function selectRoom(room, name, phone, which) {
+    function selectRoom(room, name, phone, which, guestId) {
       if (which === 'pay') {
         $('[data-role="payRoomNumber"]').value = room;
         $('[data-role="payGuestName"]').value = name;
         if ($('[data-role="payGuestPhone"]')) $('[data-role="payGuestPhone"]').value = phone || '';
+        if ($('[data-role="payGuestId"]')) $('[data-role="payGuestId"]').value = guestId || '';
         $('[data-role="payRoomSearch"]').value = '';
         $('[data-role="payRoomResults"]').classList.remove('show');
         const box = $('[data-role="paySelectedRoomBox"]');
@@ -1286,6 +1293,7 @@
         $('[data-role="fRoomNumber"]').value = room;
         $('[data-role="fGuestName"]').value = name;
         if ($('[data-role="fGuestPhone"]')) $('[data-role="fGuestPhone"]').value = phone || '';
+        if ($('[data-role="fGuestId"]')) $('[data-role="fGuestId"]').value = guestId || '';
         if ($('[data-role="roomSearch"]')) $('[data-role="roomSearch"]').value = '';
         if ($('[data-role="roomResults"]')) $('[data-role="roomResults"]').classList.remove('show');
         const box = $('[data-role="selectedRoomBox"]');
@@ -1302,6 +1310,7 @@
         if ($('[data-role="payRoomNumber"]')) $('[data-role="payRoomNumber"]').value = '';
         if ($('[data-role="payGuestName"]')) $('[data-role="payGuestName"]').value = '';
         if ($('[data-role="payGuestPhone"]')) $('[data-role="payGuestPhone"]').value = '';
+        if ($('[data-role="payGuestId"]')) $('[data-role="payGuestId"]').value = '';
         if ($('[data-role="payRoomSearch"]')) $('[data-role="payRoomSearch"]').value = '';
         if ($('[data-role="payRoomResults"]')) {
           $('[data-role="payRoomResults"]').classList.remove('show');
@@ -1312,6 +1321,7 @@
         if ($('[data-role="fRoomNumber"]')) $('[data-role="fRoomNumber"]').value = '';
         if ($('[data-role="fGuestName"]')) $('[data-role="fGuestName"]').value = '';
         if ($('[data-role="fGuestPhone"]')) $('[data-role="fGuestPhone"]').value = '';
+        if ($('[data-role="fGuestId"]')) $('[data-role="fGuestId"]').value = '';
         if ($('[data-role="roomSearch"]')) $('[data-role="roomSearch"]').value = '';
         if ($('[data-role="roomResults"]')) {
           $('[data-role="roomResults"]').classList.remove('show');
@@ -1370,7 +1380,7 @@
       if (cancel) { cancelOrder(cancel.dataset.cancel); return; }
       const pick = e.target.closest('[data-pick-room]');
       if (pick) {
-        selectRoom(pick.dataset.pickRoom, pick.dataset.pickGuest, pick.dataset.pickPhone || '', pick.dataset.pickWhich || '');
+        selectRoom(pick.dataset.pickRoom, pick.dataset.pickGuest, pick.dataset.pickPhone || '', pick.dataset.pickWhich || '', pick.dataset.pickGuestId || '');
         return;
       }
       const pill = e.target.closest('.ow-status-pill');

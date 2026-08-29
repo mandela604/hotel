@@ -176,7 +176,7 @@ exports.listSales = asyncHandler(async (req, res) => {
 // record, e.g. plain menu-only items with nothing tracked in inventory),
 // and posts a room charge onto the guest's folio when paid via Room Charge.
 exports.createSale = asyncHandler(async (req, res) => {
-  const { items, method, table, discount, roomNumber, guestName } = req.body;
+  const { items, method, table, discount, roomNumber, guestName, guestId } = req.body;
 
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const discountPct = Number(discount) || 0;
@@ -222,7 +222,7 @@ exports.createSale = asyncHandler(async (req, res) => {
   });
 
   if (method === 'Room Charge') {
-    const guest = await Guest.findOne({ name: guestName });
+    const guest = guestId ? await Guest.findOne({ id: guestId }) : await Guest.findOne({ name: guestName });
     if (guest) {
       guest.charges.push({
         date: todayDDMMYY(),
@@ -517,7 +517,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
 
-  const { method, roomNumber, guestName, guestPhone } = req.body;
+  const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
   const payMethod = method || 'Cash';
 
   /* ── Deduct RestaurantStock per item (same as createSale) ── */
@@ -568,7 +568,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
 
   /* ── Room Charge → post to guest folio ── */
   if (payMethod === 'Room Charge') {
-    const guest = await Guest.findOne({ name: guestName });
+    const guest = guestId ? await Guest.findOne({ id: guestId }) : await Guest.findOne({ name: guestName });
     if (guest) {
       guest.charges.push({
         date: todayDDMMYY(),

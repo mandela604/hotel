@@ -320,7 +320,11 @@ exports.createBooking = asyncHandler(async (req, res) => {
   await booking.save();
 
   // Attach this stay to (or create) the guest's profile.
-  await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
+  const guestProfile = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
+  if (guestProfile && guestProfile.id) {
+    booking.guestId = guestProfile.id;
+    await booking.save();
+  }
 
   await logActivity('Booking', 'gold', `${booking.guest} booked into Room ${room}`, 'booking-list.html');
   res.status(201).json({ success: true, data: booking });

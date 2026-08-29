@@ -528,7 +528,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     const bookings = (body && body.data && body.data.bookings) || [];
     return bookings
       .filter(function (b) { return b.status === 'checkedin' && b.guest; })
-      .map(function (b) { return { room: String(b.room || ''), name: b.guest || '', phone: b.phone || '', status: 'In-House' }; });
+      .map(function (b) { return { room: String(b.room || ''), name: b.guest || '', phone: b.phone || '', guestId: b.guestId || '', status: 'In-House' }; });
   }
 
   global.RestaurantService = {

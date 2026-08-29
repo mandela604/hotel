@@ -123,7 +123,7 @@
     const data = await bookingData.getBookingData();
     const bookings = (data && data.bookings) || [];
     return bookings.filter(b => b.status === 'checkedin' && b.guest).map(b => ({
-      room: String(b.room || ''), name: b.guest || '', phone: b.phone || '', status: 'In-House',
+      room: String(b.room || ''), name: b.guest || '', phone: b.phone || '', guestId: b.guestId || '', status: 'In-House',
     }));
   }
 
@@ -576,7 +576,7 @@
    * guest's booking folio server-side. Calling it again here posted
    * every Room Charge sale to the folio twice.
    */
-  async function recordSale({ items, discount = 0, method, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null }) {
+  async function recordSale({ items, discount = 0, method, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null, guestId = null }) {
     if (!items || !items.length) throw new Error('Add at least one item.');
     if (!staff) throw new Error('Please enter the staff name.');
     const cleanItems = items.map(c => ({ name: c.key || c.name, qty: c.qty, price: c.price }));
@@ -585,7 +585,7 @@
 
     const res = await apiPost('/sales', {
       items: cleanItems, discount, method: effectiveMethod, staff, table, notes,
-      roomNumber, guestName, guestPhone,
+      roomNumber, guestName, guestPhone, guestId,
     });
     state.sales.unshift(res.data);
     emitChange('sale:record');
@@ -602,11 +602,11 @@
   }
 
   /* ── Orders / Tabs (real API) ─────────────────────────────────────── */
-  async function openTab({ items, discount = 0, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null }) {
+  async function openTab({ items, discount = 0, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null, guestId = null }) {
     if (!items || !items.length) throw new Error('Add at least one item.');
     if (!staff) throw new Error('Please enter the staff name.');
     const cleanItems = items.map(c => ({ name: c.key || c.name, qty: c.qty, price: c.price }));
-    const res = await apiPost('/orders', { items: cleanItems, discount, staff, table, notes, roomNumber, guestName, guestPhone });
+    const res = await apiPost('/orders', { items: cleanItems, discount, staff, table, notes, roomNumber, guestName, guestPhone, guestId });
     state.orders.unshift(res.data);
     emitChange('order:open');
     return res.data;

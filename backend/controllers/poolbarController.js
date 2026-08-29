@@ -5,6 +5,7 @@ const Order           = require('../models/Order');
 const PoolbarMovement = require('../models/PoolbarMovement');
 const Requisition    = require('../models/Requisition');
 const Booking        = require('../models/Booking');
+const Guest          = require('../models/Guest');
 const Category       = require('../models/Category');
 const Counter        = require('../models/Counter');
 const asyncHandler   = require('../middleware/asyncHandler');
@@ -223,7 +224,7 @@ exports.listSales = asyncHandler(async (req, res) => {
 });
 
 exports.createSale = asyncHandler(async (req, res) => {
-  const { items, discount, method, staff, table, notes, roomNumber, guestName, guestPhone } = req.body;
+  const { items, discount, method, staff, table, notes, roomNumber, guestName, guestPhone, guestId } = req.body;
 
   // Validate stock is sufficient BEFORE any writes — the whole sale is
   // rejected (nothing partially deducts) if anything is short.
@@ -251,6 +252,26 @@ exports.createSale = asyncHandler(async (req, res) => {
       booking.paid = (booking.paid || 0) + total;
       recomputePayStatus(booking);
       await booking.save();
+    }
+
+    /* Post charge to Guest.folio (Guest.charges[]) */
+    const fid = guestId || (booking && booking.guestId) || '';
+    if (fid) {
+      const guest = await Guest.findOne({ id: fid });
+      if (guest) {
+        guest.charges.push({
+          date: todayDDMMYY(),
+          source: 'Pool Bar',
+          desc: items.map(it => `${it.qty}x ${it.name}`).join(', '),
+          room: String(roomNumber),
+          amount: total,
+          paid: 0,
+          by: staff || (req.user ? req.user.name : 'Barman'),
+          status: 'Pending',
+          payments: [],
+        });
+        await guest.save();
+      }
     }
   }
 
@@ -388,11 +409,12 @@ exports.payOrder = asyncHandler(async (req, res) => {
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order is already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
 
-  const { method, roomNumber, guestName, guestPhone } = req.body;
+  const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
   const payMethod = method || 'Cash';
   const effectiveRoom = roomNumber || order.roomNumber || null;
   const effectiveGuest = guestName || order.guestName || null;
   const effectivePhone = guestPhone || order.guestPhone || null;
+  const effectiveGuestId = guestId || order.guestId || null;
 
   // Validate stock is sufficient BEFORE any writes.
   const resolved = await resolveStockForItems(order.items);
@@ -416,6 +438,26 @@ exports.payOrder = asyncHandler(async (req, res) => {
       booking.paid = (booking.paid || 0) + order.total;
       recomputePayStatus(booking);
       await booking.save();
+    }
+
+    /* Post charge to Guest.folio (Guest.charges[]) */
+    const fid = effectiveGuestId || (booking && booking.guestId) || '';
+    if (fid) {
+      const guest = await Guest.findOne({ id: fid });
+      if (guest) {
+        guest.charges.push({
+          date: todayDDMMYY(),
+          source: 'Pool Bar',
+          desc: order.items.map(it => `${it.qty}x ${it.name}`).join(', '),
+          room: String(effectiveRoom),
+          amount: order.total,
+          paid: 0,
+          by: order.staff || (req.user ? req.user.name : 'Barman'),
+          status: 'Pending',
+          payments: [],
+        });
+        await guest.save();
+      }
     }
   }
 
