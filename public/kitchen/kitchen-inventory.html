@@ -260,8 +260,8 @@
         <input class="form-input" id="fUnit" type="text" placeholder="e.g. kg, litre, pack">
       </div>
       <div class="form-group">
-        <div class="form-label">Initial Quantity On Hand</div>
-        <input class="form-input" id="fQty" type="number" min="0" step="0.1" placeholder="0">
+        <div class="form-label">Quantity On Hand</div>
+        <input class="form-input" id="fQty" type="number" min="0" step="0.1" placeholder="0" disabled title="Auto-managed — updated when receiving from Store">
       </div>
       <div class="form-group">
         <div class="form-label">Reorder Level (Min)</div>
@@ -269,11 +269,11 @@
       </div>
       <div class="form-group">
         <div class="form-label">Unit Cost (₦)</div>
-        <input class="form-input" id="fCost" type="number" min="0" step="1" placeholder="0">
+        <input class="form-input" id="fCost" type="number" min="0" step="1" placeholder="0" disabled title="Auto-managed — set when receiving from Store">
       </div>
       <div class="form-group">
         <div class="form-label">Batch / Ref No.</div>
-        <input class="form-input" id="fBatch" type="text" placeholder="e.g. GR-0091">
+        <input class="form-input" id="fBatch" type="text" placeholder="e.g. GR-0091" disabled title="Auto-generated on creation">
       </div>
     </div>
     <div class="modal-footer">
@@ -486,8 +486,8 @@ function openItemModal(name=null){
     document.getElementById('fUnit').value = 'kg';
     document.getElementById('fQty').value = '0';
     document.getElementById('fMin').value = '10';
-    document.getElementById('fCost').value = '1000';
-    document.getElementById('fBatch').value = 'GR-' + Math.floor(1000 + Math.random()*9000);
+    document.getElementById('fCost').value = '0';
+    document.getElementById('fBatch').value = '';
   }
   document.getElementById('itemModal').classList.add('show');
 }
@@ -499,11 +499,7 @@ async function saveItem(){
     category: document.getElementById('fCat2').value,
     cat: document.getElementById('fCat2').value,
     unit: document.getElementById('fUnit').value.trim(),
-    qty: parseFloat(document.getElementById('fQty').value) || 0,
     min: parseFloat(document.getElementById('fMin').value) || 0,
-    price: parseFloat(document.getElementById('fCost').value) || 0,
-    cost: parseFloat(document.getElementById('fCost').value) || 0,
-    batch: document.getElementById('fBatch').value.trim(),
   };
   try {
     if (editName) {

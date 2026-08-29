@@ -45,7 +45,7 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.addStock = asyncHandler(async (req, res) => {
-  const { name, category, cat, unit, qty, min, price, cost, batch, received, desc } = req.body;
+  const { name, category, cat, unit, min, desc } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, error: 'Item name is required' });
   }
@@ -61,12 +61,12 @@ exports.addStock = asyncHandler(async (req, res) => {
     category: category || cat || 'Grains',
     cat: cat || category || 'Grains',
     unit: unit || 'kg',
-    qty: Number(qty) || 0,
+    qty: 0,
     min: Number(min) || 10,
-    price: Number(price != null ? price : cost) || 0,
-    cost: Number(cost != null ? cost : price) || 0,
-    batch: batch || '—',
-    received: received || todayDDMMYY(),
+    price: 0,
+    cost: 0,
+    batch: '—',
+    received: todayDDMMYY(),
     desc: desc || '',
   });
 
@@ -77,7 +77,7 @@ exports.updateStock = asyncHandler(async (req, res) => {
   const item = await KitchenStock.findOne({ id: req.params.id });
   if (!item) return res.status(404).json({ success: false, error: 'Stock item not found' });
 
-  const { name, category, cat, unit, min, price, cost, desc, qty, batch } = req.body;
+  const { name, category, cat, unit, min, desc } = req.body;
   if (name) item.name = name.trim();
   if (category || cat) {
     item.category = category || cat;
@@ -85,14 +85,7 @@ exports.updateStock = asyncHandler(async (req, res) => {
   }
   if (unit) item.unit = unit;
   if (min !== undefined) item.min = Number(min);
-  if (price !== undefined || cost !== undefined) {
-    const val = Number(price != null ? price : cost);
-    item.price = val;
-    item.cost = val;
-  }
   if (desc !== undefined) item.desc = desc;
-  if (qty !== undefined) item.qty = Number(qty);
-  if (batch !== undefined) item.batch = batch;
 
   await item.save();
   res.json({ success: true, data: item });
@@ -480,4 +473,55 @@ exports.deleteRecipe = asyncHandler(async (req, res) => {
 exports.listMovements = asyncHandler(async (req, res) => {
   const list = await KitchenMovement.find().sort({ createdAt: -1 }).limit(100);
   res.json({ success: true, count: list.length, data: list });
+});
+
+/* ── Requisition receive (mirrors poolbar/restaurant) ── */
+
+async function logMovement(item, qtyIn, qtyOut, balance, reason) {
+  try {
+    await KitchenMovement.create({ date: nowStamp(), item, qtyIn, qtyOut, balance, reason });
+  } catch (_) { /* non-critical */ }
+}
+
+exports.receiveRequisition = asyncHandler(async (req, res) => {
+  const reqDoc = await Requisition.findOne({ $or: [{ id: req.params.id }, { requisitionNo: req.params.id }] });
+  if (!reqDoc) return res.status(404).json({ success: false, error: 'Requisition not found' });
+
+  for (const it of (reqDoc.items || [])) {
+    const addQty = Number(it.issuedQty > 0 ? it.issuedQty : (it.issuedQty !== 0 ? it.qty : 0)) || 0;
+    if (addQty <= 0) continue;
+
+    let stockItem = null;
+    if (it.stockId) {
+      stockItem = await KitchenStock.findOne({ id: it.stockId }).catch(() => null);
+    }
+    if (!stockItem) {
+      stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+    }
+
+    if (stockItem) {
+      stockItem.qty += addQty;
+      if (Number(it.cost) > 0) { stockItem.price = Number(it.cost); stockItem.cost = Number(it.cost); }
+      await stockItem.save();
+    } else {
+      stockItem = await KitchenStock.create({
+        id: it.stockId || uuidv4(),
+        name: it.name.trim(),
+        category: 'General',
+        unit: it.unit || 'kg',
+        qty: addQty,
+        min: 10,
+        price: Number(it.cost) || 0,
+        cost: Number(it.cost) || 0,
+        batch: reqDoc.requisitionNo || '—',
+      });
+    }
+
+    await logMovement(stockItem.name, addQty, 0, stockItem.qty, `Requisition Received (${reqDoc.requisitionNo})`);
+  }
+
+  reqDoc.status = 'Completed';
+  await reqDoc.save();
+
+  res.json({ success: true, data: reqDoc });
 });

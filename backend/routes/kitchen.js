@@ -46,6 +46,7 @@ router.delete('/recipes/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteR
 
 /* ── Requisitions ───────────────────────────── */
 router.get('/requisitions', ctrl.listKitchenRequisitions);
+router.post('/requisitions/:id/receive', inDept, privilegeGuard('kitchen', 'canCreate'), ctrl.receiveRequisition);
 
 /* ── Movements ──────────────────────────────── */
 router.get('/movements', ctrl.listMovements);

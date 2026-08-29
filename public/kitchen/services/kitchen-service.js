@@ -495,6 +495,29 @@
     });
   }
 
+  function post(path, body) {
+    return request(path, { method: 'POST', body: body || {} });
+  }
+
+  function normalizeRequisition(r) {
+    return Object.assign({}, r, { no: r.no || r.requisitionNo || r.id });
+  }
+
+  async function receiveRequisition(req) {
+    if (!req) throw new Error('Invalid requisition — nothing to receive.');
+    const id = (typeof req === 'string' ? req : (req.no || req.requisitionNo || req.id || req._id));
+    if (!id) throw new Error('Requisition has no id/number.');
+    const res = await post('/requisitions/' + encodeURIComponent(id) + '/receive');
+    const norm = normalizeRequisition(res.data || res);
+    await loadAll().catch(function () {});
+    emitChange('requisition:received');
+    return norm;
+  }
+
+  async function confirmReceipt(no) {
+    return receiveRequisition(no);
+  }
+
   global.KitchenService = {
     API_BASE,
     fmtN, nowStamp, fmtStamp, todayDDMMYY, todayISO,
@@ -508,6 +531,7 @@
     recordProduction, voidProduction, startProduction, completeProduction,
     addTransfer, updateTransferStatus,
     getKitchenRequisitions, receivedSoFar,
+    receiveRequisition, confirmReceipt,
     dashboardKPIs, productionKPIs, stockKPIs, transferKPIs, recipeKPIs,
     can, canVoidProduction,
     listStaffNames,
