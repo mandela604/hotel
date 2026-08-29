@@ -47,7 +47,7 @@
   .form-input, .form-select, textarea.form-input{ background:var(--input-bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .2s; width:100%; }
   .form-input:focus, .form-select:focus{ border-color:var(--gold-border); }
 
-  .items-head-row, .entry-row{ display:grid; grid-template-columns:1fr 80px 90px 120px 120px 34px; gap:10px; align-items:center; }
+  .items-head-row, .entry-row{ display:grid; grid-template-columns:1fr 80px 70px 90px 120px 120px 34px; gap:10px; align-items:center; }
   .items-head-row{ padding:0 4px 8px; }
   .items-head-row span{ font-size:9px; text-transform:uppercase; letter-spacing:1.1px; color:var(--text3); font-weight:700; }
   .entry-row{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:10px; padding:8px; transition:border-color .2s, background .2s; }
@@ -177,7 +177,7 @@
           </div>
 
           <div class="items-head-row">
-            <span>Item to Purchase</span><span>Unit</span><span>Qty</span><span>Unit Price (₦)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
+            <span>Item to Purchase</span><span>Unit</span><span>Pack Size</span><span>Qty</span><span>Unit Price (₦)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
           </div>
 
           <div class="entry-edit-banner" id="entryEditBanner">
@@ -206,6 +206,7 @@
               <option>Cartons</option>
               <option>Boxes</option>
             </select>
+            <input class="form-input" type="number" min="0" step="1" placeholder="—" id="entryPackSize" title="How many base units per 1 bulk unit (e.g. 50kg per bag)">
             <input class="form-input" type="number" min="1" value="1" id="entryQty">
             <input class="form-input" type="number" min="0" step="0.01" placeholder="0" id="entryPrice">
             <div class="entry-subtotal" id="entrySubtotal">₦0</div>
@@ -221,6 +222,7 @@
                 <tr>
                   <th>Item to Purchase</th>
                   <th class="center">Unit</th>
+                  <th class="center">Pack Size</th>
                   <th class="center">Qty</th>
                   <th class="right">Unit Price (₦)</th>
                   <th class="right">Subtotal (₦)</th>
@@ -339,6 +341,7 @@ function showItemSuggestions(query){
       document.getElementById('entryName').dataset.stockId = m.stockId || '';
       document.getElementById('entryName').dataset.unit = m.unit || '';
       document.getElementById('entryUnit').value = m.unit || '';
+      document.getElementById('entryPackSize').value = m.packSize || '';
       document.getElementById('entryPrice').value = m.price || '';
       updateEntryPreview();
       dd.classList.remove('show');
@@ -411,6 +414,7 @@ function loadItemIntoEntry(idx){
   document.getElementById('entryName').dataset.stockId = it.stockId || '';
   document.getElementById('entryName').dataset.unit = it.unit || '';
   document.getElementById('entryUnit').value = it.unit || '';
+  document.getElementById('entryPackSize').value = it.packSize || '';
   document.getElementById('entryQty').value = it.qty;
   document.getElementById('entryPrice').value = it.price;
   updateEntryPreview();
@@ -426,6 +430,7 @@ function cancelEntryEdit(){
   nameEl.dataset.stockId = '';
   nameEl.dataset.unit = '';
   document.getElementById('entryUnit').value = '';
+  document.getElementById('entryPackSize').value = '';
   document.getElementById('entryQty').value = 1;
   document.getElementById('entryPrice').value = '';
   updateEntryPreview();
@@ -436,10 +441,12 @@ function cancelEntryEdit(){
 function addItemFromEntry(){
   const nameEl = document.getElementById('entryName');
   const unitEl = document.getElementById('entryUnit');
+  const packSizeEl = document.getElementById('entryPackSize');
   const qtyEl = document.getElementById('entryQty');
   const priceEl = document.getElementById('entryPrice');
   const name = nameEl.value.trim();
   const unit = unitEl.value || nameEl.dataset.unit || '';
+  const packSize = parseFloat(packSizeEl.value) || 0;
   const qty = parseFloat(qtyEl.value) || 0;
   const price = parseFloat(priceEl.value) || 0;
 
@@ -447,7 +454,7 @@ function addItemFromEntry(){
   if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
   if (price <= 0){ showToast('Enter a unit price.', 'error'); priceEl.focus(); return; }
 
-  const entry = { name, qty, price, subtotal: qty * price, stockId: nameEl.dataset.stockId || '', unit };
+  const entry = { name, qty, price, subtotal: qty * price, stockId: nameEl.dataset.stockId || '', unit, packSize };
 
   if (editingIndex != null) {
     items[editingIndex] = entry;
@@ -460,6 +467,7 @@ function addItemFromEntry(){
   nameEl.dataset.stockId = '';
   nameEl.dataset.unit = '';
   unitEl.value = '';
+  packSizeEl.value = '';
   qtyEl.value = 1;
   priceEl.value = '';
   updateEntryPreview();
@@ -499,6 +507,7 @@ function renderItemsList(){
     <tr class="${i === editingIndex ? 'editing-row' : ''}" data-idx="${i}">
       <td>${escapeHtml(it.name)}</td>
       <td class="center">${escapeHtml(it.unit || '—')}</td>
+      <td class="center">${it.packSize ? it.packSize : '—'}</td>
       <td class="center">${it.qty}</td>
       <td class="right">${fmtN(it.price)}</td>
       <td class="right item-subtotal">${fmtN(it.subtotal)}</td>
@@ -587,7 +596,7 @@ async function populateFromPR(pr){
   items = (pr.items || []).map(it => {
     const qty = Number(it.qty) || 0;
     const price = it.price != null ? Number(it.price) : Number(it.cost) || 0;
-    return { name: it.name, qty, price, subtotal: qty * price, stockId: it.stockId || '', unit: it.unit || '' };
+    return { name: it.name, qty, price, subtotal: qty * price, stockId: it.stockId || '', unit: it.unit || '', packSize: it.packSize || 0 };
   });
   setEntryEditingState(null);
   recalcTotals();
@@ -606,6 +615,7 @@ async function resetForm(){
   document.getElementById('fNotes').value = '';
   document.getElementById('entryName').value = '';
   document.getElementById('entryUnit').value = '';
+  document.getElementById('entryPackSize').value = '';
   document.getElementById('entryQty').value = 1;
   document.getElementById('entryPrice').value = '';
   updateEntryPreview();
@@ -674,13 +684,13 @@ async function handleSubmit(){
 ═══════════════════════════════════════════════ */
 document.getElementById('addEntryBtn').addEventListener('click', addItemFromEntry);
 document.getElementById('entryEditCancel').addEventListener('click', cancelEntryEdit);
-['entryUnit','entryQty','entryPrice'].forEach(id => document.getElementById(id).addEventListener('input', updateEntryPreview));
+['entryUnit','entryPackSize','entryQty','entryPrice'].forEach(id => document.getElementById(id).addEventListener('input', updateEntryPreview));
 document.getElementById('entryName').addEventListener('input', e => showItemSuggestions(e.target.value));
 document.getElementById('entryName').addEventListener('focus', e => { if (e.target.value) showItemSuggestions(e.target.value); });
 document.addEventListener('click', e => {
   if (!e.target.closest('.entry-name-wrap')) hideItemSuggestions();
 });
-['entryName','entryUnit','entryQty','entryPrice'].forEach(id => {
+['entryName','entryUnit','entryPackSize','entryQty','entryPrice'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Escape'){ hideItemSuggestions(); if (editingIndex != null) cancelEntryEdit(); return; }
     if (e.key === 'Enter'){ e.preventDefault(); addItemFromEntry(); }

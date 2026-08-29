@@ -456,6 +456,8 @@
       const name = (it.name || '').trim();
       if (!name) continue;
       const qty = parseFloat(it.qty) || 0;
+      const packSize = parseFloat(it.packSize) || 0;
+      const baseQty = packSize > 0 ? qty * packSize : qty;
       const cost = parseFloat(it.price || it.cost) || 0;
       const unit = it.unit || 'unit';
       const stockId = it.stockId || '';
@@ -469,7 +471,7 @@
       }
 
       if (stockItem) {
-        const payload = { qty: qty };
+        const payload = { qty: baseQty };
         if (cost > 0) payload.cost = cost;
         const updated = await apiFetch('/stock/' + stockItem.id + '/receive', {
           method: 'PATCH',
