@@ -150,8 +150,10 @@ const ProcurementModals = (function() {
     const roles = [
       { key:'accountant', label:'Accountant', icon:'fa-calculator', color:'var(--blue)' },
       { key:'gm',         label:'Manager (GM)', icon:'fa-user-tie', color:'var(--green)' },
-      { key:'md',         label:'MD', icon:'fa-star', color:'var(--purple)' },
     ];
+    if (pr.totalAmount > 100000) {
+      roles.push({ key:'md', label:'MD', icon:'fa-star', color:'var(--purple)' });
+    }
     const approvedSet = {};
     Object.keys(stageBy).forEach(s => {
       if (s==='accountant') approvedSet['accountant']=true;
@@ -236,11 +238,8 @@ const ProcurementModals = (function() {
   }
 
   async function approvePR(id) {
-    const note = await askInput('Write an approval note (optional):', 'Approve Purchase Request');
-    if (note === null) return; // Cancelled
-    
     try {
-      await ProcurementService.approvePR(id, 'current', note || '');
+      await ProcurementService.approvePR(id, 'current', '');
       ProcurementModals.alert('Purchase request approved successfully!', 'Success');
       location.reload();
     } catch (error) {
