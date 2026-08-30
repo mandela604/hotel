@@ -215,7 +215,9 @@
     <div class="form-row">
       <div class="form-group span2">
         <label class="form-label">Item Name</label>
-        <input class="form-input" type="text" id="fName" placeholder="e.g. Jollof Rice">
+        <input class="form-input" type="text" id="fName" placeholder="Type to search Store catalog…" list="storeCatalogList" oninput="onStoreItemPick()">
+        <datalist id="storeCatalogList"></datalist>
+        <div class="form-hint">Pick from Store's catalog or type a new name.</div>
       </div>
       <div class="form-group">
        <label class="form-label">Category</label>
@@ -311,6 +313,8 @@
 
 <script src="../services/permissions.js"></script>
 <script src="services/restaurant-service.js"></script>
+<script src="../store/data/store-seed.js"></script>
+<script src="../store/services/store-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script src="../component/inventory-table.js"></script>
 <script>
@@ -761,6 +765,26 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+function populateStoreCatalog(){
+  const dl = document.getElementById('storeCatalogList');
+  if (!dl || !window.StoreService || !StoreService.state) return;
+  const stock = StoreService.state.stock || [];
+  dl.innerHTML = stock.map(s => `<option value="${escapeHtml(s.name)}" data-unit="${escapeHtml(s.unit)}">`).join('');
+}
+function onStoreItemPick(){
+  const name = document.getElementById('fName').value;
+  if (!window.StoreService || !StoreService.state) return;
+  const stock = StoreService.state.stock || [];
+  const match = stock.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (match) {
+    const unitSel = document.getElementById('fUnit');
+    const opts = Array.from(unitSel.options).map(o => o.value);
+    if (opts.includes(match.unit)) {
+      unitSel.value = match.unit;
+    }
+  }
+}
+
 function showToast(msg, type) {
   type = type || 'success';
   var t = document.createElement('div');
@@ -785,6 +809,10 @@ async function init() {
 
   try {
     await RestaurantService.loadAll();
+
+    if (window.StoreService) {
+      StoreService.loadAll().then(populateStoreCatalog);
+    }
 
     mountInventoryTable();
     bindStatusPills();

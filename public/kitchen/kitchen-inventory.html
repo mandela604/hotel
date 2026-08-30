@@ -242,7 +242,9 @@
     <div class="form-row">
       <div class="form-group span2">
         <div class="form-label">Ingredient Name *</div>
-        <input class="form-input" id="fName" type="text" placeholder="e.g. Rice (Long Grain)">
+        <input class="form-input" id="fName" type="text" placeholder="Type to search Store catalog…" list="storeCatalogList" oninput="onStoreItemPick()">
+        <datalist id="storeCatalogList"></datalist>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">Pick from Store's catalog or type a new name</div>
       </div>
       <div class="form-group">
         <div class="form-label">Category</div>
@@ -299,6 +301,8 @@
 </div>
 
 <script src="services/kitchen-service.js"></script>
+<script src="../store/data/store-seed.js"></script>
+<script src="../store/services/store-service.js"></script>
 <script src="../component/kitchen-shell.js"></script>
 <script>
 const shell = KitchenShell.attach({
@@ -547,9 +551,28 @@ function showToast(msg, type='success'){
   setTimeout(() => t.remove(), 3400);
 }
 
+function populateStoreCatalog(){
+  const dl = document.getElementById('storeCatalogList');
+  if (!dl || !window.StoreService || !StoreService.state) return;
+  const stock = StoreService.state.stock || [];
+  dl.innerHTML = stock.map(s => `<option value="${s.name}" data-unit="${s.unit}">`).join('');
+}
+function onStoreItemPick(){
+  const name = document.getElementById('fName').value;
+  if (!window.StoreService || !StoreService.state) return;
+  const stock = StoreService.state.stock || [];
+  const match = stock.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (match) {
+    document.getElementById('fUnit').value = match.unit || '';
+  }
+}
+
 async function init(){
   bindStatusPills();
   await KitchenService.loadAll();
+  if (window.StoreService) {
+    StoreService.loadAll().then(populateStoreCatalog);
+  }
   render();
   KitchenService.onChange(render);
 }
