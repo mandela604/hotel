@@ -307,11 +307,17 @@ function renderStockAlerts(stock){
   if (alerts.length === 0) { el.innerHTML = '<div class="empty-note">All items are above their reorder level.</div>'; return; }
   el.innerHTML = alerts.map(s => {
     const lvl = svc.stockLevel(s);
+    const qtyLabel = (s.baseUnit && s.packSize > 0)
+      ? s.qty + ' ' + s.baseUnit + ' (' + (s.qty / s.packSize).toFixed(1) + ' ' + s.unit + ')'
+      : s.qty + ' ' + s.unit;
+    const reorderLabel = (s.baseUnit && s.packSize > 0)
+      ? s.min + ' ' + s.baseUnit
+      : s.min + ' ' + s.unit;
     return `<a class="list-row" href="stock.html">
       <div class="list-ic ${lvl==='out'?'ic-red':'ic-amber'}"><i class="fa-solid fa-box"></i></div>
       <div class="list-body">
         <div class="list-name">${s.name}</div>
-        <div class="list-meta">${s.qty} on hand · reorder at ${s.min}</div>
+        <div class="list-meta">${qtyLabel} on hand · reorder at ${reorderLabel}</div>
       </div>
       <span class="chip chip-${lvl}"><i class="fa-solid fa-circle"></i>${svc.LEVEL_LABEL[lvl]}</span>
     </a>`;

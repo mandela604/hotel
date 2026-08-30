@@ -473,6 +473,20 @@ function renderLevelTabs(){
       <span class="sc-dot" style="background:${t.dot}"></span>${t.l}
     </button>`).join('');
 }
+
+function fmtDualQty(s){
+  const qty = s.qty || 0;
+  const unit = s.unit || '—';
+  if (!s.baseUnit || !s.packSize || s.packSize <= 0) return qty + ' ' + unit;
+  const bulkQty = qty / s.packSize;
+  return qty + ' ' + s.baseUnit + ' <span style="color:var(--text3);font-size:11px;">(' + bulkQty.toFixed(1) + ' ' + unit + ')</span>';
+}
+function fmtDualReorder(s){
+  const min = s.min || 0;
+  if (!s.baseUnit || !s.packSize || s.packSize <= 0) return min + ' ' + (s.unit || '');
+  const bulkMin = min / s.packSize;
+  return min + ' ' + s.baseUnit + ' <span style="color:var(--text3);font-size:11px;">(' + bulkMin.toFixed(1) + ' ' + s.unit + ')</span>';
+}
 window.setLevel = function(k){ activeLevel = k; page = 1; render(); };
 
 window.clearFilters = function(){
@@ -540,8 +554,8 @@ function render(){
           <td class="item-name" data-label="Item">${s.name||'—'}</td>
           <td data-label="Category"><span class="cat-chip"><span class="cat-dot" style="background:${catColor(s.cat)}"></span>${s.cat||'—'}</span></td>
           <td class="center" data-label="Unit">${s.unit||'—'}</td>
-          <td class="center" data-label="On Hand">${s.qty??0}</td>
-          <td class="center" data-label="Reorder Level">${s.min??0}</td>
+          <td class="center" data-label="On Hand">${fmtDualQty(s)}</td>
+          <td class="center" data-label="Reorder Level">${fmtDualReorder(s)}</td>
           <td class="center" data-label="Avg Cost">${fmtN(s.cost||0)}</td>
           <td class="center" data-label="Total Value">${fmtN(itemValue(s))}</td>
           <td class="center" data-label="Status"><span class="chip ${svc.LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${svc.LEVEL_LABEL[lvl]}</span></td>
@@ -568,7 +582,7 @@ window.openAddItem = function(){
     categories: svc.getCategories(),
     onSave: async (entry) => {
       try {
-        await svc.addStockItem({ name: entry.name, cat: entry.cat, unit: entry.unit, min: entry.reorder || 0 });
+        await svc.addStockItem({ name: entry.name, cat: entry.cat, unit: entry.unit, baseUnit: entry.baseUnit, packSize: entry.packSize, min: entry.reorder || 0 });
         showToast('Item added. Quantity and cost will update when Procurement sends goods.', 'success');
       } catch (e) {
         showToast(e.message || 'Could not add item.', 'error');
@@ -589,7 +603,7 @@ window.openEditItem = function(id){
       try {
         // qty + cost intentionally not editable here (StoreService.editStockItem drops them) —
         // those only move via requisitions / goods receipt.
-        await svc.editStockItem(id, { name: entry.name, cat: entry.cat, unit: entry.unit, min: entry.reorder || 0 });
+        await svc.editStockItem(id, { name: entry.name, cat: entry.cat, unit: entry.unit, baseUnit: entry.baseUnit, packSize: entry.packSize, min: entry.reorder || 0 });
         showToast('Item updated.', 'success');
       } catch (e) {
         showToast(e.message || 'Could not update item.', 'error');

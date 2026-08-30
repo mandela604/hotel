@@ -81,12 +81,12 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.storeCatalog = asyncHandler(async (req, res) => {
-  const stock = await StoreStock.find({}, { name: 1, unit: 1, qty: 1, cost: 1, cat: 1 }).sort({ name: 1 });
-  res.json({ success: true, data: stock.map(s => ({ id: s._id || s.id, name: s.name, unit: s.unit, qty: s.qty, cost: s.cost, cat: s.cat })) });
+  const stock = await StoreStock.find({}, { name: 1, unit: 1, baseUnit: 1, packSize: 1, qty: 1, cost: 1, cat: 1 }).sort({ name: 1 });
+  res.json({ success: true, data: stock.map(s => ({ id: s._id || s.id, name: s.name, unit: s.unit, baseUnit: s.baseUnit, packSize: s.packSize, qty: s.qty, cost: s.cost, cat: s.cat })) });
 });
 
 exports.addStock = asyncHandler(async (req, res) => {
-  const { name, cat, category, unit, min, cost, price, qty } = req.body;
+  const { name, cat, category, unit, baseUnit, packSize, min, cost, price, qty } = req.body;
   const existing = await findStockFuzzy(name);
   if (existing) throw new ApiError(409, `"${name}" is already tracked — edit it instead.`);
 
@@ -94,6 +94,8 @@ exports.addStock = asyncHandler(async (req, res) => {
     name: name.trim(),
     cat: (cat || category || 'Other').trim(),
     unit: (unit || 'unit').trim(),
+    baseUnit: (baseUnit || '').trim(),
+    packSize: Number(packSize) || 0,
     qty: Number(qty) || 0,
     cost: Number(cost || price) || 0,
     min: Number(min) || 0,
@@ -102,11 +104,13 @@ exports.addStock = asyncHandler(async (req, res) => {
 });
 
 exports.updateStock = asyncHandler(async (req, res) => {
-  const { cat, category, unit, min, cost, price, name, qty } = req.body;
+  const { cat, category, unit, baseUnit, packSize, min, cost, price, name, qty } = req.body;
   const updates = {};
   if (name !== undefined) updates.name = name.trim();
   if (cat !== undefined || category !== undefined) updates.cat = (cat || category).trim();
   if (unit !== undefined) updates.unit = unit.trim();
+  if (baseUnit !== undefined) updates.baseUnit = (baseUnit || '').trim();
+  if (packSize !== undefined) updates.packSize = Number(packSize) || 0;
   if (min !== undefined) updates.min = Number(min);
   if (cost !== undefined || price !== undefined) updates.cost = Number(cost !== undefined ? cost : price);
   if (qty !== undefined) updates.qty = Number(qty);
@@ -333,14 +337,14 @@ exports.disputeDelivery = asyncHandler(async (req, res) => {
 });
 
 exports.receiveStock = asyncHandler(async (req, res) => {
-  const { qty, cost } = req.body;
+  const { qty, cost, packSize, unit } = req.body;
   const addQty = Number(qty) || 0;
   if (addQty <= 0) throw new ApiError(400, 'qty must be a positive number');
-  const item = await StoreStock.findByIdAndUpdate(
-    req.params.id,
-    { $inc: { qty: addQty }, ...(Number(cost) > 0 ? { $set: { cost: Number(cost) } } : {}) },
-    { new: true }
-  );
+  const updates = { $inc: { qty: addQty } };
+  if (Number(cost) > 0) updates.$set = { cost: Number(cost) };
+  if (packSize) updates.$set = { ...updates.$set, packSize: Number(packSize) };
+  if (unit) updates.$set = { ...updates.$set, unit: unit.trim() };
+  const item = await StoreStock.findByIdAndUpdate(req.params.id, updates, { new: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');
   res.json({ success: true, data: item });
 });

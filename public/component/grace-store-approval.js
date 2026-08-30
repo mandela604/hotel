@@ -278,6 +278,16 @@
     const role = options.viewerRole === 'requester' ? 'requester' : 'store';
 
     function stockFor(name) { return svc.stockQtyFor(name) || 0; }
+    function stockItemFor(name) { return svc.stockItemFor ? svc.stockItemFor(name) : null; }
+    function fmtAvail(name) {
+      const qty = stockFor(name);
+      const item = stockItemFor(name);
+      if (item && item.baseUnit && item.packSize > 0) {
+        const bulkQty = qty / item.packSize;
+        return qty + ' ' + item.baseUnit + ' <span style="opacity:.6;font-size:11px;">(' + bulkQty.toFixed(1) + ' ' + item.unit + ')</span>';
+      }
+      return qty.toFixed(2);
+    }
 
     let currentNo = options.reqNo || new URLSearchParams(window.location.search).get('req') || '';
     let req = null;
@@ -445,7 +455,7 @@
           <td>${_esc(it.name)}</td>
           <td class="ghsa-center">${_esc(it.unit)}</td>
           <td class="ghsa-center">${it.qty.toFixed(2)}</td>
-          <td class="ghsa-center ${avail < it.qty ? 'ghsa-red-text' : 'ghsa-green-text'}">${avail.toFixed(2)}</td>
+          <td class="ghsa-center ${avail < it.qty ? 'ghsa-red-text' : 'ghsa-green-text'}">${fmtAvail(it.name)}</td>
           <td class="ghsa-center"><div class="ghsa-qty${issuedEditable ? '' : ' readonly'}"><input type="text" inputmode="decimal" value="${(parseFloat(it.issuedQty) || 0).toFixed(2)}" data-idx="${idx}" data-role="issuedInput" ${issuedEditable ? '' : 'disabled'}>${issuedEditable ? `<span class="ghsa-stepper"><span data-idx="${idx}" data-delta="1" data-role="issuedStep"><i class="fa-solid fa-caret-up"></i></span><span data-idx="${idx}" data-delta="-1" data-role="issuedStep"><i class="fa-solid fa-caret-down"></i></span></span>` : ''}</div></td>
           <td class="ghsa-center ${balance > 0 ? 'ghsa-red-text' : ''}">${balance.toFixed(2)}</td>
           <td class="ghsa-center"><span class="ghsa-status-tag ${tagClass}">${tagLabel}</span></td>
@@ -530,7 +540,7 @@
                 <tfoot><tr>
                   <td class="ghsa-num" style="color:var(--ghsa-gold);">TOTAL</td><td></td><td class="ghsa-center"></td>
                   <td class="ghsa-center">${totalReq.toFixed(2)}</td>
-                  <td class="ghsa-center">${workingItems.reduce((s, i) => s + stockFor(i.name), 0).toFixed(2)}</td>
+                  <td class="ghsa-center">${workingItems.reduce((s, i) => s + stockFor(i.name), 0).toFixed(0)}</td>
                   <td class="ghsa-center">${totalIssued.toFixed(2)}</td>
                   <td class="ghsa-center">${totalBalance.toFixed(2)}</td>
                   <td class="ghsa-center"></td><td class="ghsa-center"></td>

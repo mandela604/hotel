@@ -98,6 +98,7 @@
   `;
 
   const UNITS = ['kg','g','Ltr','ml','pcs','Bottles','Cans','Packs','Cartons','Bags','Crates'];
+  const BASE_UNITS = ['','pcs','kg','g','Ltr','ml','Bottles','Cans','Packs','Bags'];
 
   let root = null;
   let opts = null;
@@ -139,13 +140,26 @@
               </select>
             </div>
             <div class="sif-group">
+              <label class="sif-label">Base Unit (optional)</label>
+              <select class="sif-select" data-role="baseUnit">
+                ${BASE_UNITS.map(u => `<option value="${u}">${u || '— same as Unit —'}</option>`).join('')}
+              </select>
+              <div class="sif-hint">The individual unit inside each pack. E.g. if Unit = "Cartons" and 1 Carton = 12 Bottles, set Base Unit = "Bottles".</div>
+            </div>
+            <div class="sif-group">
+              <label class="sif-label">Pack Size</label>
+              <input class="sif-input" type="number" data-role="packSize" placeholder="0" min="0" step="1">
+              <div class="sif-hint">How many base units in one pack. E.g. 12 Bottles per Carton. Set to 0 if unit and base unit are the same.</div>
+            </div>
+            <div class="sif-group">
               <label class="sif-label">Quantity On Hand</label>
               <input class="sif-input" type="number" data-role="qty" value="0" disabled>
               <div class="sif-hint">Always starts at 0. Updated only when Procurement sends goods to Store.</div>
             </div>
             <div class="sif-group">
-              <label class="sif-label">Reorder Level</label>
+              <label class="sif-label">Reorder Level (in base units)</label>
               <input class="sif-input" type="number" data-role="reorder" placeholder="0" min="0" step="any">
+              <div class="sif-hint">Stock alert triggers when on-hand drops below this (measured in base units).</div>
             </div>
             <div class="sif-group span2">
               <label class="sif-label">Average Unit Cost (₦)</label>
@@ -206,8 +220,10 @@
     $('[data-role="name"]').value = item.name || '';
     fillCategories(opts.categories, item.cat || (opts.categories && opts.categories[0]) || 'Other');
     $('[data-role="unit"]').value = item.unit || 'kg';
+    $('[data-role="baseUnit"]').value = item.baseUnit || '';
+    $('[data-role="packSize"]').value = item.packSize || '';
     $('[data-role="qty"]').value = item.qty != null ? item.qty : 0;
-    $('[data-role="reorder"]').value = item.reorder != null && item.reorder !== '' ? item.reorder : '';
+    $('[data-role="reorder"]').value = item.reorder != null && item.reorder !== '' ? item.reorder : (item.min != null ? item.min : '');
     $('[data-role="cost"]').value = item.cost != null ? item.cost : 0;
 
     // Always locked — system controlled
@@ -250,9 +266,9 @@
       name: name,
       cat: $('[data-role="cat"]').value,
       unit: $('[data-role="unit"]').value,
+      baseUnit: $('[data-role="baseUnit"]').value,
+      packSize: parseFloat($('[data-role="packSize"]').value) || 0,
       reorder: parseFloat($('[data-role="reorder"]').value) || 0,
-      // qty and cost are never taken from the form on create;
-      // on edit they stay as existing values (handled by caller)
       qty: isEdit ? (opts.item.qty ?? 0) : 0,
       cost: isEdit ? (opts.item.cost ?? 0) : 0,
     };

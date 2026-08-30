@@ -85,6 +85,8 @@
       name: s.name || '',
       cat: s.cat || 'Other',
       unit: s.unit || 'unit',
+      baseUnit: s.baseUnit || '',
+      packSize: Number(s.packSize) || 0,
       qty: Number(s.qty) || 0,
       cost: Number(s.cost) || 0,
       min: Number(s.min) || 0,
@@ -182,6 +184,10 @@
   function stockQtyFor(name) {
     const i = findStock(name);
     return i ? (i.qty || 0) : 0;
+  }
+
+  function stockItemFor(name) {
+    return findStock(name) || null;
   }
 
   function findCatalogItem(name) {
@@ -474,6 +480,8 @@
       if (stockItem) {
         const payload = { qty: baseQty };
         if (cost > 0) payload.cost = cost;
+        if (packSize > 0) payload.packSize = packSize;
+        if (it.unit) payload.unit = it.unit;
         const updated = await apiFetch('/stock/' + stockItem.id + '/receive', {
           method: 'PATCH',
           body: JSON.stringify(payload),
@@ -481,6 +489,8 @@
         if (updated) {
           stockItem.qty = (updated.qty != null ? updated.qty : stockItem.qty);
           if (updated.cost != null) stockItem.cost = updated.cost;
+          if (updated.packSize) stockItem.packSize = updated.packSize;
+          if (updated.unit) stockItem.unit = updated.unit;
         } else {
           stockItem.qty = (stockItem.qty || 0) + baseQty;
           if (cost > 0) stockItem.cost = cost;
@@ -488,7 +498,7 @@
       } else {
         const created = await apiFetch('/stock', {
           method: 'POST',
-          body: JSON.stringify({ name: name, cat: pr.cat || 'General', unit: unit, cost: cost, qty: baseQty, min: 0 }),
+          body: JSON.stringify({ name: name, cat: pr.cat || 'General', unit: unit, baseUnit: it.baseUnit || '', packSize: packSize, cost: cost, qty: baseQty, min: 0 }),
         });
         const norm = normalizeStock(created);
         state.stock.push(norm);
@@ -540,6 +550,7 @@
     findStock: findStock,
     findStockById: findStockById,
     stockQtyFor: stockQtyFor,
+    stockItemFor: stockItemFor,
     findCatalogItem: findCatalogItem,
     suggestIssueQty: suggestIssueQty,
 

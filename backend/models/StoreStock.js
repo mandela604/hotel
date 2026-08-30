@@ -5,6 +5,8 @@ const storeStockSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, maxlength: 120 },
     cat: { type: String, required: true, trim: true, maxlength: 60, default: 'Other' },
     unit: { type: String, required: true, trim: true, maxlength: 40, default: 'unit' },
+    baseUnit: { type: String, trim: true, maxlength: 40, default: '' },
+    packSize: { type: Number, default: 0, min: 0 },
     qty: { type: Number, required: true, default: 0, min: 0 },
     cost: { type: Number, required: true, default: 0, min: 0 },
     min: { type: Number, required: true, default: 0, min: 0 },

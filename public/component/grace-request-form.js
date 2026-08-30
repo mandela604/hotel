@@ -286,7 +286,15 @@
           return storeService.state.catalog;
         }
         if (Array.isArray(storeService.state.stock)) {
-          return storeService.state.stock.map(i => ({ name: i.name, unit: i.unit, id: i.id, stockQty: i.qty }));
+          return storeService.state.stock.map(i => {
+            const base = { name: i.name, unit: i.unit, id: i.id, stockQty: i.qty, baseUnit: i.baseUnit, packSize: i.packSize };
+            if (i.baseUnit && i.packSize > 0) {
+              base.stockLabel = i.qty + ' ' + i.baseUnit + ' (' + (i.qty / i.packSize).toFixed(1) + ' ' + i.unit + ')';
+            } else {
+              base.stockLabel = i.qty + ' ' + i.unit;
+            }
+            return base;
+          });
         }
       }
       if (dataService && dataService.state) {
@@ -460,7 +468,7 @@
       const match = findCatalogItem(val);
       const deptLabel = meta ? meta.deptLabel : 'this department';
       hint.textContent = match
-        ? `✓ ${match.name} — ${match.unit}. Press Enter or "＋ Add Item" to add.`
+        ? `✓ ${match.name} — ${match.unit}.${match.stockLabel ? ' Available: ' + match.stockLabel : ''} Press Enter or "＋ Add Item" to add.`
         : `Not in ${deptLabel}'s item list — pick a suggestion from the dropdown.`;
     }
     function tryAddSearchedItem() {
