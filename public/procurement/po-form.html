@@ -143,11 +143,28 @@
       </div>
 
       <!-- ═══ FORM ═══ -->
-      <div class="panel">
+      <div class="panel" id="formPanel">
         <div class="panel-head">
           <div class="panel-title"><i class="fa-solid fa-cart-shopping"></i> <span id="panelTitleText">Purchase Order Details</span></div>
         </div>
-        <div class="panel-body">
+        <div class="panel-body" id="formPanelBody">
+          <div id="formSkeleton" style="display:none;">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+              <div><div class="sk-box sk-text sm" style="width:40%;margin-bottom:6px;"></div><div class="sk-box" style="height:38px;"></div></div>
+              <div><div class="sk-box sk-text sm" style="width:40%;margin-bottom:6px;"></div><div class="sk-box" style="height:38px;"></div></div>
+              <div><div class="sk-box sk-text sm" style="width:40%;margin-bottom:6px;"></div><div class="sk-box" style="height:38px;"></div></div>
+              <div><div class="sk-box sk-text sm" style="width:40%;margin-bottom:6px;"></div><div class="sk-box" style="height:38px;"></div></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-bottom:16px;">
+              <div class="sk-box sk-text sm" style="width:15%;height:14px;"></div>
+              <div class="sk-box sk-text sm" style="width:10%;height:14px;"></div>
+              <div class="sk-box sk-text sm" style="width:10%;height:14px;"></div>
+              <div class="sk-box sk-text sm" style="width:10%;height:14px;"></div>
+              <div class="sk-box sk-text sm" style="width:15%;height:14px;"></div>
+              <div class="sk-box sk-text sm" style="width:15%;height:14px;"></div>
+            </div>
+            ${LoadingUI.skTableRows(3, 7)}
+          </div>
 
           <div class="form-grid">
             <div class="form-group">
@@ -269,6 +286,7 @@
 
 <script src="../services/permissions.js"></script>
   <script src="services/procurement-service.js"></script>
+<script src="../component/ui-loading.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -653,7 +671,7 @@ async function handleSubmit(){
   };
 
   const createBtn = document.getElementById('createBtn');
-  createBtn.disabled = true;
+  LoadingUI.setBtnLoading(createBtn, true, EDIT_MODE ? 'Saving…' : 'Creating…');
 
   try {
     const activeSession = ProcurementService.resolveSession();
@@ -680,7 +698,7 @@ async function handleSubmit(){
   } catch (err) {
     showToast(err.message || 'Failed to save purchase order.', 'error');
   } finally {
-    createBtn.disabled = false;
+    LoadingUI.setBtnLoading(createBtn, false);
   }
 }
 
@@ -715,11 +733,13 @@ async function init(){
   loadItemCatalog();
 
   if (EDIT_MODE){
+    document.getElementById('formSkeleton').style.display = 'block';
     try {
       editingPR = await ProcurementService.getPR(EDIT_ID);
     } catch (err) {
       showToast(err.message || 'Failed to load this purchase order.', 'error');
     }
+    document.getElementById('formSkeleton').style.display = 'none';
     if (!editingPR){
       showToast('Purchase order not found.', 'error');
       return;

@@ -330,6 +330,7 @@
 
 <script src="../services/permissions.js"></script>
   <script src="services/procurement-service.js"></script>
+<script src="../component/ui-loading.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -554,16 +555,13 @@ async function saveSupplier(){
     notes: document.getElementById('fsNotes').value.trim() || '',
   };
 
+  const btn = document.getElementById('fsSaveBtn');
+  LoadingUI.setBtnLoading(btn, true, 'Saving…');
   try {
     if (editingSupplierId) {
-      // updateSupplier() does the duplicate-name check (against every
-      // OTHER supplier) and persistence — this page never writes to the
-      // array or to localStorage itself.
       await ProcurementService.updateSupplier(editingSupplierId, entry, ProcurementService.resolveSession());
       showToast(`${name} updated.`, 'success');
     } else {
-      // createSupplier() does the duplicate-name check, validation, id
-      // assignment, and persistence.
       await ProcurementService.createSupplier(entry, ProcurementService.resolveSession());
       showToast(`${name} added to supplier directory.`, 'success');
     }
@@ -573,6 +571,8 @@ async function saveSupplier(){
     renderSuppliers();
   } catch (err) {
     showToast(err.message || 'Failed to save supplier.', 'error');
+  } finally {
+    LoadingUI.setBtnLoading(btn, false);
   }
 }
 
@@ -638,6 +638,8 @@ async function confirmRenameCategory(oldName){
   const input = document.getElementById('catEditInput');
   const newName = input ? input.value.trim() : '';
   if (!newName) { showToast('Category name cannot be empty.', 'error'); return; }
+  const btn = document.querySelector('#catList .btn-primary');
+  if (btn) LoadingUI.setBtnLoading(btn, true, 'Renaming…');
   try {
     await ProcurementService.renameCategory(oldName, newName, ProcurementService.resolveSession());
     editingCategoryName = null;
@@ -645,6 +647,8 @@ async function confirmRenameCategory(oldName){
     renderCategoryList();
   } catch (err) {
     showToast(err.message || 'Failed to rename category.', 'error');
+  } finally {
+    if (btn) LoadingUI.setBtnLoading(btn, false);
   }
 }
 
@@ -663,6 +667,8 @@ async function addCategoryFromModal(){
   const input = document.getElementById('catNewInput');
   const name = input.value.trim();
   if (!name) { showToast('Enter a category name.', 'error'); return; }
+  const addBtn = document.querySelector('.cat-add-row .btn-primary');
+  if (addBtn) LoadingUI.setBtnLoading(addBtn, true, 'Adding…');
   try {
     await ProcurementService.addCategory(name, ProcurementService.resolveSession());
     input.value = '';
@@ -670,6 +676,8 @@ async function addCategoryFromModal(){
     renderCategoryList();
   } catch (err) {
     showToast(err.message || 'Failed to add category.', 'error');
+  } finally {
+    if (addBtn) LoadingUI.setBtnLoading(addBtn, false);
   }
 }
 
@@ -685,6 +693,9 @@ function showToast(msg, type='success'){
 // Init — populates suppliers, PRs (for per-supplier order-count/spend),
 // and the category list, then renders from the caches.
 async function init(){
+  document.getElementById('kpiRow').innerHTML = LoadingUI.skKPIs(4);
+  document.getElementById('spBody').innerHTML = LoadingUI.skTableRows(5, 8);
+
   try {
     [allSuppliers, allPRsForSpend] = await Promise.all([
       ProcurementService.getSuppliers(),

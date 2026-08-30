@@ -224,10 +224,10 @@ const ProcurementModals = (function() {
         </div>
 
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-          ${canApprove ? `<button onclick="ProcurementModals.approvePR(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--green);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Approve</button>` : ''}
-          ${canReject ? `<button onclick="ProcurementModals.rejectPR(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✕ Reject</button>` : ''}
-          ${canCreatePO ? `<button onclick="ProcurementModals.createPO(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📋 Create PO</button>` : ''}
-          ${canVoid ? `<button onclick="ProcurementModals.showVoidCorrectModal('${pr.id}')" style="padding:8px 20px;background:var(--amber);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">↺ Void &amp; Correct</button>` : ''}
+          ${canApprove ? `<button id="prcApproveBtn" onclick="ProcurementModals.approvePR(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--green);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Approve</button>` : ''}
+          ${canReject ? `<button id="prcRejectBtn" onclick="ProcurementModals.rejectPR(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✕ Reject</button>` : ''}
+          ${canCreatePO ? `<button id="prcCreatePOBtn" onclick="ProcurementModals.createPO(&#39;${pr.id}&#39;)" style="padding:8px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📋 Create PO</button>` : ''}
+          ${canVoid ? `<button id="prcVoidBtn" onclick="ProcurementModals.showVoidCorrectModal('${pr.id}')" style="padding:8px 20px;background:var(--amber);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">↺ Void &amp; Correct</button>` : ''}
           <button onclick="ProcurementModals.close()" style="padding:8px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Close</button>
         </div>
       </div>
@@ -238,35 +238,41 @@ const ProcurementModals = (function() {
   }
 
   async function approvePR(id) {
+    const btn = document.getElementById('prcApproveBtn');
+    if (btn) LoadingUI.setBtnLoading(btn, true, 'Approving…');
     try {
       await ProcurementService.approvePR(id, 'current', '');
       ProcurementModals.alert('Purchase request approved successfully!', 'Success');
       location.reload();
     } catch (error) {
+      if (btn) LoadingUI.setBtnLoading(btn, false);
       ProcurementModals.alert('Error approving request: ' + error.message, 'Error');
     }
   }
 
   async function rejectPR(id) {
     const note = await askInput('Reason for rejection:', 'Reject Purchase Request');
-    if (note === null) return; // Cancelled
+    if (note === null) return;
     if (!note.trim()) {
       ProcurementModals.alert('Please provide a rejection reason.', 'Error');
       return;
     }
     
+    const btn = document.getElementById('prcRejectBtn');
+    if (btn) LoadingUI.setBtnLoading(btn, true, 'Rejecting…');
     try {
       await ProcurementService.rejectPR(id, 'current', note);
       ProcurementModals.alert('Purchase request rejected.', 'Rejected');
       location.reload();
     } catch (error) {
+      if (btn) LoadingUI.setBtnLoading(btn, false);
       ProcurementModals.alert('Error rejecting request: ' + error.message, 'Error');
     }
   }
 
   async function createPO(id) {
     const poNo = await askInput('Enter PO Number:', 'Create Purchase Order');
-    if (poNo === null) return; // Cancelled
+    if (poNo === null) return;
     if (!poNo.trim()) {
       ProcurementModals.alert('Please enter a PO number.', 'Error');
       return;
@@ -279,11 +285,14 @@ const ProcurementModals = (function() {
       return;
     }
     
+    const btn = document.getElementById('prcCreatePOBtn');
+    if (btn) LoadingUI.setBtnLoading(btn, true, 'Creating PO…');
     try {
       await ProcurementService.createPO(id, poNo.trim(), supplier.trim());
       ProcurementModals.alert(`Purchase Order ${poNo} created successfully!\n\nSupplier: ${supplier}\nStatus: Fulfilled`, 'Success');
       location.reload();
     } catch (error) {
+      if (btn) LoadingUI.setBtnLoading(btn, false);
       ProcurementModals.alert('Error creating PO: ' + error.message, 'Error');
     }
   }
@@ -337,7 +346,7 @@ const ProcurementModals = (function() {
 
         <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
           <button onclick="ProcurementModals.close()" style="padding:8px 20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
-          <button onclick="ProcurementModals.submitVoidCorrect('${pr.id}', ${items.length})" style="padding:8px 20px;background:var(--amber);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Void &amp; Raise Corrected PO</button>
+          <button id="prcVoidSubmitBtn" onclick="ProcurementModals.submitVoidCorrect('${pr.id}', ${items.length})" style="padding:8px 20px;background:var(--amber);color:#0a1520;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Void &amp; Raise Corrected PO</button>
         </div>
       </div>
     `;
@@ -366,11 +375,14 @@ const ProcurementModals = (function() {
       items.push(Object.assign({}, sourceItems[i], { qty, price, cost: price }));
     }
 
+    const btn = document.getElementById('prcVoidSubmitBtn');
+    if (btn) LoadingUI.setBtnLoading(btn, true, 'Voiding…');
     try {
       await ProcurementService.voidAndCorrectPO(prId, { items, reason }, 'current');
       ProcurementModals.alert('PO voided. A corrected request has been raised and sent to Store.', 'Success');
       location.reload();
     } catch (error) {
+      if (btn) LoadingUI.setBtnLoading(btn, false);
       ProcurementModals.alert('Error voiding this PO: ' + error.message, 'Error');
     }
   }

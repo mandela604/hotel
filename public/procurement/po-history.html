@@ -305,6 +305,7 @@
 <script src="../services/permissions.js"></script>
 <script src="../component/grace-po-detail.js"></script>
 <script src="services/procurement-service.js"></script>
+<script src="../component/ui-loading.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -722,6 +723,9 @@ window.addEventListener('afterprint', () => {
 // Init — single round trip to the service; allPOs() reads allPOsCache,
 // populated here.
 async function init(){
+  document.getElementById('kpiRow').innerHTML = LoadingUI.skKPIs(4);
+  document.getElementById('poBody').innerHTML = LoadingUI.skTableRows(5, 8);
+
   try {
     allPOsCache = await ProcurementService.getPOs();
     bindStatusPills();

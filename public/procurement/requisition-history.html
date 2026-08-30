@@ -326,6 +326,7 @@
 
 <script src="../services/permissions.js"></script>
   <script src="services/procurement-service.js"></script>
+<script src="../component/ui-loading.js"></script>
 <script src="procurement-shell.js"></script>
 <script src="procurement-modals.js"></script>
 <script>
@@ -658,6 +659,9 @@ window.addEventListener('afterprint', () => {
 // Init — single round trip to the service; everything above reads
 // from the `allPRs` cache populated here.
 async function init(){
+  document.getElementById('kpiRow').innerHTML = LoadingUI.skKPIs(4);
+  document.getElementById('prBody').innerHTML = LoadingUI.skTableRows(5, 8);
+
   try {
     allPRs = await ProcurementService.getPRs();
     populateDeptFilter();

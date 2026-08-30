@@ -157,6 +157,7 @@
      with the rest of the app; procurement-shell.js stays alongside the
      pages themselves). -->
   <script src="services/procurement-service.js"></script>
+<script src="../component/ui-loading.js"></script>
 <script src="procurement-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════════
@@ -256,11 +257,12 @@ async function init(){
     return;
   }
 
+  document.getElementById('kpiRow').innerHTML = LoadingUI.skKPIs(5);
+  document.getElementById('approvalPipeline').innerHTML = LoadingUI.skPipelineRows(6);
+
   await svc.loadAll();
   paint();
 
-  // Keep the dashboard live: an approval, rejection, PO creation, or new
-  // PR made from ANY procurement page fires this, not just this one.
   svc.onChange(paint);
 }
 
