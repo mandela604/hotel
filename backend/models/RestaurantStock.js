@@ -18,6 +18,7 @@ const restaurantStockSchema = new mongoose.Schema({
   qty:      { type: Number, default: 0 },
   min:      { type: Number, default: 0 },
   price:    { type: Number, default: 0 },
+  cost:     { type: Number, default: 0 },
   desc:     { type: String, default: '' },
 }, { timestamps: true });
 

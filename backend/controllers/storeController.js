@@ -289,6 +289,9 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
       await entry.stockItem.save();
     }
     entry.it.issuedQty = entry.issued;
+    if (entry.stockItem && !entry.it.cost) {
+      entry.it.cost = entry.stockItem.cost || entry.stockItem.price || 0;
+    }
   }
 
   row.status = totalIssued >= totalReq ? 'Full' : totalIssued > 0 ? 'Partial' : 'Pending';
