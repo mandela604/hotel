@@ -609,6 +609,12 @@ const REQ_DEPT_LABEL = 'Restaurant / Bar'; // must match GraceHotelRequestForm's
 function isRequisition(t) { return t._kind === 'requisition'; }
 function isTransfer(t) { return !isRequisition(t); }
 
+function normalizeSource(t) {
+  const src = (t.source || t.from || '').toString().toLowerCase();
+  if (src === 'store' || src.includes('store')) return 'Store';
+  return 'Kitchen';
+}
+
 function displayStatus(r) {
   if (isRequisition(r)) {
     switch (r.status) {
