@@ -278,7 +278,7 @@ function applyPermissionsUI(){
    computeShiftTotals) now live in services/accounting-service.js —
    this page just asks AccountingData for numbers and renders them.
 ═══════════════════════════════════════════ */
-const SHIFT_START_HOUR = 9;
+const SHIFT_START_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftStartHour) ? AccountingData.getShiftStartHour() : 9;
 function shiftRangeLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);

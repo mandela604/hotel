@@ -2,13 +2,18 @@ const PurchaseRequest = require('../models/PurchaseRequest');
 const Requisition = require('../models/Requisition');
 const Supplier = require('../models/Supplier');
 const ProcurementCategory = require('../models/ProcurementCategory');
+const Config = require('../models/Config');
 const mongoose = require('mongoose');
 const { ApiError } = require('../middleware/errorHandler');
 const { ROLES, STAGE_APPROVER_ROLE } = require('../middleware/procurementRoles');
 
-const MD_APPROVAL_THRESHOLD = 100000;
 const PIPELINE_STAGES = ['pending', 'accountant', 'gm', 'md', 'sent_to_store', 'fulfilled'];
 const ACTIVE_STAGES = ['pending', 'accountant', 'gm', 'md', 'sent_to_store'];
+
+async function getMDThreshold() {
+  const cfg = await Config.findOne().sort({ createdAt: -1 });
+  return (cfg && cfg.mdApprovalThreshold) || 100000;
+}
 
 function actorName(req) {
   return (req.user && (req.user.name || req.user.role)) || 'User';
@@ -89,7 +94,8 @@ exports.createPR = async (req, res, next) => {
     const body = req.body;
     const items = body.items || [];
     const totalAmount = computeItemsTotal(items);
-    const needsMDApproval = totalAmount > MD_APPROVAL_THRESHOLD;
+    const threshold = await getMDThreshold();
+    const needsMDApproval = totalAmount > threshold;
     const nums = await nextPurchaseOrderNumbers();
     const by = body.by || actorName(req);
     const source = body.source === 'Store' ? 'Store' : 'Procurement';
@@ -143,7 +149,8 @@ exports.updatePR = async (req, res, next) => {
     const body = req.body;
     const items = body.items !== undefined ? body.items : pr.items;
     const totalAmount = computeItemsTotal(items);
-    const needsMDApproval = totalAmount > MD_APPROVAL_THRESHOLD;
+    const threshold = await getMDThreshold();
+    const needsMDApproval = totalAmount > threshold;
 
     const updatable = ['dept', 'priority', 'supplier', 'notes', 'needed', 'unit', 'unitCost', 'qty', 'approvalStage', 'status', 'rejectReason'];
     updatable.forEach((k) => { if (body[k] !== undefined) pr[k] = body[k]; });
@@ -180,7 +187,7 @@ exports.approvePR = async (req, res, next) => {
       case 'accountant':
         nextStage = 'gm'; action = 'GM approved'; break;
       case 'gm':
-        if (pr.totalAmount > MD_APPROVAL_THRESHOLD) {
+        if (pr.totalAmount > await getMDThreshold()) {
           nextStage = 'md'; action = 'Forwarded to MD';
         } else {
           nextStage = 'sent_to_store'; action = 'Fully approved — sent to Store';
@@ -535,7 +542,7 @@ exports.importStoreRequest = async (req, res, next) => {
       unitCost: 0,
       priority: requisition.priority || 'Normal',
       totalAmount,
-      needsMDApproval: totalAmount > MD_APPROVAL_THRESHOLD,
+      needsMDApproval: totalAmount > await getMDThreshold(),
       status: 'pending',
       approvalStage: 'pending',
       supplier: requisition.supplier || '',

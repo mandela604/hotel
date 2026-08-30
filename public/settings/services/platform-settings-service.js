@@ -70,6 +70,7 @@
     return {
       paymentMethods: Array.isArray(cfg.paymentMethods) ? cfg.paymentMethods : seedDefaults().paymentMethods,
       shiftStartHour: typeof cfg.shiftStartHour === 'number' ? cfg.shiftStartHour : 9,
+      mdApprovalThreshold: typeof cfg.mdApprovalThreshold === 'number' ? cfg.mdApprovalThreshold : 100000,
       departments: Array.isArray(cfg.departments) ? cfg.departments : seedDefaults().departments,
     };
   }

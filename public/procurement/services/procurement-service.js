@@ -506,6 +506,10 @@
       apiFetch('/categories').then(function (cats) {
         _categories = Array.isArray(cats) ? cats : [];
       }),
+      fetch('/api/settings', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (res) {
+        var cfg = res && res.data ? res.data : {};
+        if (cfg.mdApprovalThreshold) CONFIG.MD_APPROVAL_THRESHOLD = Number(cfg.mdApprovalThreshold);
+      }).catch(function () {}),
     ]).then(function () {
       syncState('load');
       state.ready = true;

@@ -20,13 +20,22 @@
     GYM: 'gym-members',
   };
 
-  const SHIFT_START_HOUR = 9;
+  let SHIFT_START_HOUR = 9;
 
   const CONFIG = {
     API_BASE: '/api/accounting',
   };
 
   function configure(opts) { Object.assign(CONFIG, opts || {}); }
+
+  async function loadShiftHour() {
+    try {
+      const res = await fetch('/api/settings', { credentials: 'include' });
+      const json = await res.json();
+      const cfg = json && json.data ? json.data : {};
+      if (typeof cfg.shiftStartHour === 'number') SHIFT_START_HOUR = cfg.shiftStartHour;
+    } catch (_) {}
+  }
 
   /* ═══════════ Token + apiFetch ═══════════ */
   function getToken() {
@@ -291,6 +300,7 @@
 
   /* ═══════════ loadAll ═══════════ */
   async function loadAll() {
+    await loadShiftHour();
     const pnlRes = await apiFetch('/pnl?_=' + Date.now());
     const income = pnlRes.income || [];
     const expenses = pnlRes.expenses || [];
@@ -635,5 +645,6 @@
     dashboardKPIs, shiftKPIs, pnlKPIs, listStaffNames, isManagerLike,
 
     PAY_METHODS,
+    getShiftStartHour: function () { return SHIFT_START_HOUR; },
   };
 })(window);

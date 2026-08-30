@@ -124,6 +124,24 @@
         </div>
       </div>
 
+      <!-- Approval Threshold -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-shield-halved"></i> Procurement Approval Threshold</div>
+            <div class="panel-sub">PO forms above this amount require Admin (MD) approval in addition to Accountant and Manager.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="field-row">
+            <label for="thresholdInput">MD approval threshold (₦)</label>
+            <input type="number" id="thresholdInput" min="0" step="10000" placeholder="100000" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;width:200px;">
+            <button class="btn btn-outline" id="saveThresholdBtn"><i class="fa-solid fa-check"></i> Save</button>
+          </div>
+          <div class="hint">PO forms at or below this amount only need Accountant + Manager approval. Above it, MD must also approve.</div>
+        </div>
+      </div>
+
       <!-- Departments -->
       <div class="panel">
         <div class="panel-head">
@@ -240,6 +258,8 @@ function applyEditPermission() {
   document.getElementById('addDeptBtn').disabled = !canEdit;
   document.getElementById('shiftHourSel').disabled = !canEdit;
   document.getElementById('saveShiftBtn').disabled = !canEdit;
+  document.getElementById('thresholdInput').disabled = !canEdit;
+  document.getElementById('saveThresholdBtn').disabled = !canEdit;
 }
 
 document.getElementById('addMethodBtn').addEventListener('click', async () => {
@@ -286,12 +306,24 @@ document.getElementById('saveShiftBtn').addEventListener('click', async () => {
   }
 });
 
+document.getElementById('saveThresholdBtn').addEventListener('click', async () => {
+  const val = Number(document.getElementById('thresholdInput').value) || 0;
+  if (val <= 0) { showToast('Please enter a valid threshold amount.', 'error'); return; }
+  try {
+    settings = await PlatformSettings.updateSettings({ mdApprovalThreshold: val });
+    showToast(`MD approval threshold set to \u20A6${val.toLocaleString('en-NG')}`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
+
 async function init() {
   settings = await PlatformSettings.getSettings();
   canEdit = PlatformSettings.canEditSettings();
   renderPaymentChips();
   renderDeptChips();
   renderShiftHourSelect();
+  document.getElementById('thresholdInput').value = settings.mdApprovalThreshold || 100000;
   applyEditPermission();
 
   PlatformSettings.onChange((s) => { settings = s; });

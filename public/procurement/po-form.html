@@ -243,7 +243,7 @@
           <div class="threshold-hint" id="thresholdHint">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <div>
-              <div class="threshold-hint-title">This order is above ₦100,000</div>
+              <div class="threshold-hint-title" id="thresholdHintTitle">This order exceeds the MD approval threshold</div>
               <div class="threshold-hint-sub">It can still be created, but will also need Admin (MD) approval in addition to the standard Accountant and Manager approval.</div>
             </div>
           </div>
@@ -535,8 +535,10 @@ function recalcTotals(){
   renderItemsList();
   const total = items.reduce((s,i)=>s+i.subtotal, 0);
   document.getElementById('grandTotal').textContent = fmtN(total);
-  const needsMD = total > ProcurementService.CONFIG.MD_APPROVAL_THRESHOLD;
+  const threshold = ProcurementService.CONFIG.MD_APPROVAL_THRESHOLD;
+  const needsMD = total > threshold;
   document.getElementById('thresholdHint').classList.toggle('show', needsMD);
+  document.getElementById('thresholdHintTitle').textContent = 'This order is above ₦' + Number(threshold).toLocaleString('en-NG');
   renderApprovalPath(needsMD);
 }
 

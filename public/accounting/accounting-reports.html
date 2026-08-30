@@ -332,7 +332,7 @@ const shell = AccountingShell.attach({
    calendarKeyFor / buildTransactions) — this page just asks for
    numbers and renders them, same as accounting-dashboard.html.
 ═══════════════════════════════════════════ */
-const SHIFT_START_HOUR = 9;
+const SHIFT_START_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftStartHour) ? AccountingData.getShiftStartHour() : 9;
 let dateMode = 'shift'; // 'shift' | 'calendar'
 
 function pad2(n){ return String(n).padStart(2,'0'); }

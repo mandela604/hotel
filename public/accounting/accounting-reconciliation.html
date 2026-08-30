@@ -368,7 +368,7 @@ const { DEPARTMENTS, DEPT_COLOR, VARIANCE_TOLERANCE } = AccountingSeed;
 /* ═══════════════════════════════════════════
    SHIFT-DAY LOGIC
 ═══════════════════════════════════════════ */
-const SHIFT_START_HOUR = 9;
+const SHIFT_START_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftStartHour) ? AccountingData.getShiftStartHour() : 9;
 function pad2(n){ return String(n).padStart(2,'0'); }
 function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 function shiftKeyFor(dt){

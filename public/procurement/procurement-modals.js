@@ -175,7 +175,7 @@ const ProcurementModals = (function() {
             const isNext = !done && !isActive && (
               (r.key==='accountant' && activeStage==='pending') ||
               (r.key==='gm' && activeStage==='accountant') ||
-              (r.key==='md' && activeStage==='gm' && pr.totalAmount > 100000)
+              (r.key==='md' && activeStage==='gm' && pr.totalAmount > (ProcurementService.CONFIG.MD_APPROVAL_THRESHOLD || 100000))
             );
             const highlit = done ? r.color : (isActive ? 'var(--amber)' : 'var(--text3)');
             const who = done ? (stageBy[r.key] || 'Approved') : (isActive && currentRole===r.key ? ((session.name||'You') + ' — now') : (isNext ? 'Next' : 'Pending'));
@@ -209,7 +209,7 @@ const ProcurementModals = (function() {
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Date Raised</div><div style="font-size:13px;color:var(--text);">${new Date(pr.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div></div>
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Total Amount</div><div style="font-size:13px;color:var(--gold);font-weight:700;">₦${pr.totalAmount.toLocaleString('en-NG')}</div></div>
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Priority</div><div style="font-size:13px;color:var(--text);">${pr.priority}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Needs MD Approval</div><div style="font-size:13px;color:${pr.needsMDApproval ? 'var(--purple)' : 'var(--text)'};">${pr.needsMDApproval ? 'Yes (>₦100k)' : 'No'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Needs MD Approval</div><div style="font-size:13px;color:${pr.needsMDApproval ? 'var(--purple)' : 'var(--text)'};">${pr.needsMDApproval ? 'Yes (>\u20A6' + Math.round(ProcurementService.CONFIG.MD_APPROVAL_THRESHOLD || 100000).toLocaleString('en-NG') + ')' : 'No'}</div></div>
         </div>
 
         ${pipelineHtml}
