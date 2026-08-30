@@ -9,6 +9,7 @@ const recipeSchema = new mongoose.Schema({
   ingredients:          [{ name: String, qty: Number, unit: String }],
   expectedYield:        { type: Number, default: 0 },
   expectedYieldUnit:    { type: String, default: 'plates' },
+  gasCostPerUnit:       { type: Number, default: 0 },
   notes:                { type: String, default: '' },
 }, { timestamps: true });
 

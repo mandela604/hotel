@@ -139,6 +139,7 @@ exports.recordProduction = asyncHandler(async (req, res) => {
     expectedYield,
     expectedYieldUnit,
     ingredients,
+    gasCost,
     staff,
     notes,
     type,
@@ -203,6 +204,9 @@ exports.recordProduction = asyncHandler(async (req, res) => {
     }
   }
 
+  // Add gas/fuel cost on top of ingredient costs.
+  totalCost += Number(gasCost) || 0;
+
   // Actual output isn't known yet — that's recorded later via completeProduction.
   const run = await Production.create({
     id: uuidv4(),
@@ -216,6 +220,7 @@ exports.recordProduction = asyncHandler(async (req, res) => {
     expectedYieldUnit: expectedYieldUnit || 'plates',
     type: type || 'rts',
     cost: totalCost,
+    gasCost: Number(gasCost) || 0,
     meals: [],
     ingredients: processedIngredients,
     staff: staff || (req.user ? req.user.name : 'Head Chef'),
@@ -414,7 +419,7 @@ exports.listRecipes = asyncHandler(async (req, res) => {
  * Requisition).
  */
 exports.createRecipe = asyncHandler(async (req, res) => {
-  const { dish, baseQty, baseUnit, baseIngredient, ingredients, expectedYield, expectedYieldUnit, notes } = req.body;
+  const { dish, baseQty, baseUnit, baseIngredient, ingredients, expectedYield, expectedYieldUnit, gasCostPerUnit, notes } = req.body;
 
   const existing = await Recipe.findOne({ dish: new RegExp(`^${dish.trim()}$`, 'i') });
   if (existing) {
@@ -430,6 +435,7 @@ exports.createRecipe = asyncHandler(async (req, res) => {
     ingredients: ingredients || [],
     expectedYield: expectedYield !== undefined ? Number(expectedYield) : 0,
     expectedYieldUnit: expectedYieldUnit || 'plates',
+    gasCostPerUnit: gasCostPerUnit !== undefined ? Number(gasCostPerUnit) : 0,
     notes: notes || '',
   });
 
@@ -447,7 +453,7 @@ exports.editRecipe = asyncHandler(async (req, res) => {
   const recipe = await Recipe.findOne({ id });
   if (!recipe) return res.status(404).json({ success: false, error: 'Recipe not found' });
 
-  const { dish, baseQty, baseUnit, baseIngredient, ingredients, expectedYield, expectedYieldUnit, notes } = req.body;
+  const { dish, baseQty, baseUnit, baseIngredient, ingredients, expectedYield, expectedYieldUnit, gasCostPerUnit, notes } = req.body;
   if (dish !== undefined) recipe.dish = dish.trim();
   if (baseQty !== undefined) recipe.baseQty = Number(baseQty);
   if (baseUnit !== undefined) recipe.baseUnit = baseUnit;
@@ -455,6 +461,7 @@ exports.editRecipe = asyncHandler(async (req, res) => {
   if (ingredients !== undefined) recipe.ingredients = ingredients;
   if (expectedYield !== undefined) recipe.expectedYield = Number(expectedYield);
   if (expectedYieldUnit !== undefined) recipe.expectedYieldUnit = expectedYieldUnit;
+  if (gasCostPerUnit !== undefined) recipe.gasCostPerUnit = Number(gasCostPerUnit);
   if (notes !== undefined) recipe.notes = notes;
 
   await recipe.save();

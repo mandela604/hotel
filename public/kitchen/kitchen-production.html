@@ -312,7 +312,14 @@ function renderIngList(ingredients) {
 function renderCostBlock(estCost) {
   var el = document.getElementById('costBlock');
   if (isManager()) {
-    el.innerHTML = '<div class="cost-line"><span>Estimated Ingredient Cost</span><span>' + fmtN(estCost) + '</span></div>';
+    var gasCost = (activeScale && activeScale.gasCost) || 0;
+    var ingredientCost = estCost - gasCost;
+    var html = '<div class="cost-line"><span>Ingredient Cost</span><span>' + fmtN(ingredientCost) + '</span></div>';
+    if (gasCost > 0) {
+      html += '<div class="cost-line"><span>Gas / Fuel Cost</span><span>' + fmtN(gasCost) + '</span></div>';
+    }
+    html += '<div class="cost-line" style="font-weight:700;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;"><span>Total Estimated Cost</span><span>' + fmtN(estCost) + '</span></div>';
+    el.innerHTML = html;
   } else {
     el.innerHTML = '<div class="cost-restricted"><i class="fa-solid fa-lock"></i> Cost visible to managers &amp; admins only</div>';
   }
@@ -332,6 +339,7 @@ document.getElementById('startBtn').addEventListener('click', async function () 
     expectedYield: activeScale.expectedYield,
     expectedYieldUnit: activeScale.expectedYieldUnit,
     ingredients: activeScale.ingredients.map(function (i) { return { name: i.name, qty: i.qty }; }),
+    gasCost: activeScale.gasCost || 0,
     staff: getStaffName(),
     notes: document.getElementById('fNotes').value.trim(),
   };

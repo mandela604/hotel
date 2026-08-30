@@ -108,6 +108,7 @@
     if (!r) return r;
     r.baseQty = Number(r.baseQty) || 1;
     r.expectedYield = Number(r.expectedYield) || 0;
+    r.gasCostPerUnit = Number(r.gasCostPerUnit) || 0;
     r.ingredients = (r.ingredients || []).map(i => ({ name: i.name, qty: Number(i.qty) || 0, unit: i.unit || '' }));
     return r;
   }
@@ -238,6 +239,7 @@
         ingredients: (raw.ingredients || []).filter(i => i.name && Number(i.qty) > 0),
         expectedYield: raw.expectedYield,
         expectedYieldUnit: raw.expectedYieldUnit,
+        gasCostPerUnit: raw.gasCostPerUnit || 0,
         notes: raw.notes,
       },
     });
@@ -272,6 +274,8 @@
     return {
       factor,
       targetQty: qty,
+      gasCostPerUnit: Number(recipe.gasCostPerUnit) || 0,
+      gasCost: Math.round((Number(recipe.gasCostPerUnit) || 0) * qty * 100) / 100,
       ingredients: recipe.ingredients.map(i => ({
         name: i.name,
         unit: i.unit,
@@ -284,7 +288,8 @@
 
   function estimateRecipeCost(recipe, targetQty) {
     const scaled = scaleRecipe(recipe, targetQty);
-    return scaled.ingredients.reduce((s, i) => s + ingredientCost(i.name, i.qty), 0);
+    const ingredientTotal = scaled.ingredients.reduce((s, i) => s + ingredientCost(i.name, i.qty), 0);
+    return ingredientTotal + scaled.gasCost;
   }
 
   /**
@@ -308,7 +313,7 @@
      output yet (this is what the backend calls recordProduction, but
      its behavior is exactly "start"). PUT /production/:id/complete
      records the actual yield once cooking finishes. */
-  async function startProduction({ dish, recipeId, type, expectedYield, expectedYieldUnit, ingredients, staff, notes = '' }) {
+  async function startProduction({ dish, recipeId, type, expectedYield, expectedYieldUnit, ingredients, gasCost, staff, notes = '' }) {
     const run = await request('/production', {
       method: 'POST',
       body: {
@@ -318,6 +323,7 @@
         expectedYield,
         expectedYieldUnit,
         ingredients,
+        gasCost: gasCost || 0,
         staff,
         notes,
       },

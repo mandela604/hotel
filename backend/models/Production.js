@@ -17,6 +17,7 @@ const productionSchema = new mongoose.Schema({
   meals:             [{ name: String, qty: Number, unit: String }],
   ingredients:       [{ name: String, qty: Number, unit: String }],
   cost:              { type: Number, default: 0 },
+  gasCost:           { type: Number, default: 0 },
   staff:             { type: String, default: 'Head Chef' },
   by:                { type: String, default: 'Head Chef' },
   notes:             { type: String, default: '' },

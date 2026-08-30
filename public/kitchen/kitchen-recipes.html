@@ -179,6 +179,12 @@
     <div class="hint" id="rYieldHint" style="margin-top:-6px;"></div>
 
     <div class="fg">
+      <div class="label">Gas Cost per Base Unit (₦)</div>
+      <input class="input" id="rGasCost" type="number" min="0" step="0.01" placeholder="e.g. 200">
+      <div class="hint" style="margin-top:4px;">Cost of gas/fuel per 1 base unit. Scales with batch size in production.</div>
+    </div>
+
+    <div class="fg">
       <div class="label">Notes</div>
       <input class="input" id="rNotes" type="text" placeholder="Optional — style, scaling tips, etc.">
     </div>
@@ -376,6 +382,7 @@ function openRecipeModal(id) {
   document.getElementById('rBaseUnit').value = r ? r.baseUnit : 'kg';
   document.getElementById('rExpectedYield').value = r ? r.expectedYield : '';
   document.getElementById('rExpectedYieldUnit').value = r ? r.expectedYieldUnit : 'plates';
+  document.getElementById('rGasCost').value = r ? (r.gasCostPerUnit || '') : '';
   document.getElementById('rNotes').value = r ? (r.notes || '') : '';
   renderBaseIngredientOptions(r ? r.baseIngredient : null);
 
@@ -401,6 +408,7 @@ document.getElementById('saveRecipeBtn').addEventListener('click', async functio
     ingredients: rCart.filter(function (r) { return r.name; }).map(function (r) { return { name: r.name, qty: parseFloat(r.qty) || 0, unit: r.unit || '' }; }),
     expectedYield: parseFloat(document.getElementById('rExpectedYield').value) || 0,
     expectedYieldUnit: document.getElementById('rExpectedYieldUnit').value.trim() || 'plates',
+    gasCostPerUnit: parseFloat(document.getElementById('rGasCost').value) || 0,
     notes: document.getElementById('rNotes').value.trim(),
   };
 
