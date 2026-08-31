@@ -127,6 +127,8 @@
       name: fe.name,
       cat: fe.cat || 'Other',
       unit: fe.unit || 'unit',
+      baseUnit: fe.baseUnit || '',
+      packSize: Number(fe.packSize) || 0,
       min: Number(fe.min) || 0,
       cost: Number(fe.cost) || 0,
     };
@@ -510,6 +512,7 @@
         const payload = { qty: baseQty };
         if (cost > 0) payload.cost = cost;
         if (packSize > 0) payload.packSize = packSize;
+        if (it.baseUnit) payload.baseUnit = it.baseUnit;
         if (it.unit) payload.unit = it.unit;
         const updated = await apiFetch('/stock/' + stockItem.id + '/receive', {
           method: 'PATCH',
@@ -519,6 +522,7 @@
           stockItem.qty = (updated.qty != null ? updated.qty : stockItem.qty);
           if (updated.cost != null) stockItem.cost = updated.cost;
           if (updated.packSize) stockItem.packSize = updated.packSize;
+          if (updated.baseUnit) stockItem.baseUnit = updated.baseUnit;
           if (updated.unit) stockItem.unit = updated.unit;
         } else {
           stockItem.qty = (stockItem.qty || 0) + baseQty;
