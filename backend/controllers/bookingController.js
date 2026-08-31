@@ -1,6 +1,7 @@
 const Room = require('../models/Room');
 const Booking = require('../models/Booking');
 const Guest = require('../models/Guest');
+const Sale = require('../models/Sale');
 const Activity = require('../models/Activity');
 const asyncHandler = require('../middleware/asyncHandler');
 const { STATUS_TRANSITIONS } = require('../middleware/bookingValidators');
@@ -538,11 +539,12 @@ exports.settleCharge = asyncHandler(async (req, res) => {
   const remaining = charge.amount - charge.paid;
   const { amount, mode } = req.body;
   const pay = amount !== undefined ? Math.min(Number(amount), remaining) : remaining;
+  const payMode = mode || 'Cash';
 
   charge.payments.push({
     id: `PMT-${uuidv4()}`,
     amount: pay,
-    mode: mode || 'Cash',
+    mode: payMode,
     date: todayDDMMYY(),
     by: req.user ? req.user.name : '',
     ts: Date.now(),
@@ -551,6 +553,47 @@ exports.settleCharge = asyncHandler(async (req, res) => {
   charge.status = charge.paid >= charge.amount ? 'Settled' : 'Partially Settled';
 
   await guest.save();
+
+  /* Create a Sale record so the payment appears in sales/money-received */
+  const saleId = `FOL-${String(Date.now()).slice(-6)}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+  await Sale.create({
+    id: saleId,
+    source: 'Folio',
+    department: '',
+    items: [{ name: charge.desc || charge.source || 'Room Charge', qty: 1, price: pay }],
+    subtotal: pay,
+    discount: 0,
+    total: pay,
+    method: payMode,
+    staff: req.user ? req.user.name : '',
+    table: '',
+    notes: 'Folio charge settled',
+    date: new Date(),
+    status: 'completed',
+    roomNumber: guest.room || null,
+    guestName: guest.name || null,
+  });
+
+  /* Update the active Booking's payment ledger */
+  const booking = await Booking.findOne({ room: guest.room, status: 'checkedin' });
+  if (booking) {
+    booking.payments.push({
+      id: `PMT-${uuidv4()}`,
+      amount: pay,
+      mode: payMode,
+      date: todayDDMMYY(),
+      by: req.user ? req.user.name : '',
+      ts: Date.now(),
+    });
+    booking.paid = (booking.paid || 0) + pay;
+    const total = booking.total || (booking.rate || 0) * (booking.nights || 1);
+    if (total > 0) {
+      if (booking.paid >= total) booking.payStatus = 'Fully Paid';
+      else if (booking.paid > 0) booking.payStatus = 'Deposit Paid';
+    }
+    await booking.save();
+  }
+
   res.json({ success: true, data: guest });
 });
 
@@ -560,7 +603,10 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
   if (!guest) return res.status(404).json({ success: false, error: 'Guest not found' });
 
   const { mode } = req.body;
+  const payMode = mode || 'Cash';
   let settledCount = 0;
+  let totalSettled = 0;
+
   for (const charge of guest.charges) {
     if (charge.status === 'Settled') continue;
     const remaining = charge.amount - charge.paid;
@@ -568,7 +614,7 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
     charge.payments.push({
       id: `PMT-${uuidv4()}`,
       amount: remaining,
-      mode: mode || 'Cash',
+      mode: payMode,
       date: todayDDMMYY(),
       by: req.user ? req.user.name : '',
       ts: Date.now(),
@@ -576,8 +622,51 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
     charge.paid = charge.amount;
     charge.status = 'Settled';
     settledCount += 1;
+    totalSettled += remaining;
   }
   await guest.save();
+
+  /* Create a Sale record for the total settled */
+  if (totalSettled > 0) {
+    const saleId = `FOL-${String(Date.now()).slice(-6)}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+    await Sale.create({
+      id: saleId,
+      source: 'Folio',
+      department: '',
+      items: [{ name: 'Folio Settlement', qty: 1, price: totalSettled }],
+      subtotal: totalSettled,
+      discount: 0,
+      total: totalSettled,
+      method: payMode,
+      staff: req.user ? req.user.name : '',
+      table: '',
+      notes: `${settledCount} charge(s) settled`,
+      date: new Date(),
+      status: 'completed',
+      roomNumber: guest.room || null,
+      guestName: guest.name || null,
+    });
+
+    /* Update the active Booking's payment ledger */
+    const booking = await Booking.findOne({ room: guest.room, status: 'checkedin' });
+    if (booking) {
+      booking.payments.push({
+        id: `PMT-${uuidv4()}`,
+        amount: totalSettled,
+        mode: payMode,
+        date: todayDDMMYY(),
+        by: req.user ? req.user.name : '',
+        ts: Date.now(),
+      });
+      booking.paid = (booking.paid || 0) + totalSettled;
+      const total = booking.total || (booking.rate || 0) * (booking.nights || 1);
+      if (total > 0) {
+        if (booking.paid >= total) booking.payStatus = 'Fully Paid';
+        else if (booking.paid > 0) booking.payStatus = 'Deposit Paid';
+      }
+      await booking.save();
+    }
+  }
 
   res.json({ success: true, message: `${settledCount} charge(s) settled`, data: guest });
 });
