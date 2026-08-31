@@ -528,16 +528,17 @@ function renderRoomGrid(filter) {
         ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
         : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
 
+      const isMgr = (getSession() && /^(manager|admin)$/i.test(getSession().role||'')) || p.canEditRoom;
       let acts = '';
       if (st === 'available') {
         acts = '<div class="room-acts">' +
           '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' +
-          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' +
+          (isMgr ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
           '</div>';
       } else {
         acts = '<div class="room-acts">' +
           '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
-          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' +
+          (isMgr ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
           '</div>';
       }
 
