@@ -165,12 +165,9 @@
 
 <script src="data/platform-settings-seed.js"></script>
 <script src="services/platform-settings-service.js"></script>
-<script src="../component/accounting-shell.js"></script>
+<script src="../component/settings-shell.js"></script>
 <script>
-/* Reuses AccountingShell for the sidebar/topbar since this page lives
-   alongside the Accounting pages today. Swap to whatever shared shell
-   component the rest of the platform settles on if one gets built. */
-const shell = AccountingShell.attach({
+const shell = SettingsShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
   activeFile:    'platform-settings.html',
