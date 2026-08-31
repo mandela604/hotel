@@ -281,6 +281,20 @@
     if (updates.unit !== undefined) payload.unit = updates.unit;
     if (updates.min !== undefined) payload.min = updates.min;
     if (updates.cost !== undefined) payload.cost = updates.cost;
+    if (updates.baseUnit !== undefined) payload.baseUnit = updates.baseUnit;
+    if (updates.packSize !== undefined) payload.packSize = updates.packSize;
+
+    // When packSize is set/changed, recalculate cost per base unit
+    // This handles the "manual portioning" workflow:
+    // 1. Receive 1 Cow for ₦1.5M (cost=1500000, packSize=0)
+    // 2. Store sets packSize=120 (cow yielded 120 kg)
+    // 3. System recalculates: cost_per_kg = 1500000 / 120 = 12500
+    if (updates.packSize && updates.packSize > 0) {
+      const current = findStockById(id);
+      if (current && current.cost > 0 && current.packSize !== updates.packSize) {
+        payload.cost = Math.round(current.cost / updates.packSize * 100) / 100;
+      }
+    }
 
     const updated = await apiFetch('/stock/' + id, { method: 'PUT', body: JSON.stringify(payload) });
     const norm = normalizeStock(updated);

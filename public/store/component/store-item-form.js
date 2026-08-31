@@ -149,7 +149,7 @@
             <div class="sif-group">
               <label class="sif-label">Pack Size</label>
               <input class="sif-input" type="number" data-role="packSize" placeholder="0" min="0" step="1">
-              <div class="sif-hint">How many base units in one pack. E.g. 12 Bottles per Carton. Set to 0 if unit and base unit are the same.</div>
+              <div class="sif-hint">How many base units in one pack. E.g. 12 Bottles per Carton. For variable items (Cow, Pepper), leave at 0 when receiving, then set after portioning — cost will auto-recalculate per base unit.</div>
             </div>
             <div class="sif-group">
               <label class="sif-label">Quantity On Hand</label>
