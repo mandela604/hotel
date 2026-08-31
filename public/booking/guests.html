@@ -472,14 +472,17 @@ let filteredGuests = [];
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtDate(d){ if(!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function initials(name){ return name.replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Chief)\s*/i,'').split(/[\s,]+/).filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-function roomTotal(g){ return g.stays.reduce((s,x)=>s+x.total,0); }
-function roomPaid(g){ return g.stays.reduce((s,x)=>s+x.paid,0); }
-function chargeTotal(g){ return g.charges.reduce((s,c)=>s+c.amount,0); }
-function chargeOutstanding(g){ return g.charges.filter(c=>c.status==='Pending').reduce((s,c)=>s+c.amount,0); }
+function bookingTotal(b){ const n=(new Date(b.checkout)-new Date(b.checkin))/86400000; const nights=Math.max(1,n||1); return Math.max(0,((b.rate||0)-(b.discount||0))*nights); }
+function bookingPaid(b){ return (b.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0) || Number(b.paid)||0; }
+function activeBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return b.guest===g.name && (b.status==='reserved'||b.status==='checkedin'); }); }
+function roomTotal(g){ var hist=g.stays.reduce(function(s,x){return s+(Number(x.total)||0);},0); var cur=activeBookingsForGuest(g).reduce(function(s,b){return s+bookingTotal(b);},0); return hist+cur; }
+function roomPaid(g){ var hist=g.stays.reduce(function(s,x){return s+(Number(x.paid)||0);},0); var cur=activeBookingsForGuest(g).reduce(function(s,b){return s+bookingPaid(b);},0); return hist+cur; }
+function chargeTotal(g){ return g.charges.reduce(function(s,c){return s+(Number(c.amount)||0);},0); }
+function chargeOutstanding(g){ return g.charges.reduce(function(s,c){ if(c.status==='Settled') return s; return s+Math.max(0,(Number(c.amount)||0)-(Number(c.paid)||0)-(c.payments||[]).reduce(function(a,p){return a+(Number(p.amount)||0);},0)); },0); }
 function guestOutstanding(g){ return Math.max(0, roomTotal(g)-roomPaid(g)) + chargeOutstanding(g); }
 function guestSpend(g){ return roomTotal(g)+chargeTotal(g); }
-function isReturning(g){ return g.stays.length>1; }
-function currentRoom(g){ const a=g.stays.find(s=>s.status==='checkedin'); return a?a.room:null; }
+function isReturning(g){ return (g.stays.length + activeBookingsForGuest(g).length) > 1; }
+function currentRoom(g){ var act=activeBookingsForGuest(g).find(function(s){return s.status==='checkedin';}); if(act) return act.room; var a=g.stays.find(function(s){return s.status==='checkedin';}); return a?a.room:null; }
 const SRC_CHIP = { Restaurant:'chip-restaurant', Bar:'chip-bar', 'Pool Bar':'chip-pool' };
 
 function buildPagination(btnId, labelId, page, total, size, cb){
@@ -716,12 +719,14 @@ async function toggleVip(){
   }
 }
 
-/* ── Stay history ── */
+/* ── Stay history — merged Guest.stays (past) + active Bookings (current) — */
 function renderStayHistory(g){
-  const stays = [...g.stays].sort((a,b)=>new Date(b.checkin)-new Date(a.checkin));
-  const total = stays.length;
-  const start = (pfStayPage-1)*STAY_PER_PAGE;
-  const page  = stays.slice(start, start+STAY_PER_PAGE);
+  var cur = activeBookingsForGuest(g).map(function(b){ return {room:b.room, type:b.type, checkin:b.checkin, checkout:b.checkout, total:bookingTotal(b), paid:bookingPaid(b), status:b.status}; });
+  var all = [].concat(cur, g.stays);
+  var stays = all.sort(function(a,b){ return new Date(b.checkin)-new Date(a.checkin); });
+  var total = stays.length;
+  var start = (pfStayPage-1)*STAY_PER_PAGE;
+  var page  = stays.slice(start, start+STAY_PER_PAGE);
 
   document.getElementById('pfStayBody').innerHTML = page.length===0
     ? '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text3)">No stays on file</td></tr>'

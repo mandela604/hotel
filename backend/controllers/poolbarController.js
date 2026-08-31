@@ -254,24 +254,25 @@ exports.createSale = asyncHandler(async (req, res) => {
       await booking.save();
     }
 
-    /* Post charge to Guest.folio (Guest.charges[]) */
+    /* Post charge to Guest.folio (Guest.charges[]) — uuid primary, name/phone fallback */
+    let guest = null;
     const fid = guestId || (booking && booking.guestId) || '';
-    if (fid) {
-      const guest = await Guest.findOne({ id: fid });
-      if (guest) {
-        guest.charges.push({
-          date: todayDDMMYY(),
-          source: 'Pool Bar',
-          desc: items.map(it => `${it.qty}x ${it.name}`).join(', '),
-          room: String(roomNumber),
-          amount: total,
-          paid: 0,
-          by: staff || (req.user ? req.user.name : 'Barman'),
-          status: 'Pending',
-          payments: [],
-        });
-        await guest.save();
-      }
+    if (fid) guest = await Guest.findOne({ id: fid });
+    if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
+    if (!guest && guestPhone) guest = await Guest.findOne({ phone: guestPhone });
+    if (guest) {
+      guest.charges.push({
+        date: todayDDMMYY(),
+        source: 'Pool Bar',
+        desc: items.map(it => `${it.qty}x ${it.name}`).join(', '),
+        room: String(roomNumber),
+        amount: total,
+        paid: 0,
+        by: staff || (req.user ? req.user.name : 'Barman'),
+        status: 'Pending',
+        payments: [],
+      });
+      await guest.save();
     }
   }
 
@@ -441,24 +442,25 @@ exports.payOrder = asyncHandler(async (req, res) => {
       await booking.save();
     }
 
-    /* Post charge to Guest.folio (Guest.charges[]) */
+    /* Post charge to Guest.folio (Guest.charges[]) — uuid primary, name/phone fallback */
+    let guest = null;
     const fid = effectiveGuestId || (booking && booking.guestId) || '';
-    if (fid) {
-      const guest = await Guest.findOne({ id: fid });
-      if (guest) {
-        guest.charges.push({
-          date: todayDDMMYY(),
-          source: 'Pool Bar',
-          desc: order.items.map(it => `${it.qty}x ${it.name}`).join(', '),
-          room: String(effectiveRoom),
-          amount: order.total,
-          paid: 0,
-          by: order.staff || (req.user ? req.user.name : 'Barman'),
-          status: 'Pending',
-          payments: [],
-        });
-        await guest.save();
-      }
+    if (fid) guest = await Guest.findOne({ id: fid });
+    if (!guest && effectiveGuest) guest = await Guest.findOne({ name: effectiveGuest });
+    if (!guest && effectivePhone) guest = await Guest.findOne({ phone: effectivePhone });
+    if (guest) {
+      guest.charges.push({
+        date: todayDDMMYY(),
+        source: 'Pool Bar',
+        desc: order.items.map(it => `${it.qty}x ${it.name}`).join(', '),
+        room: String(effectiveRoom),
+        amount: order.total,
+        paid: 0,
+        by: order.staff || (req.user ? req.user.name : 'Barman'),
+        status: 'Pending',
+        payments: [],
+      });
+      await guest.save();
     }
   }
 
