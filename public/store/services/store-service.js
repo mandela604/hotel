@@ -271,6 +271,14 @@
     const norm = normalizeStock(created);
     state.stock.push(norm);
     state.categories = deriveCategories(state.stock);
+    // Merge DB categories so empty pre-created ones aren't lost
+    try {
+      const catApi = await apiFetch('/categories?_=' + Date.now());
+      if (Array.isArray(catApi) && catApi.length) {
+        const set = new Set(state.categories.concat(catApi));
+        state.categories = Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
+      }
+    } catch (e) {}
     rebuildCatalog();
     emitChange('stock:add');
     return norm;
@@ -303,6 +311,13 @@
     const idx = state.stock.findIndex(function (s) { return s.id === id; });
     if (idx > -1) state.stock[idx] = norm; else state.stock.push(norm);
     state.categories = deriveCategories(state.stock);
+    try {
+      const catApi = await apiFetch('/categories?_=' + Date.now());
+      if (Array.isArray(catApi) && catApi.length) {
+        const set = new Set(state.categories.concat(catApi));
+        state.categories = Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
+      }
+    } catch (e) {}
     rebuildCatalog();
     emitChange('stock:edit');
     return norm;
@@ -539,6 +554,13 @@
     }
 
     state.categories = deriveCategories(state.stock);
+    try {
+      const catApi = await apiFetch('/categories?_=' + Date.now());
+      if (Array.isArray(catApi) && catApi.length) {
+        const set = new Set(state.categories.concat(catApi));
+        state.categories = Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
+      }
+    } catch (e) {}
     rebuildCatalog();
     emitChange('stock:accept-po');
 
