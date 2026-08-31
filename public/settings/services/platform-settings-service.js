@@ -96,17 +96,23 @@
   }
 
   function getSession() {
-    try { return JSON.parse(localStorage.getItem('accounting-session') || 'null') || null; }
-    catch (e) { return null; }
+    try {
+      var keys = ['accounting-session','hotel-session','session','user','auth-user'];
+      for (var i=0;i<keys.length;i++){
+        var v = localStorage.getItem(keys[i]);
+        if (v) { try { var p=JSON.parse(v); if(p && p.role) return p; } catch(e){} }
+      }
+    } catch (e) {}
+    return null;
   }
 
   function canEditSettings(session) {
-    const P = global.Permissions;
-    if (!P) {
-      const s = session || getSession();
-      return !!s && (s.role === 'admin' || s.role === 'manager');
-    }
-    return P.hasPermission(session || getSession(), 'canEdit', 'settings');
+    var s = session || getSession();
+    // explicit admin/manager bypass - settings has no module entry, ensure they are never read-only
+    if (s && /^(admin|manager)$/i.test(s.role||'')) return true;
+    var P = global.Permissions;
+    if (!P) return !!s && (s.role === 'admin' || s.role === 'manager');
+    return P.hasPermission(s, 'canEdit', 'settings');
   }
 
   async function updateSettings(patch, session) {

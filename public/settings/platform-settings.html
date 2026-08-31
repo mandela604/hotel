@@ -367,9 +367,26 @@ document.getElementById('saveThresholdBtn').addEventListener('click', async () =
   }
 });
 
+function waitForShellSession(maxMs){
+  maxMs = maxMs || 2000;
+  return new Promise(function(resolve){
+    var start = Date.now();
+    (function tick(){
+      var u = null;
+      try { u = shell.getUser ? shell.getUser() : null; } catch(e) {}
+      if (u && u.role) return resolve(u);
+      if (Date.now() - start >= maxMs) return resolve(u);
+      setTimeout(tick, 80);
+    })();
+  });
+}
 async function init() {
   settings = await PlatformSettings.getSettings();
-  canEdit = PlatformSettings.canEditSettings();
+  var sess = await waitForShellSession(2000);
+  // try shell session first, then localStorage fallback inside service
+  canEdit = PlatformSettings.canEditSettings(sess);
+  // admin/manager must never be read-only — explicit fallback if Permissions not loaded
+  if (!canEdit && sess && /^(admin|manager)$/i.test(sess.role||'')) canEdit = true;
   renderPaymentChips();
   renderDeptList();
   renderShiftHourSelect();
