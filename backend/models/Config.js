@@ -9,6 +9,8 @@ const configSchema = new mongoose.Schema({
   timeFormat:           { type: String, default: 'HH:mm' },
   mdApprovalThreshold:  { type: Number, default: 100000 },
   shiftStartHour:       { type: Number, default: 9 },
+  shiftEndHour:         { type: Number, default: 8 },
+  disabledDepartments:  { type: [String], default: [] },
   accentColor:          { type: String, default: '#2f6fed' },
   departments:          { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { timestamps: true });

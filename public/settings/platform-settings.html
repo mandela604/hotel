@@ -68,6 +68,19 @@
   .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
   .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .dept-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+  .dept-row:last-child{ border-bottom:none; }
+  .dept-name{ font-size:13px; font-weight:600; color:var(--text); }
+  .dept-actions{ display:flex; align-items:center; gap:10px; }
+  .toggle{ position:relative; width:38px; height:20px; cursor:pointer; }
+  .toggle input{ opacity:0; width:0; height:0; }
+  .toggle .slider{ position:absolute; inset:0; background:var(--border2); border-radius:20px; transition:background .2s; }
+  .toggle .slider::before{ content:''; position:absolute; width:16px; height:16px; left:2px; top:2px; background:#fff; border-radius:50%; transition:transform .2s; }
+  .toggle input:checked + .slider{ background:var(--gold); }
+  .toggle input:checked + .slider::before{ transform:translateX(18px); }
+  .dept-del{ width:26px; height:26px; border-radius:50%; border:none; background:var(--red-bg); color:var(--red); font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .dept-del:hover{ background:var(--red); color:#fff; }
 </style>
 </head>
 <body>
@@ -111,16 +124,20 @@
         <div class="panel-head">
           <div>
             <div class="panel-title"><i class="fa-solid fa-clock"></i> Shift Settings</div>
-            <div class="panel-sub">The hour a business "shift day" rolls over — drives Accounting's shift keys and reconciliation.</div>
+            <div class="panel-sub">Define when a business "shift day" starts and ends — drives Accounting's shift keys and reconciliation.</div>
           </div>
         </div>
         <div class="panel-body">
-          <div class="field-row">
+          <div class="field-row" style="margin-bottom:10px;">
             <label for="shiftHourSel">Shift starts at</label>
             <select id="shiftHourSel"></select>
-            <button class="btn btn-outline" id="saveShiftBtn"><i class="fa-solid fa-check"></i> Save</button>
           </div>
-          <div class="hint">Example: a sale at 8:59 AM still counts toward <em>yesterday's</em> shift if this is set to 9:00 AM.</div>
+          <div class="field-row" style="margin-bottom:10px;">
+            <label for="shiftEndSel">Shift ends at</label>
+            <select id="shiftEndSel"></select>
+          </div>
+          <button class="btn btn-outline" id="saveShiftBtn"><i class="fa-solid fa-check"></i> Save Shift Times</button>
+          <div class="hint">Example: a shift from 9:00 AM to 8:00 AM (next day) means the day rolls over at 8 AM, not midnight.</div>
         </div>
       </div>
 
@@ -147,12 +164,12 @@
         <div class="panel-head">
           <div>
             <div class="panel-title"><i class="fa-solid fa-building"></i> Departments</div>
-            <div class="panel-sub">Departments available for shift reconciliation and cross-module reporting.</div>
+            <div class="panel-sub">Toggle departments on/off for shift reconciliation and cross-module reporting.</div>
           </div>
         </div>
         <div class="panel-body">
-          <div class="chip-list" id="deptChips"></div>
-          <div class="add-row">
+          <div id="deptList"></div>
+          <div class="add-row" style="margin-top:12px;">
             <input type="text" id="newDeptInput" placeholder="e.g. Spa" maxlength="60">
             <button class="btn btn-primary" id="addDeptBtn"><i class="fa-solid fa-plus"></i> Add</button>
           </div>
@@ -164,6 +181,7 @@
 </div>
 
 <script src="data/platform-settings-seed.js"></script>
+<script src="../services/permissions.js"></script>
 <script src="services/platform-settings-service.js"></script>
 <script src="../component/settings-shell.js"></script>
 <script>
@@ -211,23 +229,52 @@ function renderPaymentChips() {
   });
 }
 
-function renderDeptChips() {
-  const el = document.getElementById('deptChips');
+function renderDeptList() {
+  const el = document.getElementById('deptList');
   const list = settings.departments || [];
+  const disabled = settings.disabledDepartments || [];
   el.innerHTML = list.length
-    ? list.map(d => `
-        <span class="chip">
-          ${d}
-          ${canEdit ? `<button data-dept="${d}" title="Remove"><i class="fa-solid fa-xmark"></i></button>` : ''}
-        </span>`).join('')
-    : '<span class="chip empty">No departments configured</span>';
+    ? list.map(d => {
+      const isOff = disabled.includes(d);
+      return `<div class="dept-row">
+        <span class="dept-name">${d}</span>
+        <div class="dept-actions">
+          <label class="toggle" title="${isOff ? 'Disabled' : 'Enabled'}">
+            <input type="checkbox" data-dept="${d}" ${!isOff ? 'checked' : ''}>
+            <span class="slider"></span>
+          </label>
+          ${canEdit ? `<button class="dept-del" data-del="${d}" title="Remove"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        </div>
+      </div>`;
+    }).join('')
+    : '<div style="color:var(--text3);font-style:italic;font-size:12px;">No departments configured</div>';
 
-  el.querySelectorAll('button[data-dept]').forEach(btn => {
+  el.querySelectorAll('input[data-dept]').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      const dept = inp.dataset.dept;
+      let disabled = settings.disabledDepartments || [];
+      if (inp.checked) {
+        disabled = disabled.filter(d => d !== dept);
+      } else {
+        disabled = [...disabled, dept];
+      }
+      try {
+        settings = await PlatformSettings.updateSettings({ disabledDepartments: disabled });
+        renderDeptList();
+        showToast(`${dept} ${inp.checked ? 'enabled' : 'disabled'}`, 'success');
+      } catch (err) {
+        inp.checked = !inp.checked;
+        showToast(err.message, 'error');
+      }
+    });
+  });
+
+  el.querySelectorAll('button[data-del]').forEach(btn => {
     btn.addEventListener('click', async () => {
       try {
-        settings = await PlatformSettings.removeDepartment(btn.dataset.dept);
-        renderDeptChips();
-        showToast(`Removed "${btn.dataset.dept}"`, 'success');
+        settings = await PlatformSettings.removeDepartment(btn.dataset.del);
+        renderDeptList();
+        showToast(`Removed "${btn.dataset.del}"`, 'success');
       } catch (err) {
         showToast(err.message, 'error');
       }
@@ -243,8 +290,12 @@ function fmtHour(h) {
 
 function renderShiftHourSelect() {
   const sel = document.getElementById('shiftHourSel');
-  sel.innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${fmtHour(h)}</option>`).join('');
+  const endSel = document.getElementById('shiftEndSel');
+  const opts = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${fmtHour(h)}</option>`).join('');
+  sel.innerHTML = opts;
+  endSel.innerHTML = opts;
   sel.value = settings.shiftStartHour;
+  endSel.value = settings.shiftEndHour != null ? settings.shiftEndHour : 8;
 }
 
 function applyEditPermission() {
@@ -254,6 +305,7 @@ function applyEditPermission() {
   document.getElementById('newDeptInput').disabled = !canEdit;
   document.getElementById('addDeptBtn').disabled = !canEdit;
   document.getElementById('shiftHourSel').disabled = !canEdit;
+  document.getElementById('shiftEndSel').disabled = !canEdit;
   document.getElementById('saveShiftBtn').disabled = !canEdit;
   document.getElementById('thresholdInput').disabled = !canEdit;
   document.getElementById('saveThresholdBtn').disabled = !canEdit;
@@ -294,10 +346,11 @@ document.getElementById('newDeptInput').addEventListener('keydown', e => {
 });
 
 document.getElementById('saveShiftBtn').addEventListener('click', async () => {
-  const hour = document.getElementById('shiftHourSel').value;
+  const startHour = Number(document.getElementById('shiftHourSel').value);
+  const endHour = Number(document.getElementById('shiftEndSel').value);
   try {
-    settings = await PlatformSettings.setShiftStartHour(hour);
-    showToast(`Shift start set to ${fmtHour(Number(hour))}`, 'success');
+    settings = await PlatformSettings.updateSettings({ shiftStartHour: startHour, shiftEndHour: endHour });
+    showToast(`Shift: ${fmtHour(startHour)} to ${fmtHour(endHour)}`, 'success');
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -318,7 +371,7 @@ async function init() {
   settings = await PlatformSettings.getSettings();
   canEdit = PlatformSettings.canEditSettings();
   renderPaymentChips();
-  renderDeptChips();
+  renderDeptList();
   renderShiftHourSelect();
   document.getElementById('thresholdInput').value = settings.mdApprovalThreshold || 100000;
   applyEditPermission();
