@@ -279,13 +279,24 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
     if (!stockItem) {
       stockItem = await findStockFuzzy(it.name);
     }
-    const avail = stockItem ? stockItem.qty : 0;
+    const avail = stockItem ? stockItem.qty : 0; // always in base units
     const raw = Object.prototype.hasOwnProperty.call(issuedQtyByItem, it.name) ? issuedQtyByItem[it.name] : prevIssued;
-    const issued = Math.max(0, Math.min(Number(raw) || 0, avail + prevIssued, it.qty));
-    const delta = issued - prevIssued;
 
-    plan.push({ it, stockItem, delta, issued });
-    totalReq += it.qty;
+    // Convert issued qty to base units if needed
+    const packSize = stockItem ? (stockItem.packSize || 0) : 0;
+    const reqUnit = (it.unit || '').trim().toLowerCase();
+    const stockBaseUnit = stockItem ? (stockItem.baseUnit || '').trim().toLowerCase() : '';
+    const isBulkUnit = packSize > 0 && reqUnit !== stockBaseUnit;
+
+    const issuedInReqUnit = Math.max(0, Number(raw) || 0);
+    const issuedInBase = isBulkUnit ? issuedInReqUnit * packSize : issuedInReqUnit;
+    const reqQtyInBase = isBulkUnit ? it.qty * packSize : it.qty;
+
+    const issued = Math.max(0, Math.min(issuedInBase, avail, reqQtyInBase));
+    const delta = issued - (isBulkUnit ? prevIssued * packSize : prevIssued);
+
+    plan.push({ it, stockItem, delta, issued, issuedDisplay: raw });
+    totalReq += reqQtyInBase;
     totalIssued += issued;
   }
 
@@ -295,7 +306,7 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
       entry.stockItem.qty = Math.max(0, entry.stockItem.qty - entry.delta);
       await entry.stockItem.save();
     }
-    entry.it.issuedQty = entry.issued;
+    entry.it.issuedQty = entry.issuedDisplay;
     if (entry.stockItem && !entry.it.cost) {
       entry.it.cost = entry.stockItem.cost || entry.stockItem.price || 0;
     }

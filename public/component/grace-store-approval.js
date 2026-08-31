@@ -279,6 +279,21 @@
 
     function stockFor(name) { return svc.stockQtyFor(name) || 0; }
     function stockItemFor(name) { return svc.stockItemFor ? svc.stockItemFor(name) : null; }
+
+    // Max issuable in the requisition's unit (converts from base units if needed)
+    function maxIssuable(it) {
+      const qty = stockFor(it.name);
+      const item = stockItemFor(it.name);
+      if (item && item.baseUnit && item.packSize > 0) {
+        const reqUnit = (it.unit || '').trim().toLowerCase();
+        const stockBase = (item.baseUnit || '').trim().toLowerCase();
+        if (reqUnit !== stockBase) {
+          return Math.floor(qty / item.packSize); // convert kg → Bags
+        }
+      }
+      return qty; // already in base units
+    }
+
     function fmtAvail(name) {
       const qty = stockFor(name);
       const item = stockItemFor(name);
@@ -619,7 +634,7 @@
       if (req.status !== 'Pending' && req.status !== 'Partial') return;
       const it = workingItems[idx];
       let v = parseFloat(value) || 0;
-      v = Math.max(0, Math.min(v, stockFor(it.name)));
+      v = Math.max(0, Math.min(v, maxIssuable(it)));
       it.issuedQty = v;
       render();
     }
@@ -628,7 +643,7 @@
       if (req.status !== 'Pending' && req.status !== 'Partial') return;
       const it = workingItems[idx];
       const cur = parseFloat(it.issuedQty) || 0;
-      it.issuedQty = Math.max(0, Math.min(cur + delta, stockFor(it.name)));
+      it.issuedQty = Math.max(0, Math.min(cur + delta, maxIssuable(it)));
       render();
     }
 

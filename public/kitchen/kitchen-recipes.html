@@ -269,7 +269,7 @@ function renderGrid() {
   }
 
   grid.innerHTML = rows.map(function (r) {
-    var ingText = r.ingredients.map(function (i) { return i.qty + (i.unit || '') + ' ' + i.name; }).join(', ');
+    var ingText = r.ingredients.map(function (i) { return i.qty + ' ' + (i.unit || '') + ' ' + i.name; }).join(', ');
     return '<div class="recipe-card">' +
       '<div class="recipe-card-head">' +
         '<div>' +
