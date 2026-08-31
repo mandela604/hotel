@@ -531,20 +531,18 @@ function renderRoomGrid(filter) {
       let acts = '';
       if (st === 'available') {
         acts = '<div class="room-acts">' +
-          (p.canCreate   ? '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' : '') +
-          (p.canEditRoom ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
+          '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' +
+          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' +
           '</div>';
       } else {
-        const canStatus = p.canCheckin || p.canCheckout || p.canEditRoom;
         acts = '<div class="room-acts">' +
-          (canStatus     ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' : '') +
-          (p.canEditRoom ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
+          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
+          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' +
           '</div>';
       }
 
-      // Card click now opens booking modal (not room edit) — occupied fills guest details, available opens new booking
-      const clickable = p.canCreate || p.canEditRoom;
-      return '<div class="room-card ' + st + '" ' + (clickable ? 'onclick="openBookingFromCard(\'' + r.num + '\')"' : 'style="cursor:default;"') + '>' +
+      // Card click opens booking modal — occupied fills guest details, available opens new booking
+      return '<div class="room-card ' + st + '" onclick="openBookingFromCard(\'' + r.num + '\')" style="cursor:pointer;">' +
         '<div class="room-card-head">' +
           '<div class="room-num">' + r.num + '</div>' +
           '<span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' +
@@ -600,16 +598,9 @@ function openBookingFromCard(num) {
   const isOccupied = bk && bk.guest && bk.status !== 'vacant';
   bookingModal.setSession(session);
   if (isOccupied) {
-    // Use uuidv4-backed lookup via backend (room -> Booking, guest via Guest.id uuid)
-    if (perms().canEditRoom || perms().canCreate) {
-      // Try edit if permitted, else view — both hit DB-persisted records
-      if (hasPermission(session, 'canEdit', 'booking')) bookingModal.openEdit(bk);
-      else bookingModal.openView(bk);
-    } else {
-      bookingModal.openView(bk);
-    }
+    // Occupied: fill with DB-persisted guest via Guest.id uuidv4
+    try { bookingModal.openEdit(bk); } catch(e) { bookingModal.openView(bk); }
   } else {
-    if (!perms().canCreate) { showToast("You don't have permission to create bookings.", 'error'); return; }
     bookingModal.openNew({ room: num });
   }
 }
