@@ -312,8 +312,17 @@
     const n = (name || '').trim();
     if (!n) throw new Error('Category name is required.');
     await apiFetch('/categories', { method: 'POST', body: JSON.stringify({ name: n }) });
-    if (!state.categories.some(function (c) { return c.toLowerCase() === n.toLowerCase(); })) {
-      state.categories.push(n);
+    // Refresh categories from backend to ensure merged list is up to date
+    try {
+      const catApi = await apiFetch('/categories?_=' + Date.now());
+      if (Array.isArray(catApi)) {
+        state.categories = catApi.sort(function (a, b) { return a.localeCompare(b); });
+      }
+    } catch (e) {
+      // Fallback: add locally if API refresh fails
+      if (!state.categories.some(function (c) { return c.toLowerCase() === n.toLowerCase(); })) {
+        state.categories.push(n);
+      }
     }
     emitChange('category:add');
     return n;
@@ -324,7 +333,10 @@
     if (!n) throw new Error('Category name is required.');
     await apiFetch('/categories/' + encodeURIComponent(oldName), { method: 'PUT', body: JSON.stringify({ name: n }) });
     state.stock.forEach(function (s) { if (s.cat === oldName) s.cat = n; });
-    state.categories = deriveCategories(state.stock);
+    try {
+      const catApi = await apiFetch('/categories?_=' + Date.now());
+      state.categories = Array.isArray(catApi) ? catApi.sort(function (a, b) { return a.localeCompare(b); }) : deriveCategories(state.stock);
+    } catch (e) { state.categories = deriveCategories(state.stock); }
     emitChange('category:rename');
     return n;
   }
@@ -334,7 +346,10 @@
     const reassignTo = opts.reassignTo || 'Other';
     await apiFetch('/categories/' + encodeURIComponent(name), { method: 'DELETE', body: JSON.stringify({ reassignTo: reassignTo }) });
     state.stock.forEach(function (s) { if (s.cat === name) s.cat = reassignTo; });
-    state.categories = deriveCategories(state.stock);
+    try {
+      const catApi = await apiFetch('/categories?_=' + Date.now());
+      state.categories = Array.isArray(catApi) ? catApi.sort(function (a, b) { return a.localeCompare(b); }) : deriveCategories(state.stock);
+    } catch (e) { state.categories = deriveCategories(state.stock); }
     emitChange('category:delete');
   }
 

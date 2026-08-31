@@ -142,8 +142,11 @@ exports.listCategories = asyncHandler(async (req, res) => {
 
 exports.addCategory = asyncHandler(async (req, res) => {
   const name = req.body.name.trim();
+  // Check both the Category model AND stock items for duplicates
   const existing = await Category.findOne({ module: 'store', name });
   if (existing) throw new ApiError(409, `Category "${name}" already exists.`);
+  const stockHasIt = await StoreStock.findOne({ cat: name });
+  if (stockHasIt) throw new ApiError(409, `Category "${name}" already exists (used by a stock item).`);
   await Category.create({ module: 'store', name });
   res.status(201).json({ success: true, data: { name } });
 });
