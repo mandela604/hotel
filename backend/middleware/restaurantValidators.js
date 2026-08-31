@@ -175,11 +175,11 @@ exports.validateOpenTab = (req, res, next) => {
     if (!isNonEmptyString(roomNumber)) return fail(res, 'roomNumber is required for Room Charge tabs', 'roomNumber');
     if (!isNonEmptyString(guestName)) return fail(res, 'guestName is required for Room Charge tabs', 'guestName');
   }
-  if (table !== undefined && typeof table !== 'string') return fail(res, 'table must be a string', 'table');
-  if (notes !== undefined && typeof notes !== 'string') return fail(res, 'notes must be a string', 'notes');
-  if (roomNumber !== undefined && typeof roomNumber !== 'string') return fail(res, 'roomNumber must be a string', 'roomNumber');
-  if (guestName !== undefined && typeof guestName !== 'string') return fail(res, 'guestName must be a string', 'guestName');
-  if (guestPhone !== undefined && typeof guestPhone !== 'string') return fail(res, 'guestPhone must be a string', 'guestPhone');
+  if (table !== undefined && table !== null && typeof table !== 'string') return fail(res, 'table must be a string', 'table');
+  if (notes !== undefined && notes !== null && typeof notes !== 'string') return fail(res, 'notes must be a string', 'notes');
+  if (roomNumber !== undefined && roomNumber !== null && typeof roomNumber !== 'string') return fail(res, 'roomNumber must be a string', 'roomNumber');
+  if (guestName !== undefined && guestName !== null && typeof guestName !== 'string') return fail(res, 'guestName must be a string', 'guestName');
+  if (guestPhone !== undefined && guestPhone !== null && typeof guestPhone !== 'string') return fail(res, 'guestPhone must be a string', 'guestPhone');
 
   next();
 };
@@ -195,9 +195,9 @@ exports.validatePayOrder = (req, res, next) => {
     if (!isNonEmptyString(roomNumber)) return fail(res, 'roomNumber is required for Room Charge', 'roomNumber');
     if (!isNonEmptyString(guestName)) return fail(res, 'guestName is required for Room Charge', 'guestName');
   }
-  if (roomNumber !== undefined && typeof roomNumber !== 'string') return fail(res, 'roomNumber must be a string', 'roomNumber');
-  if (guestName !== undefined && typeof guestName !== 'string') return fail(res, 'guestName must be a string', 'guestName');
-  if (guestPhone !== undefined && typeof guestPhone !== 'string') return fail(res, 'guestPhone must be a string', 'guestPhone');
+  if (roomNumber !== undefined && roomNumber !== null && typeof roomNumber !== 'string') return fail(res, 'roomNumber must be a string', 'roomNumber');
+  if (guestName !== undefined && guestName !== null && typeof guestName !== 'string') return fail(res, 'guestName must be a string', 'guestName');
+  if (guestPhone !== undefined && guestPhone !== null && typeof guestPhone !== 'string') return fail(res, 'guestPhone must be a string', 'guestPhone');
 
   next();
 };
