@@ -62,6 +62,18 @@
       font-size:13px; color:var(--ow-text);
       display:flex; flex-direction:column; gap:16px;
     }
+    @media print{
+      .no-print{ display:none !important; }
+      body{ background:#fff !important; color:#000 !important; }
+      .ow-receipt{
+        max-width:400px; margin:0 auto; padding:16px;
+        font-size:12px; line-height:1.4;
+      }
+    }
+    .ow-receipt{
+      max-width:400px; background:#fff; padding:16px; border:1px solid #e0e0e0;
+      font-family:'Courier New',monospace; font-size:12px; color:#000;
+    }
     .ow-kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
     @media (max-width:1100px){ .ow-kpi-row{ grid-template-columns:repeat(2,1fr); } }
     @media (max-width:420px){ .ow-kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
@@ -526,6 +538,9 @@
                 <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:10px;" data-act="submit" disabled data-role="submitBtn">
                   <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>
                 </button>
+                <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:10px;" data-act="printReceipt" disabled data-role="printBtn">
+                  <i class="fa-solid fa-print"></i> Print Receipt
+                </button>
               </div>
             </div>
           </div>
@@ -799,6 +814,63 @@
       $('[data-role="cartSub"]').textContent = fmtN(sub);
       $('[data-role="cartTotal"]').textContent = fmtN(sub * (1 - disc / 100));
       $('[data-role="submitBtn"]').disabled = cart.length === 0;
+      $('[data-role="printBtn"]').disabled = cart.length === 0;
+    }
+
+    function generateReceipt(orderData, isSale) {
+      var header = moduleName === 'restaurant' ? 'Aurum Restaurant' : 'Aurum Pool Bar';
+      var orderType = isSale ? (mode === 'tab' ? 'Tab' : 'Sale') : 'Order';
+      var brand = moduleName === 'restaurant' ? 'Restaurant' : 'Pool Bar';
+      var itemsHtml = (orderData.items || []).map(function(i) {
+        return '<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">' + esc(i.name) + '</td><td style="text-align:center;padding:6px 0;border-bottom:1px solid #eee;">' + esc(i.qty) + '</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">' + fmtN(i.price) + '</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">' + fmtN(i.price * i.qty) + '</td></tr>';
+      }).join('');
+      var roomInfo = orderData.roomNumber ? '<div style="font-size:11px;color:#444;margin-top:4px;">Room ' + esc(orderData.roomNumber) + (orderData.guestName ? ' — ' + esc(orderData.guestName) : '') + (orderData.guestPhone ? ' · ' + esc(orderData.guestPhone) : '') + '</div>' : '';
+      var tableInfo = orderData.table && orderData.table !== '—' ? '<div style="font-size:11px;color:#444;">Table: ' + esc(orderData.table) + '</div>' : '';
+      var methodInfo = orderData.method ? '<div style="font-size:11px;color:#444;">Payment: ' + esc(orderData.method) + '</div>' : '';
+      var notesInfo = orderData.notes ? '<div style="font-size:11px;color:#444;margin-top:6px;">Notes: ' + esc(orderData.notes) + '</div>' : '';
+      var discAmt = orderData.discount ? (orderData.subtotal * orderData.discount / 100) : 0;
+      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:10mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:380px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px} .h p{margin:2px 0 0;font-size:10px;color:#555} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#666;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#666;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>AURUM HOTEL — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(orderType) + ' Receipt</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(orderData.date || nowStamp()) + '</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
+    }
+
+    function openPrintWindow(html) {
+      var w = window.open('', '_blank', 'width=420,height=640');
+      if (!w) { showToast('Pop-up blocked — allow pop-ups to print.', 'error'); return; }
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+    }
+
+    function printCurrentCart() {
+      if (!cart.length) { showToast('Add at least one item to print.', 'error'); return; }
+      var subtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
+      var discount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+      var total = subtotal * (1 - discount / 100);
+      var table = ($('[data-role="fTable"]').value || '').trim() || '—';
+      var staff = ($('[data-role="fStaff"]').value || '').trim() || resolveStaffName();
+      var room = getRoomFields('');
+      var method = ($('[data-role="fMethod"]').value || '').trim() || (mode === 'tab' ? '' : 'Cash');
+      var previewId = mode === 'tab' ? nextOrderId() + ' (Preview)' : nextSaleId() + ' (Preview)';
+      var orderData = {
+        id: previewId,
+        items: cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; }),
+        subtotal: subtotal, discount: discount, total: total,
+        staff: staff, table: table, notes: ($('[data-role="fNotes"]').value || '').trim(),
+        roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null,
+        date: nowStamp(), method: method || '—'
+      };
+      openPrintWindow(generateReceipt(orderData, mode === 'quick'));
+    }
+
+    function printOrderById(id) {
+      var o = orders.find(function(x){ return x.id === id; }) || sales.find(function(x){ return x.id === id; });
+      if (!o) { showToast('Order not found.', 'error'); return; }
+      var data = {
+        id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
+        staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
+        roomNumber: o.roomNumber || null, guestName: o.guestName || null, guestPhone: o.guestPhone || null,
+        date: o.date || nowStamp(), method: o.method || o.payMethod || '—'
+      };
+      openPrintWindow(generateReceipt(data, o.status === 'completed' || !!o.method));
     }
 
     function addToCart(key) {
@@ -1074,6 +1146,7 @@
           (st === 'open' || st === 'served'
             ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
             : '') +
+          '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i>Print</button>' +
           '</div></td></tr>';
       }).join('');
     }
@@ -1366,6 +1439,7 @@
         const a = act.dataset.act;
         if (a === 'clearCart') clearCart();
         else if (a === 'submit') submitOrder();
+        else if (a === 'printReceipt') printCurrentCart();
         else if (a === 'closePay') $('[data-role="payModal"]').classList.remove('show');
         else if (a === 'confirmPay') confirmPayOrder();
         else if (a === 'clearRoom') clearSelectedRoom('');
@@ -1378,6 +1452,8 @@
       if (pay) { openPayModal(pay.dataset.pay); return; }
       const cancel = e.target.closest('[data-cancel]');
       if (cancel) { cancelOrder(cancel.dataset.cancel); return; }
+      const pr = e.target.closest('[data-print]');
+      if (pr) { printOrderById(pr.dataset.print); return; }
       const pick = e.target.closest('[data-pick-room]');
       if (pick) {
         selectRoom(pick.dataset.pickRoom, pick.dataset.pickGuest, pick.dataset.pickPhone || '', pick.dataset.pickWhich || '', pick.dataset.pickGuestId || '');
