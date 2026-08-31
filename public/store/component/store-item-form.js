@@ -147,9 +147,9 @@
               <div class="sif-hint">The individual unit inside each pack. E.g. if Unit = "Cartons" and 1 Carton = 12 Bottles, set Base Unit = "Bottles".</div>
             </div>
             <div class="sif-group">
-              <label class="sif-label">Pack Size</label>
+              <label class="sif-label">Portion / Pack Size</label>
               <input class="sif-input" type="number" data-role="packSize" placeholder="0" min="0" step="1">
-              <div class="sif-hint">How many base units in one pack. E.g. 12 Bottles per Carton. For variable items (Cow, Pepper), leave at 0 when receiving, then set after portioning — cost will auto-recalculate per base unit.</div>
+              <div class="sif-hint">How many base units in one portion/pack. E.g. 12 Bottles per Carton, or 120 kg from 1 Cow. Set to 0 if not applicable. Cost auto-recalculates per base unit when set.</div>
             </div>
             <div class="sif-group">
               <label class="sif-label">Quantity On Hand</label>
