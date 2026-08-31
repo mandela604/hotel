@@ -55,6 +55,7 @@
     { label: 'Staff Management',  href: 'staff/staff-management.html',               icon: 'fa-solid fa-users' },
     { label: 'Procurement',       href: 'procurement/procurement-dashboard.html',    icon: 'fa-solid fa-truck', badge: 3 },
     { label: 'Accounting',        href: 'accounting/accounting-dashboard.html',      icon: 'fa-solid fa-calculator' },
+    { label: 'Settings',          href: 'settings/platform-settings.html',           icon: 'fa-solid fa-gear' },
   ];
 
   // ══════════════════════════════════════════════════════════════════════

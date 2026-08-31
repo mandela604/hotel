@@ -302,6 +302,7 @@ function mountTable() {
     getRowPerm: function (b, session) {
       var s = session || getSession();
       return {
+        canView: false,
         canEdit: canEdit(s, 'booking', b),
         canDelete: canDelete(s, 'booking', b)
       };

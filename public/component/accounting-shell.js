@@ -14,6 +14,7 @@
     { key: 'pnl',       label: 'Profit & Loss',         href: 'accounting-pnl.html',             icon: 'fa-solid fa-scale-balanced' },
     { key: 'tx',        label: 'Transactions',          href: 'accounting-transactions.html',   icon: 'fa-solid fa-receipt' },
     { key: 'reports',   label: 'Reports',               href: 'accounting-reports.html',        icon: 'fa-solid fa-file-lines' },
+    { key: 'settings',  label: 'Settings',              href: 'platform-settings.html',         icon: 'fa-solid fa-gear' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";

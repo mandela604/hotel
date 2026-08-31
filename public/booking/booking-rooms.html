@@ -542,8 +542,9 @@ function renderRoomGrid(filter) {
           '</div>';
       }
 
-      const clickable = p.canEditRoom;
-      return '<div class="room-card ' + st + '" ' + (clickable ? 'onclick="openRoomModal(\'edit\',\'' + r.num + '\')"' : 'style="cursor:default;"') + '>' +
+      // Card click now opens booking modal (not room edit) — occupied fills guest details, available opens new booking
+      const clickable = p.canCreate || p.canEditRoom;
+      return '<div class="room-card ' + st + '" ' + (clickable ? 'onclick="openBookingFromCard(\'' + r.num + '\')"' : 'style="cursor:default;"') + '>' +
         '<div class="room-card-head">' +
           '<div class="room-num">' + r.num + '</div>' +
           '<span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' +
@@ -591,6 +592,26 @@ function openBookingForRoom(num) {
   }
   bookingModal.setSession(session);
   bookingModal.openNew({ room: num });
+}
+
+function openBookingFromCard(num) {
+  const session = getSession();
+  const bk = bookings.find(function(b){ return b.room === num; });
+  const isOccupied = bk && bk.guest && bk.status !== 'vacant';
+  bookingModal.setSession(session);
+  if (isOccupied) {
+    // Use uuidv4-backed lookup via backend (room -> Booking, guest via Guest.id uuid)
+    if (perms().canEditRoom || perms().canCreate) {
+      // Try edit if permitted, else view — both hit DB-persisted records
+      if (hasPermission(session, 'canEdit', 'booking')) bookingModal.openEdit(bk);
+      else bookingModal.openView(bk);
+    } else {
+      bookingModal.openView(bk);
+    }
+  } else {
+    if (!perms().canCreate) { showToast("You don't have permission to create bookings.", 'error'); return; }
+    bookingModal.openNew({ room: num });
+  }
 }
 
 /* ═══════════════════════════════════════════════
