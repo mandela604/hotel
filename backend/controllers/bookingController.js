@@ -552,14 +552,13 @@ exports.settleCharge = asyncHandler(async (req, res) => {
   charge.paid += pay;
   charge.status = charge.paid >= charge.amount ? 'Settled' : 'Partially Settled';
 
-  await guest.save();
-
-  /* Create a Sale record so the payment appears in sales/money-received */
+  // Rollback safe: create Sale first, only then persist guest change — avoids "sale validation failed" leaving charge half-settled
+  const folioDept = /pool/i.test(charge.source||'') ? 'poolbar' : 'restaurant';
   const saleId = `FOL-${String(Date.now()).slice(-6)}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
   await Sale.create({
     id: saleId,
     source: 'Folio',
-    department: '',
+    department: folioDept,
     items: [{ name: charge.desc || charge.source || 'Room Charge', qty: 1, price: pay }],
     subtotal: pay,
     discount: 0,
@@ -570,12 +569,14 @@ exports.settleCharge = asyncHandler(async (req, res) => {
     notes: 'Folio charge settled',
     date: new Date(),
     status: 'completed',
-    roomNumber: guest.room || null,
+    roomNumber: charge.room || null,
     guestName: guest.name || null,
   });
 
+  await guest.save();
+
   /* Update the active Booking's payment ledger */
-  const booking = await Booking.findOne({ room: guest.room, status: 'checkedin' });
+  const booking = await Booking.findOne({ room: charge.room, status: 'checkedin' });
   if (booking) {
     booking.payments.push({
       id: `PMT-${uuidv4()}`,
@@ -624,15 +625,15 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
     settledCount += 1;
     totalSettled += remaining;
   }
-  await guest.save();
-
-  /* Create a Sale record for the total settled */
+  /* Create Sale first for atomicity */
   if (totalSettled > 0) {
+    const firstSrc = (guest.charges.find(function(c){return c.status==='Settled';})||{}).source || '';
+    const folioDept = /pool/i.test(firstSrc) ? 'poolbar' : 'restaurant';
     const saleId = `FOL-${String(Date.now()).slice(-6)}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
     await Sale.create({
       id: saleId,
       source: 'Folio',
-      department: '',
+      department: folioDept,
       items: [{ name: 'Folio Settlement', qty: 1, price: totalSettled }],
       subtotal: totalSettled,
       discount: 0,
@@ -643,12 +644,17 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
       notes: `${settledCount} charge(s) settled`,
       date: new Date(),
       status: 'completed',
-      roomNumber: guest.room || null,
+      roomNumber: guest.charges[0] && guest.charges[0].room || null,
       guestName: guest.name || null,
     });
+  }
 
+  await guest.save();
+
+  if (totalSettled > 0) {
     /* Update the active Booking's payment ledger */
-    const booking = await Booking.findOne({ room: guest.room, status: 'checkedin' });
+    const roomForBooking = guest.charges[0] && guest.charges[0].room;
+    const booking = roomForBooking ? await Booking.findOne({ room: roomForBooking, status: 'checkedin' }) : null;
     if (booking) {
       booking.payments.push({
         id: `PMT-${uuidv4()}`,
