@@ -474,10 +474,10 @@
   function findStockRecordId(item) { return item.id || item._id; }
 
   /* ── Stock CRUD (real API) ───────────────────────────────────────── */
-  async function addStockItem({ name, category, unit, min = 0, price = 0, desc = '' }) {
+  async function addStockItem({ name, category, unit, min = 0, price = 0, desc = '', storeId = '' }) {
     if (!name || !name.trim()) throw new Error('Item name is required.');
     if (findStock(name)) throw new Error(`"${name}" is already tracked — edit it instead.`);
-    const res = await apiPost('/stock', { name, category, unit, min, price, desc });
+    const res = await apiPost('/stock', { name, category, unit, min, price, desc, storeId });
     state.stock.push(res.data);
     emitChange('stock:add');
     return res.data;

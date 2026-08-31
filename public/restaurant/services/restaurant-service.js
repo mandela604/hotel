@@ -339,6 +339,7 @@ function dashboardKPIs() {
   }
 
   async function addStockItem(payload) {
+    // payload may include storeId for DB-linked consistency (Store -> Restaurant)
     const res = await post('/stock', payload);
     state.stock.push(res.data);
     emitChange('stock:add');

@@ -183,6 +183,13 @@ body{
 .cat-empty{ text-align:center; color:var(--text3); padding:16px; }
 .act-btn{ background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; font-family:inherit; }
 .act-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
+.store-suggest{ position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-lg); max-height:220px; overflow-y:auto; display:none; z-index:50; }
+.store-suggest.show{ display:block; }
+.store-suggest-item{ padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:8px; }
+.store-suggest-item:last-child{ border-bottom:none; }
+.store-suggest-item:hover{ background:var(--gold-dim); }
+.store-suggest-empty{ padding:12px; color:var(--text3); font-size:12px; text-align:center; }
+
 .act-btn.danger:hover{ border-color:rgba(240,68,56,0.4); color:var(--red); }
 
 .toast{
@@ -293,11 +300,12 @@ body{
     <div class="modal-body">
       <div class="info-note" id="itemModalNote">Qty on hand is set by requisitions &amp; sales — not edited here.</div>
       <div class="form-row">
-        <div class="form-group span2">
+        <div class="form-group span2" style="position:relative;">
           <label class="form-label">Item Name</label>
-          <input class="form-input" type="text" id="fName" placeholder="Type to search Store catalog…" list="storeCatalogList" oninput="onStoreItemPick()">
-          <datalist id="storeCatalogList"></datalist>
-          <div class="field-note">Pick from Store's catalog or type a new name.</div>
+          <input class="form-input" type="text" id="fName" placeholder="Type 1+ chars to search Store catalog…" autocomplete="off" oninput="onStoreSearch()" onfocus="onStoreSearch()">
+          <div class="store-suggest" id="storeSuggest"></div>
+          <input type="hidden" id="fStoreId">
+          <div class="field-note">Type to match Store catalog — id comes from Store DB.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Category</label>
@@ -524,21 +532,37 @@ function populateFormDatalists() {
     : '<option value="">—</option>';
 }
 
-function populateStoreCatalog(){
-  const dl = document.getElementById('storeCatalogList');
-  if (!dl || !window.StoreService || !StoreService.state) return;
+let poolbarStorePick = null;
+function renderStoreSuggest(){
+  const inp = document.getElementById('fName');
+  const box = document.getElementById('storeSuggest');
+  const q = (inp.value||'').trim().toLowerCase();
+  if (!q || q.length < 1 || !window.StoreService || !StoreService.state) { box.classList.remove('show'); box.innerHTML=''; return; }
   const stock = StoreService.state.stock || [];
-  dl.innerHTML = stock.map(s => `<option value="${escapeHtml(s.name)}" data-unit="${escapeHtml(s.unit)}">`).join('');
+  const hits = stock.filter(function(s){ return s.name.toLowerCase().includes(q); }).slice(0,8);
+  if (!hits.length) { box.innerHTML='<div class="store-suggest-empty">No match in Store</div>'; box.classList.add('show'); return; }
+  box.innerHTML = hits.map(function(s){
+    var sid = s._id || s.id || '';
+    return '<div class="store-suggest-item" data-pick="' + escapeHtml(s.name) + '" data-unit="' + escapeHtml(s.unit||'') + '" data-sid="' + escapeHtml(sid) + '"><span>' + escapeHtml(s.name) + '</span><span style="color:var(--text3);font-size:11px;">' + escapeHtml(s.unit||'') + '</span></div>';
+  }).join('');
+  box.classList.add('show');
+  box.querySelectorAll('[data-pick]').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.getElementById('fName').value = el.dataset.pick;
+      document.getElementById('fUnit').value = el.dataset.unit || '';
+      document.getElementById('fStoreId').value = el.dataset.sid || '';
+      poolbarStorePick = el.dataset.pick;
+      box.classList.remove('show');
+    });
+  });
 }
-function onStoreItemPick(){
-  const name = document.getElementById('fName').value;
-  if (!window.StoreService || !StoreService.state) return;
-  const stock = StoreService.state.stock || [];
-  const match = stock.find(s => s.name.toLowerCase() === name.toLowerCase());
-  if (match) {
-    document.getElementById('fUnit').value = match.unit || '';
-  }
+function onStoreSearch(){
+  var v = document.getElementById('fName').value;
+  // clear storeId if user edits away from picked name
+  if (poolbarStorePick && v !== poolbarStorePick) { document.getElementById('fStoreId').value=''; poolbarStorePick=null; }
+  renderStoreSuggest();
 }
+document.addEventListener('click', function(e){ if(!e.target.closest('#fName') && !e.target.closest('#storeSuggest')){ var b=document.getElementById('storeSuggest'); if(b) b.classList.remove('show'); } });
 
 /** Currency symbol on the Sale Price label — from service. */
 function applyCurrencyLabel() {
@@ -640,7 +664,7 @@ function openItemModal(name) {
   document.getElementById('itemModalTitle').textContent = isEdit ? 'Edit Item' : 'Add Item to Stock';
   document.getElementById('itemModalNote').style.display = isEdit ? 'none' : '';
 
-  populateFormDatalists(); // refresh so any newly-used category/unit shows up as a suggestion
+  populateFormDatalists();
 
   const nameInput = document.getElementById('fName');
   const catInput = document.getElementById('fCategory2');
@@ -651,6 +675,8 @@ function openItemModal(name) {
     if (!i) return;
     nameInput.value = i.name;
     nameInput.disabled = true;
+    document.getElementById('fStoreId').value = i.storeId || '';
+    poolbarStorePick = i.name;
     catInput.value = i.category || '';
     unitInput.value = i.unit || '';
     document.getElementById('fMin').value = i.min != null ? i.min : '';
@@ -659,6 +685,9 @@ function openItemModal(name) {
   } else {
     nameInput.value = '';
     nameInput.disabled = false;
+    document.getElementById('fStoreId').value = '';
+    poolbarStorePick = null;
+    document.getElementById('storeSuggest').classList.remove('show');
     catInput.value = '';
     unitInput.value = '';
     document.getElementById('fMin').value = '';
@@ -674,6 +703,7 @@ async function saveItem() {
   const payload = {
     category: document.getElementById('fCategory2').value.trim(),
     unit: document.getElementById('fUnit').value.trim(),
+    storeId: document.getElementById('fStoreId').value.trim(),
     min: parseFloat(document.getElementById('fMin').value) || 0,
     price: parseFloat(document.getElementById('fPrice').value) || 0,
     desc: document.getElementById('fDesc').value.trim(),
@@ -894,7 +924,8 @@ async function init() {
   applyLevelLabels();
 
   if (window.StoreService) {
-    StoreService.loadAll().then(populateStoreCatalog);
+    StoreService.loadAll().then(function(){ /* suggest built live from StoreService.state on typing */ });
+    StoreService.onChange && StoreService.onChange(function(){ var b=document.getElementById('storeSuggest'); if(b) b.classList.remove('show'); });
   }
 
   stockTable = InventoryTable.create({
