@@ -497,7 +497,33 @@ const PRIVILEGE_DEPT = {
 };
 function onPrivilegeChange(){
   const p = document.getElementById('fsPrivilege').value;
-  if (p && PRIVILEGE_DEPT[p]) document.getElementById('fsDept').value = PRIVILEGE_DEPT[p];
+  const deptEl = document.getElementById('fsDept');
+  const curVal = deptEl.value;
+  if (p === 'waiter') {
+    // Replace text input with dropdown for waiter
+    if (deptEl.tagName !== 'SELECT') {
+      const sel = document.createElement('select');
+      sel.id = 'fsDept';
+      sel.className = 'form-select';
+      sel.innerHTML = '<option value="">Select department</option>' +
+        '<option value="Pool Bar">Pool Bar</option>' +
+        '<option value="Restaurant">Restaurant</option>' +
+        '<option value="Pool Bar, Restaurant">Both (Pool Bar + Restaurant)</option>';
+      deptEl.parentNode.replaceChild(sel, deptEl);
+    }
+    if (curVal) document.getElementById('fsDept').value = curVal;
+  } else {
+    // Restore text input for non-waiter privileges
+    if (deptEl.tagName === 'SELECT') {
+      const inp = document.createElement('input');
+      inp.className = 'form-input';
+      inp.type = 'text';
+      inp.id = 'fsDept';
+      inp.placeholder = 'e.g. Pool Bar';
+      deptEl.parentNode.replaceChild(inp, deptEl);
+    }
+    if (p && PRIVILEGE_DEPT[p]) document.getElementById('fsDept').value = PRIVILEGE_DEPT[p];
+  }
 }
 window.onPrivilegeChange = onPrivilegeChange;
 
@@ -598,6 +624,15 @@ function resetPasswordFields(){
 
 function openStaffModal(){
   if (!canManageStaff()) return;
+  const deptEl = document.getElementById('fsDept');
+  if (deptEl.tagName === 'SELECT') {
+    const inp = document.createElement('input');
+    inp.className = 'form-input';
+    inp.type = 'text';
+    inp.id = 'fsDept';
+    inp.placeholder = 'e.g. Pool Bar';
+    deptEl.parentNode.replaceChild(inp, deptEl);
+  }
   document.getElementById('staffModalTitle').textContent = 'Add Staff';
   document.getElementById('fsSaveLabel').textContent = 'Save Staff';
   document.getElementById('fsId').value = '';
@@ -621,6 +656,15 @@ function editStaff(id){
   if (!canManageStaff()) return;
   const s = STAFF.find(x=>x.id===id);
   if (!s) return;
+  const deptEl = document.getElementById('fsDept');
+  if (deptEl.tagName === 'SELECT') {
+    const inp = document.createElement('input');
+    inp.className = 'form-input';
+    inp.type = 'text';
+    inp.id = 'fsDept';
+    inp.placeholder = 'e.g. Pool Bar';
+    deptEl.parentNode.replaceChild(inp, deptEl);
+  }
   document.getElementById('staffModalTitle').textContent = 'Edit Staff';
   document.getElementById('fsSaveLabel').textContent = 'Save Changes';
   document.getElementById('fsId').value = s.id;
@@ -632,6 +676,8 @@ function editStaff(id){
   document.getElementById('fsStatus').value = s.status;
   onFormRoleChange();
   if (s.privilege) document.getElementById('fsPrivilege').value = s.privilege;
+  onPrivilegeChange();
+  document.getElementById('fsDept').value = s.dept || '';
   document.getElementById('fsNameErr').classList.remove('show');
   document.getElementById('fsEmailErr').classList.remove('show');
   document.getElementById('fsChangePwWrap').style.display = 'block';

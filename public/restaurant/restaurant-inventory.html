@@ -607,6 +607,8 @@ function openItemModal(name) {
 async function saveItem() {
   var name = document.getElementById('fName').value.trim();
   if (!name) { showToast('Please enter an item name.', 'error'); return; }
+  var sid = document.getElementById('fStoreId').value.trim();
+  if (!editName && !sid) { showToast('Please pick item from Store catalog — type 1+ chars and select.', 'error'); return; }
 
   var category;
   try {
@@ -619,7 +621,7 @@ async function saveItem() {
   var payload = {
     category: category,
     unit: document.getElementById('fUnit').value,
-    storeId: document.getElementById('fStoreId').value.trim(),
+    storeId: sid,
     min: parseFloat(document.getElementById('fMin').value) || 0,
     price: parseFloat(document.getElementById('fPrice').value) || 0,
     desc: document.getElementById('fDesc').value.trim(),
@@ -634,6 +636,7 @@ async function saveItem() {
         name: name,
         category: payload.category,
         unit: payload.unit,
+        storeId: payload.storeId,
         min: payload.min,
         price: payload.price,
         desc: payload.desc,

@@ -700,10 +700,12 @@ function openItemModal(name) {
 async function saveItem() {
   const name = document.getElementById('fName').value.trim();
   if (!name) { showToast('Please enter an item name.', 'error'); return; }
+  const storeId = document.getElementById('fStoreId').value.trim();
+  if (!editName && !storeId) { showToast('Please pick item from Store catalog — type 1+ chars and select from dropdown.', 'error'); return; }
   const payload = {
     category: document.getElementById('fCategory2').value.trim(),
     unit: document.getElementById('fUnit').value.trim(),
-    storeId: document.getElementById('fStoreId').value.trim(),
+    storeId: storeId,
     min: parseFloat(document.getElementById('fMin').value) || 0,
     price: parseFloat(document.getElementById('fPrice').value) || 0,
     desc: document.getElementById('fDesc').value.trim(),

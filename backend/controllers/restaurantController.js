@@ -98,16 +98,25 @@ exports.listStock = asyncHandler(async (req, res) => {
 exports.addStockItem = asyncHandler(async (req, res) => {
   const { name, category, unit, min, price, desc, storeId } = req.body;
 
-  const existing = await RestaurantStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  const sid = (storeId || '').trim();
+  if (!sid) {
+    return res.status(400).json({ success: false, error: 'Please select item from Store catalog — type 1+ chars and pick from dropdown. Free-typed items not allowed.' });
+  }
+  const StoreStock = require('../models/StoreStock');
+  const storeItem = await StoreStock.findById(sid).catch(function(){ return null; });
+  if (!storeItem) {
+    return res.status(400).json({ success: false, error: 'Selected Store item not found — please re-pick from dropdown.' });
+  }
+
+  const existing = await RestaurantStock.findOne({ $or: [{ storeId: sid }, { name: new RegExp(`^${name.trim()}$`, 'i') }] });
   if (existing) {
     return res.status(409).json({ success: false, error: `"${name}" is already tracked` });
   }
-  const sid = (storeId || '').trim();
   const item = await RestaurantStock.create({
     name: name.trim(),
     category: category || 'Uncategorized',
     unit: unit || 'portion',
-    storeId: sid || '',
+    storeId: sid,
     qty: 0, // qty is only ever moved by transfers/sales, never set at creation
     min: Number(min) || 0,
     price: Number(price) || 0,

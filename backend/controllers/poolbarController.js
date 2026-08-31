@@ -107,15 +107,25 @@ exports.listStock = asyncHandler(async (req, res) => {
 exports.addStock = asyncHandler(async (req, res) => {
   const { name, category, cat, unit, qty, min, price, cost, batch, received, desc, storeId } = req.body;
 
-  const existing = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(name.trim())}$`, 'i') });
+  const sid = (storeId || '').trim();
+  if (!sid) {
+    return res.status(400).json({ success: false, error: 'Please select item from Store catalog — type 1+ chars and pick from dropdown. Free-typed items not allowed (Store is source of truth).' });
+  }
+  const StoreStock = require('../models/StoreStock');
+  const storeItem = await StoreStock.findById(sid).catch(function(){ return null; }) || await StoreStock.findOne({ _id: sid }).catch(function(){ return null; });
+  // also try by name fallback for legacy sid that may be name-based
+  if (!storeItem) {
+    return res.status(400).json({ success: false, error: 'Selected Store item not found — please re-pick from dropdown.' });
+  }
+
+  const existing = await PoolbarStock.findOne({ $or: [{ storeId: sid }, { name: new RegExp(`^${sanitizeRegex(name.trim())}$`, 'i') }] });
   if (existing) {
     return res.status(409).json({ success: false, error: `"${name}" is already tracked in Pool Bar inventory` });
   }
-  // id from Store when linked — ensures consistent id across Store -> Poolbar DB
-  const sid = (storeId || '').trim();
+  // id = Store _id ensures consistent id across Store -> Poolbar DB
   const item = await PoolbarStock.create({
-    id: sid || uuidv4(),
-    storeId: sid || '',
+    id: sid,
+    storeId: sid,
     name: name.trim(),
     category: category || cat || 'Beverages',
     cat: cat || category || 'Beverages',
