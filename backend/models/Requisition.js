@@ -4,6 +4,8 @@ const reqItemSchema = new mongoose.Schema({
   name:      { type: String, required: true },
   stockId:   { type: String, default: '' },
   unit:      { type: String, default: 'Pieces' },
+  packSize:  { type: Number, default: 0 },
+  baseUnit:  { type: String, default: '' },
   qty:       { type: Number, default: 0 },
   cost:      { type: Number, default: 0 },
   remark:    { type: String, default: '' },

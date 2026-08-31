@@ -17,6 +17,7 @@ const prItemSchema = new mongoose.Schema({
   qty:  { type: Number, default: 0 },
   unit: { type: String, default: 'Units' },
   packSize: { type: Number, default: 0 },
+  baseUnit: { type: String, default: '' },
   price: { type: Number, default: 0 },
   cost:  { type: Number, default: 0 },
   stockId: { type: String, default: '' },

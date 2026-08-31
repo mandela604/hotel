@@ -321,7 +321,7 @@
 
     function newItemRow(catalogItem) {
       itemSeq++;
-      return { rid: itemSeq, name: catalogItem.name, unit: catalogItem.unit, stockId: catalogItem.id || catalogItem.stockId || '', qty: '', cost: '', remark: '' };
+      return { rid: itemSeq, name: catalogItem.name, unit: catalogItem.unit, stockId: catalogItem.id || catalogItem.stockId || '', packSize: catalogItem.packSize || 0, baseUnit: catalogItem.baseUnit || '', qty: '', cost: '', remark: '' };
     }
 
     // ── Shell ──
@@ -606,7 +606,7 @@
         fulfillStore: mode === 'store_issue' ? root.querySelector('[data-f="fulfillStore"]').value : null,
         supplier: mode === 'purchase' ? (root.querySelector('[data-f="supplier"]')?.value || '').trim() : null,
         linked: mode === 'purchase' ? (root.querySelector('[data-f="linked"]')?.value || '').trim() : null,
-        items: validItems.map(i => ({ name: i.name, stockId: i.stockId || '', unit: i.unit, qty: parseFloat(i.qty) || 0, cost: parseFloat(i.cost) || 0, remark: i.remark, issuedQty: 0 })),
+        items: validItems.map(i => ({ name: i.name, stockId: i.stockId || '', unit: i.unit, packSize: i.packSize || 0, baseUnit: i.baseUnit || '', qty: parseFloat(i.qty) || 0, cost: parseFloat(i.cost) || 0, remark: i.remark, issuedQty: 0 })),
       };
 
       try {

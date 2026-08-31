@@ -108,7 +108,7 @@
       linked: r.linked || null,
       items: (r.items || []).map(function (it) {
         return {
-          name: it.name || '', stockId: it.stockId || '', unit: it.unit || 'unit', qty: Number(it.qty) || 0,
+          name: it.name || '', stockId: it.stockId || '', unit: it.unit || 'unit', packSize: Number(it.packSize) || 0, baseUnit: it.baseUnit || '', qty: Number(it.qty) || 0,
           cost: Number(it.cost) || 0, remark: it.remark || '', issuedQty: Number(it.issuedQty) || 0,
         };
       }),
@@ -147,7 +147,7 @@
       linked: fe.linked || null,
       items: (fe.items || []).map(function (it) {
         return {
-          name: it.name || '', stockId: it.stockId || '', unit: it.unit || 'unit', qty: Number(it.qty) || 0,
+          name: it.name || '', stockId: it.stockId || '', unit: it.unit || 'unit', packSize: Number(it.packSize) || 0, baseUnit: it.baseUnit || '', qty: Number(it.qty) || 0,
           cost: Number(it.cost) || 0, remark: it.remark || '',
         };
       }),

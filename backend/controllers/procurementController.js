@@ -509,7 +509,7 @@ exports.importStoreRequest = async (req, res, next) => {
     if (requisition.procurementPrId) return next(new ApiError(409, `${req.params.no} has already been imported`));
 
     const items = (requisition.items || []).map((it) => ({
-      name: it.name, qty: it.qty, unit: it.unit || 'unit', cost: it.cost || 0,
+      name: it.name, qty: it.qty, unit: it.unit || 'unit', cost: it.cost || 0, packSize: it.packSize || 0, baseUnit: it.baseUnit || '',
     }));
     const totalAmount = computeItemsTotal(items);
     const nums = await nextPurchaseOrderNumbers();

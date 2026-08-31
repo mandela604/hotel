@@ -212,7 +212,7 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
     supplier: finalMode === 'purchase' ? (supplier || '').trim() : null,
     linked: finalMode === 'purchase' ? (linked || '').trim() : null,
     items: items.map((i) => ({
-      name: i.name.trim(), stockId: i.stockId || '', unit: i.unit || 'unit', qty: Number(i.qty) || 0,
+      name: i.name.trim(), stockId: i.stockId || '', unit: i.unit || 'unit', packSize: Number(i.packSize) || 0, baseUnit: i.baseUnit || '', qty: Number(i.qty) || 0,
       cost: Number(i.cost) || 0, remark: i.remark || '', issuedQty: 0,
     })),
     status: 'Pending',
@@ -242,7 +242,7 @@ exports.updateRequisition = asyncHandler(async (req, res) => {
   if (row.mode === 'purchase' && linked !== undefined) row.linked = linked.trim();
   if (Array.isArray(items)) {
     row.items = items.map((i) => ({
-      name: (i.name || '').trim(), stockId: i.stockId || '', unit: i.unit || 'unit', qty: Number(i.qty) || 0,
+      name: (i.name || '').trim(), stockId: i.stockId || '', unit: i.unit || 'unit', packSize: Number(i.packSize) || 0, baseUnit: i.baseUnit || '', qty: Number(i.qty) || 0,
       cost: Number(i.cost) || 0, remark: i.remark || '', issuedQty: i.issuedQty || 0,
     }));
   }
