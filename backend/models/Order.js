@@ -24,6 +24,8 @@ const orderSchema = new mongoose.Schema({
   guestName:      { type: String, default: null },
   guestPhone:     { type: String, default: null },
   paidSaleId:     { type: String, default: null },
+  createdBy:      { type: String, default: '' },
+  processedBy:    { type: String, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -337,7 +337,7 @@ exports.listOrders = asyncHandler(async (req, res) => {
 });
 
 exports.openTab = asyncHandler(async (req, res) => {
-  const { items, discount, staff, table, notes, roomNumber, guestName, guestPhone } = req.body;
+  const { items, discount, staff, table, notes, roomNumber, guestName, guestPhone, createdBy } = req.body;
 
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const total = subtotal * (1 - (Number(discount) || 0) / 100);
@@ -359,6 +359,7 @@ exports.openTab = asyncHandler(async (req, res) => {
     roomNumber: roomNumber || null,
     guestName: guestName || null,
     guestPhone: guestPhone || null,
+    createdBy: createdBy || (req.user ? req.user.name : ''),
   });
 
   res.status(201).json({ success: true, data: order });
@@ -485,6 +486,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   order.status = 'paid';
   order.payMethod = effectiveMethod;
   order.paidSaleId = saleId;
+  order.processedBy = req.user ? req.user.name : '';
   if (effectiveRoom) order.roomNumber = effectiveRoom;
   if (effectiveGuest) order.guestName = effectiveGuest;
   if (effectivePhone) order.guestPhone = effectivePhone;

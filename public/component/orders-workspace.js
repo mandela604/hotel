@@ -398,6 +398,24 @@
       return demoStaffName;
     }
 
+    function resolveUserRole() {
+      try {
+        if (shell && typeof shell.getUser === 'function') {
+          const u = shell.getUser();
+          if (u && u.privileges && u.privileges.type) return u.privileges.type;
+          if (u && u.privilege) return u.privilege;
+        }
+      } catch (e) { /* ignore */ }
+      if (options.currentUser) {
+        const u = options.currentUser;
+        if (u.privileges && u.privileges.type) return u.privileges.type;
+        if (u.privilege) return u.privilege;
+      }
+      return '';
+    }
+
+    const isWaiter = resolveUserRole() === 'waiter';
+
     let stock = [];
     let sales = [];
     let orders = [];
@@ -566,7 +584,7 @@
                 <thead>
                   <tr>
                     <th>Order No.</th><th>Table</th><th>Items</th><th>Total</th>
-                    <th>Payment</th><th>Staff</th><th>Date</th><th>Status</th><th>Actions</th>
+                    <th>Payment</th><th>Created By</th><th>Date</th><th>Status</th><th>Actions</th>
                   </tr>
                 </thead>
                 <tbody data-role="ordBody"></tbody>
@@ -628,6 +646,7 @@
     }
 
     function setMode(m) {
+      if (isWaiter && m === 'quick') m = 'tab';
       mode = m;
       $$('.ow-mode-tab').forEach(function (tab) {
         tab.classList.toggle('active', tab.dataset.mode === m);
@@ -1061,6 +1080,7 @@
               guestName: guestName,
               guestPhone: guestPhone,
               guestId: guestId,
+              createdBy: staff,
             });
             syncFromService();
             showToast('Tab ' + ((order && order.id) || '') + ' opened' + (table ? ' for ' + table : '') + '.', 'success');
@@ -1107,13 +1127,17 @@
     // guest name underneath — previously only "Room 101" was rendered even
     // though o.guestName was already being captured and stored.
     function renderOrdersTable() {
-      const rows = orders
+      const staffName = resolveStaffName();
+      let rows = orders
         .filter(function (o) { return !statusFilter || o.status === statusFilter; })
         .sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+      if (isWaiter) {
+        rows = rows.filter(function (o) { return (o.createdBy || o.staff) === staffName; });
+      }
       $('[data-role="ordCount"]').textContent = rows.length + ' order' + (rows.length !== 1 ? 's' : '');
       if (!rows.length) {
         $('[data-role="ordBody"]').innerHTML =
-          '<tr class="ow-empty-row"><td colspan="9">No orders match this filter.</td></tr>';
+          '<tr class="ow-empty-row"><td colspan="10">No orders match this filter.</td></tr>';
         return;
       }
       $('[data-role="ordBody"]').innerHTML = rows.map(function (o) {
@@ -1126,13 +1150,14 @@
           payCell = esc(o.payMethod || '—');
         }
         const st = o.status || 'open';
+        const createdBy = o.createdBy || o.staff || '—';
         return '<tr>' +
           '<td style="font-weight:700;">' + esc(o.id) + '</td>' +
           '<td>' + esc(o.table) + '</td>' +
           '<td>' + (o.items || []).length + ' item' + ((o.items || []).length !== 1 ? 's' : '') + '</td>' +
           '<td style="font-weight:700;color:var(--ow-gold);">' + fmtN(o.total) + '</td>' +
           '<td>' + payCell + '</td>' +
-          '<td>' + esc(o.staff) + '</td>' +
+          '<td>' + esc(createdBy) + '</td>' +
           '<td>' + esc(o.date) + '</td>' +
           '<td><span class="ow-chip ow-chip-' + st + '"><i class="fa-solid fa-circle"></i>' +
           st.charAt(0).toUpperCase() + st.slice(1) + '</span></td>' +
@@ -1140,10 +1165,13 @@
           (st === 'open'
             ? '<button type="button" class="ow-act-btn" data-served="' + esc(o.id) + '"><i class="fa-solid fa-bell-concierge"></i>Served</button>'
             : '') +
-          (st === 'served'
+          (st === 'served' && !isWaiter
             ? '<button type="button" class="ow-act-btn" data-pay="' + esc(o.id) + '"><i class="fa-solid fa-naira-sign"></i>Pay</button>'
             : '') +
-          (st === 'open' || st === 'served'
+          (st === 'open' || (st === 'served' && !isWaiter)
+            ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
+            : '') +
+          (st === 'open' && isWaiter
             ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
             : '') +
           '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i>Print</button>' +
@@ -1568,7 +1596,11 @@
       renderPicker();
       renderCart();
       renderOrdersTable();
-      setMode('quick');
+      if (isWaiter) {
+        const quickTab = root.querySelector('[data-mode="quick"]');
+        if (quickTab) quickTab.style.display = 'none';
+      }
+      setMode(isWaiter ? 'tab' : 'quick');
     }
 
     init();

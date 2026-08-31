@@ -466,7 +466,7 @@ exports.listOrders = asyncHandler(async (req, res) => {
 });
 
 exports.openTab = asyncHandler(async (req, res) => {
-  const { items, discount, staff, table, notes, method, payMethod, roomNumber, guestName, guestPhone } = req.body;
+  const { items, discount, staff, table, notes, method, payMethod, roomNumber, guestName, guestPhone, createdBy } = req.body;
 
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const discountPct = Number(discount) || 0;
@@ -492,6 +492,7 @@ exports.openTab = asyncHandler(async (req, res) => {
     roomNumber: roomNumber || null,
     guestName: guestName || null,
     guestPhone: guestPhone || null,
+    createdBy: createdBy || (req.user ? req.user.name : ''),
   });
 
   await logActivity('gold', `Tab ${id} opened — ${items.length} item(s)`, 'restaurant-orders.html');
@@ -592,6 +593,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   order.status = 'paid';
   order.method = payMethod;
   order.payMethod = payMethod;
+  order.processedBy = req.user ? req.user.name : '';
   if (roomNumber) order.roomNumber = roomNumber;
   if (guestName) order.guestName = guestName;
   if (guestPhone) order.guestPhone = guestPhone;

@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   password:   { type: String, default: '' },
   role:       { type: String, enum: ['admin', 'manager', 'staff'], default: 'staff', trim: true },
   privileges: {
-    type:      { type: String, enum: ['front_desk','accountant','procurement_manager','sales_rep','store_keeper','chef','gym_attendant','pool_bar_staff','restaurant_staff', null], default: null },
+    type:      { type: String, enum: ['front_desk','accountant','procurement_manager','sales_rep','store_keeper','chef','gym_attendant','pool_bar_staff','restaurant_staff','waiter', null], default: null },
     overrides: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   department: { type: String, enum: DEPARTMENTS, default: 'Management', trim: true },

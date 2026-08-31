@@ -602,11 +602,11 @@
   }
 
   /* ── Orders / Tabs (real API) ─────────────────────────────────────── */
-  async function openTab({ items, discount = 0, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null, guestId = null }) {
+  async function openTab({ items, discount = 0, staff, table, notes = '', roomNumber = null, guestName = null, guestPhone = null, guestId = null, createdBy = '' }) {
     if (!items || !items.length) throw new Error('Add at least one item.');
     if (!staff) throw new Error('Please enter the staff name.');
     const cleanItems = items.map(c => ({ name: c.key || c.name, qty: c.qty, price: c.price }));
-    const res = await apiPost('/orders', { items: cleanItems, discount, staff, table, notes, roomNumber, guestName, guestPhone, guestId });
+    const res = await apiPost('/orders', { items: cleanItems, discount, staff, table, notes, roomNumber, guestName, guestPhone, guestId, createdBy: createdBy || staff });
     state.orders.unshift(res.data);
     emitChange('order:open');
     return res.data;

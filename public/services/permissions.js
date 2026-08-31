@@ -108,6 +108,16 @@
           canVoid: false, canGiveDiscount: false,
         },
       },
+      waiter: {
+        restaurant: {
+          canView: true, canCreate: true, canEdit: true, canDelete: false,
+          canVoid: false, canGiveDiscount: false, canManageOrders: true,
+        },
+        poolbar: {
+          canView: true, canCreate: true, canEdit: true, canDelete: false,
+          canVoid: false, canGiveDiscount: false, canManageOrders: true,
+        },
+      },
     },
 
     modules: {

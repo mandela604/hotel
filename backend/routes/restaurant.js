@@ -38,7 +38,7 @@ router.get('/orders', restaurantController.listOrders);
 router.post('/orders', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateOpenTab, restaurantController.openTab);
 router.patch('/orders/:id/serve', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateParam('id'), restaurantController.markOrderServed);
 router.post('/orders/:id/pay', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateParam('id'), v.validatePayOrder, restaurantController.payOrder);
-router.patch('/orders/:id/cancel', roleGuard('admin','manager'), v.validateParam('id'), restaurantController.cancelOrder);
+router.patch('/orders/:id/cancel', inDept, privilegeGuard('restaurant', 'canManageOrders'), v.validateParam('id'), restaurantController.cancelOrder);
 
 /* Transfers (incoming from Kitchen/Store) */
 router.get('/transfers', restaurantController.listTransfers);
