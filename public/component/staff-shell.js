@@ -224,7 +224,7 @@
           </div>
           <button class="stf-collapse" id="stf-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="stf-back" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="stf-backlabel">Back to Main Suite</span></a>
+        <a class="stf-back" id="stf-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="stf-backlabel">Back to Main Suite</span></a>
         <div class="stf-navlabel">Staff</div>
         <nav class="stf-nav" id="stf-nav">
           ${NAV.map(n => {
@@ -345,6 +345,7 @@
           avatar.title = user.name || '';
         }
         handle.setApiMode('Live');
+        if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('stf-backBtn'); if (bb) bb.style.display = 'none'; }
       }
     });
 

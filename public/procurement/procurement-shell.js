@@ -171,7 +171,7 @@
           </div>
           <button class="prc-collapse" id="prc-collapseBtn" title="Toggle sidebar">◀</button>
         </div>
-        <a class="prc-back" href="${opts.backHref || '../index.html'}">← <span class="prc-backlabel">Back to Main Suite</span></a>
+        <a class="prc-back" id="prc-backBtn" href="${opts.backHref || '../index.html'}">← <span class="prc-backlabel">Back to Main Suite</span></a>
         <div class="prc-navlabel">Procurement</div>
         <nav class="prc-nav" id="prc-nav">
           ${NAV.map(n => `
@@ -209,6 +209,14 @@
       </div>`;
 
     document.getElementById('prc-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    try {
+      var _u = JSON.parse(localStorage.getItem('aurum_user') || 'null');
+      if (_u && _u.role !== 'admin' && _u.role !== 'manager') {
+        var _bb = document.getElementById('prc-backBtn');
+        if (_bb) _bb.style.display = 'none';
+      }
+    } catch(_e) {}
 
     const sidebar     = document.getElementById('prc-sidebar');
     const overlay     = document.getElementById('prc-overlay');

@@ -253,7 +253,7 @@
           </div>
           <button class="gym-collapse" id="gym-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="gym-back" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="gym-backlabel">Back to Main Suite</span></a>
+        <a class="gym-back" id="gym-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="gym-backlabel">Back to Main Suite</span></a>
         <div class="gym-navlabel">Gym & Fitness</div>
         <nav class="gym-nav" id="gym-nav">
           ${NAV.map(n => `
@@ -389,6 +389,7 @@
       }
       handle.setApiMode('Live');
       applyNavVisibility(user);
+      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('gym-backBtn'); if (bb) bb.style.display = 'none'; }
     });
 
     return handle;

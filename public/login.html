@@ -219,7 +219,22 @@ body {
       const payload = await apiCall('/login', { email, password: pass });
       storeAuth(payload.token, payload.user);
       showToast('Signed in' + (payload.user && payload.user.name ? ' as ' + payload.user.name : ''), 'success');
-      setTimeout(() => { window.location.href = 'index.html'; }, 400);
+      const u = payload.user || {};
+      const role = u.role || '';
+      const dept = (u.department || '').toLowerCase();
+      const priv = (u.privileges && u.privileges.type) || '';
+      let target = 'index.html';
+      if (role !== 'admin' && role !== 'manager') {
+        if (dept === 'pool bar' || priv === 'pool_bar_staff' || priv === 'waiter' && dept.indexOf('pool') >= 0) target = 'poolbar/poolbar-dashboard.html';
+        else if (dept === 'restaurant' || priv === 'restaurant_staff' || priv === 'waiter' && dept.indexOf('restaurant') >= 0) target = 'restaurant/restaurant-dashboard.html';
+        else if (dept === 'kitchen' || priv === 'chef') target = 'kitchen/kitchen-dashboard.html';
+        else if (dept === 'store' || priv === 'store_keeper') target = 'store/store-dashboard.html';
+        else if (dept === 'procurement' || priv === 'procurement_manager') target = 'procurement/procurement-dashboard.html';
+        else if (dept === 'accounts' || priv === 'accountant') target = 'accounting/accounting-dashboard.html';
+        else if (dept === 'gym' || priv === 'gym_attendant') target = 'gym/gym-dashboard.html';
+        else if (priv === 'front_desk') target = 'booking/booking-dashboard.html';
+      }
+      setTimeout(() => { window.location.href = target; }, 400);
     } catch (err) {
       $('loginPassErr').textContent = err.message || 'Could not sign in.';
       $('loginPassErr').classList.add('show');

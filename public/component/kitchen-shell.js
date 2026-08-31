@@ -218,7 +218,7 @@
           </div>
           <button class="khs-collapse" id="khs-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="khs-back" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="khs-backlabel">Back to Main Suite</span></a>
+        <a class="khs-back" id="khs-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="khs-backlabel">Back to Main Suite</span></a>
         <div class="khs-navlabel">Kitchen</div>
         <nav class="khs-nav" id="khs-nav">
           ${NAV.map(n => `
@@ -353,6 +353,7 @@
         avatar.title = user.name || '';
       }
       shellApi.setApiMode('Live');
+      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('khs-backBtn'); if (bb) bb.style.display = 'none'; }
     });
 
     return shellApi;

@@ -227,7 +227,7 @@
           </div>
           <button class="gs-collapse" id="gs-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="gs-back" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="gs-backlabel">Back to Main Suite</span></a>
+        <a class="gs-back" id="gs-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="gs-backlabel">Back to Main Suite</span></a>
         <div class="gs-navlabel">Store</div>
         <nav class="gs-nav" id="gs-nav">
           ${NAV.map(n => `
@@ -354,6 +354,7 @@
         avatar.title = user.name || '';
       }
       handle.setApiMode('Live');
+      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('gs-backBtn'); if (bb) bb.style.display = 'none'; }
     });
 
     return handle;

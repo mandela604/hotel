@@ -215,7 +215,7 @@
           </div>
           <button class="sts-collapse" id="sts-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="sts-back" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="sts-backlabel">Back to Main Suite</span></a>
+        <a class="sts-back" id="sts-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="sts-backlabel">Back to Main Suite</span></a>
         <div class="sts-navlabel">Settings</div>
         <nav class="sts-nav" id="sts-nav">
           ${NAV.map(n => `
@@ -336,6 +336,7 @@
         avatar.title = user.name || '';
       }
       handle.setApiMode('Live');
+      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('sts-backBtn'); if (bb) bb.style.display = 'none'; }
     });
 
     return handle;

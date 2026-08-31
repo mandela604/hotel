@@ -235,7 +235,7 @@
           </div>
           <button class="acc-collapse" id="acc-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="acc-backlink" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="acc-backlabel">Back to Main Suite</span></a>
+        <a class="acc-backlink" id="acc-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="acc-backlabel">Back to Main Suite</span></a>
         <div class="acc-navlabel">Accounting</div>
         <nav class="acc-nav" id="acc-nav">
           ${NAV.map(n => {
@@ -373,6 +373,7 @@
           avatar.title = user.name || '';
         }
         handle.setApiMode('Live');
+        if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('acc-backBtn'); if (bb) bb.style.display = 'none'; }
       }
     });
 

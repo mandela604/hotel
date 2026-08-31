@@ -228,7 +228,7 @@
           </div>
           <button class="pbs-collapse" id="pbs-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="pbs-back" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="pbs-backlabel">Back to Main Suite</span></a>
+        <a class="pbs-back" id="pbs-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="pbs-backlabel">Back to Main Suite</span></a>
         <div class="pbs-navlabel">Pool Bar</div>
         <nav class="pbs-nav" id="pbs-nav">
           ${NAV.map(n => `
@@ -361,6 +361,7 @@
         avatar.title = user.name || '';
       }
       handle.setApiMode('Live');
+      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('pbs-backBtn'); if (bb) bb.style.display = 'none'; }
     });
 
     return handle;

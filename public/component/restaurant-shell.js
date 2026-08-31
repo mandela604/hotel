@@ -239,7 +239,7 @@
           </div>
           <button class="rst-collapse" id="rst-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
         </div>
-        <a class="rst-back" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="rst-backlabel">Back to Main Suite</span></a>
+        <a class="rst-back" id="rst-backBtn" href="../index.html"><i class="fa-solid fa-arrow-left"></i> <span class="rst-backlabel">Back to Main Suite</span></a>
         <div class="rst-navlabel">Restaurant</div>
         <nav class="rst-nav" id="rst-nav">
           ${NAV.map(n => `
@@ -369,6 +369,7 @@
       }
       handle.setApiMode('Live');
       applyNavVisibility(user);
+      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('rst-backBtn'); if (bb) bb.style.display = 'none'; }
     });
 
     return handle;
