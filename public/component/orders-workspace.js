@@ -1171,9 +1171,7 @@
           (st === 'open' || (st === 'served' && !isWaiter)
             ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
             : '') +
-          (st === 'open' && isWaiter
-            ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
-            : '') +
+          '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i>Print</button>' +
           '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i>Print</button>' +
           '</div></td></tr>';
       }).join('');
