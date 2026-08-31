@@ -105,15 +105,17 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.addStock = asyncHandler(async (req, res) => {
-  const { name, category, cat, unit, qty, min, price, cost, batch, received, desc } = req.body;
+  const { name, category, cat, unit, qty, min, price, cost, batch, received, desc, storeId } = req.body;
 
   const existing = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(name.trim())}$`, 'i') });
   if (existing) {
     return res.status(409).json({ success: false, error: `"${name}" is already tracked in Pool Bar inventory` });
   }
-
+  // id from Store when linked — ensures consistent id across Store -> Poolbar DB
+  const sid = (storeId || '').trim();
   const item = await PoolbarStock.create({
-    id: uuidv4(),
+    id: sid || uuidv4(),
+    storeId: sid || '',
     name: name.trim(),
     category: category || cat || 'Beverages',
     cat: cat || category || 'Beverages',

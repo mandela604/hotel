@@ -96,17 +96,18 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.addStockItem = asyncHandler(async (req, res) => {
-  const { name, category, unit, min, price, desc } = req.body;
+  const { name, category, unit, min, price, desc, storeId } = req.body;
 
   const existing = await RestaurantStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
   if (existing) {
     return res.status(409).json({ success: false, error: `"${name}" is already tracked` });
   }
-
+  const sid = (storeId || '').trim();
   const item = await RestaurantStock.create({
     name: name.trim(),
     category: category || 'Uncategorized',
     unit: unit || 'portion',
+    storeId: sid || '',
     qty: 0, // qty is only ever moved by transfers/sales, never set at creation
     min: Number(min) || 0,
     price: Number(price) || 0,
