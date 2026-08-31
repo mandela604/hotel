@@ -1017,12 +1017,14 @@
       var payMode = pendingSettle.mode;
       pendingSettle = null;
       try {
-        var updated = await service.addChargePayment(
+        var updatedGuest = await service.addChargePayment(
           currentGuest.id,
           idx,
           { amount: amt, mode: payMode }
         );
-        currentGuest.charges[idx] = updated;
+        if (updatedGuest && updatedGuest.charges && updatedGuest.charges[idx]) {
+          currentGuest.charges[idx] = updatedGuest.charges[idx];
+        }
         settlingIdx = null;
         renderCharges();
         toast('Charge payment recorded.', 'success');
