@@ -206,10 +206,11 @@
   // ══════════════════════════════════════════════════════════════════
   // Defaults
   // ══════════════════════════════════════════════════════════════════
+  const _memStore = {};
   const DEFAULT_STORAGE = window.storage || {
-    async get(key, shared) { const v = localStorage.getItem(key); return v == null ? null : { key, value: v, shared }; },
-    async set(key, value, shared) { localStorage.setItem(key, value); return { key, value, shared }; },
-    async list(prefix, shared) { const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return { keys, prefix, shared }; },
+    async get(key, shared) { const v = _memStore[key]; return v == null ? null : { key, value: v, shared }; },
+    async set(key, value, shared) { _memStore[key] = value; return { key, value, shared }; },
+    async list(prefix, shared) { const keys = Object.keys(_memStore).filter(k => !prefix || k.startsWith(prefix)); return { keys, prefix, shared }; },
   };
 
   const DEFAULT_MEAL_NAMES = ['Fried Rice', 'Jollof Rice', 'Egusi Soup', 'Pepper Soup', 'Moi Moi'];
