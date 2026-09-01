@@ -363,15 +363,10 @@ function applyInlineFilters() {
   if (dateFrom && dateTo) { bounds.start=new Date(dateFrom); bounds.end=new Date(dateTo); bounds.label=fmtDateShort(dateFrom)+' – '+fmtDateShort(dateTo); }
   else if (dateFrom) { bounds.start=new Date(dateFrom); bounds.end=new Date(dateFrom); bounds.label=fmtDateShort(dateFrom); }
 
-  // Non-privileged staff are restricted to today's data regardless of
-  // what the date picker shows — the UI notice is decorative, this is
-  // the real enforcement boundary.
   if (!isPrivileged()) {
     const todayStart = new Date(TODAY);
     const todayEnd   = new Date(TODAY);
     bounds = { start: todayStart, end: todayEnd, label: "Today's Report" };
-    // Lock the date picker to today so the UI reflects the restriction
-    if (fp) fp.setDate([TODAY, TODAY]);
   }
 
   const filtered = bookings.filter(b => {

@@ -104,6 +104,10 @@ body {
 .cal-summary{ font-size:11px; color:#9aa1b3; text-align:center; margin-top:10px; }
 .date-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; padding-top:10px; border-top:1px solid #eef0f6; }
 
+.skeleton{ background:linear-gradient(90deg,#eef0f6 25%,#dfe3ec 50%,#eef0f6 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; }
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton-card{ height:88px; border-radius:14px; }
+.btn-loading{ opacity:.7; pointer-events:none; }
 /* ── Guest name truncation ── */
 .ft-guest-name {
   white-space: nowrap;
@@ -160,7 +164,7 @@ body {
     <div id="topbarSlot"></div>
     <div class="content">
       <!-- KPIs -->
-      <div class="kpi-row" id="kpiRow"></div>
+      <div class="kpi-row" id="kpiRow"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div>
 
       <!-- Status chips -->
       <div class="status-chips no-print" id="statusChips">
@@ -203,7 +207,7 @@ body {
       </div>
 
       <!-- FrontDeskTable mounts here -->
-      <div id="tableSlot"></div>
+      <div id="tableSlot"><div class="skeleton" style="height:320px;border-radius:14px;"></div></div>
     </div>
   </div>
 </div>
@@ -262,6 +266,7 @@ var bookingModal = BookingModal.create({
 function getSession() {
   return shell.getUser();
 }
+function btnLoad(btnOrId, on){ var b= typeof btnOrId==='string'?document.getElementById(btnOrId):btnOrId; if(!b) return; if(on){ b.dataset.orig=b.innerHTML; b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...'; b.disabled=true; } else { if(b.dataset.orig) b.innerHTML=b.dataset.orig; b.disabled=false; } }
 
 function P() { return window.Permissions || null; }
 function hasPermission(session, permission, module) {
