@@ -46,18 +46,26 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.addStock = asyncHandler(async (req, res) => {
-  const { name, category, cat, unit, min, desc } = req.body;
+  const { name, category, cat, unit, min, desc, storeId } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, error: 'Item name is required' });
   }
 
+  // Check by storeId first (unique link to Store DB), then by exact name
+  if (storeId) {
+    const existing = await KitchenStock.findOne({ storeId });
+    if (existing) {
+      return res.status(409).json({ success: false, error: `"${name}" is already tracked`, existingId: existing.id });
+    }
+  }
   const existing = await KitchenStock.findOne({ name: new RegExp('^' + name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
   if (existing) {
-    return res.status(409).json({ success: false, error: `"${name}" is already tracked` });
+    return res.status(409).json({ success: false, error: `"${name}" is already tracked`, existingId: existing.id });
   }
 
   const item = await KitchenStock.create({
     id: uuidv4(),
+    storeId: storeId || '',
     name: name.trim(),
     category: category || cat || 'Grains',
     cat: cat || category || 'Grains',

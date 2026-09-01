@@ -169,6 +169,7 @@
         batch: raw.batch,
         received: raw.received,
         desc: raw.desc,
+        storeId: raw.storeId || '',
       },
     });
     normalizeItem(item);
