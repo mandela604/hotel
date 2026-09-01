@@ -51,7 +51,7 @@ exports.addStock = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Item name is required' });
   }
 
-  const existing = await KitchenStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  const existing = await KitchenStock.findOne({ name: new RegExp('^' + name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
   if (existing) {
     return res.status(409).json({ success: false, error: `"${name}" is already tracked` });
   }

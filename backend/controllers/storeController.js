@@ -87,7 +87,9 @@ exports.storeCatalog = asyncHandler(async (req, res) => {
 
 exports.addStock = asyncHandler(async (req, res) => {
   const { name, cat, category, unit, baseUnit, packSize, min, cost, price, qty } = req.body;
-  const existing = await findStockFuzzy(name);
+  const n = (name || '').trim();
+  if (!n) throw new ApiError(400, 'Item name is required');
+  const existing = await StoreStock.findOne({ name: new RegExp('^' + escapeRegex(n) + '$', 'i') });
   if (existing) throw new ApiError(409, `"${name}" is already tracked — edit it instead.`);
 
   const item = await StoreStock.create({
