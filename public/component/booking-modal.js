@@ -453,12 +453,12 @@
                 '<i class="fa-solid fa-plus"></i> Record payment' +
               '</button>' +
             '</div>' +
-            '<div class="bkm-pay-acc open" data-role="paymentsAcc">' +
+            '<div class="bkm-pay-acc" data-role="paymentsAcc">' +
               '<div class="bkm-pay-acc-head" data-act="togglePaymentsAcc">' +
                 '<span>Payment history <span data-role="payCount" style="font-weight:600;color:var(--bkm-text3);margin-left:6px;"></span></span>' +
                 '<i class="fa-solid fa-chevron-down"></i>' +
               '</div>' +
-              '<div class="bkm-pay-acc-body" style="display:block;">' +
+              '<div class="bkm-pay-acc-body">' +
                 '<div class="bkm-pay-table-wrap">' +
                   '<table class="bkm-pay-table">' +
                     '<thead><tr><th>Amount</th><th>Mode</th><th>Date</th><th>Recorded by</th></tr></thead>' +
@@ -486,12 +486,12 @@
                 '</div>' +
               '</div>' +
             '</div>' +
-            '<div class="bkm-pay-acc open" data-role="chargesAcc" hidden>' +
+            '<div class="bkm-pay-acc" data-role="chargesAcc" hidden>' +
               '<div class="bkm-pay-acc-head" data-act="toggleChargesAcc">' +
                 '<span><i class="fa-solid fa-receipt" style="margin-right:6px;color:var(--bkm-gold);"></i>Room charges <span data-role="chargesCount" style="font-weight:600;color:var(--bkm-text3);margin-left:6px;"></span></span>' +
                 '<i class="fa-solid fa-chevron-down"></i>' +
               '</div>' +
-              '<div class="bkm-pay-acc-body" style="display:block;">' +
+              '<div class="bkm-pay-acc-body">' +
                 '<div data-role="chargesList"></div>' +
               '</div>' +
             '</div>' +
