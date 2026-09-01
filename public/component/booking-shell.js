@@ -11,7 +11,7 @@
 
   const NAV = [
     { key: 'rooms',    label: 'Front Desk',        href: 'booking-rooms.html',   icon: 'fa-solid fa-bed' },
-    { key: 'guests',   label: 'Guests',             href: 'guests.html',          icon: 'fa-solid fa-user' },
+    { key: 'guests',   label: 'Guests',             href: 'guests.html',          icon: 'fa-solid fa-user', badgeKey: 'guests' },
     { key: 'bookings', label: 'All Bookings',       href: 'booking-list.html',    icon: 'fa-solid fa-clipboard-list', badgeKey: 'bookings' },
     { key: 'reports',  label: 'Reports & Revenue',  href: 'booking-reports.html', icon: 'fa-solid fa-chart-column' },
   ];
@@ -321,6 +321,12 @@
         if (n > 0) { el.textContent = n; el.classList.add('show'); }
         else el.classList.remove('show');
       },
+      setGuestBadge(n) {
+        const el = document.getElementById('bks-badge-guests');
+        if (!el) return;
+        if (n > 0) { el.textContent = n; el.style.background = '#12b76a'; el.classList.add('show'); }
+        else el.classList.remove('show');
+      },
       setNotifBadge(n) {
         const dot = document.querySelector('.bks-notifdot');
         if (dot) dot.style.display = n > 0 ? '' : 'none';
@@ -350,6 +356,19 @@
       }
       handle.setApiMode('Live');
       if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('bks-backBtn'); if (bb) bb.style.display = 'none'; }
+      // poll folio badge every 5s (Pool Bar / Restaurant / Gym charges)
+      async function pollGuestBadge(){
+        try{
+          var r = await fetch('/api/booking/data', {credentials:'include'});
+          if(!r.ok) return;
+          var j = await r.json();
+          var guests = (j.data && j.data.guests) || [];
+          var pending = guests.filter(function(g){ return (g.charges||[]).some(function(c){ return c.status!=='Settled'; }); }).length;
+          handle.setGuestBadge(pending);
+        }catch(e){}
+      }
+      pollGuestBadge();
+      setInterval(pollGuestBadge, 5000);
     });
 
     return handle;
