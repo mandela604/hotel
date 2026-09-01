@@ -99,7 +99,7 @@
       pool_bar_staff: {
         poolbar: {
           canView: true, canCreate: true, canEdit: false, canDelete: false,
-          canVoid: false, canGiveDiscount: false,
+          canVoid: false, canGiveDiscount: false, canManageOrders: true,
         },
       },
       restaurant_staff: {
@@ -142,8 +142,8 @@
         manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false },
       },
       poolbar: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canVoid: true, canGiveDiscount: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false, canViewReports: true },
+        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canVoid: true, canGiveDiscount: true, canManageOrders: true },
+        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false, canViewReports: true, canManageOrders: true },
       },
       kitchen: {
         admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true },

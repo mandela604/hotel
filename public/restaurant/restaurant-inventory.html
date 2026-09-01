@@ -346,6 +346,18 @@ function getSession() {
   return null;
 }
 
+/** Admin, manager, or staff with canCreate on restaurant module. */
+function canCreateInventory() {
+  const session = getSession();
+  if (!session || !session.role) return false;
+  const role = String(session.role).toLowerCase();
+  if (role === 'admin' || role === 'manager') return true;
+  if (window.Permissions) {
+    return !!Permissions.hasPermission(session, 'canCreate', 'restaurant');
+  }
+  return false;
+}
+
 /** Admin, manager, or staff with canEdit on restaurant module. */
 function canEditInventory() {
   const session = getSession();
@@ -470,7 +482,7 @@ function clearFilters() {
 function applyMutateUI() {
   canMutate = canEditInventory();
   var addBtn = document.getElementById('btnAddItem');
-  if (addBtn) addBtn.style.display = canMutate ? '' : 'none';
+  if (addBtn) addBtn.style.display = canCreateInventory() ? '' : 'none';
 }
 
 /** (Re)create InventoryTable with current permission flags. */

@@ -81,7 +81,7 @@
       pool_bar_staff: {
         poolbar: {
           canView: true, canCreate: true, canEdit: false, canDelete: false,
-          canVoid: false, canGiveDiscount: false,
+          canVoid: false, canGiveDiscount: false, canManageOrders: true,
         },
       },
       restaurant_staff: {
