@@ -521,26 +521,39 @@ function renderKPIs(){
   const outSum= outG.reduce((s,g)=>s+guestOutstanding(g),0);
 
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card acc-blue">
+    <div class="kpi-card acc-blue" data-kpi="total">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-users"></i></div><div class="kpi-label">Total Guests</div></div>
-      <div class="kpi-value" style="color:var(--blue)">${total}</div>
+      <div class="kpi-value" data-kpi-val="total" style="color:var(--blue)">${total}</div>
       <div class="kpi-trend neutral">In directory</div>
     </div>
-    <div class="kpi-card acc-purple">
+    <div class="kpi-card acc-purple" data-kpi="vip">
       <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-star"></i></div><div class="kpi-label">VIP Guests</div></div>
-      <div class="kpi-value" style="color:var(--purple)">${vip}</div>
+      <div class="kpi-value" data-kpi-val="vip" style="color:var(--purple)">${vip}</div>
       <div class="kpi-trend up">Priority handling</div>
     </div>
-    <div class="kpi-card acc-green">
+    <div class="kpi-card acc-green" data-kpi="ret">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-rotate"></i></div><div class="kpi-label">Returning Guests</div></div>
-      <div class="kpi-value" style="color:var(--green)">${ret}</div>
+      <div class="kpi-value" data-kpi-val="ret" style="color:var(--green)">${ret}</div>
       <div class="kpi-trend up">2+ stays on file</div>
     </div>
-    <div class="kpi-card acc-red">
+    <div class="kpi-card acc-red" data-kpi="out">
       <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Outstanding Balances</div></div>
-      <div class="kpi-value" style="color:var(--red);font-size:${outSum>=1000000?'17px':'22px'}">${fmtN(outSum)}</div>
-      <div class="kpi-trend ${outG.length?'warn':'up'}">${outG.length} guest${outG.length!==1?'s':''} with balance</div>
+      <div class="kpi-value" data-kpi-val="out" style="color:var(--red);font-size:${outSum>=1000000?'17px':'22px'}">${fmtN(outSum)}</div>
+      <div class="kpi-trend" data-kpi-trend="out" class="${outG.length?'warn':'up'}">${outG.length} guest${outG.length!==1?'s':''} with balance</div>
     </div>`;
+}
+function refreshKPIsSubtle(){
+  var total = guestsData.length;
+  var vip = guestsData.filter(function(g){return g.vip;}).length;
+  var ret = guestsData.filter(isReturning).length;
+  var outG = guestsData.filter(function(g){return guestOutstanding(g)>0;});
+  var outSum = outG.reduce(function(s,g){return s+guestOutstanding(g);},0);
+  var el;
+  el=document.querySelector('[data-kpi-val="total"]'); if(el) el.textContent=total;
+  el=document.querySelector('[data-kpi-val="vip"]'); if(el) el.textContent=vip;
+  el=document.querySelector('[data-kpi-val="ret"]'); if(el) el.textContent=ret;
+  el=document.querySelector('[data-kpi-val="out"]'); if(el){ el.textContent=fmtN(outSum); el.style.fontSize=outSum>=1000000?'17px':'22px'; }
+  el=document.querySelector('[data-kpi-trend="out"]'); if(el) el.textContent=outG.length+' guest'+(outG.length!==1?'s':'')+' with balance';
 }
 
 /* ── Summary bar ── */
@@ -658,11 +671,12 @@ function renderGuestsPage(){
 }
 
 /* ── Profile modal ── */
-function openProfile(id){
+function openProfile(id, preserveTab){
   activeGuestId = id;
-  pfStayPage = 1;
-  pfChargePage = 1;
+  // preserveTab = 'folio'|'history'|null — if set, don’t reset pagination/tabs
+  if (!preserveTab) { pfStayPage = 1; pfChargePage = 1; }
   const g = guestsData.find(x=>x.id===id); if(!g) return;
+  var prevTab = preserveTab || (document.querySelector('.subtab.active') ? document.querySelector('.subtab.active').dataset.sub : null);
 
   document.getElementById('pfAvatar').textContent = initials(g.name);
   document.getElementById('pfName').textContent   = g.name;
@@ -685,7 +699,7 @@ function openProfile(id){
     { l:'Balance Due',   v: fmtN(bal), c: bal>0?'var(--red)':'var(--green)' },
   ].map(m=>`<div class="mstat"><div class="mstat-lbl">${m.l}</div><div class="mstat-val" style="color:${m.c}">${m.v}</div></div>`).join('');
 
-  document.getElementById('tbHistCount').textContent  = g.stays.length;
+  document.getElementById('tbHistCount').textContent  = g.stays.length + activeBookingsForGuest(g).length;
   document.getElementById('tbFolioCount').textContent = g.charges.length;
 
   renderStayHistory(g);
@@ -693,12 +707,18 @@ function openProfile(id){
   document.getElementById('pfNoteView').textContent = g.notes || 'No notes on file yet.';
   document.getElementById('pfNoteEdit').value       = g.notes || '';
 
-  document.querySelectorAll('.subtab').forEach((b,i)=>b.classList.toggle('active',i===0));
-  document.querySelectorAll('.subpane').forEach((p,i)=>p.classList.toggle('active',i===0));
+  if (!preserveTab) {
+    document.querySelectorAll('.subtab').forEach((b,i)=>b.classList.toggle('active',i===0));
+    document.querySelectorAll('.subpane').forEach((p,i)=>p.classList.toggle('active',i===0));
+  } else {
+    // restore previous tab without flash
+    document.querySelectorAll('.subtab').forEach(function(b){ b.classList.toggle('active', b.dataset.sub===prevTab); });
+    document.querySelectorAll('.subpane').forEach(function(p){ p.classList.toggle('active', p.id==='sub-'+prevTab); });
+  }
 
   document.getElementById('profileOv').classList.add('open');
   document.getElementById('profileSheet').classList.add('open');
-  document.getElementById('profileSheet').scrollTop = 0;
+  if (!preserveTab) document.getElementById('profileSheet').scrollTop = 0;
 }
 
 function closeProfile(){
@@ -970,8 +990,23 @@ async function init() {
     });
 
     renderGuests();
-    // poll every 5s for Pool Bar / Restaurant / Gym room charges (no websocket)
-    setInterval(async function(){ await loadGuestsData(); renderGuests(); if(activeGuestId) openProfile(activeGuestId); }, 5000);
+    // poll every 5s — subtle: only text values, preserve folio/history tab, pause while booking modal open
+    setInterval(async function(){
+      if (document.querySelector('.bkm-overlay.show')) return;
+      var keepTab = null;
+      var isProfileOpen = document.getElementById('profileSheet').classList.contains('open');
+      if (isProfileOpen) {
+        var at = document.querySelector('.subtab.active');
+        keepTab = at ? at.dataset.sub : null;
+      }
+      await loadGuestsData();
+      refreshKPIsSubtle();
+      updateGuestBadge();
+      renderGuestsPage();
+      document.getElementById('guestCount').textContent = filteredGuests.length+' guest'+(filteredGuests.length!==1?'s':'');
+      renderSummaryBar(filteredGuests);
+      if (isProfileOpen && activeGuestId) openProfile(activeGuestId, keepTab || 'history');
+    }, 5000);
   } catch (err) {
     console.error('[Guests] Failed to load bookings:', err);
     renderGuests();
