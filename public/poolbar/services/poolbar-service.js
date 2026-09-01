@@ -752,7 +752,7 @@
     return (state.sales || []).filter(s => {
       if (!isToday(s.date)) return false;
       if (!allStaff) {
-        if (!me) return false;
+        if (!me) return true;
         if ((s.staff || '').toLowerCase() !== me) return false;
       }
       return true;

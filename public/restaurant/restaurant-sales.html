@@ -238,7 +238,7 @@ function scopeShiftSales() {
   return getSales().filter(function (s) {
     if (!(s.date || '').startsWith(today)) return false;
     if (!allStaff) {
-      if (!me) return false;
+      if (!me) return true;
       if ((s.staff || '').toLowerCase() !== me) return false;
     }
     return true;
