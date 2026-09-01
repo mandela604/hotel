@@ -127,6 +127,9 @@ body {
   display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(47,111,237,0.28);
   white-space: nowrap;
 }
+.skeleton{ background:linear-gradient(90deg,#eef0f6 25%,#dfe3ec 50%,#eef0f6 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; }
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton-card{ height:88px; border-radius:14px; }
 .fb-btn-primary:hover { background: var(--gold-light); }
 
 @media (max-width: 1024px) {
@@ -154,11 +157,11 @@ body {
     <div class="content">
       <!-- KPI Row -->
       <div class="kpi-row" id="kpiRow">
-        <div class="kpi-card"><div class="kpi-top"><div class="kpi-ic ic-gold"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Revenue</div></div><div class="kpi-value" id="kpi-revenue">₦0</div><div class="kpi-sub" id="kpi-revenue-sub">0 bookings</div></div>
-        <div class="kpi-card green"><div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Collected</div></div><div class="kpi-value kpi-val green" id="kpi-collected">₦0</div><div class="kpi-sub" id="kpi-collected-sub">0% collection</div></div>
-        <div class="kpi-card red"><div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Balance Due</div></div><div class="kpi-value kpi-val red" id="kpi-balance">₦0</div><div class="kpi-sub">Outstanding</div></div>
-        <div class="kpi-card purple"><div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-moon"></i></div><div class="kpi-label">Total Nights</div></div><div class="kpi-value kpi-val purple" id="kpi-nights">0</div><div class="kpi-sub">room-nights booked</div></div>
-        <div class="kpi-card teal"><div class="kpi-top"><div class="kpi-ic ic-teal"><i class="fa-solid fa-check-double"></i></div><div class="kpi-label">Fully Paid</div></div><div class="kpi-value kpi-val teal" id="kpi-paidcount">0</div><div class="kpi-sub" id="kpi-paidcount-sub">of 0 bookings</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-ic ic-gold"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Revenue</div></div><div class="kpi-value skeleton" id="kpi-revenue" style="height:22px;"></div><div class="kpi-sub skeleton" id="kpi-revenue-sub" style="height:10px;margin-top:4px;"></div></div>
+        <div class="kpi-card green"><div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Collected</div></div><div class="kpi-value kpi-val green skeleton" id="kpi-collected" style="height:22px;"></div><div class="kpi-sub skeleton" id="kpi-collected-sub" style="height:10px;margin-top:4px;"></div></div>
+        <div class="kpi-card red"><div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Balance Due</div></div><div class="kpi-value kpi-val red skeleton" id="kpi-balance" style="height:22px;"></div><div class="kpi-sub skeleton" style="height:10px;margin-top:4px;"></div></div>
+        <div class="kpi-card purple"><div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-moon"></i></div><div class="kpi-label">Total Nights</div></div><div class="kpi-value kpi-val purple skeleton" id="kpi-nights" style="height:22px;"></div><div class="kpi-sub skeleton" style="height:10px;margin-top:4px;"></div></div>
+        <div class="kpi-card teal"><div class="kpi-top"><div class="kpi-ic ic-teal"><i class="fa-solid fa-check-double"></i></div><div class="kpi-label">Fully Paid</div></div><div class="kpi-value kpi-val teal skeleton" id="kpi-paidcount" style="height:22px;"></div><div class="kpi-sub skeleton" id="kpi-paidcount-sub" style="height:10px;margin-top:4px;"></div></div>
       </div>
 
       <!-- CUSTOM INLINE FILTER BAR -->
@@ -314,7 +317,7 @@ function updateKPI(rows) {
   const collRate = totRev>0 ? Math.round(totPaid/totRev*100) : 0;
   const nights_ = rows.reduce((s,b) => s+(nights(b.checkin,b.checkout)||0), 0);
   const fullyPaid = rows.filter(b=>b.payStatus==='Fully Paid').length;
-
+  ['kpi-revenue','kpi-revenue-sub','kpi-collected','kpi-collected-sub','kpi-balance','kpi-nights','kpi-paidcount','kpi-paidcount-sub'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('skeleton'); });
   document.getElementById('kpi-revenue').textContent = fmtN(totRev);
   document.getElementById('kpi-revenue-sub').textContent = `${rows.length} bookings`;
   document.getElementById('kpi-collected').textContent = fmtN(totPaid);

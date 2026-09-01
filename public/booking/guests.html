@@ -262,6 +262,11 @@ tbody td.nowrap{ white-space:nowrap; }
 
 .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface,#fff); border:1px solid var(--border,#eef0f6); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text,#1c2440); box-shadow:var(--shadow-lg,0 8px 28px rgba(15,34,55,.15)); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; max-width:calc(100vw - 40px); font-family:inherit; }
 .has-folio{ background:#f0fdf4 !important; border-left:3px solid #12b76a; }
+.skeleton{ background:linear-gradient(90deg,#eef0f6 25%,#dfe3ec 50%,#eef0f6 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; }
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton-card{ height:88px; border-radius:14px; }
+.skeleton-line{ height:12px; border-radius:6px; margin:6px 0; }
+.btn-loading{ opacity:.7; pointer-events:none; }
 .toast.success{ border-left:3px solid var(--green,#12b76a); }
 .toast.error{   border-left:3px solid var(--red,#f04438); }
 .toast.info{    border-left:3px solid var(--blue,#2f6fed); }
@@ -299,7 +304,7 @@ tbody td.nowrap{ white-space:nowrap; }
     <div id="topbarSlot"></div>
     <div class="content">
 
-      <div class="kpi-row" id="kpiRow"></div>
+      <div class="kpi-row" id="kpiRow"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div>
 
       <!-- Filter toolbar -->
       <div class="toolbar no-print">
@@ -358,7 +363,7 @@ tbody td.nowrap{ white-space:nowrap; }
                 <th class="no-print no-sort"></th>
               </tr>
             </thead>
-            <tbody id="guestBody"></tbody>
+            <tbody id="guestBody"><tr><td colspan="8"><div class="skeleton" style="height:48px;border-radius:10px;"></div></td></tr><tr><td colspan="8"><div class="skeleton" style="height:48px;border-radius:10px;"></div></td></tr><tr><td colspan="8"><div class="skeleton" style="height:48px;border-radius:10px;"></div></td></tr></tbody>
           </table>
         </div>
         <div class="summary-bar">
@@ -436,7 +441,7 @@ tbody td.nowrap{ white-space:nowrap; }
     <div class="note-box" id="pfNoteView"></div>
     <textarea class="form-textarea" id="pfNoteEdit" placeholder="Preferences, allergies, VIP handling…"></textarea>
     <div style="text-align:right;margin-top:8px;">
-      <button class="btn btn-primary btn-sm" onclick="saveNotes()"><i class="fa-solid fa-check"></i> Save Notes</button>
+      <button class="btn btn-primary btn-sm" id="saveNotesBtn" onclick="saveNotes()"><i class="fa-solid fa-check"></i> Save Notes</button>
     </div>
   </div>
 </div>
@@ -739,6 +744,7 @@ function switchSub(name, btn){
 
 async function toggleVip(){
   const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
+  var btn=document.getElementById('pfVipBtn'); btnLoad(btn,true);
   g.vip = !g.vip;
   try {
     await BookingData.saveGuest({ id: g.id, vip: g.vip });
@@ -748,7 +754,7 @@ async function toggleVip(){
     showToast(g.vip ? g.name+' marked as VIP' : 'VIP status removed', g.vip?'success':'info');
   } catch(err) {
     showToast('Failed to update VIP status.', 'error');
-  }
+  } finally { btnLoad(btn,false); }
 }
 
 /* ── Stay history — merged Guest.stays (past) + active Bookings (current) — */
@@ -938,6 +944,7 @@ function openSalesDetailForCharge(guestId, idx){
 /* ── Notes ── */
 async function saveNotes(){
   const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
+  var btn=document.getElementById('saveNotesBtn'); btnLoad(btn,true);
   g.notes = document.getElementById('pfNoteEdit').value.trim();
   try {
     await BookingData.saveGuest({ id: g.id, notes: g.notes });
@@ -946,9 +953,10 @@ async function saveNotes(){
     showToast('Notes saved.','success');
   } catch(err) {
     showToast('Failed to save notes.', 'error');
-  }
+  } finally { btnLoad(btn,false); }
 }
 
+function btnLoad(btn, on){ if(!btn) return; if(on){ btn.dataset.orig=btn.innerHTML; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...'; btn.disabled=true; btn.classList.add('btn-loading'); } else { if(btn.dataset.orig) btn.innerHTML=btn.dataset.orig; btn.disabled=false; btn.classList.remove('btn-loading'); } }
 /* ── Toast ── */
 function showToast(msg, type='success'){
   const icon = type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info';

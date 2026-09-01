@@ -208,6 +208,14 @@ body {
 .room-card.cleaning::before { background: #0ea5e9; }
 .rc-cleaning { background: #e0f2fe; color: #0ea5e9; }
 .rc-cleaning::before { background: #0ea5e9; }
+.skeleton{ background:linear-gradient(90deg,#eef0f6 25%,#dfe3ec 50%,#eef0f6 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; }
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton-card{ height:88px; border-radius:14px; }
+.skeleton-line{ height:12px; border-radius:6px; margin:6px 0; }
+.skeleton-btn{ height:32px; border-radius:8px; width:90px; }
+.btn-loading{ opacity:.7; pointer-events:none; }
+.btn-loading i{ animation:spin 0.8s linear infinite; }
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /*#bks-apiBadge { display: none; }*/
 
@@ -262,7 +270,7 @@ body {
           <div class="panel-title" id="roomsTitle">All Rooms</div>
           <div class="panel-sub" id="roomsCount">—</div>
         </div>
-        <div class="room-grid" id="roomGrid"></div>
+        <div class="room-grid" id="roomGrid"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div>
         <div class="pagination">
           <span id="roomPaginLabel">—</span>
           <div class="page-btns" id="roomPageBtns"></div>
@@ -327,7 +335,7 @@ body {
     </div>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeModal('roomStatusModal')">Cancel</button>
-      <button class="btn-primary" onclick="saveRoomStatus()"><i class="fa-solid fa-check"></i> Update</button>
+      <button class="btn-primary" id="roomStatusSaveBtn" onclick="saveRoomStatus()"><i class="fa-solid fa-check"></i> Update</button>
     </div>
   </div>
 </div>
@@ -361,6 +369,7 @@ function hasPermission(session, permission, module) {
   }
   return !!(session && String(session.role).toLowerCase() === 'admin');
 }
+function btnLoad(id, on){ const b=document.getElementById(id); if(!b) return; if(on){ b.dataset.orig=b.innerHTML; b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...'; b.disabled=true; } else { if(b.dataset.orig) b.innerHTML=b.dataset.orig; b.disabled=false; } }
 
 /* ═══════════════════════════════════════════════
    Global state
@@ -652,7 +661,7 @@ async function saveRoomModal() {
   const rate  = parseFloat(document.getElementById('rmRate').value) || 0;
   const notes = document.getElementById('rmNotes').value.trim();
   if (!num) { showToast('Please enter a room number.', 'error'); return; }
-
+  btnLoad('roomModalSaveBtn', true);
   try {
     if (roomModalMode === 'add') {
       if (allRooms.find(r => r.num === num)) {
@@ -673,7 +682,7 @@ async function saveRoomModal() {
     await refreshDataAndRender();
   } catch (err) {
     showToast(err.message || 'Failed to save room.', 'error');
-  }
+  } finally { btnLoad('roomModalSaveBtn', false); }
 }
 
 /* ═══════════════════════════════════════════════
@@ -707,7 +716,7 @@ async function saveRoomStatus() {
   if (!newSt) return;
   const note = document.getElementById('rsNote').value.trim();
   const curSt = getRoomStatus(statusRoom);
-
+  btnLoad('roomStatusSaveBtn', true);
   try {
     // Check-in and check-out are their own backend endpoints — they carry
     // logic (setting real checkin/checkout timestamps, finalizing the
@@ -729,7 +738,7 @@ async function saveRoomStatus() {
     await refreshDataAndRender();
   } catch (err) {
     showToast(err.message || 'Failed to update status.', 'error');
-  }
+  } finally { btnLoad('roomStatusSaveBtn', false); }
 }
 
 /* ═══════════════════════════════════════════════
