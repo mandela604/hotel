@@ -117,13 +117,13 @@ exports.updateStock = asyncHandler(async (req, res) => {
   if (cost !== undefined || price !== undefined) updates.cost = Number(cost !== undefined ? cost : price);
   if (qty !== undefined) updates.qty = Number(qty);
 
-  const item = await StoreStock.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+  const item = await StoreStock.findOneAndUpdate({ id: req.params.id }, updates, { new: true, runValidators: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');
   res.json({ success: true, data: item });
 });
 
 exports.deleteStock = asyncHandler(async (req, res) => {
-  const item = await StoreStock.findByIdAndDelete(req.params.id);
+  const item = await StoreStock.findOneAndDelete({ id: req.params.id });
   if (!item) throw new ApiError(404, 'Stock item not found.');
   res.json({ success: true, data: { deleted: true } });
 });
@@ -361,7 +361,7 @@ exports.receiveStock = asyncHandler(async (req, res) => {
   if (packSize) updates.$set = { ...updates.$set, packSize: Number(packSize) };
   if (baseUnit) updates.$set = { ...updates.$set, baseUnit: baseUnit.trim() };
   if (unit) updates.$set = { ...updates.$set, unit: unit.trim() };
-  const item = await StoreStock.findByIdAndUpdate(req.params.id, updates, { new: true });
+  const item = await StoreStock.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');
   res.json({ success: true, data: item });
 });
