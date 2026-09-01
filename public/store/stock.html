@@ -585,7 +585,30 @@ window.openAddItem = function(){
         await svc.addStockItem({ name: entry.name, cat: entry.cat, unit: entry.unit, baseUnit: entry.baseUnit, packSize: entry.packSize, min: entry.reorder || 0 });
         showToast('Item added. Quantity and cost will update when Procurement sends goods.', 'success');
       } catch (e) {
-        showToast(e.message || 'Could not add item.', 'error');
+        var msg = e.message || 'Could not add item.';
+        if (msg.indexOf('already tracked') !== -1) {
+          showToast('Item exists but wasn\'t visible — reloading. Opening it for edit.', 'info');
+          await svc.loadAll();
+          render();
+          var existing = svc.findStock(entry.name);
+          if (existing) {
+            StoreItemForm.open({
+              mode: 'edit',
+              item: existing,
+              categories: svc.getCategories(),
+              onSave: async (up) => {
+                try {
+                  await svc.editStockItem(existing.id, up);
+                  showToast('Item updated.', 'success');
+                  await svc.loadAll(); render();
+                } catch (e2) { showToast(e2.message || 'Could not save.', 'error'); }
+              },
+              onError: (m) => showToast(m, 'error'),
+            });
+          }
+        } else {
+          showToast(msg, 'error');
+        }
       }
     },
     onError: (msg) => showToast(msg, 'error'),
