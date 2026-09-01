@@ -323,7 +323,9 @@ function updateKPI(rows) {
   document.getElementById('kpi-collected').textContent = fmtN(totPaid);
   document.getElementById('kpi-collected-sub').textContent = `${collRate}% collection`;
   document.getElementById('kpi-balance').textContent = fmtN(totBal);
+  var balSub=document.querySelector('#kpiRow .kpi-card:nth-child(3) .kpi-sub'); if(balSub){ balSub.classList.remove('skeleton'); balSub.style.height=''; balSub.textContent='Outstanding'; }
   document.getElementById('kpi-nights').textContent = nights_.toLocaleString();
+  var nightSub=document.querySelector('#kpiRow .kpi-card:nth-child(4) .kpi-sub'); if(nightSub){ nightSub.classList.remove('skeleton'); nightSub.style.height=''; nightSub.textContent='room-nights booked'; }
   document.getElementById('kpi-paidcount').textContent = fullyPaid;
   document.getElementById('kpi-paidcount-sub').textContent = `of ${rows.length} bookings`;
 }
