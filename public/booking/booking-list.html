@@ -85,6 +85,24 @@ body {
 .status-chips { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 10px; }
 .sc-btn { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: var(--text2); cursor: pointer; font-family: inherit; }
 .sc-btn:hover, .sc-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+.date-filter-btn{ display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-size:12.5px; cursor:pointer; font-family:inherit; color:var(--text); }
+.date-filter-btn.active{ border-color:var(--gold-border); color:var(--gold); background:var(--gold-dim); }
+.date-filter-panel{ display:none; position:fixed; top:0; left:0; background:#fff; border:1px solid #eef0f6; border-radius:12px; padding:14px; box-shadow:0 12px 30px rgba(15,34,55,.15); z-index:500; width:260px; }
+.date-filter-panel.show{ display:block; }
+.cal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.cal-header span{ font-size:12.5px; font-weight:700; color:#1c2440; }
+.cal-nav{ background:#f4f6fb; border:1px solid #eef0f6; border-radius:7px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7280; font-size:10px; }
+.cal-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:4px; }
+.cal-weekdays span{ font-size:9px; text-transform:uppercase; color:#9aa1b3; text-align:center; font-weight:700; display:block; }
+.cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-cell{ width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; cursor:pointer; font-size:11.5px; color:#6b7280; }
+.cal-cell:hover{ background:#f4f6fb; }
+.cal-cell.muted{ color:#9aa1b3; opacity:.35; cursor:default; }
+.cal-cell.today{ box-shadow:inset 0 0 0 1px rgba(47,111,237,.25); }
+.cal-cell.start, .cal-cell.end{ background:#2f6fed; color:#fff; font-weight:700; }
+.cal-cell.in-range{ background:rgba(47,111,237,.1); color:#2f6fed; border-radius:0; }
+.cal-summary{ font-size:11px; color:#9aa1b3; text-align:center; margin-top:10px; }
+.date-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; padding-top:10px; border-top:1px solid #eef0f6; }
 
 /* ── Guest name truncation ── */
 .ft-guest-name {
@@ -158,7 +176,7 @@ body {
         <div class="toolbar-left">
           <div class="search-wrap">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" placeholder="Guest, room, phone…" id="bkSearch" oninput="filterBookings()">
+            <input type="text" placeholder="Guest, room, phone, email…" id="bkSearch" oninput="filterBookings()">
           </div>
           <select class="filter-sel" id="bkType" onchange="filterBookings()">
             <option value="">All Types</option>
@@ -167,8 +185,16 @@ body {
             <option value="Suite">Suite</option>
             <option value="Conference">Conference</option>
           </select>
-          <input type="date" class="filter-sel" id="bkFrom" onchange="filterBookings()" title="Check-in from">
-          <input type="date" class="filter-sel" id="bkTo" onchange="filterBookings()" title="Check-in to">
+          <div style="position:relative;" id="dateFilterWrap">
+            <button type="button" class="date-filter-btn" id="dateFilterBtn" onclick="toggleDatePanel(event)"><i class="fa-solid fa-calendar-days"></i><span id="dateFilterLabel">All Dates</span></button>
+            <div class="date-filter-panel" id="dateFilterPanel">
+              <div class="cal-header"><button type="button" class="cal-nav" onclick="calPrevMonth(event)"><i class="fa-solid fa-chevron-left"></i></button><span id="calLabel">—</span><button type="button" class="cal-nav" onclick="calNextMonth(event)"><i class="fa-solid fa-chevron-right"></i></button></div>
+              <div class="cal-weekdays"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+              <div class="cal-grid" id="calGrid"></div>
+              <div class="cal-summary" id="calSummary">Select start date</div>
+              <div class="date-actions"><button class="btn-outline" type="button" onclick="clearDateFilter(event)" style="padding:6px 10px;font-size:11px;">Clear</button><button class="btn-primary" type="button" onclick="applyDateFilter(event)" style="padding:6px 10px;font-size:11px;">Apply</button></div>
+            </div>
+          </div>
         </div>
         <div class="toolbar-right">
           <button class="btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
@@ -219,6 +245,11 @@ var bookings = [];
 var currentSession = null;
 var filteredBk = [];
 var deleteIdx = null;
+var dateFrom='', dateTo='', rangeStart=null, rangeEnd=null, calYear, calMonth;
+var MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function pad2(n){return String(n).padStart(2,'0');}
+function ymd(y,m,d){return y+'-'+pad2(m+1)+'-'+pad2(d);}
+function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
 
 /* ═══ BookingModal instance ═══ */
 var bookingModal = BookingModal.create({
@@ -353,21 +384,34 @@ function setStatusChip(s, btn) {
   filterBookings();
 }
 
-/* ═══ Filtering ═══ */
+/* ═══ Date popover (store style) ═══ */
+function positionDatePanel(){ var btn=document.getElementById('dateFilterBtn'), p=document.getElementById('dateFilterPanel'); if(!btn||!p) return; var r=btn.getBoundingClientRect(), w=p.offsetWidth||260, l=r.left, max=window.innerWidth-w-12; if(l>max) l=Math.max(12,max); if(l<12) l=12; var t=r.bottom+6, h=p.offsetHeight||320; if(t+h>window.innerHeight-12) t=Math.max(12,r.top-h-6); p.style.left=l+'px'; p.style.top=t+'px'; }
+function toggleDatePanel(e){ e.stopPropagation(); var p=document.getElementById('dateFilterPanel'); var opening=!p.classList.contains('show'); if(opening){ rangeStart=dateFrom||null; rangeEnd=dateTo||null; var base=rangeStart?new Date(rangeStart):new Date(); calYear=base.getFullYear(); calMonth=base.getMonth(); renderCalendar(); p.classList.add('show'); positionDatePanel(); } else p.classList.remove('show'); }
+function closeDatePanel(){ var p=document.getElementById('dateFilterPanel'); if(p) p.classList.remove('show'); }
+document.addEventListener('click', function(e){ var w=document.getElementById('dateFilterWrap'), p=document.getElementById('dateFilterPanel'); if(w&&p&&!w.contains(e.target)&&!p.contains(e.target)) closeDatePanel(); });
+window.addEventListener('resize', function(){ if(document.getElementById('dateFilterPanel').classList.contains('show')) positionDatePanel(); });
+function renderCalendar(){ document.getElementById('calLabel').textContent=MONTH_NAMES[calMonth]+' '+calYear; var first=new Date(calYear,calMonth,1).getDay(), dim=new Date(calYear,calMonth+1,0).getDate(), prevDim=new Date(calYear,calMonth,0).getDate(); var todayStr=ymd(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()); var cells=[]; for(var i=first-1;i>=0;i--) cells.push({day:prevDim-i,muted:true}); for(var d=1;d<=dim;d++) cells.push({day:d,muted:false,ym:ymd(calYear,calMonth,d)}); var nxt=1; while(cells.length<42) cells.push({day:nxt++,muted:true}); document.getElementById('calGrid').innerHTML=cells.map(function(c){ if(c.muted) return '<div class="cal-cell muted">'+c.day+'</div>'; var cls='cal-cell'; if(c.ym===todayStr) cls+=' today'; if(rangeStart&&rangeEnd&&c.ym>rangeStart&&c.ym<rangeEnd) cls+=' in-range'; if(rangeStart&&c.ym===rangeStart) cls+=' start'; if(rangeEnd&&c.ym===rangeEnd) cls+=' end'; return '<div class="'+cls+'" onclick="pickCalDate(event,\''+c.ym+'\')">'+c.day+'</div>'; }).join(''); var s=document.getElementById('calSummary'); if(rangeStart&&rangeEnd) s.textContent=fmtDateShort(rangeStart)+' – '+fmtDateShort(rangeEnd); else if(rangeStart) s.textContent=fmtDateShort(rangeStart)+' – select end'; else s.textContent='Select start date'; }
+function pickCalDate(e,ym){ if(e) e.stopPropagation(); if(!rangeStart||(rangeStart&&rangeEnd)){ rangeStart=ym; rangeEnd=null; } else if(ym<rangeStart){ rangeStart=ym; rangeEnd=null; } else if(ym===rangeStart){ rangeEnd=ym; } else rangeEnd=ym; renderCalendar(); positionDatePanel(); }
+function calPrevMonth(e){ e.stopPropagation(); calMonth--; if(calMonth<0){calMonth=11; calYear--;} renderCalendar(); }
+function calNextMonth(e){ e.stopPropagation(); calMonth++; if(calMonth>11){calMonth=0; calYear++;} renderCalendar(); }
+function updateDateFilterLabel(){ var lbl=document.getElementById('dateFilterLabel'), btn=document.getElementById('dateFilterBtn'); if(dateFrom&&dateTo) lbl.textContent=fmtDateShort(dateFrom)+' – '+fmtDateShort(dateTo); else if(dateFrom) lbl.textContent='From '+fmtDateShort(dateFrom); else lbl.textContent='All Dates'; if(btn) btn.classList.toggle('active', !!(dateFrom||dateTo)); }
+function applyDateFilter(e){ if(e) e.stopPropagation(); dateFrom=rangeStart||''; dateTo=rangeEnd||rangeStart||''; updateDateFilterLabel(); closeDatePanel(); filterBookings(); }
+function clearDateFilter(e){ if(e) e.stopPropagation(); dateFrom=''; dateTo=''; rangeStart=null; rangeEnd=null; updateDateFilterLabel(); if(document.getElementById('dateFilterPanel').classList.contains('show')) renderCalendar(); filterBookings(); }
+window.toggleDatePanel=toggleDatePanel; window.pickCalDate=pickCalDate; window.calPrevMonth=calPrevMonth; window.calNextMonth=calNextMonth; window.applyDateFilter=applyDateFilter; window.clearDateFilter=clearDateFilter;
+
+/* ═══ Filtering — search like guest page (name/phone/email/room) ═══ */
 function filterBookings() {
   var q = (document.getElementById('bkSearch').value || '').toLowerCase();
   var t = document.getElementById('bkType').value;
-  var df = document.getElementById('bkFrom').value;
-  var dt = document.getElementById('bkTo').value;
   var statusChip = document.querySelector('.sc-btn.active') ? document.querySelector('.sc-btn.active').dataset.s : '';
 
   filteredBk = bookings.filter(function (b) {
     if (!b.guest) return false;
-    var mq = !q || String(b.room).indexOf(q) !== -1 || (b.guest || '').toLowerCase().indexOf(q) !== -1 || (b.phone || '').indexOf(q) !== -1;
+    var mq = !q || String(b.room).toLowerCase().indexOf(q) !== -1 || (b.guest || '').toLowerCase().indexOf(q) !== -1 || (b.phone || '').toLowerCase().indexOf(q) !== -1 || (b.email||'').toLowerCase().indexOf(q)!==-1;
     var ms = !statusChip || b.status === statusChip;
     var mt = !t || b.type === t;
-    var mf = !df || (b.checkin && b.checkin >= df);
-    var md = !dt || (b.checkin && b.checkin <= dt);
+    var mf = !dateFrom || (b.checkin && b.checkin >= dateFrom);
+    var md = !dateTo || (b.checkin && b.checkin <= dateTo);
     return mq && ms && mt && mf && md;
   });
 
