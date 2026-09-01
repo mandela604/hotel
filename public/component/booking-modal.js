@@ -453,11 +453,19 @@
                 '<i class="fa-solid fa-plus"></i> Record payment' +
               '</button>' +
             '</div>' +
-            '<div class="bkm-pay-table-wrap">' +
-              '<table class="bkm-pay-table">' +
-                '<thead><tr><th>Amount</th><th>Mode</th><th>Date</th><th>Recorded by</th></tr></thead>' +
-                '<tbody data-role="paymentBody"></tbody>' +
-              '</table>' +
+            '<div class="bkm-pay-acc open" data-role="paymentsAcc">' +
+              '<div class="bkm-pay-acc-head" data-act="togglePaymentsAcc">' +
+                '<span>Payment history <span data-role="payCount" style="font-weight:600;color:var(--bkm-text3);margin-left:6px;"></span></span>' +
+                '<i class="fa-solid fa-chevron-down"></i>' +
+              '</div>' +
+              '<div class="bkm-pay-acc-body" style="display:block;">' +
+                '<div class="bkm-pay-table-wrap">' +
+                  '<table class="bkm-pay-table">' +
+                    '<thead><tr><th>Amount</th><th>Mode</th><th>Date</th><th>Recorded by</th></tr></thead>' +
+                    '<tbody data-role="paymentBody"></tbody>' +
+                  '</table>' +
+                '</div>' +
+              '</div>' +
             '</div>' +
             '<div class="bkm-pay-acc" data-role="payAcc" hidden>' +
               '<div class="bkm-pay-acc-head" data-act="togglePayAcc">' +
@@ -478,9 +486,14 @@
                 '</div>' +
               '</div>' +
             '</div>' +
-            '<div class="bkm-charges" data-role="chargesSec" hidden>' +
-              '<div class="bkm-pay-title" style="margin-bottom:6px;"><i class="fa-solid fa-receipt"></i> Room charges</div>' +
-              '<div data-role="chargesList"></div>' +
+            '<div class="bkm-pay-acc open" data-role="chargesAcc" hidden>' +
+              '<div class="bkm-pay-acc-head" data-act="toggleChargesAcc">' +
+                '<span><i class="fa-solid fa-receipt" style="margin-right:6px;color:var(--bkm-gold);"></i>Room charges <span data-role="chargesCount" style="font-weight:600;color:var(--bkm-text3);margin-left:6px;"></span></span>' +
+                '<i class="fa-solid fa-chevron-down"></i>' +
+              '</div>' +
+              '<div class="bkm-pay-acc-body" style="display:block;">' +
+                '<div data-role="chargesList"></div>' +
+              '</div>' +
             '</div>' +
           '</div>' +
 
@@ -493,6 +506,7 @@
             '<div class="bkm-status-group" data-role="roomStatusHint" hidden>' +
               '<div class="bkm-status-label">Room state</div>' +
               '<div style="font-size:12px;color:var(--bkm-text);font-weight:700;" data-role="roomStateText">—</div>' +
+              '<button type="button" class="bkm-btn bkm-btn-checkout" data-act="checkout" hidden style="margin-top:10px;width:100%;justify-content:center;"><i class="fa-solid fa-right-from-bracket"></i> Check out</button>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -500,7 +514,6 @@
         '<div class="bkm-foot">' +
           '<div class="bkm-meta" data-role="metaFoot"></div>' +
           '<button type="button" class="bkm-btn bkm-btn-danger" data-act="delete" hidden><i class="fa-solid fa-trash"></i> Delete</button>' +
-          '<button type="button" class="bkm-btn bkm-btn-checkout" data-act="checkout" hidden><i class="fa-solid fa-right-from-bracket"></i> Check out</button>' +
           '<button type="button" class="bkm-btn bkm-btn-outline" data-act="close">Close</button>' +
           '<button type="button" class="bkm-btn bkm-btn-primary" data-act="save"><i class="fa-solid fa-check"></i> Save</button>' +
         '</div>' +
@@ -819,10 +832,12 @@
       var body = $('[data-role="paymentBody"]');
       var payAcc = $('[data-role="payAcc"]');
       var addPayBtn = $('[data-act="addPayment"]');
+      var payCountEl = $('[data-role="payCount"]');
       if (!body) return;
 
       if (mode === 'new') {
-        body.innerHTML = '<tr><td colspan="4" class="bkm-pay-empty">No payments yet. Use Initial deposit above for the first amount.</td></tr>';
+        body.innerHTML = '<tr><td colspan="4" class="bkm-pay-empty">No payments yet. Use Payment above for the first amount.</td></tr>';
+        if (payCountEl) payCountEl.textContent = '';
         if (payAcc) { payAcc.hidden = true; payAcc.classList.remove('open'); }
         if (addPayBtn) addPayBtn.hidden = true;
         setVal('newPayAmount', '');
@@ -848,6 +863,7 @@
 
       if (!payments.length) {
         body.innerHTML = '<tr><td colspan="4" class="bkm-pay-empty">No payments recorded yet.</td></tr>';
+        if (payCountEl) payCountEl.textContent = '';
       } else {
         body.innerHTML = payments.map(function (p) {
           return '<tr>' +
@@ -856,6 +872,7 @@
             '<td>' + esc(p.date || '—') + '</td>' +
             '<td>' + esc(p.by || '—') + '</td></tr>';
         }).join('');
+        if (payCountEl) payCountEl.textContent = '(' + payments.length + ')';
       }
 
       var bal = calcBal(editBooking);
@@ -921,17 +938,20 @@
 
     /* ── Room charges ── */
     function renderCharges() {
-      var sec = $('[data-role="chargesSec"]');
+      var acc = $('[data-role="chargesAcc"]');
       var list = $('[data-role="chargesList"]');
-      if (!sec || !list) return;
+      if (!acc || !list) return;
       var charges = (currentGuest && currentGuest.charges) || [];
+      var countEl = $('[data-role="chargesCount"]');
       if (!charges.length) {
-        sec.hidden = true;
+        acc.hidden = true;
         list.innerHTML = '';
+        if (countEl) countEl.textContent = '';
         settlingIdx = null;
         return;
       }
-      sec.hidden = false;
+      acc.hidden = false;
+      if (countEl) countEl.textContent = '(' + charges.length + ')';
       var allow = paymentActionsAllowed();
 
       list.innerHTML = charges.map(function (c, idx) {
@@ -1248,6 +1268,16 @@
         if (a === 'togglePayAcc') {
           var acc = $('[data-role="payAcc"]');
           if (acc && !acc.hidden) acc.classList.toggle('open');
+          return;
+        }
+        if (a === 'togglePaymentsAcc') {
+          var acc2 = $('[data-role="paymentsAcc"]');
+          if (acc2) acc2.classList.toggle('open');
+          return;
+        }
+        if (a === 'toggleChargesAcc') {
+          var acc3 = $('[data-role="chargesAcc"]');
+          if (acc3) acc3.classList.toggle('open');
           return;
         }
         if (a === 'confirmPay') { confirmPay(); return; }
