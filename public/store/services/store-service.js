@@ -81,7 +81,7 @@
   function normalizeStock(s) {
     if (!s) return s;
     return {
-      id: s._id || s.id || '',
+      id: s.id || s._id || '',
       name: s.name || '',
       cat: s.cat || 'Other',
       unit: s.unit || 'unit',

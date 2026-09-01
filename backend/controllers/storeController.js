@@ -82,7 +82,7 @@ exports.listStock = asyncHandler(async (req, res) => {
 
 exports.storeCatalog = asyncHandler(async (req, res) => {
   const stock = await StoreStock.find({}, { name: 1, unit: 1, baseUnit: 1, packSize: 1, qty: 1, cost: 1, cat: 1 }).sort({ name: 1 });
-  res.json({ success: true, data: stock.map(s => ({ id: s._id || s.id, name: s.name, unit: s.unit, baseUnit: s.baseUnit, packSize: s.packSize, qty: s.qty, cost: s.cost, cat: s.cat })) });
+  res.json({ success: true, data: stock.map(s => ({ id: s.id, name: s.name, unit: s.unit, baseUnit: s.baseUnit, packSize: s.packSize, qty: s.qty, cost: s.cost, cat: s.cat })) });
 });
 
 exports.addStock = asyncHandler(async (req, res) => {
