@@ -127,6 +127,14 @@
   .modal-title{ font-size:18px; font-weight:800; color:var(--text); }
   .modal-close{ background:none; border:none; color:var(--text3); font-size:16px; cursor:pointer; padding:4px; line-height:1; }
   .modal-close:hover{ color:var(--text); }
+  .store-suggest{ position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 40px rgba(15,34,55,0.12); max-height:220px; overflow-y:auto; display:none; z-index:50; }
+  .store-suggest.show{ display:block; }
+  .store-suggest-item{ padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; }
+  .store-suggest-item:last-child{ border-bottom:none; }
+  .store-suggest-item:hover{ background:var(--gold-dim); }
+  .store-suggest-item .ss-name{ font-weight:600; color:var(--text); }
+  .store-suggest-item .ss-unit{ color:var(--text3); font-size:11px; }
+  .store-suggest-empty{ padding:12px; color:var(--text3); font-size:12px; text-align:center; }
   .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
   .form-group{ display:flex; flex-direction:column; gap:5px; }
   .form-group.span2{ grid-column:span 2; }
@@ -240,11 +248,12 @@
       <button class="modal-close" onclick="closeModal('itemModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="form-row">
-      <div class="form-group span2">
+      <div class="form-group span2" style="position:relative;">
         <div class="form-label">Ingredient Name *</div>
-        <input class="form-input" id="fName" type="text" placeholder="Type to search Store catalog…" list="storeCatalogList" oninput="onStoreItemPick()">
-        <datalist id="storeCatalogList"></datalist>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px;">Pick from Store's catalog or type a new name</div>
+        <input class="form-input" id="fName" type="text" placeholder="Type 1+ chars to search Store catalog…" autocomplete="off" oninput="onStoreSearch()" onfocus="onStoreSearch()">
+        <div class="store-suggest" id="storeSuggest"></div>
+        <input type="hidden" id="fStoreId">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">Type to match Store catalog — id comes from Store DB</div>
       </div>
       <div class="form-group">
         <div class="form-label">Category</div>
@@ -473,6 +482,10 @@ function render(){
 function openItemModal(name=null){
   editName = name;
   const isEdit = !!name;
+  kitchenStorePick = null;
+  document.getElementById('fStoreId').value = '';
+  var suggestBox = document.getElementById('storeSuggest');
+  if (suggestBox) { suggestBox.classList.remove('show'); suggestBox.innerHTML=''; }
   document.getElementById('itemModalTitle').textContent = isEdit ? 'Edit Ingredient' : 'Add Ingredient';
   if (isEdit) {
     const s = KitchenService.findStock(name);
@@ -499,11 +512,14 @@ function openItemModal(name=null){
 async function saveItem(){
   const name = document.getElementById('fName').value.trim();
   if (!name) { showToast('Please enter an ingredient name.', 'error'); return; }
+  const storeId = document.getElementById('fStoreId').value.trim();
+  if (!editName && !storeId) { showToast('Please pick item from Store catalog — type 1+ chars and select from dropdown.', 'error'); return; }
   const payload = {
     category: document.getElementById('fCat2').value,
     cat: document.getElementById('fCat2').value,
     unit: document.getElementById('fUnit').value.trim(),
     min: parseFloat(document.getElementById('fMin').value) || 0,
+    storeId: storeId,
   };
   try {
     if (editName) {
@@ -551,27 +567,47 @@ function showToast(msg, type='success'){
   setTimeout(() => t.remove(), 3400);
 }
 
-function populateStoreCatalog(){
-  const dl = document.getElementById('storeCatalogList');
-  if (!dl || !window.StoreService || !StoreService.state) return;
-  const stock = StoreService.state.stock || [];
-  dl.innerHTML = stock.map(s => `<option value="${s.name}" data-unit="${s.unit}">`).join('');
+let kitchenStorePick = null;
+function renderStoreSuggest(){
+  var inp = document.getElementById('fName');
+  var box = document.getElementById('storeSuggest');
+  var q = (inp.value||'').trim().toLowerCase();
+  if (!q || q.length < 1 || !window.StoreService || !StoreService.state) { box.classList.remove('show'); box.innerHTML=''; return; }
+  var stock = StoreService.state.stock || [];
+  var hits = stock.filter(function(s){ return s.name.toLowerCase().includes(q); }).slice(0,8);
+  if (!hits.length) { box.innerHTML='<div class="store-suggest-empty">No match in Store</div>'; box.classList.add('show'); return; }
+  box.innerHTML = hits.map(function(s){
+    var sid = s._id || s.id || '';
+    return '<div class="store-suggest-item" data-pick="'+(s.name||'').replace(/"/g,'&quot;')+'" data-unit="'+(s.unit||'').replace(/"/g,'&quot;')+'" data-sid="'+sid+'"><span class="ss-name">'+(s.name||'')+'</span><span class="ss-unit">'+(s.unit||'')+'</span></div>';
+  }).join('');
+  box.classList.add('show');
+  box.querySelectorAll('.store-suggest-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.getElementById('fName').value = el.getAttribute('data-pick');
+      document.getElementById('fUnit').value = el.getAttribute('data-unit');
+      document.getElementById('fStoreId').value = el.getAttribute('data-sid');
+      kitchenStorePick = el.getAttribute('data-pick');
+      box.classList.remove('show'); box.innerHTML='';
+    });
+  });
 }
-function onStoreItemPick(){
-  const name = document.getElementById('fName').value;
-  if (!window.StoreService || !StoreService.state) return;
-  const stock = StoreService.state.stock || [];
-  const match = stock.find(s => s.name.toLowerCase() === name.toLowerCase());
-  if (match) {
-    document.getElementById('fUnit').value = match.unit || '';
+function onStoreSearch(){
+  var v = document.getElementById('fName').value;
+  if (kitchenStorePick && v !== kitchenStorePick) { document.getElementById('fStoreId').value=''; kitchenStorePick=null; }
+  renderStoreSuggest();
+}
+document.addEventListener('click', function(e){
+  if (!e.target.closest('#fName') && !e.target.closest('#storeSuggest')) {
+    var b = document.getElementById('storeSuggest');
+    if (b) { b.classList.remove('show'); b.innerHTML=''; }
   }
-}
+});
 
 async function init(){
   bindStatusPills();
   await KitchenService.loadAll();
   if (window.StoreService) {
-    StoreService.loadAll().then(populateStoreCatalog);
+    StoreService.loadAll();
   }
   render();
   KitchenService.onChange(render);
