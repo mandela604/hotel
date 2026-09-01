@@ -532,7 +532,16 @@ async function saveItem(){
     }
     closeModal('itemModal');
   } catch (err) {
-    showToast(err.message || 'Could not save ingredient.', 'error');
+    var msg = err.message || 'Could not save ingredient.';
+    if (msg.indexOf('already tracked') !== -1) {
+      showToast('Item exists but wasn't visible — reloading. Opening it for edit.', 'info');
+      await KitchenService.loadAll();
+      render();
+      closeModal('itemModal');
+      setTimeout(function(){ openItemModal(name); }, 300);
+    } else {
+      showToast(msg, 'error');
+    }
   }
 }
 
