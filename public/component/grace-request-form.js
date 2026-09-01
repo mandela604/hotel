@@ -279,8 +279,25 @@
         return Array.isArray(c) ? c : [];
       }
       if (Array.isArray(options.catalog)) return options.catalog;
-      // For store_issue mode (departments requesting from Store), use
-      // Store's stock catalog so departments pick items Store actually has.
+      // For department sections (kitchen, poolbar, restaurant), use the
+      // department's own stock so only items they actually hold appear.
+      if (section && dataService && dataService.state) {
+        if (dataService.state.catalog && dataService.state.catalog.length) {
+          return dataService.state.catalog;
+        }
+        if (Array.isArray(dataService.state.stock)) {
+          return dataService.state.stock.map(i => ({
+            name: i.name, unit: i.unit, id: i.id || i.name,
+            stockQty: i.qty != null ? i.qty : 0,
+            baseUnit: i.baseUnit, packSize: i.packSize,
+            stockLabel: (i.baseUnit && i.packSize > 0)
+              ? i.qty + ' ' + i.baseUnit + ' (' + (i.qty / i.packSize).toFixed(1) + ' ' + i.unit + ')'
+              : (i.qty != null ? i.qty + ' ' + i.unit : ''),
+          }));
+        }
+      }
+      // For store_issue mode (Store requesting from Procurement), use
+      // Store's stock catalog.
       if (mode === 'store_issue' && storeService && storeService.state) {
         if (storeService.state.catalog && storeService.state.catalog.length) {
           return storeService.state.catalog;
