@@ -531,11 +531,11 @@ function renderRoomGrid(filter) {
     grid.innerHTML = page.map(r => {
       const st = getRoomStatus(r.num) || 'available';  // fallback
       const bk = bookings.find(b => b.room === r.num);
-      const hasGuest = st !== 'available' && st !== 'maintenance' && bk && bk.guest;
+      const hasGuest = st !== 'available' && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning' && bk && bk.guest;
 
       const guestBlock = hasGuest
         ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
-        : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
+        : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : st === 'cleaning' ? 'Under cleaning' : st === 'checkout' ? 'Checked out — awaiting cleaning' : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
 
       const isMgr = (getSession() && /^(manager|admin)$/i.test(getSession().role||'')) || p.canEditRoom;
       let acts = '';
@@ -605,10 +605,14 @@ function openBookingForRoom(num) {
 function openBookingFromCard(num) {
   const session = getSession();
   const bk = bookings.find(function(b){ return b.room === num; });
-  const isOccupied = bk && bk.guest && bk.status !== 'vacant';
+  const st = bk ? (bk.status || 'vacant') : 'vacant';
   bookingModal.setSession(session);
+  if (st === 'checkout' || st === 'cleaning') {
+    showToast('Room ' + num + ' is ' + (st === 'cleaning' ? 'under cleaning' : 'checked out — awaiting cleaning') + '. Set status to Available to receive new bookings.', 'info');
+    return;
+  }
+  const isOccupied = bk && bk.guest && st !== 'vacant';
   if (isOccupied) {
-    // Occupied: fill with DB-persisted guest via Guest.id uuidv4
     try { bookingModal.openEdit(bk); } catch(e) { bookingModal.openView(bk); }
   } else {
     bookingModal.openNew({ room: num });

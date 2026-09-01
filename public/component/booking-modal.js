@@ -431,9 +431,8 @@
             '<div class="bkm-rate-line"><span class="bkm-rate-k">Balance</span><span class="bkm-rate-v red" data-role="dispBal">₦0</span></div>' +
             '<div class="bkm-rate-line"><span class="bkm-rate-k">Pay status</span><span class="bkm-rate-v" data-role="payStatus">Pending</span></div>' +
             '<div class="bkm-fg" style="margin-top:8px;" data-role="depositWrap">' +
-              '<label class="bkm-label">Payment <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--bkm-text3)">(deposit or full)</span></label>' +
+              '<label class="bkm-label">Payment</label>' +
               '<input class="bkm-input" data-role="paid" type="number" min="0" step="500" value="0">' +
-              '<div class="bkm-hint">Pay deposit or full amount — you decide</div>' +
             '</div>' +
             '<div class="bkm-fg" data-role="payMethodWrap">' +
               '<label class="bkm-label">Pay method</label>' +
