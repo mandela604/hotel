@@ -275,7 +275,7 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
   for (const it of row.items) {
     const prevIssued = it.issuedQty || 0;
     if (!it.stockId) throw new ApiError(400, `Missing stockId for item "${it.name}" — pick from Store catalog (uuid)`);
-    const stockItem = await StoreStock.findOne({ id: it.stockId }) || await StoreStock.findOne({ _id: it.stockId });
+    const stockItem = await StoreStock.findOne({ id: it.stockId });
     if (!stockItem) {
       console.error(`[storeController:issue] stockId not found: ${it.stockId} for "${it.name}" — available:`, (await StoreStock.find({}).select('id name')).map(s=>s.id+':'+s.name).join(', '));
       throw new ApiError(404, `Store item not found for stockId ${it.stockId} — pick from Store catalog (uuid) again.`);
