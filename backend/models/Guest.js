@@ -26,16 +26,17 @@ const chargePaymentSchema = new mongoose.Schema({
 }, { _id: false });
 
 const chargeSchema = new mongoose.Schema({
-  id:       { type: String, default: uuidv4 },
-  date:     { type: String, default: '' },
-  source:   { type: String, default: 'Other' },
-  desc:     { type: String, default: '' },
-  room:     { type: String, default: '' },
-  amount:   { type: Number, default: 0 },
-  paid:     { type: Number, default: 0 },
-  by:       { type: String, default: '' },
-  status:   { type: String, enum: ['Pending', 'Partially Settled', 'Settled'], default: 'Pending' },
-  payments: { type: [chargePaymentSchema], default: [] },
+  id:         { type: String, default: uuidv4 },
+  bookingRef: { type: String, default: '' },
+  date:       { type: String, default: '' },
+  source:     { type: String, default: 'Other' },
+  desc:       { type: String, default: '' },
+  room:       { type: String, default: '' },
+  amount:     { type: Number, default: 0 },
+  paid:       { type: Number, default: 0 },
+  by:         { type: String, default: '' },
+  status:     { type: String, enum: ['Pending', 'Partially Settled', 'Settled'], default: 'Pending' },
+  payments:   { type: [chargePaymentSchema], default: [] },
 }, { _id: false });
 
 const guestSchema = new mongoose.Schema({

@@ -273,7 +273,10 @@ exports.createSale = asyncHandler(async (req, res) => {
     if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
     if (!guest && guestPhone) guest = await Guest.findOne({ phone: guestPhone });
     if (guest) {
+      var bRef = '';
+      if (roomNumber) { var bkDoc = await Booking.findOne({ room: roomNumber }); if (bkDoc) bRef = bkDoc.id; }
       guest.charges.push({
+        bookingRef: bRef,
         date: todayDDMMYY(),
         source: 'Pool Bar',
         desc: items.map(it => `${it.qty}x ${it.name}`).join(', '),
@@ -461,7 +464,10 @@ exports.payOrder = asyncHandler(async (req, res) => {
     if (!guest && effectiveGuest) guest = await Guest.findOne({ name: effectiveGuest });
     if (!guest && effectivePhone) guest = await Guest.findOne({ phone: effectivePhone });
     if (guest) {
+      var bRef2 = '';
+      if (effectiveRoom) { var bkDoc2 = await Booking.findOne({ room: effectiveRoom }); if (bkDoc2) bRef2 = bkDoc2.id; }
       guest.charges.push({
+        bookingRef: bRef2,
         date: todayDDMMYY(),
         source: 'Pool Bar',
         desc: order.items.map(it => `${it.qty}x ${it.name}`).join(', '),

@@ -948,10 +948,10 @@
       var list = $('[data-role="chargesList"]');
       if (!acc || !list) return;
       var allCharges = (currentGuest && currentGuest.charges) || [];
-      var curRoom = editBooking ? editBooking.room : '';
-      var charges = curRoom
-        ? allCharges.filter(function(c) { return !c.room || c.room === curRoom; })
-        : allCharges;
+      var curId = editBooking ? editBooking.id : '';
+      var charges = curId
+        ? allCharges.filter(function(c) { return c.bookingRef === curId; })
+        : [];
       var countEl = $('[data-role="chargesCount"]');
       if (!charges.length) {
         acc.hidden = true;

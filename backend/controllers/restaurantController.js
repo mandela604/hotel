@@ -234,7 +234,10 @@ exports.createSale = asyncHandler(async (req, res) => {
   if (method === 'Room Charge') {
     const guest = guestId ? await Guest.findOne({ id: guestId }) : await Guest.findOne({ name: guestName });
     if (guest) {
+      var bRefR = '';
+      if (roomNumber) { var bkR = await Booking.findOne({ room: roomNumber }); if (bkR) bRefR = bkR.id; }
       guest.charges.push({
+        bookingRef: bRefR,
         date: todayDDMMYY(),
         source: 'Restaurant',
         desc: items.map((i) => `${i.qty}x ${i.name}`).join(', '),
@@ -582,7 +585,10 @@ exports.payOrder = asyncHandler(async (req, res) => {
   if (payMethod === 'Room Charge') {
     const guest = guestId ? await Guest.findOne({ id: guestId }) : await Guest.findOne({ name: guestName });
     if (guest) {
+      var bRefR2 = '';
+      if (roomNumber) { var bkR2 = await Booking.findOne({ room: roomNumber }); if (bkR2) bRefR2 = bkR2.id; }
       guest.charges.push({
+        bookingRef: bRefR2,
         date: todayDDMMYY(),
         source: 'Restaurant',
         desc: order.items.map((i) => `${i.qty}x ${i.name}`).join(', '),

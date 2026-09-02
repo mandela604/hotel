@@ -521,7 +521,13 @@ exports.addCharge = asyncHandler(async (req, res) => {
   if (!guest) return res.status(404).json({ success: false, error: 'Guest not found' });
 
   const { desc, amount, source, room } = req.body;
+  var bookingRef = '';
+  if (room) {
+    var bk = await Booking.findOne({ room });
+    if (bk) bookingRef = bk.id;
+  }
   guest.charges.push({
+    bookingRef: bookingRef,
     date: todayDDMMYY(),
     source: source || 'Other',
     desc: desc.trim(),
