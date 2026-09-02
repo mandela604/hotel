@@ -515,41 +515,26 @@
       const unit = it.unit || 'unit';
       const stockId = it.stockId || '';
 
-      let stockItem = null;
-      if (stockId) {
-        stockItem = findStockById(stockId);
-      }
-      if (!stockItem) {
-        stockItem = findStock(name);
-      }
-
-      if (stockItem) {
-        const payload = { qty: baseQty };
-        if (cost > 0) payload.cost = cost;
-        if (packSize > 0) payload.packSize = packSize;
-        if (it.baseUnit) payload.baseUnit = it.baseUnit;
-        if (it.unit) payload.unit = it.unit;
-        const updated = await apiFetch('/stock/' + stockItem.id + '/receive', {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
-        if (updated) {
-          stockItem.qty = (updated.qty != null ? updated.qty : stockItem.qty);
-          if (updated.cost != null) stockItem.cost = updated.cost;
-          if (updated.packSize) stockItem.packSize = updated.packSize;
-          if (updated.baseUnit) stockItem.baseUnit = updated.baseUnit;
-          if (updated.unit) stockItem.unit = updated.unit;
-        } else {
-          stockItem.qty = (stockItem.qty || 0) + baseQty;
-          if (cost > 0) stockItem.cost = cost;
-        }
+      let stockItem = stockId ? findStockById(stockId) : null;
+      if (!stockItem) throw new Error('Store item not found for stockId '+stockId+' — pick from Store catalog (uuid) again.');
+      const payload = { qty: baseQty };
+      if (cost > 0) payload.cost = cost;
+      if (packSize > 0) payload.packSize = packSize;
+      if (it.baseUnit) payload.baseUnit = it.baseUnit;
+      if (it.unit) payload.unit = it.unit;
+      const updated = await apiFetch('/stock/' + stockItem.id + '/receive', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      if (updated) {
+        stockItem.qty = (updated.qty != null ? updated.qty : stockItem.qty);
+        if (updated.cost != null) stockItem.cost = updated.cost;
+        if (updated.packSize) stockItem.packSize = updated.packSize;
+        if (updated.baseUnit) stockItem.baseUnit = updated.baseUnit;
+        if (updated.unit) stockItem.unit = updated.unit;
       } else {
-        const created = await apiFetch('/stock', {
-          method: 'POST',
-          body: JSON.stringify({ name: name, cat: pr.cat || 'General', unit: unit, baseUnit: it.baseUnit || '', packSize: packSize, cost: cost, qty: baseQty, min: 0 }),
-        });
-        const norm = normalizeStock(created);
-        state.stock.push(norm);
+        stockItem.qty = (stockItem.qty || 0) + baseQty;
+        if (cost > 0) stockItem.cost = cost;
       }
     }
 

@@ -274,13 +274,9 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
 
   for (const it of row.items) {
     const prevIssued = it.issuedQty || 0;
-    let stockItem = null;
-    if (it.stockId) {
-      stockItem = await StoreStock.findById(it.stockId);
-    }
-    if (!stockItem) {
-      stockItem = await findStockFuzzy(it.name);
-    }
+    if (!it.stockId) throw new ApiError(400, `Missing stockId for item "${it.name}" — pick from Store catalog (uuid)`);
+    const stockItem = await StoreStock.findOne({ id: it.stockId });
+    if (!stockItem) throw new ApiError(404, `Store item not found for stockId ${it.stockId} — uuid mismatch`);
     const avail = stockItem ? stockItem.qty : 0; // always in base units
     const raw = Object.prototype.hasOwnProperty.call(issuedQtyByItem, it.name) ? issuedQtyByItem[it.name] : prevIssued;
 
