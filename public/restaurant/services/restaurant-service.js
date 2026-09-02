@@ -302,14 +302,14 @@ function dashboardKPIs() {
   /* ══════════════════════════════════════════════════════════════
      State + change listeners
   ══════════════════════════════════════════════════════════════ */
-  const state = { stock: [], sales: [], orders: [], pending: [], history: [], movements: [], menu: [], extraCategories: [], ready: false };
+  const state = { stock: [], sales: [], orders: [], pending: [], history: [], movements: [], menu: [], extraCategories: [], requisitions: [], ready: false };
   const listeners = [];
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(function (fn) { try { fn(state, reason); } catch (e) { console.warn('[RestaurantService] listener error', e); } }); }
 
   async function loadAll() {
-    const [stockRes, salesRes, ordersRes, transfersRes, movementsRes, menuRes] = await Promise.all([
-      get('/stock'), get('/sales'), get('/orders'), get('/transfers'), get('/movements'), get('/menu'),
+    const [stockRes, salesRes, ordersRes, transfersRes, movementsRes, menuRes, reqRes] = await Promise.all([
+      get('/stock'), get('/sales'), get('/orders'), get('/transfers'), get('/movements'), get('/menu'), get('/requisitions'),
     ]);
     state.stock = stockRes.data || [];
     state.sales = salesRes.data || [];
@@ -332,6 +332,7 @@ function dashboardKPIs() {
       if (!t.no && t.transferNo) t.no = t.transferNo;
     });
     state.movements = movementsRes.data || [];
+    state.requisitions = (reqRes.data || []).map(normalizeRequisition);
     state.ready = true;
     emitChange('load');
     return state;
@@ -455,11 +456,11 @@ function dashboardKPIs() {
 
   async function getRequisitions() {
     const res = await get('/requisitions');
-    return res.data || [];
+    return (res.data || []).map(normalizeRequisition);
   }
   function getRequisition(no) {
     if (!no) return null;
-    return (state.history || []).concat(state.pending || []).find(function (r) { return r.no === no || r.requisitionNo === no || r.id === no; }) || null;
+    return (state.requisitions || []).find(function (r) { return r.no === no || r.requisitionNo === no || r.id === no; }) || null;
   }
   function normalizeRequisition(r) {
     if (!r) return r;
@@ -506,7 +507,7 @@ function dashboardKPIs() {
     const res = await post('/requisitions/' + encodeURIComponent(id) + '/receive');
     await loadAll().catch(function () {});
     emitChange('requisition:received');
-    return res.data || res;
+    return normalizeRequisition(res.data || res);
   }
   async function confirmReceipt(no) {
     return receiveRequisition(no);

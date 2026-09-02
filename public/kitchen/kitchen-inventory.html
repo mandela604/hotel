@@ -534,7 +534,7 @@ async function saveItem(){
   } catch (err) {
     var msg = err.message || 'Could not save ingredient.';
     if (msg.indexOf('already tracked') !== -1) {
-      showToast('Item exists but wasn't visible — reloading. Opening it for edit.', 'info');
+      showToast("Item exists but wasn't visible — reloading. Opening it for edit.", 'info');
       await KitchenService.loadAll();
       render();
       closeModal('itemModal');

@@ -286,7 +286,7 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
     const packSize = stockItem ? (stockItem.packSize || 0) : 0;
     const reqUnit = (it.unit || '').trim().toLowerCase();
     const stockBaseUnit = stockItem ? (stockItem.baseUnit || '').trim().toLowerCase() : '';
-    const isBulkUnit = packSize > 0 && reqUnit !== stockBaseUnit;
+    const isBulkUnit = packSize > 0 && stockBaseUnit !== '' && reqUnit !== stockBaseUnit;
 
     const issuedInReqUnit = Math.max(0, Number(raw) || 0);
     const issuedInBase = isBulkUnit ? issuedInReqUnit * packSize : issuedInReqUnit;
