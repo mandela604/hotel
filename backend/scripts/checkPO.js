@@ -4,7 +4,7 @@ const StoreStock=require('../models/StoreStock');
 const Requisition=require('../models/Requisition');
 (async()=>{
  await mongoose.connect(process.env.MONGODB_URI);
- const sid='6a96003fa5c9288db965f3da';
+ const sid='6a9814c9e716d1c97ea122d8';
  const s=await StoreStock.findOne({id:sid});
  console.log('store stock for sid:', sid, s ? s.name+' '+s.id : 'NOT FOUND');
  const allS=await StoreStock.find({}).select('id name');
