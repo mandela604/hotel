@@ -354,7 +354,7 @@ exports.getItemCatalog = async (req, res, next) => {
     (stockItems || []).forEach((s) => {
       const key = (s.name || '').trim().toLowerCase();
       if (!key || seen.has(key)) return;
-      seen.set(key, { name: (s.name || '').trim(), unit: s.unit || '', baseUnit: s.baseUnit || '', packSize: s.packSize || 0, price: s.cost || 0, stockQty: s.qty || 0, stockId: s.id || s._id.toString() });
+      seen.set(key, { name: (s.name || '').trim(), unit: s.unit || '', baseUnit: s.baseUnit || '', packSize: s.packSize || 0, price: s.cost || 0, stockQty: s.qty || 0, stockId: s.id || '' });
     });
 
     res.json({ success: true, data: Array.from(seen.values()) });
