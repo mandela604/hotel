@@ -287,7 +287,7 @@
         }
         if (Array.isArray(dataService.state.stock)) {
           return dataService.state.stock.map(i => ({
-            name: i.name, unit: i.unit, id: i.id || i.name,
+            name: i.name, unit: i.unit, id: i.id || '',
             stockQty: i.qty != null ? i.qty : 0,
             baseUnit: i.baseUnit, packSize: i.packSize,
             stockLabel: (i.baseUnit && i.packSize > 0)
