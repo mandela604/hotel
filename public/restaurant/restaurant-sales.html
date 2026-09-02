@@ -229,14 +229,19 @@ function getSales() {
   return (svc && svc.state && svc.state.sales) || [];
 }
 
-/** Always: today. Staff: only their name. Manager: all staff today. */
+function isTodayDate(d){
+  if(!d) return false;
+  var dt=new Date(d);
+  if(!isNaN(dt.getTime())){
+    var t=new Date(); return dt.getDate()===t.getDate()&&dt.getMonth()===t.getMonth()&&dt.getFullYear()===t.getFullYear();
+  }
+  return String(d).startsWith(todayDDMMYY());
+}
 function scopeShiftSales() {
-  const today = todayDDMMYY();
   const me = staffName().toLowerCase();
   const allStaff = isManagerLike();
-
   return getSales().filter(function (s) {
-    if (!(s.date || '').startsWith(today)) return false;
+    if (!isTodayDate(s.date)) return false;
     if (!allStaff) {
       if (!me) return true;
       if ((s.staff || '').toLowerCase() !== me) return false;
