@@ -953,14 +953,13 @@
         ? allCharges.filter(function(c) { return c.bookingRef === curId; })
         : [];
       var countEl = $('[data-role="chargesCount"]');
+      acc.hidden = false;
       if (!charges.length) {
-        acc.hidden = true;
-        list.innerHTML = '';
+        list.innerHTML = '<div style="padding:12px;color:#888;font-size:13px;">No charges for this booking.</div>';
         if (countEl) countEl.textContent = '';
         settlingIdx = null;
         return;
       }
-      acc.hidden = false;
       if (countEl) countEl.textContent = '(' + charges.length + ')';
       var allow = paymentActionsAllowed();
 
