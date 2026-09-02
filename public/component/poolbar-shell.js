@@ -14,7 +14,7 @@
 
   const NAV = [
     { key: 'dashboard', label: 'Dashboard',              href: 'poolbar-dashboard.html',            icon: 'fa-solid fa-gauge-high' },
-    { key: 'reqhist',   label: 'Requisition History',    href: 'poolbar-requisition-history.html',  icon: 'fa-solid fa-clock-rotate-left', badgeKey: 'reqhist' },
+    { key: 'reqhist',   label: 'Requisitions',    href: 'poolbar-requisition-history.html',  icon: 'fa-solid fa-clock-rotate-left', badgeKey: 'reqhist' },
     { key: 'stock',     label: 'Pool Bar Stock',         href: 'poolbar-stock.html',                icon: 'fa-solid fa-box' },
     { key: 'sales',     label: 'Sales',                  href: 'poolbar-sales.html',                icon: 'fa-solid fa-file-invoice-dollar' },
     { key: 'reports',   label: 'Reports',                href: 'poolbar-reports.html',              icon: 'fa-solid fa-chart-column' },

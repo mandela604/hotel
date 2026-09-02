@@ -15,7 +15,7 @@
 
   const NAV = [
     { key: 'dashboard',  label: 'Dashboard',            href: 'restaurant-dashboard.html',       icon: 'fa-solid fa-gauge-high' },
-    { key: 'xferhist',   label: 'Transfer History',     href: 'restaurant-transfer-history.html',icon: 'fa-solid fa-clock-rotate-left' },
+    { key: 'xferhist',   label: 'Requisitions',     href: 'restaurant-transfer-history.html',icon: 'fa-solid fa-clock-rotate-left' },
     { key: 'inventory',  label: 'Restaurant Inventory', href: 'restaurant-inventory.html',       icon: 'fa-solid fa-box' },
     { key: 'sales',      label: 'Sales',                href: 'restaurant-sales.html',           icon: 'fa-solid fa-file-invoice-dollar' },
     { key: 'reports',    label: 'Reports',              href: 'restaurant-reports.html',         icon: 'fa-solid fa-chart-column', managerOnly: true },
