@@ -517,11 +517,10 @@
       const cost = packSize > 0 && rawCost > 0 ? Math.round(rawCost / packSize * 100) / 100 : rawCost;
       const unit = it.unit || 'unit';
       const stockId = it.stockId || '';
-      console.log(`[store-service:receivePO] item="${name}" stockId="${stockId}" stockLen=${state.stock.length} ids=[${state.stock.map(s=>s.id).join(',')}]`);
 
       let stockItem = stockId ? findStockById(stockId) : null;
-      console.log(`[store-service:receivePO] findStockById("${stockId}") => ${stockItem ? stockItem.name : 'NOT FOUND'}`);
-      if (!stockItem) throw new Error('Store item not found for stockId '+stockId+' — pick from Store catalog (uuid) again.');
+      if (!stockItem) stockItem = findStock(name);
+      if (!stockItem) throw new Error('Store item not found for "' + name + '" — add it to Store stock first.');
       const payload = { qty: baseQty };
       if (cost > 0) payload.cost = cost;
       if (packSize > 0) payload.packSize = packSize;

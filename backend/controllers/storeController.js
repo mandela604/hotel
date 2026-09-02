@@ -274,13 +274,9 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
 
   for (const it of row.items) {
     const prevIssued = it.issuedQty || 0;
-    console.log(`[storeController:issue] item="${it.name}" stockId="${it.stockId}" type=${typeof it.stockId}`);
     if (!it.stockId) throw new ApiError(400, `Missing stockId for item "${it.name}" — pick from Store catalog (uuid)`);
     const stockItem = await StoreStock.findOne({ id: it.stockId });
-    console.log(`[storeController:issue] lookup id="${it.stockId}" => ${stockItem ? stockItem.name : 'NOT FOUND'}`);
     if (!stockItem) {
-      const allIds = (await StoreStock.find({}).select('id name _id')).map(s => `id=${s.id} name=${s.name} _id=${s._id}`);
-      console.error(`[storeController:issue] stockId not found: ${it.stockId} for "${it.name}" — available:`, allIds);
       throw new ApiError(404, `Store item not found for stockId ${it.stockId} — pick from Store catalog (uuid) again.`);
     }
     const avail = stockItem ? stockItem.qty : 0; // always in base units
