@@ -268,6 +268,7 @@
     var service = opts.service || global.BookingData || null;
     var onSaved = typeof opts.onSaved === 'function' ? opts.onSaved : function () {};
     var onDeleted = typeof opts.onDeleted === 'function' ? opts.onDeleted : null;
+    var onCloseCb = typeof opts.onClose === 'function' ? opts.onClose : null;
     var externalSession = opts.session || null;
 
     function nights(ci, co) {
@@ -946,7 +947,11 @@
       var acc = $('[data-role="chargesAcc"]');
       var list = $('[data-role="chargesList"]');
       if (!acc || !list) return;
-      var charges = (currentGuest && currentGuest.charges) || [];
+      var allCharges = (currentGuest && currentGuest.charges) || [];
+      var curRoom = editBooking ? editBooking.room : '';
+      var charges = curRoom
+        ? allCharges.filter(function(c) { return !c.room || c.room === curRoom; })
+        : allCharges;
       var countEl = $('[data-role="chargesCount"]');
       if (!charges.length) {
         acc.hidden = true;
@@ -1167,6 +1172,7 @@
       hideConfirm(false);
       var drop = $('[data-role="guestDrop"]');
       if (drop) drop.classList.remove('show');
+      if (onCloseCb) onCloseCb();
     }
 
     function fillBookingFields(booking) {

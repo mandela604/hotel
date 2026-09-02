@@ -468,6 +468,7 @@ const shell = BookingShell.attach({
 let bookingModal = null;
 let salesDetail = null;
 let guestsData = [];
+let _settleReturnGuestId = null;
 let bookingsData = [];
 let gPage = 1, pfStayPage = 1, pfChargePage = 1;
 const G_PER_PAGE = 8, STAY_PER_PAGE = 3, CHARGE_PER_PAGE = 3;
@@ -834,10 +835,10 @@ function settleCharge(idx){
   if(c.room) {
     const booking = bookingsData.find(b => b.room === c.room && b.guest === g.name);
     if(booking) {
+      _settleReturnGuestId = g.id;
       closeProfile();
       setTimeout(() => {
         if(bookingModal) bookingModal.openEdit(booking);
-        showToast('Open the booking modal to settle this charge.', 'info');
       }, 350);
       return;
     }
@@ -867,10 +868,10 @@ async function settleAll(){
   if(firstCharge && firstCharge.room) {
     const booking = bookingsData.find(b => b.room === firstCharge.room && b.guest === g.name);
     if(booking) {
+      _settleReturnGuestId = g.id;
       closeProfile();
       setTimeout(() => {
         if(bookingModal) bookingModal.openEdit(booking);
-        showToast('Open booking modal to settle all charges.', 'info');
       }, 350);
       return;
     }
@@ -983,6 +984,13 @@ async function init() {
       onDeleted: async (roomNum) => {
         await loadGuestsData();
         renderGuests();
+      },
+      onClose: () => {
+        if (_settleReturnGuestId) {
+          var gid = _settleReturnGuestId;
+          _settleReturnGuestId = null;
+          setTimeout(() => { openProfile(gid); }, 300);
+        }
       },
     });
 
