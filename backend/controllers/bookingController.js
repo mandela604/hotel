@@ -291,7 +291,17 @@ exports.createBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.findOne({ room });
   if (!booking) return res.status(404).json({ success: false, error: `Room ${room} not found — add the room first` });
   if (booking.status !== 'vacant') {
-    return res.status(409).json({ success: false, error: `Room ${room} is not available (currently '${booking.status}')` });
+    if (booking.status === 'reserved' && booking.checkin && checkin) {
+      var today = new Date(); today.setHours(0,0,0,0);
+      var resStart = new Date(booking.checkin); resStart.setHours(0,0,0,0);
+      if (today < resStart) {
+        // Room reserved for future — allow booking that ends before reservation starts
+      } else {
+        return res.status(409).json({ success: false, error: `Room ${room} is not available (currently '${booking.status}')` });
+      }
+    } else {
+      return res.status(409).json({ success: false, error: `Room ${room} is not available (currently '${booking.status}')` });
+    }
   }
 
   Object.assign(booking, {

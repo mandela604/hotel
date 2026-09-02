@@ -415,7 +415,13 @@ function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
 function getRoomStatus(num) {
   const b = bookings.find(r => r.room === num);
   if (!b || !b.status) return 'available';
-  return b.status === 'vacant' ? 'available' : b.status;
+  if (b.status === 'vacant') return 'available';
+  if (b.status === 'reserved' && b.checkin) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var resStart = new Date(b.checkin); resStart.setHours(0,0,0,0);
+    if (today < resStart) return 'available';
+  }
+  return b.status;
 }
 function perms() {
   const session = getSession();

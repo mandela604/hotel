@@ -415,8 +415,7 @@ function filterBookings() {
     var mq = !q || String(b.room).toLowerCase().indexOf(q) !== -1 || (b.guest || '').toLowerCase().indexOf(q) !== -1 || (b.phone || '').toLowerCase().indexOf(q) !== -1 || (b.email||'').toLowerCase().indexOf(q)!==-1;
     var ms = !statusChip || b.status === statusChip;
     var mt = !t || b.type === t;
-    var mf = !dateFrom || (b.checkin && b.checkin >= dateFrom);
-    var md = !dateTo || (b.checkin && b.checkin <= dateTo);
+    var mf = !dateFrom || !dateTo || (b.checkin && b.checkin <= dateTo) && (!b.checkout || b.checkout >= dateFrom);
     return mq && ms && mt && mf && md;
   });
 

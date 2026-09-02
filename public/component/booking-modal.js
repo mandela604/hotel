@@ -331,7 +331,13 @@
     function roomStatus(bookingsArr, num) {
       var b = (bookingsArr || []).find(function (r) { return r.room === num; });
       if (!b || !b.status) return 'available';
-      return b.status === 'vacant' ? 'available' : b.status;
+      if (b.status === 'vacant') return 'available';
+      if (b.status === 'reserved' && b.checkin) {
+        var today = new Date(); today.setHours(0,0,0,0);
+        var resStart = new Date(b.checkin); resStart.setHours(0,0,0,0);
+        if (today < resStart) return 'available';
+      }
+      return b.status;
     }
 
     var mode = 'new';
@@ -940,7 +946,9 @@
       var acc = $('[data-role="chargesAcc"]');
       var list = $('[data-role="chargesList"]');
       if (!acc || !list) return;
-      var charges = (currentGuest && currentGuest.charges) || [];
+      var allCharges = (currentGuest && currentGuest.charges) || [];
+      var currentRoom = editBooking ? editBooking.room : '';
+      var charges = currentRoom ? allCharges.filter(function(c) { return c.room === currentRoom; }) : allCharges;
       var countEl = $('[data-role="chargesCount"]');
       if (!charges.length) {
         acc.hidden = true;

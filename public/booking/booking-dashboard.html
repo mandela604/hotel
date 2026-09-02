@@ -298,7 +298,7 @@ function renderOverview() {
     </div>`).join('');
 
   // Today's activity
-  const acts = bookings.filter(b => b.guest && (b.checkin === TODAY || b.checkout === TODAY));
+  const acts = bookings.filter(b => b.guest && b.checkin && b.checkin <= TODAY && (!b.checkout || b.checkout >= TODAY));
   document.getElementById('ovActivity').innerHTML = acts.length === 0
     ? `<div class="act-empty">No check-ins or check-outs today.</div>`
     : acts.map(b => `
