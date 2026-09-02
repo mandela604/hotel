@@ -12,6 +12,7 @@
 const mongoose = require('mongoose');
 
 const restaurantStockSchema = new mongoose.Schema({
+  id:       { type: String, required: true, unique: true },
   name:     { type: String, required: true, unique: true, trim: true },
   category: { type: String, default: 'Uncategorized', trim: true },
   unit:     { type: String, default: 'portion', trim: true },
