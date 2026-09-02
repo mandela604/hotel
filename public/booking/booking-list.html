@@ -416,7 +416,7 @@ function filterBookings() {
     var ms = !statusChip || b.status === statusChip;
     var mt = !t || b.type === t;
     var mf = !dateFrom || !dateTo || (b.checkin && b.checkin <= dateTo) && (!b.checkout || b.checkout >= dateFrom);
-    return mq && ms && mt && mf && md;
+    return mq && ms && mt && mf;
   });
 
   if (table) table.setRows(filteredBk);
