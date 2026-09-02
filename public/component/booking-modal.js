@@ -946,9 +946,7 @@
       var acc = $('[data-role="chargesAcc"]');
       var list = $('[data-role="chargesList"]');
       if (!acc || !list) return;
-      var allCharges = (currentGuest && currentGuest.charges) || [];
-      var currentRoom = editBooking ? editBooking.room : '';
-      var charges = currentRoom ? allCharges.filter(function(c) { return c.room === currentRoom; }) : allCharges;
+      var charges = (currentGuest && currentGuest.charges) || [];
       var countEl = $('[data-role="chargesCount"]');
       if (!charges.length) {
         acc.hidden = true;
