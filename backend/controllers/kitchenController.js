@@ -53,6 +53,11 @@ exports.addStock = asyncHandler(async (req, res) => {
 
   // Check by storeId first (unique link to Store DB), then by exact name
   if (storeId) {
+    const StoreStock = require('../models/StoreStock');
+    const storeItem = await StoreStock.findOne({ id: storeId }).catch(function(){ return null; });
+    if (!storeItem) {
+      return res.status(400).json({ success: false, error: 'Selected Store item not found — please re-pick from dropdown.' });
+    }
     const existing = await KitchenStock.findOne({ storeId });
     if (existing) {
       return res.status(409).json({ success: false, error: `"${name}" is already tracked`, existingId: existing.id });
@@ -64,7 +69,7 @@ exports.addStock = asyncHandler(async (req, res) => {
   }
 
   const item = await KitchenStock.create({
-    id: uuidv4(),
+    id: storeId || uuidv4(),
     storeId: storeId || '',
     name: name.trim(),
     category: category || cat || 'Grains',

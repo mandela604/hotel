@@ -103,7 +103,7 @@ exports.addStockItem = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Please select item from Store catalog — type 1+ chars and pick from dropdown. Free-typed items not allowed.' });
   }
   const StoreStock = require('../models/StoreStock');
-  const storeItem = await StoreStock.findById(sid).catch(function(){ return null; });
+  const storeItem = await StoreStock.findOne({ id: sid }).catch(function(){ return null; });
   if (!storeItem) {
     return res.status(400).json({ success: false, error: 'Selected Store item not found — please re-pick from dropdown.' });
   }
@@ -113,6 +113,7 @@ exports.addStockItem = asyncHandler(async (req, res) => {
     return res.status(409).json({ success: false, error: `"${name}" is already tracked` });
   }
   const item = await RestaurantStock.create({
+    id: sid,
     name: name.trim(),
     category: category || 'Uncategorized',
     unit: unit || 'portion',

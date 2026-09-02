@@ -112,7 +112,7 @@ exports.addStock = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Please select item from Store catalog — type 1+ chars and pick from dropdown. Free-typed items not allowed (Store is source of truth).' });
   }
   const StoreStock = require('../models/StoreStock');
-  const storeItem = await StoreStock.findById(sid).catch(function(){ return null; }) || await StoreStock.findOne({ _id: sid }).catch(function(){ return null; });
+  const storeItem = await StoreStock.findOne({ id: sid }).catch(function(){ return null; });
   // also try by name fallback for legacy sid that may be name-based
   if (!storeItem) {
     return res.status(400).json({ success: false, error: 'Selected Store item not found — please re-pick from dropdown.' });

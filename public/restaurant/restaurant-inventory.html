@@ -803,7 +803,7 @@ function renderStoreSuggest(){
   const hits = stock.filter(function(s){ return s.name.toLowerCase().includes(q); }).slice(0,8);
   if (!hits.length) { box.innerHTML='<div class="store-suggest-empty">No match in Store</div>'; box.classList.add('show'); return; }
   box.innerHTML = hits.map(function(s){
-    var sid = s._id || s.id || '';
+    var sid = s.id || '';
     return '<div class="store-suggest-item" data-pick="' + escapeHtml(s.name) + '" data-unit="' + escapeHtml(s.unit||'') + '" data-sid="' + escapeHtml(sid) + '"><span>' + escapeHtml(s.name) + '</span><span style="color:var(--text3);font-size:11px;">' + escapeHtml(s.unit||'') + '</span></div>';
   }).join('');
   box.classList.add('show');
