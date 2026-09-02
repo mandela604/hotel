@@ -279,24 +279,13 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
     if (!stockItem) {
       throw new ApiError(404, `Store item not found for stockId ${it.stockId} — pick from Store catalog (uuid) again.`);
     }
-    const avail = stockItem ? stockItem.qty : 0; // always in base units
+    const avail = stockItem.qty;
     const raw = Object.prototype.hasOwnProperty.call(issuedQtyByItem, it.name) ? issuedQtyByItem[it.name] : prevIssued;
-
-    // Convert issued qty to base units if needed
-    const packSize = stockItem ? (stockItem.packSize || 0) : 0;
-    const reqUnit = (it.unit || '').trim().toLowerCase();
-    const stockBaseUnit = stockItem ? (stockItem.baseUnit || '').trim().toLowerCase() : '';
-    const isBulkUnit = packSize > 0 && stockBaseUnit !== '' && reqUnit !== stockBaseUnit;
-
-    const issuedInReqUnit = Math.max(0, Number(raw) || 0);
-    const issuedInBase = isBulkUnit ? issuedInReqUnit * packSize : issuedInReqUnit;
-    const reqQtyInBase = isBulkUnit ? it.qty * packSize : it.qty;
-
-    const issued = Math.max(0, Math.min(issuedInBase, avail, reqQtyInBase));
-    const delta = issued - (isBulkUnit ? prevIssued * packSize : prevIssued);
+    const issued = Math.max(0, Math.min(Number(raw) || 0, avail, it.qty));
+    const delta = issued - prevIssued;
 
     plan.push({ it, stockItem, delta, issued, issuedDisplay: raw });
-    totalReq += reqQtyInBase;
+    totalReq += it.qty;
     totalIssued += issued;
   }
 

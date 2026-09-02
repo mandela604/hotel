@@ -458,9 +458,12 @@ function dashboardKPIs() {
     const res = await get('/requisitions');
     return (res.data || []).map(normalizeRequisition);
   }
-  function getRequisition(no) {
+  async function getRequisition(no) {
     if (!no) return null;
-    return (state.requisitions || []).find(function (r) { return r.no === no || r.requisitionNo === no || r.id === no; }) || null;
+    try {
+      const res = await get('/requisitions/' + encodeURIComponent(no));
+      return normalizeRequisition(res.data || res);
+    } catch (e) { return null; }
   }
   function normalizeRequisition(r) {
     if (!r) return r;
