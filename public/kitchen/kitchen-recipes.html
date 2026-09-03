@@ -173,7 +173,7 @@
       </div>
       <div class="fg">
         <div class="label">Yield Unit</div>
-        <input class="input" id="rExpectedYieldUnit" type="text" placeholder="plates" value="plates">
+        <input class="input" id="rExpectedYieldUnit" type="text" placeholder="portions" value="portions">
       </div>
     </div>
     <div class="hint" id="rYieldHint" style="margin-top:-6px;"></div>
@@ -358,7 +358,7 @@ document.getElementById('rIngList').addEventListener('click', function (e) {
 function updateYieldHintPreview() {
   var baseQty = parseFloat(document.getElementById('rBaseQty').value) || 0;
   var yieldVal = parseFloat(document.getElementById('rExpectedYield').value) || 0;
-  var unit = document.getElementById('rExpectedYieldUnit').value || 'plates';
+  var unit = document.getElementById('rExpectedYieldUnit').value || 'portions';
   var hint = document.getElementById('rYieldHint');
   if (baseQty > 0 && yieldVal > 0) {
     hint.textContent = 'e.g. cooking 3 ' + (document.getElementById('rBaseUnit').value || 'kg') + ' would scale to ≈ ' + Math.round((yieldVal * (3 / baseQty)) * 100) / 100 + ' ' + unit + '.';
@@ -381,7 +381,7 @@ function openRecipeModal(id) {
   document.getElementById('rBaseQty').value = r ? r.baseQty : 1;
   document.getElementById('rBaseUnit').value = r ? r.baseUnit : 'kg';
   document.getElementById('rExpectedYield').value = r ? r.expectedYield : '';
-  document.getElementById('rExpectedYieldUnit').value = r ? r.expectedYieldUnit : 'plates';
+  document.getElementById('rExpectedYieldUnit').value = r ? r.expectedYieldUnit : 'portions';
   document.getElementById('rGasCost').value = r ? (r.gasCostPerUnit || '') : '';
   document.getElementById('rNotes').value = r ? (r.notes || '') : '';
   renderBaseIngredientOptions(r ? r.baseIngredient : null);
@@ -407,7 +407,7 @@ document.getElementById('saveRecipeBtn').addEventListener('click', async functio
     baseIngredient: document.getElementById('rBaseIngredient').value,
     ingredients: rCart.filter(function (r) { return r.name; }).map(function (r) { return { name: r.name, qty: parseFloat(r.qty) || 0, unit: r.unit || '' }; }),
     expectedYield: parseFloat(document.getElementById('rExpectedYield').value) || 0,
-    expectedYieldUnit: document.getElementById('rExpectedYieldUnit').value.trim() || 'plates',
+    expectedYieldUnit: document.getElementById('rExpectedYieldUnit').value.trim() || 'portions',
     gasCostPerUnit: parseFloat(document.getElementById('rGasCost').value) || 0,
     notes: document.getElementById('rNotes').value.trim(),
   };

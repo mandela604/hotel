@@ -788,7 +788,7 @@ function renderStayHistory(g){
    cell and the Settle button both stop propagation so they don't also
    trigger the row's own click-to-open. */
 function renderCharges(g){
-  const charges = [...g.charges].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const charges = [...g.charges].sort((a,b)=>{ if(a.status==='Pending'&&b.status!=='Pending') return -1; if(a.status!=='Pending'&&b.status==='Pending') return 1; return new Date(b.date)-new Date(a.date); });
   const total = charges.length;
   const start = (pfChargePage-1)*CHARGE_PER_PAGE;
   const page  = charges.slice(start, start+CHARGE_PER_PAGE);

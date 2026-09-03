@@ -269,7 +269,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     /* Post charge to Guest.folio (Guest.charges[]) — uuid primary, name/phone fallback */
     let guest = null;
     const fid = guestId || (booking && booking.guestId) || '';
-    if (fid) guest = await Guest.findOne({ id: fid });
+    if (fid) guest = await Guest.findOne({ guestId: fid });
     if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
     if (!guest && guestPhone) guest = await Guest.findOne({ phone: guestPhone });
     if (guest) {
@@ -460,7 +460,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     /* Post charge to Guest.folio (Guest.charges[]) — uuid primary, name/phone fallback */
     let guest = null;
     const fid = effectiveGuestId || (booking && booking.guestId) || '';
-    if (fid) guest = await Guest.findOne({ id: fid });
+    if (fid) guest = await Guest.findOne({ guestId: fid });
     if (!guest && effectiveGuest) guest = await Guest.findOne({ name: effectiveGuest });
     if (!guest && effectivePhone) guest = await Guest.findOne({ phone: effectivePhone });
     if (guest) {

@@ -233,10 +233,10 @@ exports.createSale = asyncHandler(async (req, res) => {
   });
 
   if (method === 'Room Charge') {
-    const guest = guestId ? await Guest.findOne({ id: guestId }) : await Guest.findOne({ name: guestName });
+    const guest = guestId ? await Guest.findOne({ guestId: guestId }) : await Guest.findOne({ name: guestName });
     if (guest) {
       var bRefR = '';
-      if (roomNumber) { var bkR = await Booking.findOne({ room: roomNumber }); if (bkR) bRefR = bkR.id; }
+      if (roomNumber) { var bkR = await Booking.findOne({ room: roomNumber, status: 'checkedin' }); if (bkR) bRefR = bkR.id; }
       guest.charges.push({
         bookingRef: bRefR,
         date: todayDDMMYY(),
@@ -251,9 +251,24 @@ exports.createSale = asyncHandler(async (req, res) => {
       });
       await guest.save();
     } else {
-      // Sale still completes even if the guest folio couldn't be found —
-      // front desk can reconcile manually rather than losing the sale.
       await logActivity('amber', `Room Charge sale ${id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-sales.html');
+    }
+    /* Also post to Booking.payments[] — same as Pool Bar */
+    if (roomNumber) {
+      const booking = await Booking.findOne({ room: String(roomNumber).trim(), status: 'checkedin' });
+      if (booking) {
+        booking.payments.push({
+          id: uuidv4(),
+          amount: total,
+          mode: 'Room Charge (Restaurant)',
+          date: todayDDMMYY(),
+          by: req.user ? req.user.name : '',
+          ts: Date.now(),
+        });
+        booking.paid = (booking.paid || 0) + total;
+        recomputePayStatus(booking);
+        await booking.save();
+      }
     }
   }
 
@@ -583,10 +598,10 @@ exports.payOrder = asyncHandler(async (req, res) => {
 
   /* ── Room Charge → post to guest folio ── */
   if (payMethod === 'Room Charge') {
-    const guest = guestId ? await Guest.findOne({ id: guestId }) : await Guest.findOne({ name: guestName });
+    const guest = guestId ? await Guest.findOne({ guestId: guestId }) : await Guest.findOne({ name: guestName });
     if (guest) {
       var bRefR2 = '';
-      if (roomNumber) { var bkR2 = await Booking.findOne({ room: roomNumber }); if (bkR2) bRefR2 = bkR2.id; }
+      if (roomNumber) { var bkR2 = await Booking.findOne({ room: roomNumber, status: 'checkedin' }); if (bkR2) bRefR2 = bkR2.id; }
       guest.charges.push({
         bookingRef: bRefR2,
         date: todayDDMMYY(),
@@ -602,6 +617,23 @@ exports.payOrder = asyncHandler(async (req, res) => {
       await guest.save();
     } else {
       await logActivity('amber', `Room Charge tab ${order.id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-orders.html');
+    }
+    /* Also post to Booking.payments[] — same as Pool Bar */
+    if (roomNumber) {
+      const booking = await Booking.findOne({ room: String(roomNumber).trim(), status: 'checkedin' });
+      if (booking) {
+        booking.payments.push({
+          id: uuidv4(),
+          amount: order.total,
+          mode: 'Room Charge (Restaurant)',
+          date: todayDDMMYY(),
+          by: order.staff || '',
+          ts: Date.now(),
+        });
+        booking.paid = (booking.paid || 0) + order.total;
+        recomputePayStatus(booking);
+        await booking.save();
+      }
     }
   }
 
