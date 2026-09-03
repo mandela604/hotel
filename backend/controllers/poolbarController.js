@@ -325,9 +325,7 @@ exports.voidSale = asyncHandler(async (req, res) => {
 
   /* restore stock + log movements */
   for (const it of (sale.items || [])) {
-    let stockItem = null;
-    if (it.stockId) stockItem = await PoolbarStock.findOne({ id: it.stockId });
-    if (!stockItem) stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+    const stockItem = it.stockId ? await PoolbarStock.findOne({ id: it.stockId }) : null;
     if (stockItem) {
       stockItem.qty += Number(it.qty) || 0;
       await stockItem.save();

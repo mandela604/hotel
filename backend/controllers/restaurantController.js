@@ -294,9 +294,7 @@ exports.voidSale = asyncHandler(async (req, res) => {
   await sale.save();
 
   for (const it of sale.items) {
-    let stockItem = null;
-    if (it.stockId) stockItem = await RestaurantStock.findOne({ id: it.stockId });
-    if (!stockItem) stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    const stockItem = it.stockId ? await RestaurantStock.findOne({ id: it.stockId }) : null;
     if (!stockItem) continue;
     stockItem.qty += Number(it.qty);
     await stockItem.save();
