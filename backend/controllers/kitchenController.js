@@ -564,7 +564,6 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
 
     if (stockItem) {
       stockItem.qty += addQty;
-      if (Number(it.cost) > 0) { stockItem.price = Number(it.cost); stockItem.cost = Number(it.cost); }
       await stockItem.save();
     } else {
       stockItem = await KitchenStock.create({
