@@ -110,6 +110,8 @@
 .ft-chip-reserved{ background:var(--ft-blue-bg); color:var(--ft-blue); }
 .ft-chip-vacant{ background:rgba(156,163,175,.14); color:#6b7280; }
 .ft-chip-maintenance{ background:var(--ft-amber-bg); color:var(--ft-amber); }
+.ft-chip-noshow{ background:var(--ft-red-bg); color:var(--ft-red); }
+.ft-chip-cleaning{ background:rgba(56,189,248,.14); color:#0284c7; }
 .ft-chip-default{ background:var(--ft-bg3); color:var(--ft-text3); }
 
 .ft-pay{ display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px; white-space:nowrap; }
@@ -200,6 +202,8 @@
     reserved:    { cls: 'ft-chip-reserved',    label: 'Reserved' },
     vacant:      { cls: 'ft-chip-vacant',      label: 'Vacant' },
     maintenance: { cls: 'ft-chip-maintenance', label: 'Maintenance' },
+    'no-show':   { cls: 'ft-chip-noshow',     label: 'No-Show' },
+    cleaning:    { cls: 'ft-chip-cleaning',    label: 'Cleaning' },
   };
   const DEFAULT_PAY_MAP = {
     'Fully Paid':        'ft-pay-full',

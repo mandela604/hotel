@@ -438,6 +438,43 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
   res.json({ success: true, data: booking });
 });
 
+exports.markNoShow = asyncHandler(async (req, res) => {
+  const booking = await Booking.findOne({ room: req.params.room });
+  if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+  if (booking.status !== 'reserved') {
+    return res.status(400).json({ success: false, error: `Cannot mark no-show from status '${booking.status}'` });
+  }
+  booking.status = 'no-show';
+  booking.updatedAt = Date.now();
+  await booking.save();
+  await logActivity('Booking', 'amber', `${booking.guest} — Room ${booking.room} marked as no-show`, 'booking-rooms.html');
+  res.json({ success: true, data: booking });
+});
+
+// Auto-cancel reservations where checkout date has passed and guest never checked in
+exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  const result = await Booking.updateMany(
+    { status: 'reserved', checkout: { $lt: today } },
+    { $set: { status: 'no-show', updatedAt: Date.now() } }
+  );
+  if (result.modifiedCount > 0) {
+    await logActivity('Booking', 'amber', `Auto-cancelled ${result.modifiedCount} expired reservation(s)`, 'booking-rooms.html');
+  }
+  if (res) res.json({ success: true, modified: result.modifiedCount });
+});
+
+// Also run auto-cancel as part of getBookingData so it fires on page load
+const origGetBookingData = exports.getBookingData;
+exports.getBookingData = asyncHandler(async (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  await Booking.updateMany(
+    { status: 'reserved', checkout: { $lt: today } },
+    { $set: { status: 'no-show', updatedAt: Date.now() } }
+  );
+  return origGetBookingData(req, res);
+});
+
 // Adds a payment entry to a booking's payments[] and recomputes paid/
 // payStatus — same shape as paymentEntrySchema (id, amount, mode, date, by, ts).
 exports.addPayment = asyncHandler(async (req, res) => {

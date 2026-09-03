@@ -41,6 +41,7 @@ router.delete('/bookings/:room', isAdmin, v.validateParam('room'), bookingContro
 router.post('/bookings/:room/checkin', inDept, privilegeGuard('booking', 'canCheckin'), v.validateParam('room'), v.validateCheckin, bookingController.checkinBooking);
 router.post('/bookings/:room/checkout', inDept, privilegeGuard('booking', 'canCheckout'), v.validateParam('room'), bookingController.checkoutBooking);
 router.post('/bookings/:room/payments', bookingWriteLimiter, inDept, privilegeGuard('booking', 'canCreate'), v.validateParam('room'), v.validateAddPayment, bookingController.addPayment);
+router.post('/bookings/:room/no-show', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('room'), bookingController.markNoShow);
 
 /* Guests */
 router.get('/guests', bookingController.listGuests);

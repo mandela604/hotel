@@ -97,6 +97,7 @@ body {
 .room-card.checkedin::before   { background: var(--gold); }
 .room-card.reserved::before    { background: var(--purple); }
 .room-card.checkout::before    { background: var(--red); }
+.room-card.no-show::before     { background: var(--red); }
 .room-card.maintenance::before { background: var(--amber); }
 
 .room-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; min-height: 26px; }
@@ -109,6 +110,7 @@ body {
 .rc-checkedin   { background: var(--gold-dim); color: var(--gold); }    .rc-checkedin::before   { background: var(--gold); }
 .rc-reserved    { background: var(--purple-bg); color: var(--purple); }.rc-reserved::before    { background: var(--purple); }
 .rc-checkout    { background: var(--red-bg); color: var(--red); }       .rc-checkout::before    { background: var(--red); }
+.rc-noshow      { background: var(--red-bg); color: var(--red); }       .rc-noshow::before      { background: var(--red); }
 .rc-maintenance { background: var(--amber-bg); color: var(--amber); }   .rc-maintenance::before { background: var(--amber); }
 
 .room-guest-block { min-height: 34px; margin-bottom: 8px; }
@@ -439,12 +441,12 @@ function applyPermissionUI() {
   return p;
 }
 
-const RC_CLS = { available: 'rc-available', checkedin: 'rc-checkedin', reserved: 'rc-reserved', checkout: 'rc-checkout', maintenance: 'rc-maintenance', cleaning: 'rc-cleaning' };
-const RC_LBL = { available: 'Available', checkedin: 'Occupied', reserved: 'Reserved', checkout: 'Check-out', maintenance: 'Maintenance', cleaning: 'Cleaning' };
+const RC_CLS = { available: 'rc-available', checkedin: 'rc-checkedin', reserved: 'rc-reserved', checkout: 'rc-checkout', maintenance: 'rc-maintenance', cleaning: 'rc-cleaning', 'no-show': 'rc-noshow' };
+const RC_LBL = { available: 'Available', checkedin: 'Occupied', reserved: 'Reserved', checkout: 'Check-out', maintenance: 'Maintenance', cleaning: 'Cleaning', 'no-show': 'No-Show' };
 const STATUS_OPTS = {
   available:   [{ v: 'maintenance', l: 'Put Under Maintenance' }],
   checkedin:   [{ v: 'cleaning', l: 'Check out → Cleaning' }],
-  reserved:    [{ v: 'checkedin', l: 'Check In' }, { v: 'vacant', l: 'Cancel / Make Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
+  reserved:    [{ v: 'checkedin', l: 'Check In' }, { v: 'no-show', l: 'Mark No-Show' }, { v: 'vacant', l: 'Cancel / Make Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
   checkout:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
   maintenance: [{ v: 'vacant', l: 'Mark Available' }],
    cleaning:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }]
@@ -735,6 +737,8 @@ async function saveRoomStatus() {
     // cancel) still goes through the plain status change.
     if (newSt === 'checkedin') {
       await BookingData.checkinBooking(statusRoom, { notes: note });
+    } else if (newSt === 'no-show') {
+      await apiFetch('/bookings/' + encodeURIComponent(statusRoom) + '/no-show', { method: 'POST', body: JSON.stringify({}) });
     } else if (curSt === 'checkedin') {
       // checkoutBooking() always lands the room on 'cleaning' itself —
       // staff can move it further (Available/Maintenance) afterward as
