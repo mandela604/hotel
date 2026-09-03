@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>New Production | Grace Kitchen</title>
+<title>Start Production | Grace Kitchen</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="color-scheme" content="light">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -30,11 +30,11 @@
   .content{ padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text); }
   @media (max-width:480px){ .content{ padding:16px 14px 22px; } }
 
+  /* ── KPIs ── */
   .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media (max-width:1100px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:420px){ .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; } }
-  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow);
-    display:flex; flex-direction:column; cursor:pointer; transition:transform .2s,box-shadow .2s,border-color .2s; animation:fadeUp .4s ease both; }
+  .kpi-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 14px 12px; position:relative; overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s; animation:fadeUp .4s ease both; }
   .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
   .kpi-card.acc-blue::before{ background:linear-gradient(90deg,var(--blue),transparent); }
   .kpi-card.acc-green::before{ background:linear-gradient(90deg,var(--green),transparent); }
@@ -46,61 +46,87 @@
   .ic-green{ background:var(--green-bg); color:var(--green); }
   .ic-amber{ background:var(--amber-bg); color:var(--amber); }
   .ic-purple{ background:var(--purple-bg); color:var(--purple); }
-  .ic-red{ background:var(--red-bg); color:var(--red); }
   .kpi-label{ font-size:11px; color:var(--text2); font-weight:600; line-height:1.3; }
   .kpi-value{ font-size:22px; font-weight:800; color:var(--text); margin:4px 0 2px; line-height:1; }
   @media (max-width:420px){ .kpi-value{ font-size:18px; } }
   .kpi-trend{ font-size:10.5px; font-weight:600; color:var(--text3); margin-top:auto; }
   .kpi-trend.up{ color:var(--green); } .kpi-trend.warn{ color:var(--amber); } .kpi-trend.info{ color:var(--blue); }
 
-  .layout{ display:grid; grid-template-columns:1fr; max-width:520px; margin:0 auto; width:100%; }
-
-  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  /* ── Panel ── */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; max-width:680px; margin:0 auto; width:100%; }
   .panel-head{ padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .panel-title{ font-size:13.5px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
   .panel-sub{ font-size:11px; color:var(--text3); font-weight:600; margin-top:2px; }
-  .panel-body{ padding:16px 18px 18px; }
+  .panel-body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:14px; }
 
-  .staff-pill{ display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:6px 12px 6px 6px; font-size:11.5px; font-weight:700; color:var(--text2); }
+  .staff-pill{ display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:6px 12px 6px 6px; font-size:11.5px; font-weight:700; color:var(--text2); white-space:nowrap; }
   .staff-pill .avatar{ width:22px; height:22px; border-radius:50%; background:var(--gold); color:#fff; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; }
 
-  .fg{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  /* ── Batch dish rows ── */
+  .batch-list{ display:flex; flex-direction:column; gap:12px; }
+
+  .dish-row{ background:var(--surface2); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:border-color .2s; }
+  .dish-row:focus-within{ border-color:var(--gold-border); }
+  .dish-row-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--border); gap:8px; cursor:pointer; user-select:none; }
+  .dish-row-num{ font-size:10.5px; font-weight:800; color:var(--text3); background:var(--surface3); border-radius:6px; padding:2px 7px; }
+  .dish-row-title{ font-size:12.5px; font-weight:700; color:var(--text); flex:1; }
+  .dish-row-meta{ font-size:10.5px; color:var(--text3); font-weight:600; }
+  .dish-remove{ background:none; border:none; cursor:pointer; color:var(--text3); font-size:13px; padding:2px 4px; border-radius:6px; transition:color .15s; flex-shrink:0; }
+  .dish-remove:hover{ color:var(--red); }
+  .dish-collapse-icon{ color:var(--text3); font-size:11px; transition:transform .2s; flex-shrink:0; }
+  .dish-row.collapsed .dish-collapse-icon{ transform:rotate(-90deg); }
+
+  .dish-row-body{ padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .dish-row.collapsed .dish-row-body{ display:none; }
+
+  .fg{ display:flex; flex-direction:column; gap:5px; }
   .label{ font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:700; }
-  .input, .select{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; width:100%; transition:border-color .2s; }
-  .input:focus, .select:focus{ border-color:var(--gold-border); }
-  .input:disabled{ opacity:.7; cursor:not-allowed; }
+  .input,.select{ background:var(--surface); border:1px solid var(--border2); border-radius:10px; padding:9px 12px; color:var(--text); font-family:inherit; font-size:13px; outline:none; width:100%; transition:border-color .2s; }
+  .input:focus,.select:focus{ border-color:var(--gold-border); }
+  .input:disabled{ opacity:.6; cursor:not-allowed; background:var(--surface3); }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 
   .type-row{ display:flex; gap:8px; }
-  .type-btn{ flex:1; text-align:center; padding:10px 8px; border:1px solid var(--border); border-radius:10px; font-size:12.5px; font-weight:700; color:var(--text2); cursor:pointer; transition:all .15s; background:var(--surface2); display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .type-btn .tb-sub{ font-size:10px; font-weight:600; color:var(--text3); text-transform:none; letter-spacing:0; }
+  .type-btn{ flex:1; text-align:center; padding:8px 6px; border:1px solid var(--border2); border-radius:10px; font-size:11.5px; font-weight:700; color:var(--text2); cursor:pointer; transition:all .15s; background:var(--surface); display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .type-btn .tb-sub{ font-size:9.5px; font-weight:600; color:var(--text3); text-transform:none; letter-spacing:0; }
   .type-btn.on.normal{ background:var(--blue-bg); border-color:rgba(47,111,237,.4); color:var(--blue); }
   .type-btn.on.normal .tb-sub{ color:var(--blue); opacity:.8; }
   .type-btn.on.cook_on_order{ background:var(--amber-bg); border-color:rgba(247,144,9,.4); color:var(--amber); }
   .type-btn.on.cook_on_order .tb-sub{ color:var(--amber); opacity:.8; }
 
-  .ing-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .recipe-info-box{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:9px; padding:9px 12px; font-size:11.5px; color:var(--text2); line-height:1.6; }
+  .recipe-info-box b{ color:var(--text); }
+
+  .ing-list{ display:flex; flex-direction:column; gap:6px; }
   .ing-row{ display:grid; grid-template-columns:1fr 90px; gap:8px; align-items:center; }
-  .ing-locked-name{ background:var(--surface3); border:1px solid var(--border); border-radius:10px; padding:9px 12px; font-size:12.5px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ing-locked-name i{ color:var(--gold); font-size:11px; flex-shrink:0; }
-  .ing-empty{ font-size:11.5px; color:var(--text3); font-weight:600; padding:6px 2px; }
+  .ing-locked{ background:var(--surface); border:1px solid var(--border2); border-radius:9px; padding:7px 11px; font-size:12px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:7px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ing-locked i{ color:var(--gold); font-size:10px; flex-shrink:0; }
+  .ing-empty{ font-size:11px; color:var(--text3); font-weight:600; padding:4px 2px; }
 
-  .recipe-info{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:11.5px; color:var(--text2); line-height:1.6; }
-  .recipe-info b{ color:var(--text); }
-  .link-recipes{ font-size:11px; font-weight:700; color:var(--gold); text-decoration:none; }
+  .cost-line{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px dashed var(--border2); font-size:12.5px; font-weight:700; color:var(--text); }
+  .cost-line span:last-child{ color:var(--gold); font-weight:800; }
+  .cost-restricted{ font-size:11px; color:var(--text3); font-weight:600; padding:8px 0; border-top:1px dashed var(--border2); display:flex; align-items:center; gap:6px; }
 
-  .cost-line{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px dashed var(--border); font-size:13px; font-weight:700; color:var(--text); margin-top:4px; }
-  .cost-line span:last-child{ color:var(--gold); font-size:16px; font-weight:800; }
-  .cost-restricted{ font-size:11px; color:var(--text3); font-weight:600; padding:10px 0; border-top:1px dashed var(--border); margin-top:4px; display:flex; align-items:center; gap:6px; }
+  /* ── Add dish + Start All ── */
+  .add-dish-btn{ display:flex; align-items:center; justify-content:center; gap:8px; padding:11px; border:1.5px dashed var(--border2); border-radius:12px; color:var(--text2); font-size:12.5px; font-weight:700; cursor:pointer; background:none; width:100%; transition:border-color .2s,color .2s; font-family:inherit; }
+  .add-dish-btn:hover{ border-color:var(--gold-border); color:var(--gold); }
 
-  .btn-primary{ background:var(--gold); color:#fff; border:1px solid var(--gold); border-radius:10px; padding:10px 16px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; width:100%; justify-content:center; transition:all .2s; }
-  .btn-primary:hover{ background:var(--gold-light); }
-  .btn-primary:disabled{ opacity:.55; cursor:not-allowed; }
-  .btn-outline{ background:var(--surface2); border:1px solid var(--border); color:var(--text2); border-radius:9px; padding:7px 12px; font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; }
-  .btn-outline:hover{ border-color:var(--gold-border); color:var(--gold); }
+  .start-all-btn{ background:var(--gold); color:#fff; border:1px solid var(--gold); border-radius:11px; padding:12px 16px; font-family:inherit; font-size:13.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; width:100%; transition:all .2s; }
+  .start-all-btn:hover{ background:var(--gold-light); }
+  .start-all-btn:disabled{ opacity:.5; cursor:not-allowed; }
 
-  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; font-weight:600; }
-  .toast.success{ border-left:3px solid var(--green); } .toast.error{ border-left:3px solid var(--red); } .toast.info{ border-left:3px solid var(--blue); }
+  .progress-bar{ background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; font-size:12px; font-weight:600; color:var(--text2); display:none; align-items:center; gap:10px; }
+  .progress-bar.show{ display:flex; }
+  .progress-bar i{ color:var(--blue); }
+
+  .link-history{ font-size:11.5px; font-weight:700; color:var(--gold); text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px; padding:4px 0; }
+
+  /* ── Toast ── */
+  .toast{ position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 16px; font-size:12.5px; color:var(--text); box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:9999; display:flex; align-items:center; gap:8px; font-weight:600; }
+  .toast.success{ border-left:3px solid var(--green); }
+  .toast.error{ border-left:3px solid var(--red); }
+  .toast.info{ border-left:3px solid var(--blue); }
+
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
@@ -113,71 +139,40 @@
 
       <div class="kpi-row" id="kpiRow"></div>
 
-      <div class="layout">
-        <!-- START PRODUCTION PANEL -->
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title"><i class="fa-solid fa-fire-burner" style="color:var(--gold)"></i> Start Production Run</div>
-              <div class="panel-sub">Deducts ingredients now — record actual yield or void from Production History</div>
-            </div>
-            <div class="staff-pill" id="staffPill"></div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-fire-burner" style="color:var(--gold)"></i> Start Production Batch</div>
+            <div class="panel-sub">Add one or more dishes — all will start together. Record actual yield or void from History.</div>
           </div>
-          <div class="panel-body">
+          <div class="staff-pill" id="staffPill"></div>
+        </div>
+        <div class="panel-body">
 
-            <div class="fg">
-              <div class="label">Production Type</div>
-              <div class="type-row" id="typeRow">
-                <div class="type-btn on normal" data-type="normal">
-                  <span>Normal Cook</span>
-                  <span class="tb-sub">Batch-cooked ahead of orders</span>
-                </div>
-                <div class="type-btn cook_on_order" data-type="cook_on_order">
-                  <span>Cook on Order</span>
-                  <span class="tb-sub">Made when an order comes in</span>
-                </div>
-              </div>
-            </div>
+          <!-- Dish rows container -->
+          <div class="batch-list" id="batchList"></div>
 
-            <div class="fg">
-              <div class="label">Recipe *</div>
-              <select class="select" id="fRecipe"></select>
-            </div>
-            <div class="row2">
-              <div class="fg">
-                <div class="label" id="batchQtyLabel">Batch Size *</div>
-                <input class="input" id="fBatchQty" type="number" min="0.1" step="0.1" placeholder="3">
-              </div>
-              <div class="fg">
-                <div class="label">Expected Yield</div>
-                <input class="input" id="fExpectedYield" type="text" disabled placeholder="—">
-              </div>
-            </div>
-            <div class="recipe-info" id="recipeInfo" style="display:none;"></div>
-            <div style="text-align:right;margin:-6px 0 10px;">
-              <a class="link-recipes" href="kitchen-recipes.html"><i class="fa-solid fa-arrow-right"></i> Manage recipes</a>
-            </div>
+          <!-- Add another dish -->
+          <button class="add-dish-btn" id="addDishBtn" type="button">
+            <i class="fa-solid fa-plus"></i> Add Another Dish
+          </button>
 
-            <div class="fg">
-              <div class="label">Ingredients (from recipe)</div>
-              <div class="ing-list" id="ingList"></div>
-            </div>
-
-            <div class="fg">
-              <div class="label">Notes / Service Batch</div>
-              <input class="input" id="fNotes" type="text" placeholder="Optional remarks">
-            </div>
-
-            <div id="costBlock"></div>
-
-            <button class="btn-primary" id="startBtn" type="button"><i class="fa-solid fa-play"></i> Start Production Run</button>
-
-            <div style="text-align:center;margin-top:14px;">
-              <a href="kitchen-production-history.html" style="font-size:11.5px;font-weight:700;color:var(--gold);text-decoration:none;">
-                <i class="fa-solid fa-clock-rotate-left"></i> Go to Production History to record yield or void a run
-              </a>
-            </div>
+          <!-- Progress indicator -->
+          <div class="progress-bar" id="progressBar">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <span id="progressText">Starting…</span>
           </div>
+
+          <!-- Start all -->
+          <button class="start-all-btn" id="startAllBtn" type="button">
+            <i class="fa-solid fa-play"></i>
+            <span id="startAllLabel">Start All Runs</span>
+          </button>
+
+          <a class="link-history" href="kitchen-production-history.html">
+            <i class="fa-solid fa-clock-rotate-left"></i> Go to Production History to record yield or void a run
+          </a>
+
         </div>
       </div>
 
@@ -189,33 +184,32 @@
 <script src="../component/kitchen-shell.js"></script>
 <script>
 'use strict';
+
 var shell = null;
-var activeRecipe = null;
-var activeScale = null;
-var productionType = 'normal'; // 'normal' | 'cook_on_order' — defaults to Normal Cook
 
+/* ── Helpers ── */
 function fmtN(n) { return KitchenService.fmtN(n); }
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function showToast(msg, type) {
   type = type || 'success';
   var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
   var t = document.createElement('div');
   t.className = 'toast ' + type;
-  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + esc(String(msg == null ? '' : msg));
   document.body.appendChild(t);
-  setTimeout(function () { t.remove(); }, 3400);
+  setTimeout(function () { t.remove(); }, 4000);
 }
-
 function getSession() { return shell ? shell.getUser() : null; }
 function getStaffName() {
-  var session = getSession();
-  return (session && session.name) || 'Head Chef';
+  var s = getSession();
+  return (s && s.name) || 'Head Chef';
 }
-function isManager() {
-  return KitchenService.isManagerLike(getSession());
-}
+function isManager() { return KitchenService.isManagerLike(getSession()); }
 
+/* ── Staff pill ── */
 function renderStaffPill() {
   var name = getStaffName();
   var initials = name.split(/\s+/).map(function (p) { return p[0]; }).slice(0, 2).join('').toUpperCase();
@@ -223,182 +217,378 @@ function renderStaffPill() {
     '<span class="avatar">' + esc(initials || '?') + '</span> ' + esc(name);
 }
 
-/* ── Production type toggle — defaults to Normal Cook ── */
-function setProductionType(t) {
-  productionType = (t === 'cook_on_order') ? 'cook_on_order' : 'normal';
-  document.querySelectorAll('.type-btn').forEach(function (btn) {
-    btn.classList.toggle('on', btn.dataset.type === productionType);
+/* ══════════════════════════════════════════════
+   BATCH STATE
+   Each entry: { id, recipeId, batchQty, productionType, scale, notes }
+   We keep state in a plain array and re-render from it.
+══════════════════════════════════════════════ */
+var batchRows = [];   // array of row state objects
+var nextRowId  = 1;
+
+function makeBatchRow() {
+  return {
+    id:              nextRowId++,
+    recipeId:        '',
+    batchQty:        '',
+    productionType:  'normal',
+    scale:           null,
+    notes:           '',
+  };
+}
+
+/* ── Compute scale for a row from current KitchenService state ── */
+function computeScale(row) {
+  if (!row.recipeId) { row.scale = null; return; }
+  var recipe = KitchenService.findRecipeById(row.recipeId);
+  if (!recipe) { row.scale = null; return; }
+  var qty = parseFloat(row.batchQty) || 0;
+  row.scale = qty > 0 ? KitchenService.scaleRecipe(recipe, qty) : null;
+}
+
+/* ══════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════ */
+function renderBatchList() {
+  var container = document.getElementById('batchList');
+  if (!batchRows.length) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = batchRows.map(function (row, idx) {
+    return buildRowHTML(row, idx);
+  }).join('');
+
+  // Reattach all event listeners after a full re-render
+  batchRows.forEach(function (row) {
+    bindRowEvents(row.id);
+  });
+
+  updateStartAllLabel();
+}
+
+function buildRowHTML(row, idx) {
+  var recipe = row.recipeId ? KitchenService.findRecipeById(row.recipeId) : null;
+  var title   = recipe ? esc(recipe.dish) : '<span style="color:var(--text3);">New Dish ' + (idx + 1) + '</span>';
+  var meta    = recipe && row.scale
+    ? esc(row.batchQty) + ' ' + esc(recipe.baseUnit) + ' → ~' + row.scale.expectedYield + ' ' + esc(row.scale.expectedYieldUnit)
+    : '';
+
+  var ingHTML = '';
+  if (row.scale && row.scale.ingredients.length) {
+    ingHTML = row.scale.ingredients.map(function (i) {
+      return '<div class="ing-row">' +
+        '<div class="ing-locked"><i class="fa-solid fa-lock"></i> ' + esc(i.name) + '</div>' +
+        '<div class="ing-locked" style="justify-content:center;">' + esc(String(i.qty)) + ' ' + esc(i.unit || '') + '</div>' +
+        '</div>';
+    }).join('');
+  } else if (recipe) {
+    ingHTML = '<div class="ing-empty">Enter batch size to see scaled ingredients.</div>';
+  } else {
+    ingHTML = '<div class="ing-empty">Select a recipe first.</div>';
+  }
+
+  var costHTML = '';
+  if (row.scale) {
+    var estCost = KitchenService.estimateRecipeCost(recipe, parseFloat(row.batchQty) || 0);
+    if (isManager()) {
+      costHTML = '<div class="cost-line"><span>Estimated Ingredient Cost</span><span>' + fmtN(estCost) + '</span></div>';
+    } else {
+      costHTML = '<div class="cost-restricted"><i class="fa-solid fa-lock"></i> Cost visible to managers &amp; admins only</div>';
+    }
+  }
+
+  var recipeInfoHTML = (recipe && row.scale && recipe.notes)
+    ? '<div class="recipe-info-box">' + esc(recipe.notes) + '</div>'
+    : '';
+
+  var batchQtyLabel = recipe
+    ? 'Batch Size (' + esc(recipe.baseUnit) + ' of ' + esc(recipe.baseIngredient) + ') *'
+    : 'Batch Size *';
+
+  var recipeSel = KitchenService.state.recipes.length
+    ? '<option value="">Select a recipe…</option>' + KitchenService.state.recipes.map(function (r) {
+        return '<option value="' + esc(r.id) + '"' + (r.id === row.recipeId ? ' selected' : '') + '>' + esc(r.dish) + '</option>';
+      }).join('')
+    : '<option value="">No recipes yet</option>';
+
+  var isCollapsed = row._collapsed ? ' collapsed' : '';
+
+  return '<div class="dish-row' + isCollapsed + '" data-row-id="' + row.id + '">' +
+    '<div class="dish-row-head">' +
+      '<span class="dish-row-num">#' + (idx + 1) + '</span>' +
+      '<span class="dish-row-title">' + title + '</span>' +
+      '<span class="dish-row-meta">' + meta + '</span>' +
+      '<i class="fa-solid fa-chevron-down dish-collapse-icon"></i>' +
+      (batchRows.length > 1
+        ? '<button class="dish-remove" data-action="remove" data-row-id="' + row.id + '" title="Remove this dish"><i class="fa-solid fa-xmark"></i></button>'
+        : '') +
+    '</div>' +
+    '<div class="dish-row-body">' +
+      '<div class="fg"><div class="label">Production Type</div>' +
+        '<div class="type-row" data-role="typeRow" data-row-id="' + row.id + '">' +
+          '<div class="type-btn' + (row.productionType === 'normal' ? ' on normal' : '') + '" data-type="normal">' +
+            'Normal Cook<span class="tb-sub">Batch ahead</span></div>' +
+          '<div class="type-btn' + (row.productionType === 'cook_on_order' ? ' on cook_on_order' : '') + '" data-type="cook_on_order">' +
+            'Cook on Order<span class="tb-sub">Made per order</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fg"><div class="label">Recipe *</div>' +
+        '<select class="select" data-role="recipeSelect" data-row-id="' + row.id + '">' + recipeSel + '</select>' +
+        '<div style="text-align:right;margin-top:4px;"><a href="kitchen-recipes.html" style="font-size:10.5px;font-weight:700;color:var(--gold);text-decoration:none;"><i class="fa-solid fa-arrow-right"></i> Manage recipes</a></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="fg"><div class="label" data-role="batchLabel">' + batchQtyLabel + '</div>' +
+          '<input class="input" data-role="batchQty" data-row-id="' + row.id + '" type="number" min="0.1" step="0.1" placeholder="e.g. 3" value="' + esc(String(row.batchQty)) + '"></div>' +
+        '<div class="fg"><div class="label">Expected Yield</div>' +
+          '<input class="input" data-role="yieldDisplay" type="text" disabled placeholder="—" value="' +
+            (row.scale ? esc(row.scale.expectedYield + ' ' + row.scale.expectedYieldUnit) : '') + '"></div>' +
+      '</div>' +
+      recipeInfoHTML +
+      '<div class="fg"><div class="label">Ingredients (auto-scaled)</div>' +
+        '<div class="ing-list">' + ingHTML + '</div>' +
+      '</div>' +
+      costHTML +
+      '<div class="fg"><div class="label">Notes / Service Batch</div>' +
+        '<input class="input" data-role="notes" data-row-id="' + row.id + '" type="text" placeholder="Optional remarks" value="' + esc(row.notes) + '"></div>' +
+    '</div>' +
+  '</div>';
+}
+
+function bindRowEvents(rowId) {
+  var rowEl   = document.querySelector('[data-row-id="' + rowId + '"].dish-row');
+  if (!rowEl) return;
+  var row     = batchRows.find(function (r) { return r.id === rowId; });
+  if (!row) return;
+
+  // Collapse toggle via header (not on remove button)
+  var head = rowEl.querySelector('.dish-row-head');
+  head.addEventListener('click', function (e) {
+    if (e.target.closest('[data-action="remove"]')) return;
+    row._collapsed = !row._collapsed;
+    rowEl.classList.toggle('collapsed', !!row._collapsed);
+    rowEl.querySelector('.dish-collapse-icon').style.transform = row._collapsed ? 'rotate(-90deg)' : '';
+  });
+
+  // Remove button
+  var removeBtn = rowEl.querySelector('[data-action="remove"]');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      removeRow(rowId);
+    });
+  }
+
+  // Production type buttons
+  var typeRow = rowEl.querySelector('[data-role="typeRow"]');
+  typeRow.addEventListener('click', function (e) {
+    var btn = e.target.closest('.type-btn');
+    if (!btn) return;
+    row.productionType = btn.dataset.type;
+    typeRow.querySelectorAll('.type-btn').forEach(function (b) {
+      b.className = 'type-btn' + (b.dataset.type === row.productionType ? ' on ' + row.productionType : '');
+    });
+  });
+
+  // Recipe select
+  var recipeSelect = rowEl.querySelector('[data-role="recipeSelect"]');
+  recipeSelect.addEventListener('change', function () {
+    row.recipeId = recipeSelect.value;
+    var recipe   = row.recipeId ? KitchenService.findRecipeById(row.recipeId) : null;
+    row.batchQty = recipe ? (recipe.baseQty || '') : '';
+    computeScale(row);
+    // Re-render just this row in-place
+    renderRowInPlace(rowId);
+    updateStartAllLabel();
+  });
+
+  // Batch qty
+  var batchQtyInput = rowEl.querySelector('[data-role="batchQty"]');
+  batchQtyInput.addEventListener('input', function () {
+    row.batchQty = batchQtyInput.value;
+    computeScale(row);
+    // Update just the dynamic parts without full re-render to preserve focus
+    updateRowDynamicParts(rowEl, row);
+    updateStartAllLabel();
+  });
+
+  // Notes
+  var notesInput = rowEl.querySelector('[data-role="notes"]');
+  notesInput.addEventListener('input', function () {
+    row.notes = notesInput.value;
   });
 }
-document.getElementById('typeRow').addEventListener('click', function (e) {
-  var btn = e.target.closest('.type-btn');
-  if (btn) setProductionType(btn.dataset.type);
-});
 
-/* ── Recipe selection & scaling ── */
-function populateRecipeSelect() {
-  var sel = document.getElementById('fRecipe');
-  var current = sel.value;
-  var recipes = KitchenService.state.recipes || [];
-  if (!recipes.length) {
-    sel.innerHTML = '<option value="">No recipes yet — create one first</option>';
-    return;
-  }
-  sel.innerHTML = '<option value="">Select a recipe…</option>' +
-    recipes.map(function (r) { return '<option value="' + r.id + '">' + esc(r.dish) + '</option>'; }).join('');
-  if (current) sel.value = current;
+/* Re-render a single row in-place (used after recipe change) */
+function renderRowInPlace(rowId) {
+  var rowEl = document.querySelector('[data-row-id="' + rowId + '"].dish-row');
+  if (!rowEl) return;
+  var row   = batchRows.find(function (r) { return r.id === rowId; });
+  if (!row)  return;
+  var idx   = batchRows.indexOf(row);
+  var newHTML = buildRowHTML(row, idx);
+  var tmp = document.createElement('div');
+  tmp.innerHTML = newHTML;
+  rowEl.parentNode.replaceChild(tmp.firstElementChild, rowEl);
+  bindRowEvents(rowId);
 }
 
-function onRecipeChange() {
-  var sel = document.getElementById('fRecipe');
-  activeRecipe = KitchenService.findRecipeById(sel.value);
-  var infoBox = document.getElementById('recipeInfo');
+/* Update only the yield, ingredients, and cost parts (called on qty change to preserve focus) */
+function updateRowDynamicParts(rowEl, row) {
+  var recipe = row.recipeId ? KitchenService.findRecipeById(row.recipeId) : null;
 
-  if (!activeRecipe) {
-    document.getElementById('batchQtyLabel').textContent = 'Batch Size *';
-    document.getElementById('fBatchQty').value = '';
-    document.getElementById('fExpectedYield').value = '';
-    infoBox.style.display = 'none';
-    activeScale = null;
-    renderIngList([]);
-    renderCostBlock(0);
-    return;
+  // Expected yield
+  var yieldEl = rowEl.querySelector('[data-role="yieldDisplay"]');
+  if (yieldEl) {
+    yieldEl.value = (row.scale && row.scale.expectedYield)
+      ? row.scale.expectedYield + ' ' + row.scale.expectedYieldUnit
+      : '—';
   }
 
-  document.getElementById('batchQtyLabel').textContent =
-    'Batch Size (' + activeRecipe.baseUnit + ' of ' + activeRecipe.baseIngredient + ') *';
-  document.getElementById('fBatchQty').value = activeRecipe.baseQty || '';
-  recomputeScale();
-}
-
-function recomputeScale() {
-  if (!activeRecipe) return;
-  var qty = parseFloat(document.getElementById('fBatchQty').value) || 0;
-  activeScale = KitchenService.scaleRecipe(activeRecipe, qty);
-  var expEl = document.getElementById('fExpectedYield');
-  var infoBox = document.getElementById('recipeInfo');
-  var estCost = qty > 0 ? KitchenService.estimateRecipeCost(activeRecipe, qty) : 0;
-
-  if (qty > 0) {
-    expEl.value = activeScale.expectedYield + ' ' + activeScale.expectedYieldUnit;
-    infoBox.style.display = 'block';
-    infoBox.innerHTML = '<b>' + activeScale.ingredients.length + ' ingredients</b> scaled from the recipe' +
-      (activeRecipe.notes ? '<br>' + esc(activeRecipe.notes) : '');
-  } else {
-    expEl.value = '—';
-    infoBox.style.display = 'none';
-  }
-
-  renderIngList(activeScale.ingredients);
-  renderCostBlock(estCost);
-}
-
-function renderIngList(ingredients) {
-  var wrap = document.getElementById('ingList');
-  if (!ingredients || !ingredients.length) {
-    wrap.innerHTML = '<div class="ing-empty">Pick a recipe above to load its ingredients.</div>';
-    return;
-  }
-  // The ingredient was already chosen when the recipe was created — this
-  // just shows what will be deducted, it isn't a picker.
-  wrap.innerHTML = ingredients.map(function (i) {
-    return '<div class="ing-row">' +
-      '<div class="ing-locked-name"><i class="fa-solid fa-lock"></i> ' + esc(i.name) + '</div>' +
-      '<div class="ing-locked-name" style="justify-content:center;">' + esc(i.qty) + ' ' + esc(i.unit || '') + '</div>' +
-      '</div>';
-  }).join('');
-}
-
-function renderCostBlock(estCost) {
-  var el = document.getElementById('costBlock');
-  if (isManager()) {
-    var gasCost = (activeScale && activeScale.gasCost) || 0;
-    var ingredientCost = estCost - gasCost;
-    var html = '<div class="cost-line"><span>Ingredient Cost</span><span>' + fmtN(ingredientCost) + '</span></div>';
-    if (gasCost > 0) {
-      html += '<div class="cost-line"><span>Gas / Fuel Cost</span><span>' + fmtN(gasCost) + '</span></div>';
+  // Ingredients
+  var ingList = rowEl.querySelector('.ing-list');
+  if (ingList) {
+    if (row.scale && row.scale.ingredients.length) {
+      ingList.innerHTML = row.scale.ingredients.map(function (i) {
+        return '<div class="ing-row">' +
+          '<div class="ing-locked"><i class="fa-solid fa-lock"></i> ' + esc(i.name) + '</div>' +
+          '<div class="ing-locked" style="justify-content:center;">' + esc(String(i.qty)) + ' ' + esc(i.unit || '') + '</div>' +
+          '</div>';
+      }).join('');
+    } else {
+      ingList.innerHTML = recipe
+        ? '<div class="ing-empty">Enter batch size to see scaled ingredients.</div>'
+        : '<div class="ing-empty">Select a recipe first.</div>';
     }
-    html += '<div class="cost-line" style="font-weight:700;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;"><span>Total Estimated Cost</span><span>' + fmtN(estCost) + '</span></div>';
-    el.innerHTML = html;
-  } else {
-    el.innerHTML = '<div class="cost-restricted"><i class="fa-solid fa-lock"></i> Cost visible to managers &amp; admins only</div>';
+  }
+
+  // Cost block — find and replace the cost-line/cost-restricted div
+  var costLine = rowEl.querySelector('.cost-line, .cost-restricted');
+  if (costLine) costLine.remove();
+  if (row.scale && recipe) {
+    var estCost = KitchenService.estimateRecipeCost(recipe, parseFloat(row.batchQty) || 0);
+    var costEl = document.createElement('div');
+    if (isManager()) {
+      costEl.className = 'cost-line';
+      costEl.innerHTML = '<span>Estimated Ingredient Cost</span><span>' + fmtN(estCost) + '</span>';
+    } else {
+      costEl.className = 'cost-restricted';
+      costEl.innerHTML = '<i class="fa-solid fa-lock"></i> Cost visible to managers &amp; admins only';
+    }
+    rowEl.querySelector('.dish-row-body').appendChild(costEl);
   }
 }
 
-document.getElementById('fRecipe').addEventListener('change', onRecipeChange);
-document.getElementById('fBatchQty').addEventListener('input', recomputeScale);
+function removeRow(rowId) {
+  batchRows = batchRows.filter(function (r) { return r.id !== rowId; });
+  renderBatchList();
+}
 
-/* ── Start production ── */
-document.getElementById('startBtn').addEventListener('click', async function () {
-  if (!activeRecipe || !activeScale) { showToast('Select a recipe and batch size first.', 'error'); return; }
+function addRow() {
+  var row = makeBatchRow();
+  batchRows.push(row);
+  renderBatchList();
+  // Scroll the new row into view
+  var newEl = document.querySelector('[data-row-id="' + row.id + '"].dish-row');
+  if (newEl) newEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
-  var payload = {
-    dish: activeRecipe.dish,
-    recipeId: activeRecipe.id,
-    type: productionType, // 'normal' (default) | 'cook_on_order' — explicit, never left to an implicit service default
-    expectedYield: activeScale.expectedYield,
-    expectedYieldUnit: activeScale.expectedYieldUnit,
-    ingredients: activeScale.ingredients.map(function (i) { return { name: i.name, qty: i.qty }; }),
-    gasCost: activeScale.gasCost || 0,
-    staff: getStaffName(),
-    notes: document.getElementById('fNotes').value.trim(),
-  };
+function updateStartAllLabel() {
+  var valid = batchRows.filter(function (r) { return r.recipeId && parseFloat(r.batchQty) > 0; }).length;
+  var el = document.getElementById('startAllLabel');
+  if (el) el.textContent = valid === 0 ? 'Start All Runs' : ('Start ' + valid + ' Run' + (valid !== 1 ? 's' : ''));
+}
 
-  var btn = document.getElementById('startBtn');
-  btn.disabled = true;
-  try {
-    await KitchenService.startProduction(payload);
-    showToast('Production started — ingredients deducted. Record the actual yield once it\'s done.', 'success');
-    document.getElementById('fRecipe').value = '';
-    document.getElementById('fNotes').value = '';
-    setProductionType('normal');
-    onRecipeChange();
-    renderAll();
-  } catch (err) {
-    showToast((err && err.message) || 'Failed to start production.', 'error');
-  } finally {
-    btn.disabled = false;
+/* ══════════════════════════════════════════════
+   SUBMIT ALL
+══════════════════════════════════════════════ */
+document.getElementById('addDishBtn').addEventListener('click', addRow);
+
+document.getElementById('startAllBtn').addEventListener('click', async function () {
+  var validRows = batchRows.filter(function (r) { return r.recipeId && parseFloat(r.batchQty) > 0; });
+
+  if (!validRows.length) {
+    showToast('Add at least one dish with a recipe and batch size.', 'error');
+    return;
   }
+
+  var btn      = document.getElementById('startAllBtn');
+  var progress = document.getElementById('progressBar');
+  var progText = document.getElementById('progressText');
+  btn.disabled = true;
+  progress.classList.add('show');
+
+  var succeeded = 0;
+  var failed    = [];
+
+  for (var i = 0; i < validRows.length; i++) {
+    var row    = validRows[i];
+    var recipe = KitchenService.findRecipeById(row.recipeId);
+    if (!recipe) { failed.push('Row ' + (i + 1) + ': recipe not found'); continue; }
+
+    progText.textContent = 'Starting ' + (i + 1) + ' of ' + validRows.length + ': ' + recipe.dish + '…';
+
+    try {
+      await KitchenService.startProduction({
+        dish:              recipe.dish,
+        recipeId:          recipe.id,
+        type:              row.productionType,
+        expectedYield:     row.scale ? row.scale.expectedYield : 0,
+        expectedYieldUnit: row.scale ? row.scale.expectedYieldUnit : 'portions',
+        ingredients:       row.scale ? row.scale.ingredients.map(function (ing) {
+                             return { name: ing.name, qty: ing.qty };
+                           }) : [],
+        staff:             getStaffName(),
+        notes:             row.notes,
+      });
+      succeeded++;
+    } catch (err) {
+      failed.push(recipe.dish + ': ' + ((err && err.message) || 'unknown error'));
+    }
+  }
+
+  progress.classList.remove('show');
+  btn.disabled = false;
+
+  if (failed.length === 0) {
+    showToast(succeeded + ' production run' + (succeeded !== 1 ? 's' : '') + ' started — ingredients deducted. Record yield from History when ready.', 'success');
+    // Reset all rows back to a single blank row
+    batchRows = [makeBatchRow()];
+    renderBatchList();
+  } else if (succeeded > 0) {
+    showToast(succeeded + ' started, ' + failed.length + ' failed: ' + failed.join('; '), 'error');
+    // Remove only the succeeded rows (approximation — remove the first N valid rows)
+    var toRemove = validRows.slice(0, succeeded);
+    batchRows = batchRows.filter(function (r) { return !toRemove.includes(r); });
+    if (!batchRows.length) batchRows = [makeBatchRow()];
+    renderBatchList();
+  } else {
+    showToast('All runs failed: ' + failed.join('; '), 'error');
+  }
+
+  renderKPIs();
 });
 
 /* ── KPIs ── */
-function todayOutputTotal() {
-  var today = KitchenService.todayDDMMYY();
-  var total = 0;
-  (KitchenService.state.production || []).forEach(function (p) {
-    if (p.status === 'completed' && (p.date || '').startsWith(today)) total += Number(p.outputQty) || 0;
-  });
-  return Math.round(total * 100) / 100;
-}
-
 function renderKPIs() {
-  var k = KitchenService.dashboardKPIs();
+  var k  = KitchenService.dashboardKPIs();
   var pk = KitchenService.productionKPIs();
   var pending = (KitchenService.state.production || []).filter(function (p) { return p.status === 'in-progress'; }).length;
-  var el = document.getElementById('kpiRow');
-  el.innerHTML =
+  document.getElementById('kpiRow').innerHTML =
     '<div class="kpi-card acc-blue">' +
       '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-fire-burner"></i></div><div class="kpi-label">Today\'s Runs</div></div>' +
       '<div class="kpi-value" style="color:var(--blue);">' + k.todayRunsCount + '</div>' +
-      '<div class="kpi-trend neutral">Started today</div>' +
+      '<div class="kpi-trend info">Started today</div>' +
     '</div>' +
     '<div class="kpi-card acc-amber">' +
       '<div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Awaiting Yield</div></div>' +
       '<div class="kpi-value" style="color:var(--amber);">' + pending + '</div>' +
       '<div class="kpi-trend warn">Cooking in progress</div>' +
     '</div>' +
-    (isManager() ?
-      '<div class="kpi-card acc-green">' +
-        '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Today\'s Ingredient Cost</div></div>' +
-        '<div class="kpi-value" style="color:var(--green);">' + fmtN(k.todayCost) + '</div>' +
-        '<div class="kpi-trend up">Consumed today</div>' +
-      '</div>'
-      :
-      '<div class="kpi-card acc-green">' +
-        '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-utensils"></i></div><div class="kpi-label">Today\'s Output</div></div>' +
-        '<div class="kpi-value" style="color:var(--green);">' + todayOutputTotal() + '</div>' +
-        '<div class="kpi-trend up">Units produced today</div>' +
-      '</div>'
+    (isManager()
+      ? '<div class="kpi-card acc-green"><div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Today\'s Cost</div></div>' +
+        '<div class="kpi-value" style="color:var(--green);">' + fmtN(k.todayCost) + '</div><div class="kpi-trend up">Ingredient value</div></div>'
+      : '<div class="kpi-card acc-green"><div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-utensils"></i></div><div class="kpi-label">Items in Stock</div></div>' +
+        '<div class="kpi-value" style="color:var(--green);">' + k.itemCount + '</div><div class="kpi-trend up">Ingredients tracked</div></div>'
     ) +
     '<div class="kpi-card acc-purple">' +
       '<div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-scale-balanced"></i></div><div class="kpi-label">Avg Yield Variance</div></div>' +
@@ -407,29 +597,33 @@ function renderKPIs() {
     '</div>';
 }
 
-function renderAll() {
-  renderKPIs();
-}
-
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
 (async function init() {
   if (window.KitchenShell) {
     shell = KitchenShell.attach({
-      sidebarTarget: '#sidebarSlot',
-      topbarTarget: '#topbarSlot',
-      activeFile: 'kitchen-production.html',
-      pageTitle: 'New Production',
-      pageSubtitle: 'Log dishes produced from raw ingredient stock',
+      sidebarTarget:  '#sidebarSlot',
+      topbarTarget:   '#topbarSlot',
+      activeFile:     'kitchen-production.html',
+      pageTitle:      'Start Production',
+      pageSubtitle:   'Deducts ingredients now — record yield from History when cooking is done',
     });
   }
 
   await KitchenService.loadAll();
+
   renderStaffPill();
-  setProductionType('normal');
-  populateRecipeSelect();
-  renderIngList([]);
-  renderCostBlock(0);
-  KitchenService.onChange(function () { renderAll(); populateRecipeSelect(); });
-  renderAll();
+  renderKPIs();
+
+  // Start with one blank dish row
+  batchRows = [makeBatchRow()];
+  renderBatchList();
+
+  // Keep KPIs live as state changes
+  KitchenService.onChange(function () {
+    renderKPIs();
+  });
 })();
 </script>
 </body>

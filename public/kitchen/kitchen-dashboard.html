@@ -149,6 +149,7 @@ body{
    Initialization & Rendering
 ═══════════════════════════════════════════════ */
 const svc = window.KitchenService;
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function paint(){
   if(!svc || !svc.state.ready) return;
@@ -190,8 +191,8 @@ function paint(){
     <div class="list-row">
       <div class="list-ic ic-purple"><i class="fa-solid fa-utensils"></i></div>
       <div class="list-body">
-        <div class="list-name">${p.dish}</div>
-        <div class="list-meta">${p.outputQty} ${p.outputUnit} · by ${p.staff} · ${p.date}</div>
+        <div class="list-name">${esc(p.dish)}</div>
+        <div class="list-meta">${esc(String(p.outputQty||''))} ${esc(p.outputUnit||'')} · by ${esc(p.staff||p.by||'')} · ${esc(p.date||'')}</div>
       </div>
       <span class="chip chip-completed">${p.status.toUpperCase()}</span>
     </div>
@@ -203,7 +204,7 @@ function paint(){
     <div class="list-row">
       <div class="list-ic ic-amber"><i class="fa-solid fa-box-open"></i></div>
       <div class="list-body">
-        <div class="list-name">${i.name}</div>
+        <div class="list-name">${esc(i.name)}</div>
         <div class="list-meta">Have ${i.qty} ${i.unit} · Reorder at ${i.min}</div>
       </div>
       <span class="chip chip-low">LOW</span>
@@ -217,7 +218,7 @@ function paint(){
       <a class="list-row" href="kitchen-requisition-history.html">
         <div class="list-ic ic-blue"><i class="fa-solid fa-file-invoice"></i></div>
         <div class="list-body">
-          <div class="list-name">${r.no} — Requisition</div>
+          <div class="list-name">${esc(r.no)} — Requisition</div>
           <div class="list-meta">${r.items.length} items · Raised ${r.dateRaisedDisplay || r.dateRaised}</div>
         </div>
         <span class="chip" style="background:var(--blue-bg);color:var(--blue)">${r.status}</span>

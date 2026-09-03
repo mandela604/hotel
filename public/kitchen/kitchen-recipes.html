@@ -225,7 +225,7 @@ function showToast(msg, type) {
   var icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
   var t = document.createElement('div');
   t.className = 'toast ' + type;
-  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + esc(String(msg==null?'':msg));
   document.body.appendChild(t);
   setTimeout(function () { t.remove(); }, 3400);
 }

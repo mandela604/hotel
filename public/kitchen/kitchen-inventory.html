@@ -333,6 +333,7 @@ function fmtN(n){ return KitchenService.fmtN(n); }
 function fmtQty(n){ return (Math.round((n||0)*100)/100).toLocaleString('en-NG'); }
 function stockLevel(s){ return KitchenService.stockLevel(s); }
 function itemValue(s){ return (s.qty||0) * (s.price||s.cost||0); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 const LEVEL_CHIP = KitchenService.LEVEL_CHIP;
 const LEVEL_LABEL = KitchenService.LEVEL_LABEL;
@@ -459,7 +460,7 @@ function render(){
         const cat = s.category || s.cat || 'General';
         const cost = s.price || s.cost || 0;
         return `<tr>
-          <td data-label="Ingredient"><span class="item-name">${s.name}</span></td>
+          <td data-label="Ingredient"><span class="item-name">${esc(s.name)}</span></td>
           <td data-label="Category"><span class="cat-badge">${cat}</span></td>
           <td data-label="On Hand" style="font-weight:700;">${fmtQty(s.qty)} ${s.unit||''}</td>
           <td data-label="Reorder Min">${fmtQty(s.min)} ${s.unit||''}</td>
@@ -468,8 +469,8 @@ function render(){
           <td data-label="Total Value" style="font-weight:700;color:var(--gold);">${fmtN(itemValue(s))}</td>
           <td data-label="Actions" style="text-align:right;">
             <div class="act-btns" style="justify-content:flex-end;">
-              <button class="act-btn" onclick="openItemModal('${s.name.replace(/'/g, "\\'")}')" title="Edit ingredient"><i class="fa-solid fa-pen-to-square"></i></button>
-              <button class="act-btn del" onclick="openDeleteModal('${s.name.replace(/'/g, "\\'")}')" title="Delete ingredient"><i class="fa-solid fa-trash"></i></button>
+              <button class="act-btn" onclick="openItemModal('${esc(s.name)}')" title="Edit ingredient"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button class="act-btn del" onclick="openDeleteModal('${esc(s.name)}')" title="Delete ingredient"><i class="fa-solid fa-trash"></i></button>
             </div>
           </td>
         </tr>`;
@@ -571,7 +572,7 @@ const TOAST_ICON = { success:'fa-circle-check', error:'fa-circle-xmark', info:'f
 function showToast(msg, type='success'){
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.innerHTML = `<i class="fa-solid ${TOAST_ICON[type]||'fa-circle-info'}"></i> ${msg}`;
+  t.innerHTML = `<i class="fa-solid ${TOAST_ICON[type]||'fa-circle-info'}"></i> ${esc(String(msg==null?'':msg))}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }

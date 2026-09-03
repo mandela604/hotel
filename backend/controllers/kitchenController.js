@@ -117,7 +117,7 @@ exports.deductStock = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Valid ingredient name and quantity required' });
   }
 
-  const item = await KitchenStock.findOne({ name: new RegExp(`^${name.trim()}$`, 'i') });
+  const item = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(name.trim())}$`, 'i') });
   if (!item) return res.status(404).json({ success: false, error: `"${name}" not found in stock` });
   if (item.qty < Number(qty)) {
     return res.status(400).json({ success: false, error: `Cannot deduct ${qty} ${item.unit}. Only ${item.qty} on hand.` });
@@ -318,7 +318,7 @@ exports.voidProduction = asyncHandler(async (req, res) => {
 
   if (Array.isArray(run.ingredients)) {
     for (const ing of run.ingredients) {
-      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${ing.name.trim()}$`, 'i') });
+      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
       if (stockItem) {
         stockItem.qty += Number(ing.qty);
         await stockItem.save();
@@ -359,7 +359,7 @@ exports.addTransfer = asyncHandler(async (req, res) => {
     productionNo: productionNo || '',
     meal: meal.trim(),
     quantity: Number(quantity),
-    unit: unit || 'Plates',
+    unit: unit || 'Portions',
     sentBy: sentBy || (req.user ? req.user.name : 'Head Chef'),
     dateSent: nowStamp(),
     status: 'sent',
@@ -434,7 +434,7 @@ exports.listRecipes = asyncHandler(async (req, res) => {
 exports.createRecipe = asyncHandler(async (req, res) => {
   const { dish, baseQty, baseUnit, baseIngredient, ingredients, expectedYield, expectedYieldUnit, gasCostPerUnit, notes } = req.body;
 
-  const existing = await Recipe.findOne({ dish: new RegExp(`^${dish.trim()}$`, 'i') });
+  const existing = await Recipe.findOne({ dish: new RegExp(`^${sanitizeRegex(dish.trim())}$`, 'i') });
   if (existing) {
     return res.status(409).json({ success: false, error: `A recipe for "${dish}" already exists` });
   }
@@ -492,8 +492,25 @@ exports.deleteRecipe = asyncHandler(async (req, res) => {
 });
 
 exports.listMovements = asyncHandler(async (req, res) => {
-  const list = await KitchenMovement.find().sort({ createdAt: -1 }).limit(100);
-  res.json({ success: true, count: list.length, data: list });
+  const page  = Math.max(1, parseInt(req.query.page)  || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 100));
+  const item  = req.query.item  ? new RegExp(sanitizeRegex(req.query.item.trim()),  'i') : null;
+  const from  = req.query.from  ? new Date(req.query.from)  : null;
+  const to    = req.query.to    ? new Date(req.query.to)    : null;
+
+  const filter = {};
+  if (item) filter.item = item;
+  if (from || to) {
+    filter.createdAt = {};
+    if (from) filter.createdAt.$gte = from;
+    if (to)   { to.setHours(23, 59, 59, 999); filter.createdAt.$lte = to; }
+  }
+
+  const [list, total] = await Promise.all([
+    KitchenMovement.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    KitchenMovement.countDocuments(filter),
+  ]);
+  res.json({ success: true, count: list.length, total, page, pages: Math.ceil(total / limit), data: list });
 });
 
 /* ── Create Requisition (Kitchen → Store) ── */
