@@ -196,9 +196,11 @@ exports.createSale = asyncHandler(async (req, res) => {
   const count = await Sale.countDocuments({ department: DEPT });
   const id = `RST-${String(count + 1).padStart(5, '0')}`;
 
+  const stockIdMap = {};
   for (const it of items) {
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
-    if (!stockItem) continue; // not every menu item is stock-tracked
+    if (!stockItem) continue;
+    stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
     const qty = Number(it.qty);
     if (stockItem.qty < qty) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -221,7 +223,7 @@ exports.createSale = asyncHandler(async (req, res) => {
   const sale = await Sale.create({
     id,
     department: DEPT,
-    items: items.map((i) => ({ name: i.name, qty: Number(i.qty), price: Number(i.price) })),
+    items: items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
     subtotal,
     discount: discountPct,
     total,
@@ -292,7 +294,9 @@ exports.voidSale = asyncHandler(async (req, res) => {
   await sale.save();
 
   for (const it of sale.items) {
-    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    let stockItem = null;
+    if (it.stockId) stockItem = await RestaurantStock.findOne({ id: it.stockId });
+    if (!stockItem) stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
     if (!stockItem) continue;
     stockItem.qty += Number(it.qty);
     await stockItem.save();
@@ -551,9 +555,11 @@ exports.payOrder = asyncHandler(async (req, res) => {
   const payMethod = method || 'Cash';
 
   /* ── Deduct RestaurantStock per item (same as createSale) ── */
+  const stockIdMap = {};
   for (const it of order.items) {
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
     if (!stockItem) continue;
+    stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
     const qty = Number(it.qty);
     if (stockItem.qty < qty) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -581,7 +587,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     id: saleId,
     source: order.id,
     department: DEPT,
-    items: order.items.map((i) => ({ name: i.name, qty: Number(i.qty), price: Number(i.price) })),
+    items: order.items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
     subtotal: order.subtotal,
     discount: order.discount,
     total: order.total,

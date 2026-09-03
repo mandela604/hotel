@@ -295,7 +295,10 @@ exports.createSale = asyncHandler(async (req, res) => {
     id: saleId,
     source: 'Poolbar',
     department: 'poolbar',
-    items: items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) })),
+    items: items.map((it, idx) => {
+      const r = resolved.find(rv => rv.stockItem && rv.stockItem.name && rv.stockItem.name.toLowerCase() === it.name.trim().toLowerCase());
+      return { name: it.name.trim(), stockId: r ? r.stockItem.id : '', qty: Number(it.qty), price: Number(it.price) };
+    }),
     subtotal,
     discount: Number(discount) || 0,
     total,
@@ -322,7 +325,9 @@ exports.voidSale = asyncHandler(async (req, res) => {
 
   /* restore stock + log movements */
   for (const it of (sale.items || [])) {
-    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+    let stockItem = null;
+    if (it.stockId) stockItem = await PoolbarStock.findOne({ id: it.stockId });
+    if (!stockItem) stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
     if (stockItem) {
       stockItem.qty += Number(it.qty) || 0;
       await stockItem.save();
@@ -487,7 +492,10 @@ exports.payOrder = asyncHandler(async (req, res) => {
     id: saleId,
     source: 'Poolbar',
     department: 'poolbar',
-    items: order.items.map(it => ({ name: it.name, qty: Number(it.qty), price: Number(it.price) })),
+    items: order.items.map(it => {
+      const r = resolved.find(rv => rv.stockItem && rv.stockItem.name && rv.stockItem.name.toLowerCase() === it.name.trim().toLowerCase());
+      return { name: it.name, stockId: r ? r.stockItem.id : '', qty: Number(it.qty), price: Number(it.price) };
+    }),
     subtotal: order.subtotal,
     discount: order.discount,
     total: order.total,
