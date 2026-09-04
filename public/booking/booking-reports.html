@@ -389,10 +389,13 @@ function applyInlineFilters() {
       if (!hit) return false;
     }
     if (bounds.start && bounds.end) {
-      const ci = new Date(b.checkin); ci.setHours(0,0,0,0);
-      const co = b.checkout ? new Date(b.checkout) : ci; co.setHours(0,0,0,0);
-      if (isNaN(ci.getTime())) return false;
-      if (ci > bounds.end || co < bounds.start) return false;
+      const hasRefund = Number(b.refunded) > 0;
+      if (!hasRefund) {
+        const ci = new Date(b.checkin); ci.setHours(0,0,0,0);
+        const co = b.checkout ? new Date(b.checkout) : ci; co.setHours(0,0,0,0);
+        if (isNaN(ci.getTime())) return false;
+        if (ci > bounds.end || co < bounds.start) return false;
+      }
     }
     return true;
   });

@@ -119,33 +119,6 @@
       totals[method] = (totals[method] || 0) + (s.total || 0);
     });
     const methods = order.filter(function (m) { return totals[m] > 0; })
-      .concat(Object.keys(totals).filter(function (m) { return order.indexOf(m) === -1; }));
-    return methods.map(function (method) {
-      return { method, amount: totals[method] || 0, colorClass: colors[method] || '' };
-    });
-  }
-
-  function getFilteredSales(filters) {
-  const { status, source, payment, search, bounds } = filters || {};
-  return (state.sales || []).filter(function (s) {
-    if (status && s.status !== status) return false;
-    if (source && s.source !== source) return false;
-    if (payment && s.payment !== payment) return false;
-    if (search && s.name && s.name.toLowerCase().indexOf(search.toLowerCase()) === -1) return false;
-    if (bounds) {
-      const d = parseStamp(s.date);
-      if (!d) return false;
-      if (bounds.start && d < new Date(bounds.start)) return false;
-      if (bounds.end && d > new Date(bounds.end)) return false;
-    }
-    return true;
-  }).sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
-}
-
-function getCategories() {
-    const cats = new Set();
-    (state.stock || []).forEach(function (i) { if (i.category || i.cat) cats.add(i.category || i.cat); });
-    (state.extraCategories || []).forEach(function (c) { if (c) cats.add(c); });
     return [...cats].sort();
   }
 
@@ -553,7 +526,8 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     openTab, markServed, payOrder, cancelOrder,
     acceptTransfer, rejectTransfer, transferKPIs,
     getRequisitions, submitRequisition, receiveRequisition, confirmReceipt,
-    dashboardKPIs, salesKPIs, getFilteredSales, getRevenueBreakdown, getTodaysCompletedSales,
+    dashboardKPIs, salesKPIs, getFilteredSales, filterSales, getRevenueBreakdown, getTodaysCompletedSales,
+    getCompletedSaleStatus, getStatusConstants, getRoomChargeMethodName, isMoneyReceived, listStaffNames, getReportTitle,
     can, canVoidSale, canDiscount,
     getInHouseGuests,
     getSession,
