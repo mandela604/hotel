@@ -97,8 +97,8 @@
     .sif-btn-primary:disabled{ opacity:.55; cursor:not-allowed; }
   `;
 
-  const UNITS = ['kg','g','Ltr','ml','pcs','Bottles','Cans','Packs','Cartons','Bags','Crates'];
-  const BASE_UNITS = ['','pcs','kg','g','Ltr','ml','Bottles','Cans','Packs','Bags'];
+  const UNITS = ['kg','g','Ltr','ml','pcs','Bottles','Cans','Packs','Cartons','Bags','Crates','Basket','Portion'];
+  const BASE_UNITS = ['','pcs','kg','g','Ltr','ml','Bottles','Cans','Packs','Bags','Basket','Portion'];
 
   let root = null;
   let opts = null;

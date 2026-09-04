@@ -97,7 +97,7 @@
     .sif-btn-primary:disabled{ opacity:.55; cursor:not-allowed; }
   `;
 
-  const UNITS = ['kg','g','Ltr','ml','pcs','Bottles','Cans','Packs','Cartons','Bags','Crates'];
+  const UNITS = ['kg','g','Ltr','ml','pcs','Bottles','Cans','Packs','Cartons','Bags','Crates','Basket','Portion'];
 
   let root = null;
   let opts = null;
