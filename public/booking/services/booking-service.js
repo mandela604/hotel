@@ -44,6 +44,7 @@
     { value: 'vacant',      label: 'Available',   tone: 'all',       color: '#6b7280' },
     { value: 'reserved',    label: 'Reserved',    tone: 'pending',   color: '#f79009' },
     { value: 'maintenance', label: 'Maintenance', tone: 'open',      color: '#2f6fed' },
+    { value: 'cancelled',   label: 'Cancelled',   tone: 'voided',    color: '#ef4444' },
   ];
 
   const CONFIG = {
@@ -68,10 +69,13 @@
     return ((b.rate || 0) - (b.discount || 0)) * n;
   }
   function calcPaid(b) {
+    var raw = 0;
     if (Array.isArray(b.payments) && b.payments.length) {
-      return b.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      raw = b.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    } else {
+      raw = Number(b.paid) || 0;
     }
-    return Number(b.paid) || 0;
+    return Math.max(0, raw - (Number(b.refunded) || 0));
   }
   function calcBal(b) { return Math.max(0, calcTotal(b) - calcPaid(b)); }
 

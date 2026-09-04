@@ -485,7 +485,7 @@ const RC_CLS = { available: 'rc-available', checkedin: 'rc-checkedin', reserved:
 const RC_LBL = { available: 'Available', checkedin: 'Occupied', reserved: 'Reserved', checkout: 'Check-out', maintenance: 'Maintenance', cleaning: 'Cleaning', 'no-show': 'No-Show', cancelled: 'Cancelled' };
 const STATUS_OPTS = {
   available:   [{ v: 'maintenance', l: 'Put Under Maintenance' }],
-  checkedin:   [{ v: 'cleaning', l: 'Check out → Cleaning' }],
+  checkedin:   [{ v: 'cleaning', l: 'Check out → Cleaning' }, { v: 'cancel-refund', l: 'Cancel & Refund' }],
   reserved:    [{ v: 'checkedin', l: 'Check In' }, { v: 'no-show', l: 'Mark No-Show' }, { v: 'cancel-refund', l: 'Cancel & Refund' }, { v: 'vacant', l: 'Cancel / Make Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
   checkout:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
   maintenance: [{ v: 'vacant', l: 'Mark Available' }],
@@ -542,7 +542,7 @@ function updateStatPills() {
   const totalRooms = allRooms.length || 1;
   const occupied = allRooms.filter(r => getRoomStatus(r.num) === 'checkedin').length;
   const occRate = Math.round((occupied / totalRooms) * 100);
-  const revenue = bookings.reduce((sum, b) => sum + (b.paid || 0) - (Number(b.refunded)||0), 0);
+  const revenue = bookings.reduce((sum, b) => sum + (BookingData.calcPaid(b)), 0);
   document.getElementById('occRateVal').textContent = occRate + '%';
   document.getElementById('revenueVal').textContent = fmtN(revenue);
 }

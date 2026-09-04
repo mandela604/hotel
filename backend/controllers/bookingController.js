@@ -2,6 +2,7 @@ const Room = require('../models/Room');
 const Booking = require('../models/Booking');
 const Guest = require('../models/Guest');
 const Sale = require('../models/Sale');
+const Order = require('../models/Order');
 const Activity = require('../models/Activity');
 const asyncHandler = require('../middleware/asyncHandler');
 const { STATUS_TRANSITIONS } = require('../middleware/bookingValidators');
@@ -194,7 +195,7 @@ exports.updateRoom = asyncHandler(async (req, res) => {
 
   const { num: newNum, type, rate, notes } = req.body;
 
-  // Handle room number change
+  // Handle room number change — cascade to all references
   if (newNum && newNum !== req.params.num) {
     const exists = await Room.findOne({ num: newNum });
     if (exists) return res.status(400).json({ success: false, error: `Room ${newNum} already exists` });
@@ -205,6 +206,14 @@ exports.updateRoom = asyncHandler(async (req, res) => {
       booking.room = newNum;
       await booking.save();
     }
+    // Cascade to Sale, Order, Guest.charges (active references only)
+    await Sale.updateMany({ roomNumber: req.params.num }, { $set: { roomNumber: newNum } });
+    await Order.updateMany({ roomNumber: req.params.num }, { $set: { roomNumber: newNum } });
+    await Guest.updateMany(
+      { 'charges.room': req.params.num },
+      { $set: { 'charges.$[elem].room': newNum } },
+      { arrayFilters: [{ 'elem.room': req.params.num }] }
+    );
   }
 
   if (type !== undefined) room.type = type;
@@ -467,7 +476,7 @@ exports.markNoShow = asyncHandler(async (req, res) => {
 exports.cancelRefund = asyncHandler(async (req, res) => {
   const booking = await Booking.findOne({ room: req.params.room });
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
-  if (!['reserved', 'no-show'].includes(booking.status)) {
+  if (!['reserved', 'checkedin', 'no-show'].includes(booking.status)) {
     return res.status(400).json({ success: false, error: `Cannot cancel from status '${booking.status}'` });
   }
 
@@ -481,16 +490,28 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
     refund = Math.max(0, Math.min(Number(refundAmount) || 0, totalPaid));
   }
 
-  booking.status = 'cancelled';
+  const guestName = booking.guest;
+  const roomNum = booking.room;
+
+  // Record refund before clearing
   booking.refunded = refund;
   booking.refundDate = new Date().toISOString().split('T')[0];
   booking.refundBy = req.user ? req.user.name : '';
   booking.refundReason = reason || '';
+
+  // Clear guest data — room becomes available
+  Object.assign(booking, {
+    guest: '', phone: '', email: '', address: '', idNum: '',
+    checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
+    notes: '', status: 'vacant', rate: 0,
+  });
+  // Keep payments[] and paid for financial record, but mark as refunded
+  booking.payStatus = refund >= totalPaid ? 'Refunded' : (refund > 0 ? 'Partial Refund' : booking.payStatus);
   booking.updatedAt = Date.now();
   await booking.save();
 
   const label = refund > 0 ? ` (refund: ${refund})` : '';
-  await logActivity('Booking', 'amber', `${booking.guest} — Room ${booking.room} cancelled${label}`, 'booking-rooms.html');
+  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${roomNum} cancelled${label}`, 'booking-rooms.html');
   res.json({ success: true, data: booking });
 });
 

@@ -212,6 +212,8 @@
     'Deposit Paid':       'ft-pay-deposit',
     'Partially Settled':  'ft-pay-partial',
     'Pending':            'ft-pay-pending',
+    'Refunded':           'ft-pay-deposit',
+    'Partial Refund':     'ft-pay-partial',
   };
 
   function create(options) {

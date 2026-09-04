@@ -26,7 +26,7 @@ const bookingSchema = new mongoose.Schema({
   payments:   { type: [paymentEntrySchema], default: [] },
   paid:       { type: Number, default: 0 },
   payMethod:  { type: String, default: 'Cash' },
-  payStatus:  { type: String, enum: ['Pending','Deposit Paid','Fully Paid'], default: 'Pending' },
+  payStatus:  { type: String, enum: ['Pending','Deposit Paid','Fully Paid','Refunded','Partial Refund'], default: 'Pending' },
   recordedBy: { type: String, default: '' },
   adults:     { type: Number, default: 1 },
   children:   { type: Number, default: 0 },

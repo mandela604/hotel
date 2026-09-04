@@ -193,6 +193,8 @@ body {
               <option value="">All Payments</option>
               <option value="Fully Paid">Fully Paid</option>
               <option value="Deposit Paid">Deposit Paid</option>
+              <option value="Refunded">Refunded</option>
+              <option value="Partial Refund">Partial Refund</option>
               <option value="Pending">Pending</option>
             </select>
           </div>
@@ -461,7 +463,7 @@ function openReportInModal(b) {
   bookingModal.openView(b);
 }
 
-const PAY_CLS = {'Fully Paid':'pay-full','Deposit Paid':'pay-deposit','Pending':'pay-pending'};
+const PAY_CLS = {'Fully Paid':'pay-full','Deposit Paid':'pay-deposit','Pending':'pay-pending','Refunded':'pay-deposit','Partial Refund':'pay-deposit'};
 const DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', Suite: 'ft-dot-suite', Conference: 'ft-dot-conf' };
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 const roomColumn = { id: 'room', label: 'Room', cell: (b) => { const dot = DOT_CLASS[b.type] || 'ft-dot-default'; return '<span class="ft-room"><span class="ft-dot ' + dot + '"></span>' + esc(b.room) + ' · ' + esc(b.type || '') + '</span>'; } };
@@ -480,7 +482,8 @@ const statusColorMap = {
   'cleaning':   '#0ea5e9',
   'reserved':   'var(--purple)',
   'checkout':   'var(--red)',
-  'maintenance':'var(--amber)'
+  'maintenance':'var(--amber)',
+  'cancelled':  '#ef4444'
 };
 const statusBgMap = {
   'vacant':     'var(--green-bg)',
@@ -488,7 +491,8 @@ const statusBgMap = {
   'cleaning':   '#e0f2fe',
   'reserved':   'var(--purple-bg)',
   'checkout':   'var(--red-bg)',
-  'maintenance':'var(--amber-bg)'
+  'maintenance':'var(--amber-bg)',
+  'cancelled':  '#fef2f2'
 };
 // Custom column (same pattern as roomColumn/guestColumn above) so the
 // chip's colors are guaranteed to match statusColorMap/statusBgMap
@@ -523,7 +527,8 @@ async function init() {
     // Exclude the vacant "room keeper" booking records (created alongside
     // every room). They are placeholders, not real bookings — the report
     // should only show actual booked rooms with revenue.
-    bookings = (data.bookings || []).filter(b => b.status !== 'vacant');
+    // BUT: include vacant rooms that have refunds (cancelled bookings).
+    bookings = (data.bookings || []).filter(b => b.status !== 'vacant' || (Number(b.refunded) > 0));
     currentSession = shell.getUser();
     bookingModal.setSession(currentSession);
 
