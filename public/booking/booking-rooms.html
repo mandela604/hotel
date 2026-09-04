@@ -350,7 +350,7 @@ body {
     </div>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeModal('refundModal')">Cancel</button>
-      <button class="btn-danger" id="refundSaveBtn" onclick="saveCancelRefund()"><i class="fa-solid fa-ban"></i> Confirm Cancel</button>
+      <button class="btn-primary" id="refundSaveBtn" onclick="saveCancelRefund()"><i class="fa-solid fa-ban"></i> Confirm Cancel</button>
     </div>
   </div>
 </div>
@@ -780,7 +780,7 @@ async function saveRoomStatus() {
     if (newSt === 'checkedin') {
       await BookingData.checkinBooking(statusRoom, { notes: note });
     } else if (newSt === 'no-show') {
-      await apiFetch('/bookings/' + encodeURIComponent(statusRoom) + '/no-show', { method: 'POST', body: JSON.stringify({}) });
+      await fetch('/api/booking/bookings/' + encodeURIComponent(statusRoom) + '/no-show', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({}) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) throw new Error(d.error); });
     } else if (newSt === 'cancel-refund') {
       openRefundModal(statusRoom);
       closeModal('roomStatusModal');
@@ -871,10 +871,12 @@ async function saveCancelRefund() {
   var reason = document.getElementById('rfReason').value.trim();
   btnLoad('refundSaveBtn', true);
   try {
-    await apiFetch('/bookings/' + encodeURIComponent(refundRoom) + '/cancel-refund', {
+    await fetch('/api/booking/bookings/' + encodeURIComponent(refundRoom) + '/cancel-refund', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ refundType: refundType, refundAmount: Number(refundAmount) || 0, reason: reason })
-    });
+    }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) throw new Error(d.error); });
     closeModal('refundModal');
     showToast('Room ' + refundRoom + ' cancelled.', 'success');
     await refreshDataAndRender();

@@ -614,15 +614,17 @@
     function populateRooms(preferNum) {
       var sel = $('[data-role="room"]');
       if (!sel) return;
+      var isEdit = mode === 'edit';
       sel.innerHTML = '<option value="">Select room…</option>';
       rooms.forEach(function (r) {
         var st = roomStatus(bookings, r.num);
-        var keep = st === 'available' || r.num === preferNum;
+        var keep = st === 'available' || r.num === preferNum || isEdit;
         if (!keep) return;
         var opt = document.createElement('option');
         opt.value = r.num + '|' + r.type + '|' + r.rate;
         opt.textContent = r.num + ' – ' + r.type + ' (' + fmtN(r.rate) + '/nt)' +
-          (r.num === preferNum ? ' · current' : '');
+          (r.num === preferNum ? ' · current' : '') +
+          (isEdit && r.num !== preferNum && st !== 'available' ? ' (' + st + ')' : '');
         sel.appendChild(opt);
       });
       if (preferNum) {
@@ -703,6 +705,7 @@
         var role = el.getAttribute('data-role');
         if (!role) return;
         if (role === 'type' || role === 'nightsDisp' || role === 'newPayBy') return;
+        if (role === 'room' && mode === 'edit') return;
         if (role === 'discount') return;
         if (role === 'newPayAmount' || role === 'newPayMode') return;
         if (role === 'settleAmount' || role === 'settleMode') return;
@@ -805,9 +808,7 @@
 
     function collectEntry() {
       var roomVal = val('room');
-      var roomNum = mode === 'edit' && editBooking
-        ? editBooking.room
-        : (roomVal ? roomVal.split('|')[0] : '');
+      var roomNum = roomVal ? roomVal.split('|')[0] : (editBooking ? editBooking.room : '');
       return {
         room: roomNum,
         type: val('type'),

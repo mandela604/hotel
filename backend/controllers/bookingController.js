@@ -348,6 +348,29 @@ exports.updateBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.findOne({ room: req.params.room });
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
 
+  // Handle room change — swap to new room if requested
+  const newRoom = req.body.room;
+  if (newRoom && newRoom !== req.params.room) {
+    const newRoomBooking = await Booking.findOne({ room: newRoom });
+    if (!newRoomBooking) return res.status(404).json({ success: false, error: 'New room not found' });
+    if (newRoomBooking.status !== 'vacant') {
+      return res.status(400).json({ success: false, error: `Room ${newRoom} is not available (status: ${newRoomBooking.status})` });
+    }
+    // Copy booking data to new room
+    const data = booking.toObject();
+    delete data._id;
+    delete data.room;
+    Object.assign(newRoomBooking, data, { room: newRoom, updatedAt: Date.now() });
+    await newRoomBooking.save();
+    // Clear old room
+    Object.assign(booking, { guest: '', phone: '', email: '', address: '', idNum: '',
+      checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
+      payStatus: 'Pending', adults: 1, children: 0, notes: '', status: 'vacant', rate: 0 });
+    booking.updatedAt = Date.now();
+    await booking.save();
+    return res.json({ success: true, data: newRoomBooking });
+  }
+
   const fields = ['type', 'guest', 'phone', 'email', 'address', 'idType', 'idNum',
     'checkin', 'checkout', 'rate', 'discount', 'payMethod', 'adults', 'children', 'notes'];
   for (const f of fields) {
