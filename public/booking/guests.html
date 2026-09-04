@@ -971,6 +971,7 @@ function showToast(msg, type='success'){
 /* ── Init ── */
 async function init() {
   try {
+    if (shell && shell.ready) await shell.ready();
     await loadGuestsData();
     
     // Initialize Booking Modal

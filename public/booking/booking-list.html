@@ -504,6 +504,7 @@ async function init() {
   }
 
   try {
+    if (shell && shell.ready) await shell.ready();
     var data = await BookingData.getBookingData();
     allRooms = data.rooms || [];
     bookings = data.bookings || [];    bookingModal.setSession(getSession());

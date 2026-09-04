@@ -522,6 +522,7 @@ async function init() {
     return;
   }
   try {
+    if (shell && shell.ready) await shell.ready();
     const data = await BookingData.getBookingData();
     allRooms = data.rooms;
     // Exclude the vacant "room keeper" booking records (created alongside

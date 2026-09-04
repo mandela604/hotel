@@ -102,10 +102,22 @@
     return '';
   }
 
-  function getSession() {
-    // With httpOnly cookies, we can't decode the JWT client-side.
-    // Use the session API endpoint for user info, or return a default.
-    return null;
+  var _sessionCache = null;
+  var _sessionPromise = null;
+  function getSession() { return _sessionCache; }
+  function fetchSession() {
+    if (_sessionPromise) return _sessionPromise;
+    _sessionPromise = fetch(CONFIG.API_BASE + '/api/auth/session', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        var u = d && d.data ? d.data : d;
+        if (u && u.role) {
+          _sessionCache = { name: u.name, role: u.role, privilege: u.privilege || null, initials: u.initials || '' };
+        }
+        return _sessionCache;
+      })
+      .catch(function() { return null; });
+    return _sessionPromise;
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -144,6 +156,7 @@
      Public API — window.BookingData
   ══════════════════════════════════════════════════════════════ */
   async function getBookingData() {
+    await fetchSession();
     const res = await get('/data');
     // Backend's /data doesn't carry a session (that's what the JWT is
     // for) — attach the best-effort decoded one so pages reading

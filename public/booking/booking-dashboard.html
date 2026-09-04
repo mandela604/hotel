@@ -323,6 +323,7 @@ async function init() {
     console.error('[BookingDashboard] BookingData not loaded. Check script order.');
     return;
   }
+  if (shell && shell.ready) await shell.ready();
   const data = await BookingData.getBookingData();
   allRooms = data.rooms || [];
   bookings = data.bookings || [];

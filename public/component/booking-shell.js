@@ -307,7 +307,11 @@
     } catch (e) {}
     applyTheme();
 
+    var _readyResolve;
+    var _ready = new Promise(function(resolve) { _readyResolve = resolve; });
+
     const handle = {
+      ready() { return _ready; },
       setApiMode(mode) {
         const badge = document.getElementById('bks-apiBadge');
         const label = document.getElementById('bks-apiLabel');
@@ -348,6 +352,7 @@
     fetchSession().then(function (sessionUser) {
       if (!sessionUser) return; // live fail → already redirected
       user = sessionUser;
+      _readyResolve(user);
       initials = user.initials || (user.name || 'FD').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
       const avatar = document.getElementById('bks-avatar');
       if (avatar) {

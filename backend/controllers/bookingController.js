@@ -466,10 +466,16 @@ exports.markNoShow = asyncHandler(async (req, res) => {
   if (booking.status !== 'reserved') {
     return res.status(400).json({ success: false, error: `Cannot mark no-show from status '${booking.status}'` });
   }
+  const guestName = booking.guest;
   booking.status = 'no-show';
+  Object.assign(booking, {
+    guest: '', phone: '', email: '', address: '', idNum: '',
+    checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
+    notes: '', rate: 0,
+  });
   booking.updatedAt = Date.now();
   await booking.save();
-  await logActivity('Booking', 'amber', `${booking.guest} — Room ${booking.room} marked as no-show`, 'booking-rooms.html');
+  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${booking.room} marked as no-show`, 'booking-rooms.html');
   res.json({ success: true, data: booking });
 });
 
@@ -520,7 +526,10 @@ exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   const result = await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
-    { $set: { status: 'no-show', updatedAt: Date.now() } }
+    { $set: { status: 'no-show', updatedAt: Date.now(),
+      guest: '', phone: '', email: '', address: '', idNum: '',
+      checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
+      notes: '', rate: 0 } }
   );
   if (result.modifiedCount > 0) {
     await logActivity('Booking', 'amber', `Auto-cancelled ${result.modifiedCount} expired reservation(s)`, 'booking-rooms.html');
@@ -534,7 +543,10 @@ exports.getBookingData = asyncHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
-    { $set: { status: 'no-show', updatedAt: Date.now() } }
+    { $set: { status: 'no-show', updatedAt: Date.now(),
+      guest: '', phone: '', email: '', address: '', idNum: '',
+      checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
+      notes: '', rate: 0 } }
   );
   return origGetBookingData(req, res);
 });
