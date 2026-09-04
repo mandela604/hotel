@@ -858,7 +858,7 @@ function openRefundModal(room) {
   document.getElementById('rfAmount').value = '';
   document.getElementById('rfReason').value = '';
   toggleRefundAmount();
-  openModal('refundModal');
+  document.getElementById('refundModal').classList.add('show');
 }
 function toggleRefundAmount() {
   var t = document.getElementById('rfType').value;
