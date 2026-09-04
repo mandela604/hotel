@@ -615,6 +615,14 @@
   }
   function setSession(s) { try { localStorage.setItem(KEYS.SESSION, JSON.stringify(s)); } catch (e) { /* */ } }
 
+  async function getProcurementPnl(from, to) {
+    let qs = '';
+    if (from) qs += 'from=' + encodeURIComponent(from);
+    if (to) qs += (qs ? '&' : '') + 'to=' + encodeURIComponent(to);
+    const res = await apiFetch('/procurement-pnl' + (qs ? '?' + qs : ''));
+    return res;
+  }
+
   global.AccountingData = {
     KEYS, CONFIG, configure,
     getSession, setSession,
@@ -646,5 +654,6 @@
 
     PAY_METHODS,
     getShiftStartHour: function () { return SHIFT_START_HOUR; },
+    getProcurementPnl,
   };
 })(window);

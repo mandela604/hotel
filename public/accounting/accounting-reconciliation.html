@@ -874,6 +874,7 @@ async function init(){
   bindTableDelegation();
 
   const { roomTx, restSales, poolSales, shifts: backendShifts } = await AccountingData.getAccountingData();
+  SHIFT_START_HOUR = AccountingData.getShiftStartHour();
   transactions = buildTransactions(roomTx, restSales, poolSales);
 
   shifts = backendShifts || [];

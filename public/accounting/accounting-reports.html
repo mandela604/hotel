@@ -360,10 +360,9 @@ function shortDateLabel(key){
 function fmtN(n){ return AccountingData.fmtN(n); }
 
 /* ═══════════════════════════════════════════
-   STATE — transactions now comes from AccountingData.getAccountingData()
+   STATE — transactions come from AccountingData.getAccountingData()
    + AccountingData.buildTransactions(), same source Dashboard uses, so
-   this report always agrees with it. No local storage shim or demo
-   arrays on this page anymore.
+   this report always agrees with it.
 ═══════════════════════════════════════════ */
 let transactions = [];
 let activePreset = 'today';
@@ -697,6 +696,7 @@ async function init(){
 
   try {
     const { roomTx, restSales, poolSales } = await AccountingData.getAccountingData();
+    SHIFT_START_HOUR = AccountingData.getShiftStartHour();
     transactions = AccountingData.buildTransactions(roomTx, restSales, poolSales);
     applyPreset('today');
   } catch (err) {

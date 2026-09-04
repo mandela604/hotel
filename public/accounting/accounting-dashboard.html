@@ -289,10 +289,8 @@ function shiftRangeLabel(key){
 }
 
 /* "Current shift" is anchored to the most recent transaction actually
-   present in the data, not the real wall-clock date — the demo seed
-   generates its timestamps relative to "now" at load time (see
-   accounting-seed.js's hoursAgo()/at() helpers), so this stays correct
-   without needing special-casing here. */
+   present in the data, not the real wall-clock date. The backend
+   settings config provides the actual shift start hour. */
 function currentShiftKey(transactions){
   if (!transactions.length) return AccountingData.shiftKeyFor(new Date());
   return AccountingData.shiftKeyFor(transactions[0].date); // already sorted newest-first
@@ -416,9 +414,7 @@ function renderRecentTx(allTx){
 
 /* ═══════════════════════════════════════════
    INIT — everything comes from AccountingData.getAccountingData(),
-   which itself seeds shared storage from AccountingSeed the first
-   time it's called. No local storage shim, buildTransactions(), or
-   shiftKeyFor() on this page anymore — those live in
+   which fetches from the backend API. Business logic lives in
    services/accounting-service.js now, same as BookingData owns that
    logic on the booking pages.
 ═══════════════════════════════════════════ */
@@ -431,6 +427,7 @@ async function init(){
   try {
     const { roomTx, restSales, poolSales, shifts, session } = await AccountingData.getAccountingData();
     currentSession = session;
+    SHIFT_START_HOUR = AccountingData.getShiftStartHour();
     applyPermissionsUI();
 
     const allTx = AccountingData.buildTransactions(roomTx, restSales, poolSales);

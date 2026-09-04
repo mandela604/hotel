@@ -340,7 +340,7 @@ const shell = AccountingShell.attach({
 /* ═══════════════════════════════════════════════════════════════
    CALL-AND-RENDER ONLY — every number on this page comes from
    AccountingData (services/accounting-service.js). This file owns
-   no storage shim, no seed data, no date-key math, and no
+   no date-key math, and no
    aggregation logic; it just asks the service for numbers and
    renders them, then re-renders when a filter/toggle changes.
 ═══════════════════════════════════════════════════════════════ */
@@ -581,8 +581,8 @@ function printReport(){
 }
 
 /* ═══════════════════════════════════════════
-   INIT — one call to AccountingData for everything. No local storage
-   shim, no seed data, no shift/calendar-key math on this page anymore.
+   INIT — one call to AccountingData for everything. All logic
+   lives in services/accounting-service.js.
 ═══════════════════════════════════════════ */
 async function init(){
   bindModeToggle();
