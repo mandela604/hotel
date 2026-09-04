@@ -201,14 +201,15 @@
   }
 
   async function saveRoom(room) {
+    const originalNum = room.originalNum || room.num;
     let exists = false;
     try {
       const list = await get('/rooms');
-      exists = (list.data || []).some(function (r) { return r.num === room.num; });
+      exists = (list.data || []).some(function (r) { return r.num === originalNum; });
     } catch (e) { exists = false; }
 
     if (exists) {
-      const res = await put('/rooms/' + encodeURIComponent(room.num), room);
+      const res = await put('/rooms/' + encodeURIComponent(originalNum), room);
       return res.data;
     }
     const res = await post('/rooms', room);

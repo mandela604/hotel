@@ -690,7 +690,7 @@ function openRoomModal(mode, num) {
   if (isEdit) {
     const r = allRooms.find(x => x.num === num);
     document.getElementById('rmNum').value   = r ? r.num : num;
-    document.getElementById('rmNum').readOnly = true;
+    document.getElementById('rmNum').readOnly = false;
     document.getElementById('rmType').value  = r ? r.type : 'Standard';
     document.getElementById('rmRate').value  = r ? r.rate : '';
     document.getElementById('rmNotes').value = r ? (r.notes || '') : '';
@@ -729,8 +729,8 @@ async function saveRoomModal() {
       }
       showToast('Room ' + num + ' added.', 'success');
     } else {
-      await BookingData.saveRoom({ num: roomEditNum, type, rate, notes });
-      showToast('Room ' + roomEditNum + ' updated.', 'success');
+      await BookingData.saveRoom({ num: num, originalNum: roomEditNum, type, rate, notes });
+      showToast('Room ' + num + ' updated.', 'success');
     }
     closeModal('roomModal');
     await refreshDataAndRender();

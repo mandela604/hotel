@@ -192,14 +192,27 @@ exports.updateRoom = asyncHandler(async (req, res) => {
   const room = await Room.findOne({ num: req.params.num });
   if (!room) return res.status(404).json({ success: false, error: 'Room not found' });
 
-  const { type, rate, notes } = req.body;
+  const { num: newNum, type, rate, notes } = req.body;
+
+  // Handle room number change
+  if (newNum && newNum !== req.params.num) {
+    const exists = await Room.findOne({ num: newNum });
+    if (exists) return res.status(400).json({ success: false, error: `Room ${newNum} already exists` });
+    const booking = await Booking.findOne({ room: req.params.num });
+    room.num = newNum;
+    await room.save();
+    if (booking) {
+      booking.room = newNum;
+      await booking.save();
+    }
+  }
+
   if (type !== undefined) room.type = type;
   if (rate !== undefined) room.rate = Number(rate);
   if (notes !== undefined) room.notes = notes;
   await room.save();
 
   // Keep the paired Booking record's type/rate in sync for vacant rooms
-  // only — an occupied room's rate is locked to what the guest agreed to.
   const booking = await Booking.findOne({ room: room.num });
   if (booking && (booking.status === 'vacant' || !booking.guest)) {
     if (type !== undefined) booking.type = type;
@@ -347,29 +360,6 @@ exports.createBooking = asyncHandler(async (req, res) => {
 exports.updateBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.findOne({ room: req.params.room });
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
-
-  // Handle room change — swap to new room if requested
-  const newRoom = req.body.room;
-  if (newRoom && newRoom !== req.params.room) {
-    const newRoomBooking = await Booking.findOne({ room: newRoom });
-    if (!newRoomBooking) return res.status(404).json({ success: false, error: 'New room not found' });
-    if (newRoomBooking.status !== 'vacant') {
-      return res.status(400).json({ success: false, error: `Room ${newRoom} is not available (status: ${newRoomBooking.status})` });
-    }
-    // Copy booking data to new room
-    const data = booking.toObject();
-    delete data._id;
-    delete data.room;
-    Object.assign(newRoomBooking, data, { room: newRoom, updatedAt: Date.now() });
-    await newRoomBooking.save();
-    // Clear old room
-    Object.assign(booking, { guest: '', phone: '', email: '', address: '', idNum: '',
-      checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
-      payStatus: 'Pending', adults: 1, children: 0, notes: '', status: 'vacant', rate: 0 });
-    booking.updatedAt = Date.now();
-    await booking.save();
-    return res.json({ success: true, data: newRoomBooking });
-  }
 
   const fields = ['type', 'guest', 'phone', 'email', 'address', 'idType', 'idNum',
     'checkin', 'checkout', 'rate', 'discount', 'payMethod', 'adults', 'children', 'notes'];
