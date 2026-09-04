@@ -132,7 +132,7 @@ exports.pnl = asyncHandler(async (req, res) => {
     if (!row.amount || row.amount <= 0) continue;
     const key = shiftKey(row.date);
     const dept = DEPT_MAP[row.department] || row.department || 'Other';
-    if (!incByDate[key]) incByDate[key] = { Front Desk: 0, Restaurant: 0, 'Pool Bar': 0, Gym: 0, Other: 0, total: 0 };
+    if (!incByDate[key]) incByDate[key] = { 'Front Desk': 0, Restaurant: 0, 'Pool Bar': 0, Gym: 0, Other: 0, total: 0 };
     incByDate[key][dept] = (incByDate[key][dept] || 0) + row.amount;
     incByDate[key].total += row.amount;
   }
