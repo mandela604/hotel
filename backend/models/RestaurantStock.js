@@ -17,6 +17,7 @@ const restaurantStockSchema = new mongoose.Schema({
   category: { type: String, default: 'Uncategorized', trim: true },
   unit:     { type: String, default: 'portion', trim: true },
   storeId:  { type: String, default: '', index: true },
+  procurementId: { type: String, default: '' },
   qty:      { type: Number, default: 0 },
   min:      { type: Number, default: 0 },
   price:    { type: Number, default: 0 },

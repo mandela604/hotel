@@ -51,10 +51,10 @@ exports.addStock = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Item name is required' });
   }
 
-  // Check by storeId first (unique link to Store DB), then by exact name
+  let storeItem = null;
   if (storeId) {
     const StoreStock = require('../models/StoreStock');
-    const storeItem = await StoreStock.findOne({ id: storeId }).catch(function(){ return null; });
+    storeItem = await StoreStock.findOne({ id: storeId }).catch(function(){ return null; });
     if (!storeItem) {
       return res.status(400).json({ success: false, error: 'Selected Store item not found — please re-pick from dropdown.' });
     }
@@ -71,6 +71,7 @@ exports.addStock = asyncHandler(async (req, res) => {
   const item = await KitchenStock.create({
     id: storeId || uuidv4(),
     storeId: storeId || '',
+    procurementId: storeItem ? (storeItem.procurementId || '') : '',
     name: name.trim(),
     category: category || cat || 'Grains',
     cat: cat || category || 'Grains',
@@ -583,8 +584,12 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
       stockItem.qty += addQty;
       await stockItem.save();
     } else {
+      const StoreStock = require('../models/StoreStock');
+      const storeRef = it.stockId ? await StoreStock.findOne({ id: it.stockId }).catch(() => null) : null;
       stockItem = await KitchenStock.create({
         id: it.stockId || uuidv4(),
+        storeId: it.stockId || '',
+        procurementId: storeRef ? (storeRef.procurementId || '') : '',
         name: it.name.trim(),
         category: 'General',
         unit: it.unit || 'kg',

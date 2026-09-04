@@ -4,6 +4,7 @@ const orderItemSchema = new mongoose.Schema({
   name:  { type: String, required: true },
   qty:   { type: Number, required: true },
   price: { type: Number, required: true },
+  procurementId: { type: String, default: '' },
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({

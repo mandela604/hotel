@@ -12,6 +12,7 @@ const storeStockSchema = new mongoose.Schema(
     qty: { type: Number, required: true, default: 0, min: 0 },
     cost: { type: Number, required: true, default: 0, min: 0 },
     min: { type: Number, required: true, default: 0, min: 0 },
+    procurementId: { type: String, default: '' },
   },
   { timestamps: true }
 );

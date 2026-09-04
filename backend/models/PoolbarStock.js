@@ -7,6 +7,7 @@ const poolbarStockSchema = new mongoose.Schema({
   cat:      { type: String, default: 'Beverages', trim: true },
   unit:     { type: String, default: 'bottle', trim: true },
   storeId:  { type: String, default: '', index: true },
+  procurementId: { type: String, default: '' },
   qty:      { type: Number, default: 0 },
   min:      { type: Number, default: 10 },
   price:    { type: Number, default: 0 },

@@ -340,14 +340,17 @@ exports.disputeDelivery = asyncHandler(async (req, res) => {
 });
 
 exports.receiveStock = asyncHandler(async (req, res) => {
-  const { qty, cost, packSize, baseUnit, unit } = req.body;
+  const { qty, cost, packSize, baseUnit, unit, procurementId } = req.body;
   const addQty = Number(qty) || 0;
   if (addQty <= 0) throw new ApiError(400, 'qty must be a positive number');
   const updates = { $inc: { qty: addQty } };
-  if (Number(cost) > 0) updates.$set = { cost: Number(cost) };
-  if (packSize) updates.$set = { ...updates.$set, packSize: Number(packSize) };
-  if (baseUnit) updates.$set = { ...updates.$set, baseUnit: baseUnit.trim() };
-  if (unit) updates.$set = { ...updates.$set, unit: unit.trim() };
+  const setFields = {};
+  if (Number(cost) > 0) setFields.cost = Number(cost);
+  if (packSize) setFields.packSize = Number(packSize);
+  if (baseUnit) setFields.baseUnit = baseUnit.trim();
+  if (unit) setFields.unit = unit.trim();
+  if (procurementId) setFields.procurementId = procurementId;
+  if (Object.keys(setFields).length) updates.$set = setFields;
   const item = await StoreStock.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');
   res.json({ success: true, data: item });

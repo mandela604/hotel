@@ -118,6 +118,7 @@ exports.addStockItem = asyncHandler(async (req, res) => {
     category: category || 'Uncategorized',
     unit: unit || 'portion',
     storeId: sid,
+    procurementId: storeItem.procurementId || '',
     qty: 0, // qty is only ever moved by transfers/sales, never set at creation
     min: Number(min) || 0,
     price: Number(price) || 0,
@@ -197,10 +198,12 @@ exports.createSale = asyncHandler(async (req, res) => {
   const id = `RST-${String(count + 1).padStart(5, '0')}`;
 
   const stockIdMap = {};
+  const procIdMap = {};
   for (const it of items) {
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
     if (!stockItem) continue;
     stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
+    procIdMap[it.name.trim().toLowerCase()] = stockItem.procurementId || '';
     const qty = Number(it.qty);
     if (stockItem.qty < qty) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -223,7 +226,7 @@ exports.createSale = asyncHandler(async (req, res) => {
   const sale = await Sale.create({
     id,
     department: DEPT,
-    items: items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
+    items: items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', procurementId: procIdMap[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
     subtotal,
     discount: discountPct,
     total,
@@ -453,6 +456,8 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
       stockItem.qty += addQty;
       await stockItem.save();
     } else {
+      const StoreStock = require('../models/StoreStock');
+      const storeRef = it.stockId ? await StoreStock.findOne({ id: it.stockId }).catch(() => null) : null;
       stockItem = await RestaurantStock.create({
         name: it.name.trim(),
         category: 'General',
@@ -460,6 +465,8 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
         qty: addQty,
         min: 10,
         price: Number(it.cost) || 0,
+        storeId: it.stockId || '',
+        procurementId: storeRef ? (storeRef.procurementId || '') : '',
       });
     }
 
@@ -505,10 +512,16 @@ exports.openTab = asyncHandler(async (req, res) => {
   const count = await Order.countDocuments({ department: DEPT });
   const id = `RSO-${String(count + 1).padStart(5, '0')}`;
 
+  const orderItems = [];
+  for (const it of items) {
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    orderItems.push({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price), procurementId: stockItem ? (stockItem.procurementId || '') : '' });
+  }
+
   const order = await Order.create({
     id,
     department: DEPT,
-    items: items.map((i) => ({ name: i.name, qty: Number(i.qty), price: Number(i.price) })),
+    items: orderItems,
     subtotal,
     discount: discountPct,
     total,
@@ -554,10 +567,12 @@ exports.payOrder = asyncHandler(async (req, res) => {
 
   /* ── Deduct RestaurantStock per item (same as createSale) ── */
   const stockIdMap = {};
+  const procIdMap2 = {};
   for (const it of order.items) {
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
     if (!stockItem) continue;
     stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
+    procIdMap2[it.name.trim().toLowerCase()] = stockItem.procurementId || '';
     const qty = Number(it.qty);
     if (stockItem.qty < qty) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -585,7 +600,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     id: saleId,
     source: order.id,
     department: DEPT,
-    items: order.items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
+    items: order.items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', procurementId: procIdMap2[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
     subtotal: order.subtotal,
     discount: order.discount,
     total: order.total,

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const kitchenStockSchema = new mongoose.Schema({
   id:       { type: String, required: true, unique: true },
   storeId:  { type: String, default: '' },
+  procurementId: { type: String, default: '' },
   name:     { type: String, required: true, unique: true, trim: true },
   category: { type: String, default: 'Grains', trim: true },
   cat:      { type: String, default: 'Grains', trim: true },

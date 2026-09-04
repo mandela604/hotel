@@ -9,6 +9,7 @@ router.get('/summary',              ctrl.summary);
 router.get('/ledger',               ctrl.ledger);
 router.get('/transactions',         ctrl.transactions);
 router.get('/pnl',                  ctrl.pnl);
+router.get('/procurement-pnl',      ctrl.procurementPnl);
 router.get('/shifts',               ctrl.listShifts);
 
 /* ── Write routes — Accounts department ────────────────────── */

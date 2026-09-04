@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const saleItemSchema = new mongoose.Schema({
   name:    { type: String, required: true },
   stockId: { type: String, default: '' },
+  procurementId: { type: String, default: '' },
   qty:     { type: Number, required: true },
   price:   { type: Number, required: true },
 }, { _id: false });

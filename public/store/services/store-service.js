@@ -521,7 +521,7 @@
       let stockItem = stockId ? findStockById(stockId) : null;
       if (!stockItem) stockItem = findStock(name);
       if (!stockItem) throw new Error('Store item not found for "' + name + '" — add it to Store stock first.');
-      const payload = { qty: baseQty };
+      const payload = { qty: baseQty, procurementId: pr.id || '' };
       if (cost > 0) payload.cost = cost;
       if (packSize > 0) payload.packSize = packSize;
       if (it.baseUnit) payload.baseUnit = it.baseUnit;

@@ -126,6 +126,7 @@ exports.addStock = asyncHandler(async (req, res) => {
   const item = await PoolbarStock.create({
     id: sid,
     storeId: sid,
+    procurementId: storeItem.procurementId || '',
     name: name.trim(),
     category: category || cat || 'Beverages',
     cat: cat || category || 'Beverages',
@@ -297,7 +298,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     department: 'poolbar',
     items: items.map((it, idx) => {
       const r = resolved.find(rv => rv.stockItem && rv.stockItem.name && rv.stockItem.name.toLowerCase() === it.name.trim().toLowerCase());
-      return { name: it.name.trim(), stockId: r ? r.stockItem.id : '', qty: Number(it.qty), price: Number(it.price) };
+      return { name: it.name.trim(), stockId: r ? r.stockItem.id : '', procurementId: r ? (r.stockItem.procurementId || '') : '', qty: Number(it.qty), price: Number(it.price) };
     }),
     subtotal,
     discount: Number(discount) || 0,
@@ -362,10 +363,16 @@ exports.openTab = asyncHandler(async (req, res) => {
   const total = subtotal * (1 - (Number(discount) || 0) / 100);
   const orderId = await nextId('PB', Order);
 
+  const orderItems = [];
+  for (const it of items) {
+    const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+    orderItems.push({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price), procurementId: stockItem ? (stockItem.procurementId || '') : '' });
+  }
+
   const order = await Order.create({
     id: orderId,
     department: 'poolbar',
-    items: items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) })),
+    items: orderItems,
     subtotal,
     discount: Number(discount) || 0,
     total,
@@ -492,7 +499,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     department: 'poolbar',
     items: order.items.map(it => {
       const r = resolved.find(rv => rv.stockItem && rv.stockItem.name && rv.stockItem.name.toLowerCase() === it.name.trim().toLowerCase());
-      return { name: it.name, stockId: r ? r.stockItem.id : '', qty: Number(it.qty), price: Number(it.price) };
+      return { name: it.name, stockId: r ? r.stockItem.id : '', procurementId: r ? (r.stockItem.procurementId || '') : '', qty: Number(it.qty), price: Number(it.price) };
     }),
     subtotal: order.subtotal,
     discount: order.discount,
@@ -610,8 +617,12 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
       stockItem.qty += addQty;
       await stockItem.save();
     } else {
+      const StoreStock = require('../models/StoreStock');
+      const storeRef = it.stockId ? await StoreStock.findOne({ id: it.stockId }).catch(() => null) : null;
       stockItem = await PoolbarStock.create({
         id: it.stockId || uuidv4(),
+        storeId: it.stockId || '',
+        procurementId: storeRef ? (storeRef.procurementId || '') : '',
         name: it.name.trim(),
         category: 'Beverages',
         unit: it.unit || 'bottle',
