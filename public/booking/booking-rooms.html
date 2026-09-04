@@ -98,6 +98,7 @@ body {
 .room-card.reserved::before    { background: var(--purple); }
 .room-card.checkout::before    { background: var(--red); }
 .room-card.no-show::before     { background: var(--red); }
+.room-card.cancelled::before   { background: var(--red); }
 .room-card.maintenance::before { background: var(--amber); }
 
 .room-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; min-height: 26px; }
@@ -111,6 +112,7 @@ body {
 .rc-reserved    { background: var(--purple-bg); color: var(--purple); }.rc-reserved::before    { background: var(--purple); }
 .rc-checkout    { background: var(--red-bg); color: var(--red); }       .rc-checkout::before    { background: var(--red); }
 .rc-noshow      { background: var(--red-bg); color: var(--red); }       .rc-noshow::before      { background: var(--red); }
+.rc-cancelled   { background: var(--red-bg); color: var(--red); }       .rc-cancelled::before   { background: var(--red); }
 .rc-maintenance { background: var(--amber-bg); color: var(--amber); }   .rc-maintenance::before { background: var(--amber); }
 
 .room-guest-block { min-height: 34px; margin-bottom: 8px; }
@@ -315,6 +317,44 @@ body {
   </div>
 </div>
 
+<!-- CANCEL & REFUND MODAL -->
+<div class="modal-overlay" id="refundModal" onclick="handleModalBackdrop(event,'refundModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Cancel & Refund</div>
+      <button class="modal-close" onclick="closeModal('refundModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="padding:4px 0 14px;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">
+        Room <strong id="rfRoomNum" style="color:var(--text)"></strong> · Guest: <span id="rfGuestName" style="font-weight:600;"></span>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">
+        Total Paid: <strong id="rfTotalPaid" style="color:var(--gold);"></strong>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label">Refund Type</label>
+        <select class="form-select" id="rfType" onchange="toggleRefundAmount()">
+          <option value="none">No Refund — Hotel keeps deposit</option>
+          <option value="full">Full Refund — Return all money</option>
+          <option value="partial">Partial Refund</option>
+        </select>
+      </div>
+      <div class="form-group" id="rfAmountGroup" style="display:none;margin-bottom:12px;">
+        <label class="form-label">Refund Amount</label>
+        <input class="form-input" type="number" id="rfAmount" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reason</label>
+        <input class="form-input" type="text" id="rfReason" placeholder="e.g. Guest changed plans">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('refundModal')">Cancel</button>
+      <button class="btn-danger" id="refundSaveBtn" onclick="saveCancelRefund()"><i class="fa-solid fa-ban"></i> Confirm Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ROOM STATUS MODAL -->
 <div class="modal-overlay" id="roomStatusModal" onclick="handleModalBackdrop(event,'roomStatusModal')">
   <div class="modal modal-sm">
@@ -441,15 +481,17 @@ function applyPermissionUI() {
   return p;
 }
 
-const RC_CLS = { available: 'rc-available', checkedin: 'rc-checkedin', reserved: 'rc-reserved', checkout: 'rc-checkout', maintenance: 'rc-maintenance', cleaning: 'rc-cleaning', 'no-show': 'rc-noshow' };
-const RC_LBL = { available: 'Available', checkedin: 'Occupied', reserved: 'Reserved', checkout: 'Check-out', maintenance: 'Maintenance', cleaning: 'Cleaning', 'no-show': 'No-Show' };
+const RC_CLS = { available: 'rc-available', checkedin: 'rc-checkedin', reserved: 'rc-reserved', checkout: 'rc-checkout', maintenance: 'rc-maintenance', cleaning: 'rc-cleaning', 'no-show': 'rc-noshow', cancelled: 'rc-cancelled' };
+const RC_LBL = { available: 'Available', checkedin: 'Occupied', reserved: 'Reserved', checkout: 'Check-out', maintenance: 'Maintenance', cleaning: 'Cleaning', 'no-show': 'No-Show', cancelled: 'Cancelled' };
 const STATUS_OPTS = {
   available:   [{ v: 'maintenance', l: 'Put Under Maintenance' }],
   checkedin:   [{ v: 'cleaning', l: 'Check out → Cleaning' }],
-  reserved:    [{ v: 'checkedin', l: 'Check In' }, { v: 'no-show', l: 'Mark No-Show' }, { v: 'vacant', l: 'Cancel / Make Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
+  reserved:    [{ v: 'checkedin', l: 'Check In' }, { v: 'no-show', l: 'Mark No-Show' }, { v: 'cancel-refund', l: 'Cancel & Refund' }, { v: 'vacant', l: 'Cancel / Make Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
   checkout:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
   maintenance: [{ v: 'vacant', l: 'Mark Available' }],
-   cleaning:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }]
+  cleaning:    [{ v: 'vacant', l: 'Mark Available' }, { v: 'maintenance', l: 'Put Under Maintenance' }],
+  'no-show':   [{ v: 'cancel-refund', l: 'Cancel & Refund' }, { v: 'vacant', l: 'Mark Available' }],
+  cancelled:   [{ v: 'vacant', l: 'Mark Available' }],
 };
 
 /* ═══════════════════════════════════════════════
@@ -500,7 +542,7 @@ function updateStatPills() {
   const totalRooms = allRooms.length || 1;
   const occupied = allRooms.filter(r => getRoomStatus(r.num) === 'checkedin').length;
   const occRate = Math.round((occupied / totalRooms) * 100);
-  const revenue = bookings.reduce((sum, b) => sum + (b.paid || 0), 0);
+  const revenue = bookings.reduce((sum, b) => sum + (b.paid || 0) - (Number(b.refunded)||0), 0);
   document.getElementById('occRateVal').textContent = occRate + '%';
   document.getElementById('revenueVal').textContent = fmtN(revenue);
 }
@@ -739,6 +781,11 @@ async function saveRoomStatus() {
       await BookingData.checkinBooking(statusRoom, { notes: note });
     } else if (newSt === 'no-show') {
       await apiFetch('/bookings/' + encodeURIComponent(statusRoom) + '/no-show', { method: 'POST', body: JSON.stringify({}) });
+    } else if (newSt === 'cancel-refund') {
+      openRefundModal(statusRoom);
+      closeModal('roomStatusModal');
+      btnLoad('roomStatusSaveBtn', false);
+      return;
     } else if (curSt === 'checkedin') {
       // checkoutBooking() always lands the room on 'cleaning' itself —
       // staff can move it further (Available/Maintenance) afterward as
@@ -796,6 +843,47 @@ async function init() {
       '<div class="room-empty">Couldn\'t load room data. Please refresh.</div>';
   }
 }
+
+/* ── Cancel & Refund Modal ── */
+var refundRoom = null;
+function openRefundModal(room) {
+  refundRoom = room;
+  var bk = bookings.find(function(b){ return b.room === room; });
+  if (!bk) return;
+  document.getElementById('rfRoomNum').textContent = room;
+  document.getElementById('rfGuestName').textContent = bk.guest || '—';
+  var totalPaid = (bk.payments || []).reduce(function(s,p){ return s + (Number(p.amount)||0); }, 0) || Number(bk.paid) || 0;
+  document.getElementById('rfTotalPaid').textContent = '₦' + totalPaid.toLocaleString();
+  document.getElementById('rfType').value = 'none';
+  document.getElementById('rfAmount').value = '';
+  document.getElementById('rfReason').value = '';
+  toggleRefundAmount();
+  openModal('refundModal');
+}
+function toggleRefundAmount() {
+  var t = document.getElementById('rfType').value;
+  document.getElementById('rfAmountGroup').style.display = t === 'partial' ? '' : 'none';
+}
+async function saveCancelRefund() {
+  if (!refundRoom) return;
+  var refundType = document.getElementById('rfType').value;
+  var refundAmount = document.getElementById('rfAmount').value;
+  var reason = document.getElementById('rfReason').value.trim();
+  btnLoad('refundSaveBtn', true);
+  try {
+    await apiFetch('/bookings/' + encodeURIComponent(refundRoom) + '/cancel-refund', {
+      method: 'POST',
+      body: JSON.stringify({ refundType: refundType, refundAmount: Number(refundAmount) || 0, reason: reason })
+    });
+    closeModal('refundModal');
+    showToast('Room ' + refundRoom + ' cancelled.', 'success');
+    await refreshDataAndRender();
+  } catch (err) {
+    showToast(err.message || 'Failed to cancel booking.', 'error');
+  }
+  btnLoad('refundSaveBtn', false);
+}
+
 init();
 </script>
 </body>

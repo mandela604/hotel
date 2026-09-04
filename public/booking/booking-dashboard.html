@@ -224,7 +224,7 @@ function renderOverview() {
   const total  = allRooms.length;
   const pct    = total ? Math.round(occ / total * 100) : 0;
   const withG  = bookings.filter(b => b.guest);
-  const rev    = withG.reduce((s, b) => s + calcTotal(b), 0);
+  const rev    = withG.reduce((s, b) => s + calcTotal(b) - (Number(b.refunded)||0), 0);
 
   document.getElementById('ovDate').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 

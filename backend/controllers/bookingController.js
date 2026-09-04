@@ -451,6 +451,36 @@ exports.markNoShow = asyncHandler(async (req, res) => {
   res.json({ success: true, data: booking });
 });
 
+exports.cancelRefund = asyncHandler(async (req, res) => {
+  const booking = await Booking.findOne({ room: req.params.room });
+  if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+  if (!['reserved', 'no-show'].includes(booking.status)) {
+    return res.status(400).json({ success: false, error: `Cannot cancel from status '${booking.status}'` });
+  }
+
+  const { refundType, refundAmount, reason } = req.body;
+  const totalPaid = booking.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0) || Number(booking.paid) || 0;
+
+  let refund = 0;
+  if (refundType === 'full') {
+    refund = totalPaid;
+  } else if (refundType === 'partial') {
+    refund = Math.max(0, Math.min(Number(refundAmount) || 0, totalPaid));
+  }
+
+  booking.status = 'cancelled';
+  booking.refunded = refund;
+  booking.refundDate = new Date().toISOString().split('T')[0];
+  booking.refundBy = req.user ? req.user.name : '';
+  booking.refundReason = reason || '';
+  booking.updatedAt = Date.now();
+  await booking.save();
+
+  const label = refund > 0 ? ` (refund: ${refund})` : '';
+  await logActivity('Booking', 'amber', `${booking.guest} — Room ${booking.room} cancelled${label}`, 'booking-rooms.html');
+  res.json({ success: true, data: booking });
+});
+
 // Auto-cancel reservations where checkout date has passed and guest never checked in
 exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];

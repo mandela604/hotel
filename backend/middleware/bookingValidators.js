@@ -21,11 +21,12 @@ const STATUS_TRANSITIONS = {
   vacant:      ['maintenance', 'reserved'],
   available:   ['maintenance', 'reserved'],
   checkedin:   ['cleaning', 'checkout'],
-  reserved:    ['checkedin', 'no-show', 'vacant', 'maintenance'],
+  reserved:    ['checkedin', 'no-show', 'cancelled', 'vacant', 'maintenance'],
   checkout:    ['vacant', 'maintenance', 'cleaning'],
   maintenance: ['vacant'],
   cleaning:    ['vacant', 'maintenance'],
   'no-show':   ['vacant'],
+  cancelled:   ['vacant'],
 };
 
 function fail(res, msg, field) {

@@ -30,8 +30,12 @@ const bookingSchema = new mongoose.Schema({
   recordedBy: { type: String, default: '' },
   adults:     { type: Number, default: 1 },
   children:   { type: Number, default: 0 },
-  status:     { type: String, enum: ['vacant','reserved','checkedin','checkout','cleaning','maintenance','no-show'], default: 'vacant' },
+  status:     { type: String, enum: ['vacant','reserved','checkedin','checkout','cleaning','maintenance','no-show','cancelled'], default: 'vacant' },
   notes:      { type: String, default: '' },
+  refunded:       { type: Number, default: 0 },
+  refundDate:     { type: String, default: '' },
+  refundBy:       { type: String, default: '' },
+  refundReason:   { type: String, default: '' },
   createdAt:  { type: Number, default: 0 },
   updatedAt:  { type: Number, default: 0 },
 }, { timestamps: false });

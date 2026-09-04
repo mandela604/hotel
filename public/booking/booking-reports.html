@@ -312,14 +312,16 @@ function applyRoleUI() {
 
 function updateKPI(rows) {
   const totRev = rows.reduce((s,b) => s+calcTotal(b), 0);
+  const totRefunded = rows.reduce((s,b) => s+(Number(b.refunded)||0), 0);
+  const netRev = totRev - totRefunded;
   const totPaid = rows.reduce((s,b) => s+calcPaid(b), 0);
   const totBal = rows.reduce((s,b) => s+calcBal(b), 0);
-  const collRate = totRev>0 ? Math.round(totPaid/totRev*100) : 0;
+  const collRate = netRev>0 ? Math.round(totPaid/netRev*100) : 0;
   const nights_ = rows.reduce((s,b) => s+(nights(b.checkin,b.checkout)||0), 0);
   const fullyPaid = rows.filter(b=>b.payStatus==='Fully Paid').length;
   document.querySelectorAll('#kpiRow .skeleton').forEach(function(el){ el.classList.remove('skeleton'); el.style.height=''; });
-  document.getElementById('kpi-revenue').textContent = fmtN(totRev);
-  document.getElementById('kpi-revenue-sub').textContent = `${rows.length} bookings`;
+  document.getElementById('kpi-revenue').textContent = fmtN(netRev);
+  document.getElementById('kpi-revenue-sub').textContent = `${rows.length} bookings` + (totRefunded > 0 ? ` (₦${fmtN(totRefunded)} refunded)` : '');
   document.getElementById('kpi-collected').textContent = fmtN(totPaid);
   document.getElementById('kpi-collected-sub').textContent = `${collRate}% collection`;
   document.getElementById('kpi-balance').textContent = fmtN(totBal);
