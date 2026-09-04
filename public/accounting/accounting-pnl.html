@@ -129,6 +129,11 @@
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
   .btn-sm{ padding:6px 12px; font-size:11.5px; }
 
+  .status-pills{ display:inline-flex; gap:0; }
+  .status-pill{ display:flex; align-items:center; gap:5px; padding:7px 14px; border-radius:20px; font-size:11.5px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .15s; white-space:nowrap; }
+  .status-pill:hover{ border-color:var(--gold-border); }
+  .status-pill.on{ background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+
   /* ═══ TWO-COLUMN INCOME / EXPENSES PANELS ═══
      .panel-grid is a two-column grid; grid items default to
      align-items:stretch, so both .panel cards are ALREADY the same
@@ -346,7 +351,7 @@
             </table>
           </div>
           <div class="tbl-pagination no-print" id="incomePagination"></div>
-          <div class="panel-foot-total"><span>Total Income</span><span style="color:var(--blue);" id="incomeFootTotal">₦0</span></div>
+          <div class="panel-foot-total"><span>Total Income</span><span style="color:var(--green);" id="incomeFootTotal">₦0</span></div>
         </div>
 
         <div class="panel">
@@ -448,6 +453,14 @@ const KEY_EXPENSES = 'accounting-expenses';
 const PAGE_SIZE = 7;
 let dateMode = 'shift';
 
+function setMode(m) {
+  dateMode = m;
+  document.querySelectorAll('#modeToggle .status-pill').forEach(p => {
+    p.classList.toggle('on', p.dataset.mode === m);
+  });
+  reload();
+}
+
 async function apiFetch(method, path, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (CONFIG.API_KEY) opts.headers['Authorization'] = `Bearer ${CONFIG.API_KEY}`;
@@ -520,9 +533,9 @@ function renderKPIs() {
   const positive = netProfit >= 0;
 
   document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Income</div></div>
-      <div class="kpi-value" style="color:var(--blue);">${fmtN(totalIncome)}</div>
+    <div class="kpi-card acc-green">
+      <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Income</div></div>
+      <div class="kpi-value" style="color:var(--green);">${fmtN(totalIncome)}</div>
       <div class="kpi-trend neutral">${inc.length} period${inc.length!==1?'s':''}</div>
     </div>
     <div class="kpi-card acc-red">
@@ -578,8 +591,8 @@ function renderIncomeTable() {
     : rows.map(r => `
       <tr>
         <td data-label="Date" style="font-weight:600;">${fmtDate(r.date)}</td>
-        <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span>${r.department}</span></td>
-        <td data-label="Amount" class="right" style="font-weight:700;color:var(--blue);">${fmtN(r.amount)}</td>
+        <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span><strong>${r.department}</strong></span></td>
+        <td data-label="Amount" class="right" style="font-weight:700;color:var(--green);">${fmtN(r.amount)}</td>
         <td class="no-print"></td>
       </tr>`).join('');
 
@@ -640,11 +653,11 @@ function renderStatement() {
 
   document.getElementById('stmtBlock').innerHTML = `
     <div class="stmt-section-label">Income by Department</div>
-    ${totalFrontDesk ? `<div class="stmt-line"><span>Front Desk</span><span class="amt">${fmtN(totalFrontDesk)}</span></div>` : ''}
-    ${totalRestaurant ? `<div class="stmt-line"><span>Restaurant</span><span class="amt">${fmtN(totalRestaurant)}</span></div>` : ''}
-    ${totalPoolBar ? `<div class="stmt-line"><span>Pool Bar</span><span class="amt">${fmtN(totalPoolBar)}</span></div>` : ''}
-    ${totalGym ? `<div class="stmt-line"><span>Gym</span><span class="amt">${fmtN(totalGym)}</span></div>` : ''}
-    <div class="stmt-subtotal"><span>Total Income</span><span class="amt">${fmtN(totalIncome)}</span></div>
+    <div class="stmt-line"><span><strong>Front Desk</strong></span><span class="amt">${fmtN(totalFrontDesk)}</span></div>
+    <div class="stmt-line"><span><strong>Restaurant</strong></span><span class="amt">${fmtN(totalRestaurant)}</span></div>
+    <div class="stmt-line"><span><strong>Pool Bar</strong></span><span class="amt">${fmtN(totalPoolBar)}</span></div>
+    <div class="stmt-line"><span><strong>Gym</strong></span><span class="amt">${fmtN(totalGym)}</span></div>
+    <div class="stmt-subtotal" style="color:var(--green);font-weight:800;"><span>Total Income</span><span class="amt" style="color:var(--green);">${fmtN(totalIncome)}</span></div>
 
     <div class="stmt-section-label">Expenses</div>
     ${totalProcurement ? `<div class="stmt-line neg"><span>Procurement (COGS)</span><span class="amt">(${fmtN(totalProcurement)})</span></div>` : ''}
