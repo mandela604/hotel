@@ -406,8 +406,7 @@ const CFG = { PAGE_SIZE: 8 };
 
 /* ═══════════════════════════════════════════
    SHAPE VALIDATION — this is what actually fixes the "undefined" cells.
-   Loading whatever happens to be sitting in localStorage under
-   KEY_SHIFTS without checking its shape is how a shift row ends up
+   Loading shift data without checking its shape is how a shift row ends up
    missing `dept` or `staff` (e.g. left over from an earlier version of
    this page, or corrupted by hand-editing storage during testing).
    Anything that doesn't look like a real shift record gets thrown out

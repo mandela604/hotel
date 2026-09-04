@@ -439,19 +439,9 @@ shell.setApiMode('Live');
 const INCOME_DEPARTMENTS = ['Rooms & Bookings', 'Restaurant', 'Pool Bar', 'Kitchen / Banquets', 'Other Income'];
 const EXPENSE_CATEGORIES = ['Salaries & Wages', 'Utilities', 'Maintenance & Repairs', 'Marketing & Advertising', 'Supplies & Inventory', 'Insurance', 'Transport & Logistics', 'Miscellaneous'];
 
-const storage = window.storage || {
-  async get(key){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v}; },
-  async set(key, value){ localStorage.setItem(key, value); return {key, value}; },
-};
 const KEY_INCOME   = 'accounting-income';
 const KEY_EXPENSES = 'accounting-expenses';
 const PAGE_SIZE = 7;
-
-async function loadShared(key) {
-  try { const r = await storage.get(key, true); if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p) && p.length) return p; } } catch(e) {}
-  return [];
-}
-async function saveShared(key, value) { try { await storage.set(key, JSON.stringify(value), true); } catch(e) {} }
 async function apiFetch(method, path, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (CONFIG.API_KEY) opts.headers['Authorization'] = `Bearer ${CONFIG.API_KEY}`;
@@ -462,15 +452,8 @@ async function apiFetch(method, path, body) {
 }
 
 async function getAccountingData() {
-  try {
-    const data = await apiFetch('GET', '/api/accounting/pnl');
-    return { income: data.income || [], expenses: data.expenses || [] };
-  } catch (err) {
-    console.warn('[P&L] API unavailable, falling back to stored data:', err.message);
-  }
-  const income   = await loadShared(KEY_INCOME);
-  const expenses = await loadShared(KEY_EXPENSES);
-  return { income, expenses };
+  const data = await apiFetch('GET', '/api/accounting/pnl');
+  return { income: data.income || [], expenses: data.expenses || [] };
 }
 async function apiAddIncome(entry) {
   return apiFetch('POST', '/api/accounting/pnl/income', entry);

@@ -348,27 +348,9 @@ const shell = AccountingShell.attach({
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   DATA LAYER — reads the exact same shared storage keys every other
-   module in this platform already writes to (window.storage, or the
-   localStorage fallback outside the Claude.ai preview), so this page
-   needs no separate "accounting" data pipe. It only ever READS:
-     poolbar-sales        → Pool Bar sales (Sales page)
-     restaurant-sales     → Restaurant sales (Sales page)
-     booking-bookings     → Room revenue (paid amounts on bookings)
-     gym-members          → Membership payments (amountPaid on join)
-═══════════════════════════════════════════════════════════════ */
-
-const storage = window.storage || {
-  async get(key, shared){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v, shared}; },
-  async set(key, value, shared){ localStorage.setItem(key, value); return {key, value, shared}; },
-};
-async function loadShared(key, fallback){
-  try {
-    const r = await storage.get(key, true);
-    if (r && r.value) { const parsed = JSON.parse(r.value); if (Array.isArray(parsed)) return parsed; }
-  } catch(e){}
-  return fallback || [];
-}
+   DATA LAYER — reads from AccountingData.getAccountingData(),
+   same source as dashboard/reports/breakdown.
+════════════════════════════════════════════════════════════════ */
 
 let txns = [];
 let page = 1;
@@ -453,18 +435,8 @@ function fromGym(members){
 async function refreshData(manual){
   document.getElementById('tblBody').innerHTML = `<tr class="empty-row"><td colspan="8"><i class="fa-solid fa-spinner fa-spin"></i> Loading transactions…</td></tr>`;
   try {
-    const [poolbar, restaurant, bookings, gym] = await Promise.all([
-      loadShared('poolbar-sales', []),
-      loadShared('restaurant-sales', []),
-      loadShared('booking-bookings', []),
-      loadShared('gym-members', []),
-    ]);
-    txns = [
-      ...fromPoolBar(poolbar),
-      ...fromRestaurant(restaurant),
-      ...fromBookings(bookings),
-      ...fromGym(gym),
-    ].filter(t => t.date);
+    const { roomTx, restSales, poolSales } = await AccountingData.getAccountingData();
+    txns = AccountingData.buildTransactions(roomTx, restSales, poolSales);
     txns.sort((a,b) => b.date - a.date);
     renderStatusTabs();
     render();
