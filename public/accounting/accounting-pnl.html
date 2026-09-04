@@ -321,6 +321,10 @@
             </div>
           </div>
           <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
+          <div class="flt-group" id="modeToggle" style="display:inline-flex;gap:0;margin-left:8px;">
+            <span class="status-pill on" data-mode="shift" onclick="setMode('shift')">Shift Day</span>
+            <span class="status-pill" data-mode="calendar" onclick="setMode('calendar')">Calendar Day</span>
+          </div>
         </div>
         <div class="toolbar-right">
           <button class="btn btn-outline btn-sm" onclick="printStatement()"><i class="fa-solid fa-print"></i> Print Statement</button>
@@ -337,7 +341,7 @@
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Date</th><th>Department</th><th>Description</th><th class="right">Amount (₦)</th><th class="no-print"></th></tr></thead>
+              <thead><tr><th>Date</th><th class="right">Front Desk (₦)</th><th class="right">Restaurant (₦)</th><th class="right">Pool Bar (₦)</th><th class="right">Gym (₦)</th><th class="right" style="font-weight:800;">Total (₦)</th><th class="no-print"></th></tr></thead>
               <tbody id="incomeBody"></tbody>
             </table>
           </div>
@@ -347,12 +351,12 @@
 
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title"><i class="fa-solid fa-arrow-trend-down"></i> Operating Expenses</div>
+            <div class="panel-title"><i class="fa-solid fa-arrow-trend-down"></i> Expenses</div>
             <span class="panel-sub" id="expCount">—</span>
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Date</th><th>Category</th><th>Description</th><th class="right">Amount (₦)</th><th class="no-print"></th></tr></thead>
+              <thead><tr><th>Date</th><th class="right">Procurement (₦)</th><th class="right">Manual (₦)</th><th class="right" style="font-weight:800;">Total (₦)</th><th class="no-print"></th></tr></thead>
               <tbody id="expenseBody"></tbody>
             </table>
           </div>
@@ -436,12 +440,14 @@ const shell = AccountingShell.attach({
 const CONFIG = { API_BASE: '', API_KEY: '' };
 shell.setApiMode('Live');
 
-const INCOME_DEPARTMENTS = ['Rooms & Bookings', 'Restaurant', 'Pool Bar', 'Kitchen / Banquets', 'Other Income'];
+const INCOME_DEPARTMENTS = ['Front Desk', 'Restaurant', 'Pool Bar', 'Gym', 'Other'];
 const EXPENSE_CATEGORIES = ['Salaries & Wages', 'Utilities', 'Maintenance & Repairs', 'Marketing & Advertising', 'Supplies & Inventory', 'Insurance', 'Transport & Logistics', 'Miscellaneous'];
 
 const KEY_INCOME   = 'accounting-income';
 const KEY_EXPENSES = 'accounting-expenses';
 const PAGE_SIZE = 7;
+let dateMode = 'shift';
+
 async function apiFetch(method, path, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (CONFIG.API_KEY) opts.headers['Authorization'] = `Bearer ${CONFIG.API_KEY}`;
@@ -452,8 +458,8 @@ async function apiFetch(method, path, body) {
 }
 
 async function getAccountingData() {
-  const data = await apiFetch('GET', '/api/accounting/pnl');
-  return { income: data.income || [], expenses: data.expenses || [] };
+  const data = await apiFetch('GET', '/api/accounting/pnl?mode=' + dateMode);
+  return { income: data.income || [], expenses: data.expenses || [], totalIncome: data.totalIncome || 0, totalExpenses: data.totalExpenses || 0 };
 }
 async function apiAddIncome(entry) {
   return apiFetch('POST', '/api/accounting/pnl/income', entry);
@@ -505,10 +511,11 @@ function filteredExpenses() { return expenses.filter(e => inRange(e.date)); }
 function renderKPIs() {
   const inc = filteredIncome();
   const exp = filteredExpenses();
-  const totalIncome = inc.reduce((s,e)=>s+e.amount,0);
-  const totalExpenses = exp.reduce((s,e)=>s+e.amount,0);
-  const grossProfit = totalIncome; // = Total Income for now (no per-item cost tracked yet)
-  const netProfit = grossProfit - totalExpenses;
+  const totalIncome = inc.reduce((s,r)=>s+r.total,0);
+  const totalExpenses = exp.reduce((s,r)=>s+r.total,0);
+  const procCost = exp.reduce((s,r)=>s+r.procurement,0);
+  const grossProfit = totalIncome - procCost;
+  const netProfit = totalIncome - totalExpenses;
   const netMargin = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
   const positive = netProfit >= 0;
 
@@ -516,17 +523,17 @@ function renderKPIs() {
     <div class="kpi-card">
       <div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Income</div></div>
       <div class="kpi-value" style="color:var(--blue);">${fmtN(totalIncome)}</div>
-      <div class="kpi-trend neutral">${inc.length} entr${inc.length!==1?'ies':'y'}</div>
+      <div class="kpi-trend neutral">${inc.length} period${inc.length!==1?'s':''}</div>
     </div>
     <div class="kpi-card acc-red">
       <div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-file-invoice-dollar"></i></div><div class="kpi-label">Total Expenses</div></div>
       <div class="kpi-value" style="color:var(--red);">${fmtN(totalExpenses)}</div>
-      <div class="kpi-trend neutral">${exp.length} entr${exp.length!==1?'ies':'y'}</div>
+      <div class="kpi-trend neutral">${exp.length} period${exp.length!==1?'s':''}</div>
     </div>
     <div class="kpi-card acc-purple">
       <div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-coins"></i></div><div class="kpi-label">Gross Profit</div></div>
       <div class="kpi-value" style="color:var(--purple);">${fmtN(grossProfit)}</div>
-      <div class="kpi-trend neutral">= Total Income (for now)</div>
+      <div class="kpi-trend neutral">Income − Procurement</div>
     </div>
     <div class="kpi-card ${positive?'acc-green':'acc-red'}">
       <div class="kpi-top"><div class="kpi-ic ${positive?'ic-green':'ic-red'}"><i class="fa-solid ${positive?'fa-chart-line':'fa-chart-line-down'}"></i></div><div class="kpi-label">Net Profit</div></div>
@@ -559,36 +566,33 @@ function renderTblPagination(containerId, total, page, onPage) {
    visible page.
 ═══════════════════════════════════════════════ */
 function renderIncomeTable() {
-  const all = filteredIncome().slice().sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('incCount').textContent = all.length + ' entr' + (all.length!==1?'ies':'y');
+  const all = filteredIncome().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById('incCount').textContent = all.length + ' period' + (all.length!==1?'s':'');
 
   const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
   if (incomePage > totalPages) incomePage = totalPages;
   const rows = all.slice((incomePage-1)*PAGE_SIZE, incomePage*PAGE_SIZE);
 
   document.getElementById('incomeBody').innerHTML = rows.length===0
-    ? `<tr class="empty-row"><td colspan="5">No income recorded for this period.</td></tr>`
-    : rows.map(e => `
+    ? `<tr class="empty-row"><td colspan="7">No income recorded for this period.</td></tr>`
+    : rows.map(r => `
       <tr>
-        <td data-label="Date">${fmtDate(e.date)}</td>
-        <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span>${e.department}${e.autoGenerated ? ' <span style="font-size:9px;color:var(--text3);margin-left:4px;">AUTO</span>' : ''}</span></td>
-        <td data-label="Description">${e.description}</td>
-        <td data-label="Amount" class="right" style="font-weight:700;color:var(--blue);">${fmtN(e.amount)}</td>
-        <td class="no-print" style="width:60px;">
-          ${e.autoGenerated ? '' : `<div class="row-actions">
-            <button class="icon-btn edit" onclick="openEntryModal('income','${e.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
-            <button class="icon-btn del" onclick="openDeleteConfirm('income','${e.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
-          </div>`}
-        </td>
+        <td data-label="Date" style="font-weight:600;">${fmtDate(r.date)}</td>
+        <td data-label="Front Desk" class="right">${r['Front Desk'] ? fmtN(r['Front Desk']) : '—'}</td>
+        <td data-label="Restaurant" class="right">${r.Restaurant ? fmtN(r.Restaurant) : '—'}</td>
+        <td data-label="Pool Bar" class="right">${r['Pool Bar'] ? fmtN(r['Pool Bar']) : '—'}</td>
+        <td data-label="Gym" class="right">${r.Gym ? fmtN(r.Gym) : '—'}</td>
+        <td data-label="Total" class="right" style="font-weight:800;color:var(--blue);">${fmtN(r.total)}</td>
+        <td class="no-print"></td>
       </tr>`).join('');
 
   renderTblPagination('incomePagination', all.length, incomePage, (p) => { incomePage = p; renderIncomeTable(); });
-  document.getElementById('incomeFootTotal').textContent = fmtN(all.reduce((s,e)=>s+e.amount,0));
+  document.getElementById('incomeFootTotal').textContent = fmtN(all.reduce((s,r) => s + r.total, 0));
 }
 
 function renderExpenseTable() {
-  const all = filteredExpenses().slice().sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('expCount').textContent = all.length + ' entr' + (all.length!==1?'ies':'y');
+  const all = filteredExpenses().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById('expCount').textContent = all.length + ' period' + (all.length!==1?'s':'');
 
   const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
   if (expensePage > totalPages) expensePage = totalPages;
@@ -596,22 +600,17 @@ function renderExpenseTable() {
 
   document.getElementById('expenseBody').innerHTML = rows.length===0
     ? `<tr class="empty-row"><td colspan="5">No expenses recorded for this period.</td></tr>`
-    : rows.map(e => `
+    : rows.map(r => `
       <tr>
-        <td data-label="Date">${fmtDate(e.date)}</td>
-        <td data-label="Category"><span class="cat-chip"><span class="cat-dot expense"></span>${e.category}</span></td>
-        <td data-label="Description">${e.description}</td>
-        <td data-label="Amount" class="right" style="font-weight:700;color:var(--red);">${fmtN(e.amount)}</td>
-        <td class="no-print" style="width:60px;">
-          <div class="row-actions">
-            <button class="icon-btn edit" onclick="openEntryModal('expense','${e.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
-            <button class="icon-btn del" onclick="openDeleteConfirm('expense','${e.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        </td>
+        <td data-label="Date" style="font-weight:600;">${fmtDate(r.date)}</td>
+        <td data-label="Procurement" class="right">${r.procurement ? fmtN(r.procurement) : '—'}</td>
+        <td data-label="Manual" class="right">${r.manual ? fmtN(r.manual) : '—'}</td>
+        <td data-label="Total" class="right" style="font-weight:800;color:var(--red);">${fmtN(r.total)}</td>
+        <td class="no-print"></td>
       </tr>`).join('');
 
   renderTblPagination('expensePagination', all.length, expensePage, (p) => { expensePage = p; renderExpenseTable(); });
-  document.getElementById('expenseFootTotal').textContent = fmtN(all.reduce((s,e)=>s+e.amount,0));
+  document.getElementById('expenseFootTotal').textContent = fmtN(all.reduce((s,r) => s + r.total, 0));
 }
 
 /* ═══════════════════════════════════════════════
@@ -629,28 +628,34 @@ function renderStatement() {
     return;
   }
 
-  const incByDept = {};
-  inc.forEach(e => { incByDept[e.department] = (incByDept[e.department]||0) + e.amount; });
-  const expByCat = {};
-  exp.forEach(e => { expByCat[e.category] = (expByCat[e.category]||0) + e.amount; });
-
-  const totalIncome = inc.reduce((s,e)=>s+e.amount,0);
-  const totalExpenses = exp.reduce((s,e)=>s+e.amount,0);
-  const grossProfit = totalIncome;
-  const netProfit = grossProfit - totalExpenses;
+  const totalIncome = inc.reduce((s,r)=>s+r.total,0);
+  const totalFrontDesk = inc.reduce((s,r)=>s+(r['Front Desk']||0),0);
+  const totalRestaurant = inc.reduce((s,r)=>s+(r.Restaurant||0),0);
+  const totalPoolBar = inc.reduce((s,r)=>s+(r['Pool Bar']||0),0);
+  const totalGym = inc.reduce((s,r)=>s+(r.Gym||0),0);
+  const totalProcurement = exp.reduce((s,r)=>s+r.procurement,0);
+  const totalManual = exp.reduce((s,r)=>s+r.manual,0);
+  const totalExpenses = totalProcurement + totalManual;
+  const grossProfit = totalIncome - totalProcurement;
+  const netProfit = totalIncome - totalExpenses;
   const netMargin = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
   const positive = netProfit >= 0;
 
   document.getElementById('stmtBlock').innerHTML = `
     <div class="stmt-section-label">Income by Department</div>
-    ${Object.keys(incByDept).length === 0 ? `<div class="stmt-line" style="color:var(--text3);font-style:italic;">No income recorded</div>` :
-      Object.entries(incByDept).sort((a,b)=>b[1]-a[1]).map(([d,amt]) => `<div class="stmt-line"><span>${d}</span><span class="amt">${fmtN(amt)}</span></div>`).join('')}
-    <div class="stmt-subtotal"><span>Total Income (Gross Profit)</span><span class="amt">${fmtN(grossProfit)}</span></div>
+    ${totalFrontDesk ? `<div class="stmt-line"><span>Front Desk</span><span class="amt">${fmtN(totalFrontDesk)}</span></div>` : ''}
+    ${totalRestaurant ? `<div class="stmt-line"><span>Restaurant</span><span class="amt">${fmtN(totalRestaurant)}</span></div>` : ''}
+    ${totalPoolBar ? `<div class="stmt-line"><span>Pool Bar</span><span class="amt">${fmtN(totalPoolBar)}</span></div>` : ''}
+    ${totalGym ? `<div class="stmt-line"><span>Gym</span><span class="amt">${fmtN(totalGym)}</span></div>` : ''}
+    <div class="stmt-subtotal"><span>Total Income</span><span class="amt">${fmtN(totalIncome)}</span></div>
 
-    <div class="stmt-section-label">Operating Expenses</div>
-    ${Object.keys(expByCat).length === 0 ? `<div class="stmt-line" style="color:var(--text3);font-style:italic;">No expenses recorded</div>` :
-      Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).map(([c,amt]) => `<div class="stmt-line neg"><span>${c}</span><span class="amt">(${fmtN(amt)})</span></div>`).join('')}
-    <div class="stmt-subtotal expense"><span>Total Operating Expenses</span><span class="amt">(${fmtN(totalExpenses)})</span></div>
+    <div class="stmt-section-label">Expenses</div>
+    ${totalProcurement ? `<div class="stmt-line neg"><span>Procurement (COGS)</span><span class="amt">(${fmtN(totalProcurement)})</span></div>` : ''}
+    ${totalManual ? `<div class="stmt-line neg"><span>Manual Expenses</span><span class="amt">(${fmtN(totalManual)})</span></div>` : ''}
+    <div class="stmt-subtotal expense"><span>Total Expenses</span><span class="amt">(${fmtN(totalExpenses)})</span></div>
+
+    <div class="stmt-section-label">Profit</div>
+    <div class="stmt-line"><span>Gross Profit (Income − COGS)</span><span class="amt">${fmtN(grossProfit)}</span></div>
 
     <div class="stmt-net ${positive?'':'loss'}">
       <div class="lbl">${positive?'Net Profit':'Net Loss'}<small>${netMargin.toFixed(1)}% of income</small></div>
@@ -746,10 +751,7 @@ async function saveEntry() {
     showToast(`${isIncome ? 'Income' : 'Expense'} ${editId ? 'updated' : 'saved'}.`, 'success');
     closeModal('entryModal');
     editId = null;
-    const data = await getAccountingData();
-    income = data.income;
-    expenses = data.expenses;
-    renderAll();
+    await reload();
   } catch (err) {
     showToast('Failed to save: ' + err.message, 'error');
   }
@@ -771,10 +773,7 @@ async function confirmDeleteEntry() {
     closeModal('deleteModal');
     deleteTarget = null;
     showToast('Entry deleted.', 'info');
-    const data = await getAccountingData();
-    income = data.income;
-    expenses = data.expenses;
-    renderAll();
+    await reload();
   } catch (err) {
     showToast('Failed to delete: ' + err.message, 'error');
   }
@@ -930,8 +929,7 @@ function clearFilters() {
   dateFrom = ''; dateTo = '';
   pendingStart = null; pendingEnd = null;
   updateTriggerLabel();
-  incomePage = 1; expensePage = 1;
-  renderAll();
+  setMode('shift');
 }
 
 /* ═══════════════════════════════════════════════
@@ -952,23 +950,26 @@ function showToast(msg, type = 'success') {
 
 /* ═══════════════════════════════════════════════
    INIT
-═══════════════════════════════════════════════ */
-async function init() {
-  initSelects();
-  updateTriggerLabel();
-  document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="5"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
+══════════════════════════════════════════════ */
+async function reload() {
+  document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="7"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
   document.getElementById('expenseBody').innerHTML = `<tr class="empty-row"><td colspan="5"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
   try {
     const data = await getAccountingData();
     income = data.income;
     expenses = data.expenses;
+    incomePage = 1;
+    expensePage = 1;
     renderAll();
   } catch (err) {
-    console.error('[P&L] Failed to load accounting data:', err);
-    document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="5" style="color:var(--red);">Couldn't load data. Please refresh.</td></tr>`;
-    document.getElementById('expenseBody').innerHTML = `<tr class="empty-row"><td colspan="5" style="color:var(--red);">Couldn't load data. Please refresh.</td></tr>`;
+    console.error('[P&L] Failed to load:', err);
     showToast('Failed to load accounting data.', 'error');
   }
+}
+async function init() {
+  initSelects();
+  updateTriggerLabel();
+  await reload();
 }
 init();
 </script>
