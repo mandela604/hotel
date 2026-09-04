@@ -128,7 +128,32 @@ const shell = RestaurantShell.attach({
   pageSubtitle: 'Full sales history and revenue breakdown — Aurum Restaurant',
 });
 const svc = window.RestaurantService;
-const { fmtN, todayDDMMYY, parseStamp, dateOnly } = svc;
+
+function fmtN(n) {
+  if (svc && svc.fmtN) return svc.fmtN(n);
+  return '₦' + Math.round(n || 0).toLocaleString('en-NG');
+}
+
+function parseStamp(str) {
+  if (!str) return null;
+  if (svc && svc.parseStamp) return svc.parseStamp(str);
+  const parts = str.split(' ');
+  const [d, m, y] = parts[0].split('/').map(n => parseInt(n, 10));
+  let hh = 0, mm = 0;
+  if (parts[1]) { const [h, mi] = parts[1].split(':').map(n => parseInt(n, 10)); hh = h; mm = mi || 0; }
+  if (parts[2]) {
+    const ap = parts[2].toUpperCase();
+    if (ap === 'PM' && hh < 12) hh += 12;
+    if (ap === 'AM' && hh === 12) hh = 0;
+  }
+  const fullYear = y < 100 ? 2000 + y : y;
+  return new Date(fullYear, m - 1, d, hh, mm);
+}
+
+function dateOnly(dt) {
+  if (svc && svc.dateOnly) return svc.dateOnly(dt);
+  return dt ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null;
+}
 
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -136,10 +161,9 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const completedStatus = svc.getCompletedSaleStatus ? svc.getCompletedSaleStatus() : 'completed';
-const voidedStatus = svc.getStatusConstants ? svc.getStatusConstants().SALE_VOIDED : 'voided';
-const roomChargeMethod = svc.getRoomChargeMethodName ? svc.getRoomChargeMethodName() : 'Room Charge';
-const emptyValue = svc.getEmptyValuePlaceholder ? svc.getEmptyValuePlaceholder() : '—';
+const completedStatus = 'completed';
+const voidedStatus = 'voided';
+const roomChargeMethod = 'Room Charge';
 
 let session = null;
 let canViewReports = false;
@@ -181,13 +205,59 @@ function itemsQty(s) {
   return (s.items || []).reduce((sum, i) => sum + (i.qty || 0), 0);
 }
 
+function isMoneyReceived(method) {
+  const list = ['Cash', 'POS', 'Transfer'];
+  return list.indexOf((method || '').trim()) !== -1;
+}
+
+function listStaffNames() {
+  const set = new Set();
+  (svc.state.sales || []).forEach(s => { if (s.staff) set.add(s.staff); });
+  (svc.state.orders || []).forEach(o => { if (o.staff) set.add(o.staff); });
+  return [...set].sort();
+}
+
+function getReportTitle(label) {
+  if (!label || label === 'All time') return 'Full Report';
+  return 'Report: ' + label;
+}
+
+function filterSales(filterState) {
+  filterState = filterState || {};
+  const q = (filterState.search || '').trim().toLowerCase();
+  const pay = filterState.payment || '';
+  const status = filterState.status || '';
+  const source = filterState.source || '';
+  const staff = filterState.staff || '';
+  const bounds = filterState.dateRange || filterState.bounds || { start: null, end: null };
+
+  return (svc.state.sales || []).filter(s => {
+    if (status && s.status !== status) return false;
+    if (source && s.source !== source) return false;
+    if (pay && s.method !== pay && s.payment !== pay) return false;
+    if (staff && (s.staff || '') !== staff) return false;
+    if (q) {
+      const hit = (s.id || '').toLowerCase().includes(q)
+        || (s.staff || '').toLowerCase().includes(q)
+        || (s.table || '').toLowerCase().includes(q)
+        || (s.items || []).some(i => (i.name || i.meal || '').toLowerCase().includes(q));
+      if (!hit) return false;
+    }
+    if (bounds && bounds.start && bounds.end) {
+      const sd = dateOnly(parseStamp(s.date));
+      if (!sd || sd < bounds.start || sd > bounds.end) return false;
+    }
+    return true;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
 /**
  * KPI cards mirror poolbar-reports.html layout:
  * 1. Transactions (blue / gold value) - FontAwesome fa-receipt
  * 2. Revenue (green) - FontAwesome fa-sack-dollar
  * 3. Money received (green) - FontAwesome fa-wallet
  * 4. Units Sold (blue / gold value) - FontAwesome fa-boxes-stacked
- * Always computed from the CURRENTLY FILTERED rows.
+ * Computed from current filtered rows.
  */
 function renderKPIs(rows) {
   const completed = rows.filter(s => s.status === completedStatus);
@@ -195,7 +265,7 @@ function renderKPIs(rows) {
   const revenue = completed.reduce((n, s) => n + (s.total || 0), 0);
   const units = completed.reduce((n, s) => n + itemsQty(s), 0);
   const moneyReceived = completed
-    .filter(s => svc.isMoneyReceived ? svc.isMoneyReceived(s.method || s.payment) : (s.method !== 'Room Charge' && s.method !== 'Complimentary'))
+    .filter(s => isMoneyReceived(s.method || s.payment))
     .reduce((n, s) => n + (s.total || 0), 0);
   const roomCharge = completed
     .filter(s => (s.method || s.payment || '') === roomChargeMethod)
@@ -226,7 +296,7 @@ function renderKPIs(rows) {
 
 function applyFilters(state) {
   const bounds = state.bounds || { start: null, end: null, label: 'All time' };
-  const filtered = svc.filterSales({
+  const filtered = filterSales({
     search: state.search || '',
     payment: state.payment || '',
     status: state.status || '',
@@ -234,13 +304,12 @@ function applyFilters(state) {
     staff: state.staff || '',
     dateRange: bounds,
   });
-  const title = svc.getReportTitle ? svc.getReportTitle(bounds.label) : (bounds.label && bounds.label !== 'All time' ? 'Report: ' + bounds.label : 'Full Report');
+  const title = getReportTitle(bounds.label);
   if (salesTable) {
     salesTable.setTitle(title);
     salesTable.setSort('date', 'desc');
     salesTable.setRows(filtered);
   }
-  // KPI cards reflect the exact filtered rows.
   renderKPIs(filtered);
   const comp = filtered.filter(s => s.status === completedStatus);
   const net = comp.reduce((n, s) => n + (s.total || 0), 0);
@@ -257,7 +326,7 @@ function applyFilters(state) {
 
 function openSaleModal(saleOrId) {
   const id = typeof saleOrId === 'string' ? saleOrId : (saleOrId && saleOrId.id);
-  const s = svc.state.sales.find(x => x.id === id || x._id === id);
+  const s = (svc.state.sales || []).find(x => x.id === id || x._id === id);
   if (!s || !salesDetail) return;
   salesDetail.open({
     id: s.id || s._id,
@@ -289,7 +358,7 @@ function applyPermissionGate() {
 }
 
 function mountFilterBar() {
-  const staffOpts = svc.listStaffNames ? svc.listStaffNames() : [...new Set((svc.state.sales || []).map(s => s.staff).filter(Boolean))].sort();
+  const staffOpts = listStaffNames();
   filterBar = SalesFilterBar.create({
     target: '#filterSlot',
     show: {
@@ -357,8 +426,7 @@ async function init() {
     if (svc.onChange) {
       svc.onChange(() => {
         if (filterBar) {
-          const staffOpts = svc.listStaffNames ? svc.listStaffNames() : [...new Set((svc.state.sales || []).map(s => s.staff).filter(Boolean))].sort();
-          filterBar.setStaffOptions(staffOpts);
+          filterBar.setStaffOptions(listStaffNames());
           applyFilters(filterBar.getState());
         }
       });
