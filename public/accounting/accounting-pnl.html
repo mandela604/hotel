@@ -431,13 +431,13 @@ const shell = AccountingShell.attach({
 });
 
 /* ═══════════════════════════════════════════════
-   DATA SERVICE — production API client.
-   Income/expense categories from AccountingSeed.
-═══════════════════════════════════════════════ */
+   CONFIG — inline constants (same as other modules).
+══════════════════════════════════════════════ */
 const CONFIG = { API_BASE: '', API_KEY: '' };
 shell.setApiMode('Live');
 
-const { INCOME_DEPARTMENTS, EXPENSE_CATEGORIES } = AccountingSeed;
+const INCOME_DEPARTMENTS = ['Rooms & Bookings', 'Restaurant', 'Pool Bar', 'Kitchen / Banquets', 'Other Income'];
+const EXPENSE_CATEGORIES = ['Salaries & Wages', 'Utilities', 'Maintenance & Repairs', 'Marketing & Advertising', 'Supplies & Inventory', 'Insurance', 'Transport & Logistics', 'Miscellaneous'];
 
 const storage = window.storage || {
   async get(key){ const v = localStorage.getItem(key); return v==null ? null : {key, value:v}; },

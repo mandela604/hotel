@@ -17,8 +17,7 @@
      single-box date-range popover).
      NOTE: the View/Reconcile modal lives in shift-reconciliation-detail.js
      (a reusable component, same folder as this page) — this page no longer
-     owns any modal markup or CSS for it. Demo data for this page lives in
-     accounting-seed.js, not hardcoded here — see AccountingSeed below.
+     owns any modal markup or CSS for it.
      Row/action clicks use event delegation (data-key/data-dept + one
      addEventListener), not inline onclick="" attributes, so they aren't
      fragile against CSP or interpolation edge cases. */
@@ -361,9 +360,11 @@ const shell = AccountingShell.attach({
 });
 
 /* ═══════════════════════════════════════════
-   SEED DATA — config constants from AccountingSeed.
+   CONFIG — inline constants (same as other modules).
 ════════════════════════════════════════════ */
-const { DEPARTMENTS, DEPT_COLOR, VARIANCE_TOLERANCE } = AccountingSeed;
+const DEPARTMENTS = ['Rooms', 'Restaurant', 'Pool Bar'];
+const DEPT_COLOR = { Rooms: 'var(--purple)', Restaurant: 'var(--green)', 'Pool Bar': 'var(--amber)' };
+const VARIANCE_TOLERANCE = 500;
 
 /* ═══════════════════════════════════════════
    SHIFT-DAY LOGIC

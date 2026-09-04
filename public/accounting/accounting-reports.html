@@ -265,6 +265,7 @@
             </div>
           </div>
           <div class="toolbar-actions">
+            <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear Filters</button>
             <button class="btn btn-outline btn-sm" onclick="printReport()"><i class="fa-solid fa-print"></i> Print</button>
           </div>
         </div>
@@ -391,9 +392,7 @@ function updateModeLabels(){
    PERIOD PRESETS
 ═══════════════════════════════════════════ */
 function anchorDate(){
-  // Anchor to the most recent activity in the data, so seeded/demo
-  // transactions still show up even if real-world "today" has moved on.
-  return transactions.length ? new Date(Math.max(...transactions.map(t=>t.date.getTime()))) : new Date();
+  return new Date();
 }
 function bindPresets(){
   document.querySelectorAll('#presetRow .status-pill').forEach(btn => {
@@ -657,6 +656,13 @@ function renderLedger(daily){
   document.getElementById('ftCount').textContent = daily.reduce((s,d)=>s+d.count,0);
 }
 
+function clearFilters(){
+  document.getElementById('fDept').value = '';
+  document.getElementById('fMethod').value = '';
+  setRange('', '');
+  setPreset('today');
+  applyPreset('today');
+}
 function generate(){
   const rangeRows = getRangeFiltered();
   renderKPIs(rangeRows);
@@ -676,9 +682,7 @@ function printReport(){
 
 /* ═══════════════════════════════════════════
    INIT — single call into AccountingData.getAccountingData(), same
-   as accounting-dashboard.html. No local storage shim, buildTransactions(),
-   or demo arrays on this page anymore — that logic lives once in
-   services/accounting-service.js and data/accounting-seed.js.
+   as accounting-dashboard.html.
 ═══════════════════════════════════════════ */
 async function init(){
   initSelects();

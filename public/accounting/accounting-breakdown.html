@@ -345,7 +345,7 @@ const shell = AccountingShell.attach({
    renders them, then re-renders when a filter/toggle changes.
 ═══════════════════════════════════════════════════════════════ */
 const fmtN = AccountingData.fmtN;
-const PAY_METHODS = AccountingSeed.PAYMENT_METHODS;
+const PAY_METHODS = AccountingData.PAY_METHODS || ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'];
 const PAY_BAR_CLASS = { Cash:'', POS:'pos', Transfer:'transfer', 'Room Charge':'roomcharge', Complimentary:'comp' };
 const PAGE_SIZE = 8;
 
