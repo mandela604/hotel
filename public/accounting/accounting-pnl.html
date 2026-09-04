@@ -341,7 +341,7 @@
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Date</th><th class="right">Front Desk (₦)</th><th class="right">Restaurant (₦)</th><th class="right">Pool Bar (₦)</th><th class="right">Gym (₦)</th><th class="right" style="font-weight:800;">Total (₦)</th><th class="no-print"></th></tr></thead>
+              <thead><tr><th>Date</th><th>Department</th><th class="right">Amount (₦)</th><th class="no-print"></th></tr></thead>
               <tbody id="incomeBody"></tbody>
             </table>
           </div>
@@ -511,7 +511,7 @@ function filteredExpenses() { return expenses.filter(e => inRange(e.date)); }
 function renderKPIs() {
   const inc = filteredIncome();
   const exp = filteredExpenses();
-  const totalIncome = inc.reduce((s,r)=>s+r.total,0);
+  const totalIncome = inc.reduce((s,r)=>s+r.amount,0);
   const totalExpenses = exp.reduce((s,r)=>s+r.total,0);
   const procCost = exp.reduce((s,r)=>s+r.procurement,0);
   const grossProfit = totalIncome - procCost;
@@ -566,28 +566,25 @@ function renderTblPagination(containerId, total, page, onPage) {
    visible page.
 ═══════════════════════════════════════════════ */
 function renderIncomeTable() {
-  const all = filteredIncome().slice().sort((a,b)=>a.date.localeCompare(b.date));
-  document.getElementById('incCount').textContent = all.length + ' period' + (all.length!==1?'s':'');
+  const all = filteredIncome().slice().sort((a,b)=>a.date.localeCompare(b.date) || a.department.localeCompare(b.department));
+  document.getElementById('incCount').textContent = all.length + ' entr' + (all.length!==1?'ies':'y');
 
   const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
   if (incomePage > totalPages) incomePage = totalPages;
   const rows = all.slice((incomePage-1)*PAGE_SIZE, incomePage*PAGE_SIZE);
 
   document.getElementById('incomeBody').innerHTML = rows.length===0
-    ? `<tr class="empty-row"><td colspan="7">No income recorded for this period.</td></tr>`
+    ? `<tr class="empty-row"><td colspan="4">No income recorded for this period.</td></tr>`
     : rows.map(r => `
       <tr>
         <td data-label="Date" style="font-weight:600;">${fmtDate(r.date)}</td>
-        <td data-label="Front Desk" class="right">${r['Front Desk'] ? fmtN(r['Front Desk']) : '—'}</td>
-        <td data-label="Restaurant" class="right">${r.Restaurant ? fmtN(r.Restaurant) : '—'}</td>
-        <td data-label="Pool Bar" class="right">${r['Pool Bar'] ? fmtN(r['Pool Bar']) : '—'}</td>
-        <td data-label="Gym" class="right">${r.Gym ? fmtN(r.Gym) : '—'}</td>
-        <td data-label="Total" class="right" style="font-weight:800;color:var(--blue);">${fmtN(r.total)}</td>
+        <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span>${r.department}</span></td>
+        <td data-label="Amount" class="right" style="font-weight:700;color:var(--blue);">${fmtN(r.amount)}</td>
         <td class="no-print"></td>
       </tr>`).join('');
 
   renderTblPagination('incomePagination', all.length, incomePage, (p) => { incomePage = p; renderIncomeTable(); });
-  document.getElementById('incomeFootTotal').textContent = fmtN(all.reduce((s,r) => s + r.total, 0));
+  document.getElementById('incomeFootTotal').textContent = fmtN(all.reduce((s,r) => s + r.amount, 0));
 }
 
 function renderExpenseTable() {
@@ -628,11 +625,11 @@ function renderStatement() {
     return;
   }
 
-  const totalIncome = inc.reduce((s,r)=>s+r.total,0);
-  const totalFrontDesk = inc.reduce((s,r)=>s+(r['Front Desk']||0),0);
-  const totalRestaurant = inc.reduce((s,r)=>s+(r.Restaurant||0),0);
-  const totalPoolBar = inc.reduce((s,r)=>s+(r['Pool Bar']||0),0);
-  const totalGym = inc.reduce((s,r)=>s+(r.Gym||0),0);
+  const totalIncome = inc.reduce((s,r)=>s+r.amount,0);
+  const totalFrontDesk = inc.filter(r=>r.department==='Front Desk').reduce((s,r)=>s+r.amount,0);
+  const totalRestaurant = inc.filter(r=>r.department==='Restaurant').reduce((s,r)=>s+r.amount,0);
+  const totalPoolBar = inc.filter(r=>r.department==='Pool Bar').reduce((s,r)=>s+r.amount,0);
+  const totalGym = inc.filter(r=>r.department==='Gym').reduce((s,r)=>s+r.amount,0);
   const totalProcurement = exp.reduce((s,r)=>s+r.procurement,0);
   const totalManual = exp.reduce((s,r)=>s+r.manual,0);
   const totalExpenses = totalProcurement + totalManual;
@@ -952,7 +949,7 @@ function showToast(msg, type = 'success') {
    INIT
 ══════════════════════════════════════════════ */
 async function reload() {
-  document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="7"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
+  document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="4"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
   document.getElementById('expenseBody').innerHTML = `<tr class="empty-row"><td colspan="5"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
   try {
     const data = await getAccountingData();
