@@ -471,10 +471,11 @@
     // ── Shell HTML ──
     el.innerHTML = `
       <div class="ow-root" id="${uid}">
-        <div class="ow-back-bar">
+        <div class="ow-back-bar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <a class="ow-back-btn" href="${esc(backHref)}" data-role="backBtn">
             <i class="fa-solid fa-arrow-left"></i> ${esc(backLabel)}
           </a>
+          ${moduleName==='restaurant' ? '<button type="button" class="ow-btn" style="background:#f79009;color:#fff;border-color:#f79009;" data-act="openCoo"><i class="fa-solid fa-fire"></i> Cook on Order</button>' : ''}
         </div>
 
         <div class="ow-kpi-row" data-role="kpiRow"></div>
@@ -559,7 +560,6 @@
                 <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:10px;" data-act="printReceipt" disabled data-role="printBtn">
                   <i class="fa-solid fa-print"></i> Print Receipt
                 </button>
-                ${moduleName==='restaurant' ? '<button type="button" class="ow-btn" style="width:100%;justify-content:center;margin-top:8px;background:#f79009;color:#fff;border-color:#f79009;" data-act="sendCoo"><i class="fa-solid fa-fire"></i> Send to Kitchen (Cook on Order)</button>' : ''}
               </div>
             </div>
           </div>
@@ -626,6 +626,23 @@
             <div class="ow-modal-footer">
               <button type="button" class="ow-btn ow-btn-outline ow-btn-sm" data-act="closePay">Cancel</button>
               <button type="button" class="ow-btn ow-btn-primary ow-btn-sm" data-act="confirmPay"><i class="fa-solid fa-check"></i> Confirm Payment</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ow-modal-overlay" data-role="cooModal">
+          <div class="ow-modal" style="width:min(520px,96vw);">
+            <div class="ow-modal-header">
+              <div class="ow-modal-title"><i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order — Send to Kitchen</div>
+              <button type="button" class="ow-modal-close" data-act="closeCoo"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="ow-fg"><label class="ow-label">Table / Covers</label><div style="display:flex;gap:8px;"><input class="ow-input" data-role="cooTable" placeholder="Table e.g. T-04" style="flex:1;"><input class="ow-input" data-role="cooCovers" type="number" min="1" value="1" style="width:80px;"></div></div>
+            <div class="ow-fg" style="position:relative;"><label class="ow-label">Items — pick from Restaurant/Kitchen catalog (same id) or type manual</label><input class="ow-input" data-role="cooItemSearch" placeholder="Type 1+ chars to search…"><div class="store-suggest" id="cooSuggest" data-role="cooSuggest" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #eef0f6;border-radius:10px;max-height:180px;overflow-y:auto;display:none;z-index:10;"></div></div>
+            <div data-role="cooCart" style="min-height:40px;border:1px dashed #eef0f6;border-radius:10px;padding:8px 10px;margin-bottom:8px;background:#f4f6fb;"><div style="color:#9aa1b3;font-size:12px;text-align:center;">No items — search and pick</div></div>
+            <div class="ow-fg"><label class="ow-label">Notes</label><input class="ow-input" data-role="cooNotes" placeholder="Allergies, spice level…"></div>
+            <div class="ow-modal-footer">
+              <button type="button" class="ow-btn ow-btn-outline ow-btn-sm" data-act="closeCoo">Cancel</button>
+              <button type="button" class="ow-btn ow-btn-primary ow-btn-sm" style="background:#f79009;border-color:#f79009;" data-act="confirmCoo"><i class="fa-solid fa-paper-plane"></i> Send to Kitchen</button>
             </div>
           </div>
         </div>
@@ -1483,7 +1500,9 @@
         if (a === 'clearCart') clearCart();
         else if (a === 'submit') submitOrder();
         else if (a === 'printReceipt') printCurrentCart();
-        else if (a === 'sendCoo') sendCooOrder();
+        else if (a === 'openCoo') openCooModal();
+        else if (a === 'closeCoo') $('[data-role="cooModal"]').classList.remove('show');
+        else if (a === 'confirmCoo') sendCooOrder();
         else if (a === 'closePay') $('[data-role="payModal"]').classList.remove('show');
         else if (a === 'confirmPay') confirmPayOrder();
         else if (a === 'clearRoom') clearSelectedRoom('');

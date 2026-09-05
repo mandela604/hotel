@@ -245,7 +245,7 @@ function renderKPIs(kpis, stockLen) {
     '<a class="kpi-card acc-purple" href="restaurant-inventory.html">' +
       '<div class="kpi-top"><div class="kpi-ic ic-purple"><i class="fa-solid fa-box"></i></div><div class="kpi-label">Plates On Hand</div></div>' +
       '<div class="kpi-value" style="color:var(--purple);">' + plates + '</div>' +
-      '<div class="kpi-trend neutral">Across ' + (stockLen || 0) + ' meals</div>' +
+      '<div class="kpi-trend neutral">' + (stockLen || 0) + ' item' + (stockLen !== 1 ? 's' : '') + ' tracked</div>' +
     '</a>';
 
   if (shell.setPendingBadge) shell.setPendingBadge(pending);
