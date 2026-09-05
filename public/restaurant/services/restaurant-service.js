@@ -108,7 +108,7 @@
   const LEVEL_LABEL = new Proxy({}, { get: (_, key) => getLevelLabels()[key] });
 
   const DEFAULT_REVENUE_ORDER = ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'];
-  const DEFAULT_REVENUE_COLORS = {};
+  const DEFAULT_REVENUE_COLORS = { 'Cash': 'blue', 'POS': 'purple', 'Transfer': 'amber', 'Room Charge': 'green', 'Complimentary': '' };
   /**
    * Groups completed sales by payment method, in config order, with a
    * config color class per method. See restaurant-dashboard.html's own
