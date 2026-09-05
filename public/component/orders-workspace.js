@@ -1579,9 +1579,9 @@
       }
       const cooPick = e.target.closest('[data-coo-pick]');
       if (cooPick) {
-        var n=cooPick.dataset.cooPick, i=cooPick.dataset.cooId, u=cooPick.dataset.cooUnit, pr=parseFloat(cooPick.dataset.cooPrice)||0;
+        var n=cooPick.dataset.cooPick, i=cooPick.dataset.cooId, u=cooPick.dataset.cooUnit, pc=parseFloat(cooPick.dataset.cooPrice)||0;
         var ex=cooCart.find(function(c){ return c.id===i && c.name===n; });
-        if(ex) ex.qty++; else cooCart.push({name:n, id:i, unit:u, price:pr, qty:1});
+        if(ex) ex.qty++; else cooCart.push({name:n, id:i, unit:u, price:pc, qty:1});
         renderCooCart();
         var inp=$('[data-role="cooItemSearch"]'); if(inp) inp.value='';
         var box=$('[data-role="cooSuggest"]'); if(box){ box.style.display='none'; box.innerHTML=''; }
