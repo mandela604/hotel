@@ -559,6 +559,7 @@
                 <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:10px;" data-act="printReceipt" disabled data-role="printBtn">
                   <i class="fa-solid fa-print"></i> Print Receipt
                 </button>
+                ${moduleName==='restaurant' ? '<button type="button" class="ow-btn" style="width:100%;justify-content:center;margin-top:8px;background:#f79009;color:#fff;border-color:#f79009;" data-act="sendCoo"><i class="fa-solid fa-fire"></i> Send to Kitchen (Cook on Order)</button>' : ''}
               </div>
             </div>
           </div>
@@ -890,6 +891,22 @@
         date: o.date || nowStamp(), method: o.method || o.payMethod || '—'
       };
       openPrintWindow(generateReceipt(data, o.status === 'completed' || !!o.method));
+    }
+
+    async function sendCooOrder(){
+      if (!cart.length) { showToast('Add items to send to kitchen.', 'error'); return; }
+      var table = ($('[data-role="fTable"]').value||'').trim() || '—';
+      var staff = ($('[data-role="fStaff"]').value||'').trim() || resolveStaffName();
+      var notes = ($('[data-role="fNotes"]').value||'').trim();
+      var payload = { table: table, covers: 1, items: cart.map(function(c){ return {name:c.key, qty:c.qty, price:c.price}; }), notes: notes, staff: staff };
+      try{
+        var res = await fetch('/api/kitchen/coo-orders', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload)});
+        var body=null; try{ body=await res.json(); }catch(e){}
+        if(!res.ok) throw new Error((body&&body.error)||'Failed to send to kitchen');
+        showToast('Cook on Order sent to kitchen — '+(body&&body.data&&body.data.id||''), 'success');
+        clearCart();
+        $('[data-role="fTable"]').value=''; $('[data-role="fNotes"]').value='';
+      }catch(err){ showToast(err.message||'Failed to send COO', 'error'); }
     }
 
     function addToCart(key) {
@@ -1466,6 +1483,7 @@
         if (a === 'clearCart') clearCart();
         else if (a === 'submit') submitOrder();
         else if (a === 'printReceipt') printCurrentCart();
+        else if (a === 'sendCoo') sendCooOrder();
         else if (a === 'closePay') $('[data-role="payModal"]').classList.remove('show');
         else if (a === 'confirmPay') confirmPayOrder();
         else if (a === 'clearRoom') clearSelectedRoom('');

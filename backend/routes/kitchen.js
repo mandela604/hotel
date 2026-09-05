@@ -50,6 +50,13 @@ router.get('/requisitions', ctrl.listKitchenRequisitions);
 router.post('/requisitions', inDept, privilegeGuard('kitchen', 'canCreate'), validateCreateRequisition, ctrl.createRequisition);
 router.post('/requisitions/:id/receive', inDept, privilegeGuard('kitchen', 'canCreate'), ctrl.receiveRequisition);
 
+/* ── COO Orders ───────────────────────────── */
+const cooCtrl = require('../controllers/kitchenCooController');
+router.get('/coo-orders', cooCtrl.listCoo);
+router.post('/coo-orders', departmentGuard('Restaurant'), privilegeGuard('restaurant','canCreate'), cooCtrl.createCoo);
+router.post('/coo-orders/:id/accept', inDept, privilegeGuard('kitchen','canEdit'), cooCtrl.acceptCoo);
+router.post('/coo-orders/:id/reject', inDept, cooCtrl.rejectCoo);
+
 /* ── Movements ──────────────────────────────── */
 router.get('/movements', ctrl.listMovements);
 

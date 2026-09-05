@@ -136,6 +136,14 @@ body{
         </div>
       </div>
 
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order — Restaurant</div>
+          <span class="panel-action" id="cooCount"></span>
+        </div>
+        <div class="panel-body" id="cooInbox"><div style="color:var(--text3);padding:8px 0;">Loading...</div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -228,7 +236,24 @@ function paint(){
     // Update badge in shell
     if(window.currentShell) window.currentShell.setReqHistBadge(pending.length);
   });
+  loadCooInbox();
 }
+
+async function loadCooInbox(){
+  try{
+    const r=await fetch('/api/kitchen/coo-orders?status=pending',{credentials:'include'});
+    const j=await r.json();
+    const list=((j.data||j)||[]).slice(0,5);
+    const el=document.getElementById('cooInbox'), cnt=document.getElementById('cooCount');
+    if(cnt) cnt.textContent=list.length+' pending';
+    if(!el) return;
+    el.innerHTML = list.length ? list.map(function(o){
+      return '<div class="list-row" style="justify-content:space-between;"><div class="list-body"><div class="list-name">'+esc(o.table||'Table')+' — '+o.items.map(function(i){return i.qty+'x '+i.name;}).join(', ')+'</div><div class="list-meta">by '+esc(o.staff||'')+' · '+new Date(o.createdAt).toLocaleString()+'</div></div><div style="display:flex;gap:6px;"><button class="chip" style="background:var(--green-bg);color:var(--green);cursor:pointer;border:none;" onclick="acceptCoo(\''+o.id+'\')">Accept</button><button class="chip" style="background:var(--red-bg);color:var(--red);cursor:pointer;border:none;" onclick="rejectCoo(\''+o.id+'\')">Reject</button></div></div>';
+    }).join('') : '<div style="color:var(--text3);padding:8px 0;">No pending Cook on Order.</div>';
+  }catch(e){ var el2=document.getElementById('cooInbox'); if(el2) el2.innerHTML='<div style="color:var(--red)">Failed to load COO</div>'; }
+}
+async function acceptCoo(id){ try{ var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/accept',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); var j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); loadCooInbox(); paint(); }catch(e){ alert(e.message); } }
+async function rejectCoo(id){ try{ var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/reject',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); var j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); loadCooInbox(); }catch(e){ alert(e.message); } }
 
 async function init(){
   // Initialize UI Shell
@@ -248,6 +273,8 @@ async function init(){
   // Load Data
   await svc.loadAll();
   paint();
+  loadCooInbox();
+  setInterval(loadCooInbox, 5000);
   
   // Listen for changes (like in Store)
   svc.onChange(paint);
