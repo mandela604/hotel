@@ -421,6 +421,8 @@
     let orders = [];
     let movements = [];
     let cart = [];
+    let cooCart = [];
+    let kitchenStockCache = [];
     let mode = 'quick'; // quick | tab | active
     let activeCat = 'All';
     let statusFilter = '';
@@ -910,19 +912,65 @@
       openPrintWindow(generateReceipt(data, o.status === 'completed' || !!o.method));
     }
 
+    function renderCooCart(){
+      var el=$('[data-role="cooCart"]');
+      if(!el) return;
+      if(!cooCart.length){ el.innerHTML='<div style="color:#9aa1b3;font-size:12px;text-align:center;">No items — search and pick</div>'; return; }
+      el.innerHTML=cooCart.map(function(c, idx){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eef0f6;"><span style="flex:1;font-size:12px;font-weight:600;">'+esc(c.name)+'</span><span style="display:flex;gap:4px;align-items:center;"><button type="button" data-coo-dec="'+idx+'" style="width:22px;height:22px;border:1px solid #eef0f6;border-radius:6px;background:#f4f6fb;cursor:pointer;">−</button><span style="min-width:18px;text-align:center;font-weight:700;">'+c.qty+'</span><button type="button" data-coo-inc="'+idx+'" style="width:22px;height:22px;border:1px solid #eef0f6;border-radius:6px;background:#f4f6fb;cursor:pointer;">+</button></span><button type="button" data-coo-rm="'+idx+'" style="background:none;border:none;color:#9aa1b3;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div>';
+      }).join('');
+    }
+    async function fetchKitchenStock(){
+      if(kitchenStockCache.length) return kitchenStockCache;
+      try{
+        var r=await fetch('/api/kitchen/stock',{credentials:'include'});
+        var j=await r.json();
+        var list=(j.data||j||[]);
+        kitchenStockCache=list.map(function(s){ return {name:s.name, id:s.id||s._id||'', unit:s.unit||'', price:s.price||0, source:'kitchen'}; });
+      }catch(e){ kitchenStockCache=[]; }
+      return kitchenStockCache;
+    }
+    async function openCooModal(){
+      cooCart=[];
+      renderCooCart();
+      var t=$('[data-role="cooTable"]'); if(t) t.value=$('[data-role="fTable"]').value||'';
+      var c=$('[data-role="cooCovers"]'); if(c) c.value='1';
+      var n=$('[data-role="cooNotes"]'); if(n) n.value=$('[data-role="fNotes"]').value||'';
+      var s=$('[data-role="cooItemSearch"]'); if(s) s.value='';
+      var sug=$('[data-role="cooSuggest"]'); if(sug){ sug.style.display='none'; sug.innerHTML=''; }
+      await fetchKitchenStock();
+      $('[data-role="cooModal"]').classList.add('show');
+    }
+    function onCooSearch(){
+      var inp=$('[data-role="cooItemSearch"]'), box=$('[data-role="cooSuggest"]');
+      if(!inp||!box) return;
+      var q=(inp.value||'').trim().toLowerCase();
+      if(!q || q.length<1){ box.style.display='none'; box.innerHTML=''; return; }
+      var rest=(stock||[]).map(function(s){ return {name:s.name, id:s.id||s._id||'', unit:s.unit||'', price:s.price||0, source:'restaurant'}; });
+      var kit=kitchenStockCache||[];
+      var combined=[].concat(rest, kit);
+      // dedupe by id+name
+      var hits=combined.filter(function(s){ return s.name.toLowerCase().includes(q); }).slice(0,8);
+      if(!hits.length){ box.innerHTML='<div style="padding:10px;color:#9aa1b3;font-size:12px;text-align:center;">No match — press Enter to add manual</div>'; box.style.display='block'; return; }
+      box.innerHTML=hits.map(function(s){
+        return '<div class="store-suggest-item" data-coo-pick="'+esc(s.name)+'" data-coo-id="'+esc(s.id)+'" data-coo-unit="'+esc(s.unit)+'" data-coo-price="'+s.price+'" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #eef0f6;display:flex;justify-content:space-between;gap:8px;"><span>'+esc(s.name)+' <span style="color:#9aa1b3;font-size:11px;">'+esc(s.source)+'</span></span><span style="color:#9aa1b3;font-size:11px;">'+esc(s.unit)+' · '+fmtN(s.price)+'</span></div>';
+      }).join('')+'<div style="padding:8px 12px;border-top:1px dashed #eef0f6;color:#6b7280;font-size:11px;text-align:center;cursor:pointer;" data-coo-manual="1">+ Add "'+esc(inp.value)+'" as manual entry</div>';
+      box.style.display='block';
+    }
     async function sendCooOrder(){
-      if (!cart.length) { showToast('Add items to send to kitchen.', 'error'); return; }
-      var table = ($('[data-role="fTable"]').value||'').trim() || '—';
+      if (!cooCart.length) { showToast('Add items to send to kitchen.', 'error'); return; }
+      var table = ($('[data-role="cooTable"]').value||'').trim() || '—';
+      var covers = parseInt(($('[data-role="cooCovers"]').value||'1'),10)||1;
       var staff = ($('[data-role="fStaff"]').value||'').trim() || resolveStaffName();
-      var notes = ($('[data-role="fNotes"]').value||'').trim();
-      var payload = { table: table, covers: 1, items: cart.map(function(c){ return {name:c.key, qty:c.qty, price:c.price}; }), notes: notes, staff: staff };
+      var notes = ($('[data-role="cooNotes"]').value||'').trim();
+      var payload = { table: table, covers: covers, items: cooCart.map(function(c){ return {name:c.name, qty:c.qty, price:c.price, id:c.id}; }), notes: notes, staff: staff };
       try{
         var res = await fetch('/api/kitchen/coo-orders', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload)});
         var body=null; try{ body=await res.json(); }catch(e){}
         if(!res.ok) throw new Error((body&&body.error)||'Failed to send to kitchen');
         showToast('Cook on Order sent to kitchen — '+(body&&body.data&&body.data.id||''), 'success');
-        clearCart();
-        $('[data-role="fTable"]').value=''; $('[data-role="fNotes"]').value='';
+        $('[data-role="cooModal"]').classList.remove('show');
+        cooCart=[]; renderCooCart();
       }catch(err){ showToast(err.message||'Failed to send COO', 'error'); }
     }
 
@@ -1205,7 +1253,6 @@
           (st === 'open' || (st === 'served' && !isWaiter)
             ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
             : '') +
-          '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i>Print</button>' +
           '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i>Print</button>' +
           '</div></td></tr>';
       }).join('');
@@ -1528,7 +1575,30 @@
         $$('.ow-status-pill').forEach(function (p) { p.classList.remove('on'); });
         pill.classList.add('on');
         renderOrdersTable();
+        return;
       }
+      const cooPick = e.target.closest('[data-coo-pick]');
+      if (cooPick) {
+        var n=cooPick.dataset.cooPick, i=cooPick.dataset.cooId, u=cooPick.dataset.cooUnit, pr=parseFloat(cooPick.dataset.cooPrice)||0;
+        var ex=cooCart.find(function(c){ return c.id===i && c.name===n; });
+        if(ex) ex.qty++; else cooCart.push({name:n, id:i, unit:u, price:pr, qty:1});
+        renderCooCart();
+        var inp=$('[data-role="cooItemSearch"]'); if(inp) inp.value='';
+        var box=$('[data-role="cooSuggest"]'); if(box){ box.style.display='none'; box.innerHTML=''; }
+        return;
+      }
+      const cooMan = e.target.closest('[data-coo-manual]');
+      if (cooMan) {
+        var inp2=$('[data-role="cooItemSearch"]'); var nm=(inp2.value||'').trim();
+        if(nm){ var ex2=cooCart.find(function(c){ return c.name.toLowerCase()===nm.toLowerCase(); }); if(ex2) ex2.qty++; else cooCart.push({name:nm, id:'', unit:'portion', price:0, qty:1}); renderCooCart(); inp2.value=''; var b2=$('[data-role="cooSuggest"]'); if(b2){ b2.style.display='none'; b2.innerHTML=''; } }
+        return;
+      }
+      const cooInc = e.target.closest('[data-coo-inc]');
+      if (cooInc){ var idx=parseInt(cooInc.dataset.cooInc,10); if(cooCart[idx]){ cooCart[idx].qty++; renderCooCart(); } return; }
+      const cooDec = e.target.closest('[data-coo-dec]');
+      if (cooDec){ var idx2=parseInt(cooDec.dataset.cooDec,10); if(cooCart[idx2]){ if(cooCart[idx2].qty<=1) cooCart.splice(idx2,1); else cooCart[idx2].qty--; renderCooCart(); } return; }
+      const cooRm = e.target.closest('[data-coo-rm]');
+      if (cooRm){ var idx3=parseInt(cooRm.dataset.cooRm,10); cooCart.splice(idx3,1); renderCooCart(); return; }
     });
 
     $('[data-role="itemSearch"]').addEventListener('input', function () { renderPicker(); });
@@ -1546,6 +1616,13 @@
       $('[data-role="payRoomSearch"]').addEventListener('input', function () { onRoomSearch('pay'); });
     }
     $('[data-role="payModal"]').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('show');
+    });
+    if ($('[data-role="cooItemSearch"]')) {
+      $('[data-role="cooItemSearch"]').addEventListener('input', onCooSearch);
+      $('[data-role="cooItemSearch"]').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); var v=(this.value||'').trim(); if(v){ var ex=cooCart.find(function(c){return c.name.toLowerCase()===v.toLowerCase();}); if(ex) ex.qty++; else cooCart.push({name:v, id:'', unit:'portion', price:0, qty:1}); renderCooCart(); this.value=''; var b=$('[data-role="cooSuggest"]'); if(b){ b.style.display='none'; b.innerHTML=''; } } } });
+    }
+    $('[data-role="cooModal"]').addEventListener('click', function (e) {
       if (e.target === this) this.classList.remove('show');
     });
 
