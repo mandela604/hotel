@@ -12,17 +12,43 @@ exports.listCoo = asyncHandler(async (req, res) => {
 });
 
 exports.createCoo = asyncHandler(async (req, res) => {
-  const { table, covers, items, notes, staff } = req.body;
+  const { table, covers, items, notes, staff, method, roomNumber, guestName, guestId, guestPhone } = req.body;
   if (!items || !items.length) throw new Error('Add at least one item');
+  const total = items.reduce((s,i)=> s + Number(i.price||0)*Number(i.qty||0),0);
   const doc = await KitchenCooOrder.create({
     table: table || '',
     covers: Number(covers)||1,
     items: items.map(i=>({name:i.name.trim(), qty:Number(i.qty), price:Number(i.price)||0})),
     notes: notes||'',
     staff: staff|| (req.user?req.user.name:''),
+    method: method||'Cash',
+    roomNumber: roomNumber||'',
+    guestName: guestName||'',
+    guestId: guestId||'',
+    guestPhone: guestPhone||'',
+    total,
     createdBy: req.user?req.user.name:'',
     status: 'pending',
   });
+  // Room Charge -> also folio + booking like poolbar
+  if ((method==='Room Charge' || doc.method==='Room Charge') && roomNumber) {
+    const Guest = require('../models/Guest');
+    const Booking = require('../models/Booking');
+    const gId = guestId || '';
+    let guest=null;
+    if(gId) guest=await Guest.findOne({id:gId});
+    if(!guest && guestName) guest=await Guest.findOne({name:guestName});
+    if(guest){
+      guest.charges.push({ date: new Date().toLocaleDateString('en-GB'), source:'Restaurant', desc: items.map(i=>`${i.qty}x ${i.name}`).join(', '), room:String(roomNumber), amount:total, paid:0, by:staff||(req.user?req.user.name:''), status:'Pending', payments:[] });
+      await guest.save();
+    }
+    const booking=await Booking.findOne({room:String(roomNumber).trim(), status:'checkedin'});
+    if(booking){
+      booking.payments.push({ id:uuidv4(), amount:total, mode:'Room Charge (Restaurant)', date: new Date().toLocaleDateString('en-GB'), by:staff||(req.user?req.user.name:''), ts:Date.now() });
+      booking.paid=(booking.paid||0)+total;
+      await booking.save();
+    }
+  }
   res.status(201).json({ success:true, data:doc });
 });
 

@@ -638,7 +638,9 @@
               <div class="ow-modal-title"><i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order — Send to Kitchen</div>
               <button type="button" class="ow-modal-close" data-act="closeCoo"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="ow-fg"><label class="ow-label">Table / Covers</label><div style="display:flex;gap:8px;"><input class="ow-input" data-role="cooTable" placeholder="Table e.g. T-04" style="flex:1;"><input class="ow-input" data-role="cooCovers" type="number" min="1" value="1" style="width:80px;"></div></div>
+            <div class="ow-fg"><label class="ow-label">Table / Covers — location, Room number becomes location if Room Charge</label><div style="display:flex;gap:8px;"><input class="ow-input" data-role="cooTable" placeholder="Table e.g. T-04 or Room 101" style="flex:1;"><input class="ow-input" data-role="cooCovers" type="number" min="1" value="1" style="width:80px;"></div></div>
+            <div class="ow-fg"><label class="ow-label">Payment</label><select class="ow-select" data-role="cooMethod"><option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option></select></div>
+            <div class="ow-fg" data-role="cooRoomWrap" style="display:none;"><label class="ow-label">Room / Guest</label><input class="ow-input" data-role="cooRoomSearch" placeholder="Search room, guest…"><div class="ow-room-results" data-role="cooRoomResults"></div><div class="ow-selected-room" data-role="cooSelectedRoomBox"><div class="info"></div><button type="button" class="clear-btn" data-act="clearCooRoom"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" data-role="cooRoomNumber"><input type="hidden" data-role="cooGuestName"><input type="hidden" data-role="cooGuestId"><input type="hidden" data-role="cooGuestPhone"></div>
             <div class="ow-fg" style="position:relative;"><label class="ow-label">Items — pick from Restaurant/Kitchen catalog (same id) or type manual</label><input class="ow-input" data-role="cooItemSearch" placeholder="Type 1+ chars to search…"><div class="store-suggest" id="cooSuggest" data-role="cooSuggest" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #eef0f6;border-radius:10px;max-height:180px;overflow-y:auto;display:none;z-index:10;"></div></div>
             <div data-role="cooCart" style="min-height:40px;border:1px dashed #eef0f6;border-radius:10px;padding:8px 10px;margin-bottom:8px;background:#f4f6fb;"><div style="color:#9aa1b3;font-size:12px;text-align:center;">No items — search and pick</div></div>
             <div class="ow-fg"><label class="ow-label">Notes</label><input class="ow-input" data-role="cooNotes" placeholder="Allergies, spice level…"></div>
@@ -939,6 +941,7 @@
       var s=$('[data-role="cooItemSearch"]'); if(s) s.value='';
       var sug=$('[data-role="cooSuggest"]'); if(sug){ sug.style.display='none'; sug.innerHTML=''; }
       await fetchKitchenStock();
+      toggleCooRoomChargeUI();
       $('[data-role="cooModal"]').classList.add('show');
     }
     function onCooSearch(){
@@ -957,13 +960,37 @@
       }).join('')+'<div style="padding:8px 12px;border-top:1px dashed #eef0f6;color:#6b7280;font-size:11px;text-align:center;cursor:pointer;" data-coo-manual="1">+ Add "'+esc(inp.value)+'" as manual entry</div>';
       box.style.display='block';
     }
+    function toggleCooRoomChargeUI(){
+      var m=($('[data-role="cooMethod"]').value||''); var w=$('[data-role="cooRoomWrap"]'); if(!w) return; var show=m==='Room Charge'; w.style.display=show?'':'none'; if(!show){ var a=$('[data-role="cooRoomNumber"]'); if(a) a.value=''; var b=$('[data-role="cooGuestName"]'); if(b) b.value=''; var c=$('[data-role="cooGuestId"]'); if(c) c.value=''; var d=$('[data-role="cooRoomSearch"]'); if(d) d.value=''; var e=$('[data-role="cooRoomResults"]'); if(e){ e.style.display='none'; e.innerHTML=''; } var f=$('[data-role="cooSelectedRoomBox"]'); if(f) f.style.display='none'; }
+    }
+    function onCooRoomSearch(){
+      var inp=$('[data-role="cooRoomSearch"]'), res=$('[data-role="cooRoomResults"]'); if(!inp||!res) return;
+      var q=(inp.value||'').trim().toLowerCase(); if(!q){ res.style.display='none'; res.innerHTML=''; return; }
+      var hits=guests.filter(function(g){ return String(g.room).toLowerCase().includes(q) || (g.name||'').toLowerCase().includes(q) || (g.phone||'').includes(q); }).slice(0,8);
+      if(!hits.length){ res.innerHTML='<div style="padding:8px;color:#9aa1b3;font-size:12px;text-align:center;">No match</div>'; res.style.display='block'; return; }
+      res.innerHTML=hits.map(function(g){ return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #eef0f6;" data-coo-room="'+g.room+'" data-coo-guest="'+g.name+'" data-coo-phone="'+(g.phone||'')+'" data-coo-gid="'+(g.guestId||'')+'"><div style="font-weight:700;">Room '+g.room+'</div><div style="font-size:11px;color:#6b7280;">'+g.name+(g.phone?' · '+g.phone:'')+'</div></div>'; }).join('');
+      res.style.display='block';
+    }
+    function selectCooRoom(room, name, phone, gid){
+      $('[data-role="cooRoomNumber"]').value=room; $('[data-role="cooGuestName"]').value=name; $('[data-role="cooGuestPhone"]').value=phone||''; $('[data-role="cooGuestId"]').value=gid||'';
+      var s=$('[data-role="cooRoomSearch"]'); if(s) s.value=''; var r=$('[data-role="cooRoomResults"]'); if(r){ r.style.display='none'; r.innerHTML=''; }
+      var b=$('[data-role="cooSelectedRoomBox"]'); if(b){ b.querySelector('.info').innerHTML='Room '+room+'<span>'+name+(phone?' · '+phone:'')+'</span>'; b.style.display='flex'; }
+      var t=$('[data-role="cooTable"]'); if(t) t.value='Room '+room;
+    }
     async function sendCooOrder(){
       if (!cooCart.length) { showToast('Add items to send to kitchen.', 'error'); return; }
       var table = ($('[data-role="cooTable"]').value||'').trim() || '—';
       var covers = parseInt(($('[data-role="cooCovers"]').value||'1'),10)||1;
       var staff = ($('[data-role="fStaff"]').value||'').trim() || resolveStaffName();
       var notes = ($('[data-role="cooNotes"]').value||'').trim();
-      var payload = { table: table, covers: covers, items: cooCart.map(function(c){ return {name:c.name, qty:c.qty, price:c.price, id:c.id}; }), notes: notes, staff: staff };
+      var method=($('[data-role="cooMethod"]').value||'Cash');
+      var room=$('[data-role="cooRoomNumber"]').value||'';
+      var guest=$('[data-role="cooGuestName"]').value||'';
+      var gid=$('[data-role="cooGuestId"]').value||'';
+      var phone=$('[data-role="cooGuestPhone"]').value||'';
+      if(method==='Room Charge' && !room){ showToast('Select room for Room Charge.', 'error'); return; }
+      var location = method==='Room Charge' && room ? 'Room '+room : table;
+      var payload = { table: location, covers: covers, items: cooCart.map(function(c){ return {name:c.name, qty:c.qty, price:c.price, id:c.id}; }), notes: notes, staff: staff, method: method, roomNumber: room, guestName: guest, guestId: gid, guestPhone: phone };
       try{
         var res = await fetch('/api/kitchen/coo-orders', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload)});
         var body=null; try{ body=await res.json(); }catch(e){}
@@ -1550,6 +1577,7 @@
         else if (a === 'openCoo') openCooModal();
         else if (a === 'closeCoo') $('[data-role="cooModal"]').classList.remove('show');
         else if (a === 'confirmCoo') sendCooOrder();
+        else if (a === 'clearCooRoom'){ var b=$('[data-role="cooSelectedRoomBox"]'); if(b) b.style.display='none'; var r=$('[data-role="cooRoomNumber"]'); if(r) r.value=''; var g=$('[data-role="cooGuestName"]'); if(g) g.value=''; var gi=$('[data-role="cooGuestId"]'); if(gi) gi.value=''; var s=$('[data-role="cooRoomSearch"]'); if(s) s.value=''; var res=$('[data-role="cooRoomResults"]'); if(res){ res.style.display='none'; res.innerHTML=''; } }
         else if (a === 'closePay') $('[data-role="payModal"]').classList.remove('show');
         else if (a === 'confirmPay') confirmPayOrder();
         else if (a === 'clearRoom') clearSelectedRoom('');
@@ -1599,6 +1627,8 @@
       if (cooDec){ var idx2=parseInt(cooDec.dataset.cooDec,10); if(cooCart[idx2]){ if(cooCart[idx2].qty<=1) cooCart.splice(idx2,1); else cooCart[idx2].qty--; renderCooCart(); } return; }
       const cooRm = e.target.closest('[data-coo-rm]');
       if (cooRm){ var idx3=parseInt(cooRm.dataset.cooRm,10); cooCart.splice(idx3,1); renderCooCart(); return; }
+      const cooRoomPick = e.target.closest('[data-coo-room]');
+      if (cooRoomPick){ selectCooRoom(cooRoomPick.dataset.cooRoom, cooRoomPick.dataset.cooGuest, cooRoomPick.dataset.cooPhone, cooRoomPick.dataset.cooGid); return; }
     });
 
     $('[data-role="itemSearch"]').addEventListener('input', function () { renderPicker(); });
@@ -1625,6 +1655,8 @@
     $('[data-role="cooModal"]').addEventListener('click', function (e) {
       if (e.target === this) this.classList.remove('show');
     });
+    if ($('[data-role="cooMethod"]')) { $('[data-role="cooMethod"]').addEventListener('change', toggleCooRoomChargeUI); }
+    if ($('[data-role="cooRoomSearch"]')) { $('[data-role="cooRoomSearch"]').addEventListener('input', onCooRoomSearch); }
 
     async function init() {
       // ── Preferred path: module service ──

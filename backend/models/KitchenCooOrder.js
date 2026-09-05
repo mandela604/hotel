@@ -14,6 +14,12 @@ const cooSchema = new mongoose.Schema({
   items: { type: [cooItemSchema], default: [] },
   notes: { type: String, default: '' },
   staff: { type: String, default: '' },
+  method: { type: String, default: 'Cash' },
+  roomNumber: { type: String, default: '' },
+  guestName: { type: String, default: '' },
+  guestId: { type: String, default: '' },
+  guestPhone: { type: String, default: '' },
+  total: { type: Number, default: 0 },
   status: { type: String, enum: ['pending','accepted','rejected','completed'], default: 'pending' },
   createdBy: { type: String, default: '' },
 }, { timestamps: true });
