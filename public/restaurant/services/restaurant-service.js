@@ -78,6 +78,13 @@
   function todayDDMMYY() { const d = new Date(); return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)}`; }
   function parseStamp(str) {
     if (!str) return null;
+    // Handle ISO date strings (from MongoDB) and Date objects
+    if (typeof str === 'object') return str instanceof Date ? str : new Date(str);
+    if (str.includes('T') || str.includes('-')) {
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // Legacy DD/MM/YYYY HH:MM AM/PM format
     const parts = str.split(' ');
     const [d, m, y] = parts[0].split('/').map(n => parseInt(n, 10));
     let hh = 0, mm = 0;
