@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cook on Order | Kitchen</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;font-size:13px}
+.app{display:flex;height:100vh;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;height:100%;overflow:hidden;margin-left:250px}
+@media(max-width:768px){.main{margin-left:0 !important}}
+.content{flex:1;padding:20px 24px 28px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;--bg:#f4f6fb;--surface:#fff;--surface2:#f4f6fb;--border:#eef0f6;--text:#1c2440;--text2:#6b7280;--text3:#9aa1b3;--gold:#2f6fed;--gold-dim:rgba(47,111,237,.1);--gold-border:rgba(47,111,237,.25);background:var(--bg);color:var(--text)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11.5px;font-weight:600;cursor:pointer}
+.pill.on{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+.panel-title{font-weight:800}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th{padding:9px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.chip{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.chip-pending{background:#fff4e5;color:#f79009} .chip-accepted{background:#e9f9f0;color:#12b76a} .chip-rejected{background:#feecec;color:#f04438}
+.btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:11px;font-weight:700}
+.btn:hover{border-color:var(--gold-border);color:var(--gold)}
+.btn-primary{background:var(--gold);color:#fff;border-color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="app"><div id="sidebarSlot"></div><div class="main"><div id="topbarSlot"></div><div class="content">
+<div class="toolbar">
+  <div class="pills" id="pills">
+    <button class="pill on" data-s="">All</button>
+    <button class="pill" data-s="pending">Pending</button>
+    <button class="pill" data-s="accepted">Accepted</button>
+    <button class="pill" data-s="rejected">Rejected</button>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <input type="text" id="q" placeholder="Search table, item..." style="padding:8px 12px;border:1px solid #eef0f6;border-radius:10px;outline:none;">
+    <button class="btn" onclick="load()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+  </div>
+</div>
+<div class="panel">
+  <div class="panel-head"><div class="panel-title">Cook on Order</div><span id="count" style="font-size:11px;color:#9aa1b3"></span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Table</th><th>Items</th><th>Staff</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#9aa1b3">Loading...</td></tr></tbody></table></div>
+</div>
+</div></div></div>
+<script src="../component/kitchen-shell.js"></script>
+<script>
+const shell=KitchenShell.attach({sidebarTarget:'#sidebarSlot',topbarTarget:'#topbarSlot',activeFile:'kitchen-coo.html',pageTitle:'Cook on Order',pageSubtitle:'Restaurant → Kitchen live orders'});
+let all=[], filterStatus='', q='';
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+async function load(){
+  try{
+    const qs=filterStatus? '?status='+filterStatus : '';
+    const r=await fetch('/api/kitchen/coo-orders'+qs,{credentials:'include'});
+    const j=await r.json();
+    all=(j.data||j||[]);
+    render();
+  }catch(e){ document.getElementById('tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:#f04438">'+e.message+'</td></tr>'; }
+}
+function render(){
+  const rows=all.filter(function(o){
+    if(q && !(o.table||'').toLowerCase().includes(q) && !(o.items||[]).some(function(i){return i.name.toLowerCase().includes(q);} )) return false;
+    return true;
+  });
+  document.getElementById('count').textContent=rows.length+' order'+(rows.length!==1?'s':'');
+  const tb=document.getElementById('tbody');
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:#9aa1b3">No orders</td></tr>'; return; }
+  tb.innerHTML=rows.map(function(o){
+    return '<tr><td><b>'+esc(o.table||'—')+'</b> <span style="color:#9aa1b3">'+(o.covers||1)+' covers</span></td><td>'+o.items.map(function(i){return i.qty+'x '+esc(i.name);}).join(', ')+'</td><td>'+esc(o.staff||'')+'</td><td><span class="chip chip-'+o.status+'">'+o.status+'</span></td><td>'+new Date(o.createdAt).toLocaleString()+'</td><td>'+(o.status==='pending'?'<button class="btn btn-primary" onclick="doAccept(\''+o.id+'\')">Accept</button> <button class="btn" onclick="doReject(\''+o.id+'\')">Reject</button>':'—')+'</td></tr>';
+  }).join('');
+  if(shell.setPendingBadge) shell.setPendingBadge(all.filter(function(o){return o.status==='pending';}).length);
+}
+async function doAccept(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/accept',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); load(); }catch(e){ alert(e.message); } }
+async function doReject(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/reject',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); load(); }catch(e){ alert(e.message); } }
+document.querySelectorAll('.pill').forEach(function(b){ b.addEventListener('click', function(){ document.querySelectorAll('.pill').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); filterStatus=b.dataset.s||''; load(); }); });
+document.getElementById('q').addEventListener('input', function(){ q=this.value.toLowerCase(); render(); });
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>
