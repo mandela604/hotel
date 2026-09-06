@@ -261,6 +261,7 @@ exports.updateRequisition = asyncHandler(async (req, res) => {
  * same rule as approveAndIssue() on the frontend.
  */
 exports.issueRequisition = asyncHandler(async (req, res) => {
+  console.log('[Store] issueRequisition:', req.params.no, 'body:', JSON.stringify(req.body));
   const row = await Requisition.findOne({ requisitionNo: req.params.no });
   if (!row) throw new ApiError(404, `Requisition ${req.params.no} not found.`);
   if (row.mode !== 'store_issue') throw new ApiError(400, 'Only Store-issue requisitions can be issued from here.');
@@ -274,11 +275,20 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
 
   for (const it of row.items) {
     const prevIssued = it.issuedQty || 0;
-    if (!it.stockId) throw new ApiError(400, `Missing stockId for item "${it.name}" — pick from Store catalog (uuid)`);
-    const stockItem = await StoreStock.findOne({ id: it.stockId });
-    if (!stockItem) {
-      throw new ApiError(404, `Store item not found for stockId ${it.stockId} — pick from Store catalog (uuid) again.`);
+    let stockItem = null;
+    if (it.stockId) {
+      stockItem = await StoreStock.findOne({ id: it.stockId });
+      console.log('[Store] lookup by stockId:', it.stockId, '→', stockItem ? 'FOUND: ' + stockItem.name : 'NOT FOUND');
     }
+    if (!stockItem && it.name) {
+      stockItem = await StoreStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+      console.log('[Store] fallback by name:', it.name, '→', stockItem ? 'FOUND: ' + stockItem.id : 'NOT FOUND');
+    }
+    if (!stockItem) throw new ApiError(404, `Store item not found for "${it.name}" — add it to Store inventory first.`);
+    if (!stockItem && it.name) {
+      stockItem = await StoreStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    }
+    if (!stockItem) throw new ApiError(404, `Store item not found for "${it.name}" — add it to Store inventory first.`);
     const avail = stockItem.qty;
     const raw = Object.prototype.hasOwnProperty.call(issuedQtyByItem, it.name) ? issuedQtyByItem[it.name] : prevIssued;
     const issued = Math.max(0, Math.min(Number(raw) || 0, avail, it.qty));

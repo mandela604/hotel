@@ -287,7 +287,7 @@
         }
         if (Array.isArray(dataService.state.stock)) {
           return dataService.state.stock.map(i => ({
-            name: i.name, unit: i.unit, id: i.id || '',
+            name: i.name, unit: i.unit, id: i.storeId || i.id || '',
             stockQty: i.qty != null ? i.qty : 0,
             baseUnit: i.baseUnit, packSize: i.packSize,
             stockLabel: (i.baseUnit && i.packSize > 0)
@@ -635,6 +635,7 @@
           ? dataService
           : storeService;
         const entry = await submitSvc.submitRequisition(payload);
+        console.log('[RequestForm] submitted:', entry.no, 'items:', payload.items.map(i => ({ name: i.name, stockId: i.stockId })));
 
         showToast(`${entry.no} submitted to ${meta ? meta.destTitle : (mode === 'purchase' ? 'Procurement' : 'Store')}.`, 'success');
         resetForm();

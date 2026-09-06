@@ -535,6 +535,8 @@
     const remark = opts.remark || '';
     const neededBy = opts.neededBy || opts.needed || '';
 
+    console.log('[Kitchen] submitRequisition items:', items.map(i => ({ name: i.name, stockId: i.stockId, unit: i.unit, qty: i.qty })));
+
     const res = await post('/requisitions', {
       items: items.map(function (i) {
         return { name: i.name, stockId: i.stockId || '', unit: i.unit || 'kg', qty: Number(i.qty) || 0, cost: Number(i.cost) || 0, remark: i.remark || '' };
