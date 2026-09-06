@@ -337,7 +337,7 @@
       return null;
     }
 
-    const moduleName = options.module || 'poolbar';
+    const moduleName = String(options.module || 'poolbar').toLowerCase().trim();
     const service = options.service || null; // RestaurantService | PoolBarService | adapter
     const keys = Object.assign({
       stock: moduleName + '-stock',
@@ -422,7 +422,9 @@
     let movements = [];
     let cart = [];
     let cooCart = [];
+    let cooMenuItems = [];
     let kitchenStockCache = [];
+    let cooActiveCat = 'All';
     let mode = 'quick'; // quick | tab | active
     let activeCat = 'All';
     let statusFilter = '';
@@ -477,7 +479,6 @@
           <a class="ow-back-btn" href="${esc(backHref)}" data-role="backBtn">
             <i class="fa-solid fa-arrow-left"></i> ${esc(backLabel)}
           </a>
-          ${moduleName==='restaurant' ? '<button type="button" class="ow-btn" style="background:#f79009;color:#fff;border-color:#f79009;" data-act="openCoo"><i class="fa-solid fa-fire"></i> Cook on Order</button>' : ''}
         </div>
 
         <div class="ow-kpi-row" data-role="kpiRow"></div>
@@ -491,6 +492,11 @@
             <i class="fa-solid fa-receipt"></i>Open Tab
             <span class="sub">Serve first, pay later</span>
           </button>
+          ${(moduleName === 'restaurant' || moduleName.indexOf('restaurant') !== -1 || options.showCookOnOrder !== false) ? `
+          <button type="button" class="ow-mode-tab" data-mode="coo">
+            <i class="fa-solid fa-fire"></i>Cook on Order
+            <span class="sub">Kitchen sends when ready</span>
+          </button>` : ''}
           <button type="button" class="ow-mode-tab" data-mode="active">
             <i class="fa-solid fa-list-check"></i>Active Orders
             <span class="sub">Open & served tabs</span>
@@ -632,21 +638,54 @@
           </div>
         </div>
 
-        <div class="ow-modal-overlay" data-role="cooModal">
-          <div class="ow-modal" style="width:min(520px,96vw);">
-            <div class="ow-modal-header">
-              <div class="ow-modal-title"><i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order — Send to Kitchen</div>
-              <button type="button" class="ow-modal-close" data-act="closeCoo"><i class="fa-solid fa-xmark"></i></button>
+        <div class="ow-view" data-view="coo">
+          <div class="ow-builder">
+            <div class="ow-menu">
+              <div class="ow-mp-header">
+                <div class="ow-cat-tabs" data-role="cooCatTabs"></div>
+                <div class="ow-search" style="margin-left:auto;">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" data-role="cooItemSearch" placeholder="Search Kitchen recipes & stock…">
+                </div>
+              </div>
+              <div class="ow-mi-grid" data-role="cooItemGrid"></div>
             </div>
-            <div class="ow-fg"><label class="ow-label">Table / Covers — location, Room number becomes location if Room Charge</label><div style="display:flex;gap:8px;"><input class="ow-input" data-role="cooTable" placeholder="Table e.g. T-04 or Room 101" style="flex:1;"><input class="ow-input" data-role="cooCovers" type="number" min="1" value="1" style="width:80px;"></div></div>
-            <div class="ow-fg"><label class="ow-label">Payment</label><select class="ow-select" data-role="cooMethod"><option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option></select></div>
-            <div class="ow-fg" data-role="cooRoomWrap" style="display:none;"><label class="ow-label">Room / Guest</label><input class="ow-input" data-role="cooRoomSearch" placeholder="Search room, guest…"><div class="ow-room-results" data-role="cooRoomResults"></div><div class="ow-selected-room" data-role="cooSelectedRoomBox"><div class="info"></div><button type="button" class="clear-btn" data-act="clearCooRoom"><i class="fa-solid fa-xmark"></i></button></div><input type="hidden" data-role="cooRoomNumber"><input type="hidden" data-role="cooGuestName"><input type="hidden" data-role="cooGuestId"><input type="hidden" data-role="cooGuestPhone"></div>
-            <div class="ow-fg" style="position:relative;"><label class="ow-label">Items — pick from Restaurant/Kitchen catalog (same id) or type manual</label><input class="ow-input" data-role="cooItemSearch" placeholder="Type 1+ chars to search…"><div class="store-suggest" id="cooSuggest" data-role="cooSuggest" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #eef0f6;border-radius:10px;max-height:180px;overflow-y:auto;display:none;z-index:10;"></div></div>
-            <div data-role="cooCart" style="min-height:40px;border:1px dashed #eef0f6;border-radius:10px;padding:8px 10px;margin-bottom:8px;background:#f4f6fb;"><div style="color:#9aa1b3;font-size:12px;text-align:center;">No items — search and pick</div></div>
-            <div class="ow-fg"><label class="ow-label">Notes</label><input class="ow-input" data-role="cooNotes" placeholder="Allergies, spice level…"></div>
-            <div class="ow-modal-footer">
-              <button type="button" class="ow-btn ow-btn-outline ow-btn-sm" data-act="closeCoo">Cancel</button>
-              <button type="button" class="ow-btn ow-btn-primary ow-btn-sm" style="background:#f79009;border-color:#f79009;" data-act="confirmCoo"><i class="fa-solid fa-paper-plane"></i> Send to Kitchen</button>
+
+            <div class="ow-cart">
+              <div class="ow-cart-head">
+                <div class="ow-cart-title"><i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order</div>
+                <button type="button" class="ow-btn-ghost" data-act="clearCooCart"><i class="fa-solid fa-trash"></i> Clear</button>
+              </div>
+              <div class="ow-cart-body" data-role="cooCartBody"><div class="ow-cart-empty">Tap an item to add it</div></div>
+              <div class="ow-cart-footer">
+                <div class="ow-fg"><label class="ow-label">Table / Covers</label><div style="display:flex;gap:8px;"><input class="ow-input" data-role="cooTable" placeholder="e.g. T-04 or Room 101" style="flex:1;"><input class="ow-input" data-role="cooCovers" type="number" min="1" value="1" style="width:80px;"></div></div>
+                <div class="ow-fg">
+                  <label class="ow-label">Staff</label>
+                  <input class="ow-input" data-role="fStaff" placeholder="Staff name" readonly style="opacity:.9;">
+                </div>
+                <div class="ow-fg">
+                  <label class="ow-label">Payment</label>
+                  <select class="ow-select" data-role="cooMethod">
+                    <option>Cash</option><option>POS</option><option>Transfer</option><option>Room Charge</option><option>Complimentary</option>
+                  </select>
+                </div>
+                <div class="ow-fg" data-role="cooRoomWrap" style="display:none;">
+                  <label class="ow-label">Room / Guest</label>
+                  <input class="ow-input" data-role="cooRoomSearch" placeholder="Search room, guest…">
+                  <div class="ow-room-results" data-role="cooRoomResults"></div>
+                  <div class="ow-selected-room" data-role="cooSelectedRoomBox"><div class="info"></div><button type="button" class="clear-btn" data-act="clearCooRoom"><i class="fa-solid fa-xmark"></i></button></div>
+                  <input type="hidden" data-role="cooRoomNumber"><input type="hidden" data-role="cooGuestName"><input type="hidden" data-role="cooGuestId"><input type="hidden" data-role="cooGuestPhone">
+                </div>
+                <div class="ow-fg">
+                  <label class="ow-label">Notes</label>
+                  <input class="ow-input" data-role="cooNotes" placeholder="Allergies, spice level…">
+                </div>
+                <div class="ow-ct-row"><span>Subtotal</span><span data-role="cooSub">₦0</span></div>
+                <div class="ow-ct-row total"><span>Total</span><span class="ow-ct-val" data-role="cooTotal">₦0</span></div>
+                <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:10px;background:#f79009;border-color:#f79009;" data-act="submitCoo" disabled data-role="cooSubmitBtn">
+                  <i class="fa-solid fa-paper-plane"></i> Send to Kitchen
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -674,9 +713,11 @@
         tab.classList.toggle('active', tab.dataset.mode === m);
       });
       const isActive = m === 'active';
-      $('[data-view="builder"]').classList.toggle('active', !isActive);
+      const isCoo = m === 'coo';
+      $('[data-view="builder"]').classList.toggle('active', !isActive && !isCoo);
       $('[data-view="active"]').classList.toggle('active', isActive);
-      // Payment: Quick Sale = required; Open Tab = optional (still pay later if skipped).
+      $('[data-view="coo"]').classList.toggle('active', isCoo);
+      // Payment: Quick Sale = required; Open Tab = optional; COO = required
       const methodWrap = $('[data-role="methodWrap"]');
       if (methodWrap) methodWrap.style.display = (m === 'quick' || m === 'tab') ? '' : 'none';
       const methodLabel = methodWrap && methodWrap.querySelector('.ow-label');
@@ -699,8 +740,17 @@
         else methodSel.value = paymentMethods[0] || '';
       }
       toggleRoomChargeUI();
-      $('[data-role="submitLabel"]').textContent = m === 'quick' ? 'Complete Sale' : 'Open Tab';
-      $('[data-role="cartTitle"]').textContent = m === 'quick' ? 'Quick Sale' : 'Open Tab';
+      if (m === 'coo') {
+        $('[data-role="submitLabel"]').textContent = 'Complete Sale';
+        $('[data-role="cartTitle"]').textContent = 'Quick Sale';
+        toggleCooRoomChargeUI();
+        fetchCooMenuItems();
+        renderCooPicker();
+        renderCooCartItems();
+      } else {
+        $('[data-role="submitLabel"]').textContent = m === 'quick' ? 'Complete Sale' : 'Open Tab';
+        $('[data-role="cartTitle"]').textContent = m === 'quick' ? 'Quick Sale' : 'Open Tab';
+      }
       if (isActive) renderOrdersTable();
     }
 
@@ -915,13 +965,111 @@
     }
 
     function renderCooCart(){
-      var el=$('[data-role="cooCart"]');
+      var el=$('[data-role="cooCartBody"]');
       if(!el) return;
-      if(!cooCart.length){ el.innerHTML='<div style="color:#9aa1b3;font-size:12px;text-align:center;">No items — search and pick</div>'; return; }
+      if(!cooCart.length){ el.innerHTML='<div class="ow-cart-empty">Tap an item to add it</div>'; updateCooTotals(); return; }
       el.innerHTML=cooCart.map(function(c, idx){
-        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eef0f6;"><span style="flex:1;font-size:12px;font-weight:600;">'+esc(c.name)+'</span><span style="display:flex;gap:4px;align-items:center;"><button type="button" data-coo-dec="'+idx+'" style="width:22px;height:22px;border:1px solid #eef0f6;border-radius:6px;background:#f4f6fb;cursor:pointer;">−</button><span style="min-width:18px;text-align:center;font-weight:700;">'+c.qty+'</span><button type="button" data-coo-inc="'+idx+'" style="width:22px;height:22px;border:1px solid #eef0f6;border-radius:6px;background:#f4f6fb;cursor:pointer;">+</button></span><button type="button" data-coo-rm="'+idx+'" style="background:none;border:none;color:#9aa1b3;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></div>';
+        return '<div class="ow-ci">' +
+          '<div class="ow-ci-name">' + esc(c.name) + (c.recipeId ? ' <span style="color:#f79009;font-size:10px;">recipe</span>' : '') + '</div>' +
+          '<div class="ow-ci-qty">' +
+          '<button type="button" data-coo-dec="' + idx + '">−</button>' +
+          '<span>' + c.qty + '</span>' +
+          '<button type="button" data-coo-inc="' + idx + '">+</button></div>' +
+          '<div class="ow-ci-price">' + fmtN(c.price * c.qty) + '</div>' +
+          '<button type="button" class="ow-ci-del" data-coo-rm="' + idx + '"><i class="fa-solid fa-xmark"></i></button></div>';
+      }).join('');
+      updateCooTotals();
+    }
+
+    function updateCooTotals(){
+      var sub=cooCart.reduce(function(s,c){return s+c.price*c.qty;},0);
+      var el1=$('[data-role="cooSub"]'); if(el1) el1.textContent=fmtN(sub);
+      var el2=$('[data-role="cooTotal"]'); if(el2) el2.textContent=fmtN(sub);
+      var btn=$('[data-role="cooSubmitBtn"]'); if(btn) btn.disabled=!cooCart.length;
+    }
+
+    async function fetchCooMenuItems(){
+      if(cooMenuItems.length) return cooMenuItems;
+      try{
+        var r=await fetch('/api/restaurant/recipes',{credentials:'include'});
+        var j=await r.json();
+        cooMenuItems=(j.data||[]).map(function(recipe){
+          return {name:recipe.dish, id:recipe.id, unit:recipe.expectedYieldUnit||'portions', price:0, source:'kitchen', recipeId:recipe.id, category:recipe.category||'Recipes', desc:recipe.notes||''};
+        });
+      }catch(e){ cooMenuItems=[]; }
+      var rest=(stock||[]).map(function(s){
+        return {name:s.name, id:s.id||s._id||'', unit:s.unit||'portion', price:s.price||0, source:'restaurant', recipeId:s.recipeId||'', category:s.category||'Stock'};
+      });
+      cooMenuItems=[].concat(cooMenuItems,rest);
+      return cooMenuItems;
+    }
+
+    function getCooCategories(){
+      return ['All'].concat(Array.from(new Set(cooMenuItems.map(function(i){return i.category||'Other';}))));
+    }
+
+    function renderCooPicker(){
+      var cats=getCooCategories();
+      var tabs=$('[data-role="cooCatTabs"]');
+      if(tabs) tabs.innerHTML=cats.map(function(c){
+        return '<button type="button" class="ow-cat-tab'+(c===cooActiveCat?' active':'')+'" data-coo-cat="'+esc(c)+'">'+esc(c)+'</button>';
+      }).join('');
+      var q=(($('[data-role="cooItemSearch]')||{}).value||'').toLowerCase();
+      var items=cooMenuItems.filter(function(i){
+        return (cooActiveCat==='All'||i.category===cooActiveCat)&&(!q||(i.name||'').toLowerCase().includes(q));
+      });
+      var grid=$('[data-role="cooItemGrid"]');
+      if(!grid) return;
+      if(!items.length){ grid.innerHTML='<div class="ow-empty-note">No items match.</div>'; return; }
+      grid.innerHTML=items.map(function(i){
+        var inCart=cooCart.find(function(c){return c.name===i.name;});
+        var remaining=i.source==='restaurant'?(i.qty||0)-(inCart?inCart.qty:0):999;
+        var disabled=(i.source==='restaurant'&&i.qty<=0)||remaining<=0;
+        return '<button type="button" class="ow-mi-tile" data-coo-add="'+esc(i.name)+'" data-coo-source="'+esc(i.source)+'" '+(disabled?'disabled':'')+'>'+
+          (i.source==='kitchen'?'<span class="ow-mi-badge" style="background:#f79009;color:#fff;">Kitchen</span>':'')+
+          '<div class="ow-mi-cat">'+esc(i.category||'')+'</div>'+
+          '<div class="ow-mi-name">'+esc(i.name)+'</div>'+
+          '<div class="ow-mi-price">'+fmtN(i.price)+'</div>'+
+          '<div class="ow-mi-stock">'+(i.source==='restaurant'?(i.qty||0)+' '+esc(i.unit)+' on hand':'Tap to add')+'</div></button>';
       }).join('');
     }
+
+    function addCooItem(name, source){
+      var item=cooMenuItems.find(function(i){return i.name===name;});
+      if(!item) return;
+      if(source==='restaurant'){
+        var inv=stock.find(function(i){return i.name===name;});
+        if(!inv||inv.qty<=0){showToast(name+' is out of stock.','error');return;}
+        var ex=cooCart.find(function(c){return c.name===name;});
+        if(ex){if(ex.qty>=inv.qty){showToast('Only '+inv.qty+' available.','error');return;}ex.qty++;}
+        else cooCart.push({name:name, id:item.id, unit:item.unit, price:item.price, qty:1, recipeId:item.recipeId||''});
+      }else{
+        var ex2=cooCart.find(function(c){return c.name===name;});
+        if(ex2) ex2.qty++; else cooCart.push({name:name, id:item.id, unit:item.unit, price:item.price, qty:1, recipeId:item.recipeId||''});
+      }
+      renderCooCart();
+      renderCooPicker();
+    }
+
+    function adjustCooQty(idx, delta){
+      if(!cooCart[idx]) return;
+      var c=cooCart[idx];
+      var next=c.qty+delta;
+      if(next<1) cooCart.splice(idx,1);
+      else{
+        if(c.unit&&c.unit!=='portion'){
+          var inv=stock.find(function(i){return i.name===c.name;});
+          var max=inv?inv.qty:999;
+          if(next>max){showToast('Only '+max+' available.','error');return;}
+        }
+        c.qty=next;
+      }
+      renderCooCart();
+      renderCooPicker();
+    }
+
+    function clearCooCart(){cooCart=[];renderCooCart();renderCooPicker();}
+
     async function fetchKitchenStock(){
       if(kitchenStockCache.length) return kitchenStockCache;
       try{
@@ -932,34 +1080,7 @@
       }catch(e){ kitchenStockCache=[]; }
       return kitchenStockCache;
     }
-    async function openCooModal(){
-      cooCart=[];
-      renderCooCart();
-      var t=$('[data-role="cooTable"]'); if(t) t.value=$('[data-role="fTable"]').value||'';
-      var c=$('[data-role="cooCovers"]'); if(c) c.value='1';
-      var n=$('[data-role="cooNotes"]'); if(n) n.value=$('[data-role="fNotes"]').value||'';
-      var s=$('[data-role="cooItemSearch"]'); if(s) s.value='';
-      var sug=$('[data-role="cooSuggest"]'); if(sug){ sug.style.display='none'; sug.innerHTML=''; }
-      await fetchKitchenStock();
-      toggleCooRoomChargeUI();
-      $('[data-role="cooModal"]').classList.add('show');
-    }
-    function onCooSearch(){
-      var inp=$('[data-role="cooItemSearch"]'), box=$('[data-role="cooSuggest"]');
-      if(!inp||!box) return;
-      var q=(inp.value||'').trim().toLowerCase();
-      if(!q || q.length<1){ box.style.display='none'; box.innerHTML=''; return; }
-      var rest=(stock||[]).map(function(s){ return {name:s.name, id:s.id||s._id||'', unit:s.unit||'', price:s.price||0, source:'restaurant'}; });
-      var kit=kitchenStockCache||[];
-      var combined=[].concat(rest, kit);
-      // dedupe by id+name
-      var hits=combined.filter(function(s){ return s.name.toLowerCase().includes(q); }).slice(0,8);
-      if(!hits.length){ box.innerHTML='<div style="padding:10px;color:#9aa1b3;font-size:12px;text-align:center;">No match — press Enter to add manual</div>'; box.style.display='block'; return; }
-      box.innerHTML=hits.map(function(s){
-        return '<div class="store-suggest-item" data-coo-pick="'+esc(s.name)+'" data-coo-id="'+esc(s.id)+'" data-coo-unit="'+esc(s.unit)+'" data-coo-price="'+s.price+'" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #eef0f6;display:flex;justify-content:space-between;gap:8px;"><span>'+esc(s.name)+' <span style="color:#9aa1b3;font-size:11px;">'+esc(s.source)+'</span></span><span style="color:#9aa1b3;font-size:11px;">'+esc(s.unit)+' · '+fmtN(s.price)+'</span></div>';
-      }).join('')+'<div style="padding:8px 12px;border-top:1px dashed #eef0f6;color:#6b7280;font-size:11px;text-align:center;cursor:pointer;" data-coo-manual="1">+ Add "'+esc(inp.value)+'" as manual entry</div>';
-      box.style.display='block';
-    }
+
     function toggleCooRoomChargeUI(){
       var m=($('[data-role="cooMethod"]').value||''); var w=$('[data-role="cooRoomWrap"]'); if(!w) return; var show=m==='Room Charge'; w.style.display=show?'':'none'; if(!show){ var a=$('[data-role="cooRoomNumber"]'); if(a) a.value=''; var b=$('[data-role="cooGuestName"]'); if(b) b.value=''; var c=$('[data-role="cooGuestId"]'); if(c) c.value=''; var d=$('[data-role="cooRoomSearch"]'); if(d) d.value=''; var e=$('[data-role="cooRoomResults"]'); if(e){ e.style.display='none'; e.innerHTML=''; } var f=$('[data-role="cooSelectedRoomBox"]'); if(f) f.style.display='none'; }
     }
@@ -977,28 +1098,31 @@
       var b=$('[data-role="cooSelectedRoomBox"]'); if(b){ b.querySelector('.info').innerHTML='Room '+room+'<span>'+name+(phone?' · '+phone:'')+'</span>'; b.style.display='flex'; }
       var t=$('[data-role="cooTable"]'); if(t) t.value='Room '+room;
     }
-    async function sendCooOrder(){
-      if (!cooCart.length) { showToast('Add items to send to kitchen.', 'error'); return; }
-      var table = ($('[data-role="cooTable"]').value||'').trim() || '—';
-      var covers = parseInt(($('[data-role="cooCovers"]').value||'1'),10)||1;
-      var staff = ($('[data-role="fStaff"]').value||'').trim() || resolveStaffName();
-      var notes = ($('[data-role="cooNotes"]').value||'').trim();
+
+    async function submitCooOrder(){
+      if(!cooCart.length){showToast('Add at least one item.','error');return;}
+      var table=($('[data-role="cooTable"]').value||'').trim()||'—';
+      var covers=parseInt(($('[data-role="cooCovers"]').value||'1'),10)||1;
+      var staff=($('[data-role="fStaff"]').value||'').trim()||resolveStaffName();
+      var notes=($('[data-role="cooNotes"]').value||'').trim();
       var method=($('[data-role="cooMethod"]').value||'Cash');
       var room=$('[data-role="cooRoomNumber"]').value||'';
       var guest=$('[data-role="cooGuestName"]').value||'';
       var gid=$('[data-role="cooGuestId"]').value||'';
       var phone=$('[data-role="cooGuestPhone"]').value||'';
-      if(method==='Room Charge' && !room){ showToast('Select room for Room Charge.', 'error'); return; }
-      var location = method==='Room Charge' && room ? 'Room '+room : table;
-      var payload = { table: location, covers: covers, items: cooCart.map(function(c){ return {name:c.name, qty:c.qty, price:c.price, id:c.id}; }), notes: notes, staff: staff, method: method, roomNumber: room, guestName: guest, guestId: gid, guestPhone: phone };
+      if(method==='Room Charge'&&!room){showToast('Select room for Room Charge.','error');return;}
+      var location=method==='Room Charge'&&room?'Room '+room:table;
+      var items=cooCart.map(function(c){return {name:c.name, qty:c.qty, price:c.price, recipeId:c.recipeId||''};});
+      var payload={table:location, covers:covers, items:items, notes:notes, staff:staff, method:method, roomNumber:room, guestName:guest, guestId:gid, guestPhone:phone};
       try{
-        var res = await fetch('/api/kitchen/coo-orders', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload)});
-        var body=null; try{ body=await res.json(); }catch(e){}
+        var res=await fetch('/api/restaurant/coo-orders',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
+        var body=null;try{body=await res.json();}catch(e){}
         if(!res.ok) throw new Error((body&&body.error)||'Failed to send to kitchen');
-        showToast('Cook on Order sent to kitchen — '+(body&&body.data&&body.data.id||''), 'success');
-        $('[data-role="cooModal"]').classList.remove('show');
-        cooCart=[]; renderCooCart();
-      }catch(err){ showToast(err.message||'Failed to send COO', 'error'); }
+        showToast('COO order sent to kitchen — '+(body&&body.data&&body.data.order&&body.data.order.id||''),'success');
+        cooCart=[];renderCooCart();renderCooPicker();
+        if(typeof service!=='undefined'&&service&&typeof service.loadAll==='function'){try{await service.loadAll();syncFromService();}catch(e){}}
+        renderKPIs();renderOrdersTable();
+      }catch(err){showToast(err.message||'Failed to send COO','error');}
     }
 
     function addToCart(key) {
@@ -1541,7 +1665,7 @@
     // Events
     root.addEventListener('click', function (e) {
       const modeTab = e.target.closest('[data-mode]');
-      if (modeTab && modeTab.classList.contains('ow-mode-tab')) {
+      if (modeTab && (modeTab.classList.contains('ow-mode-tab') || modeTab.dataset.mode)) {
         setMode(modeTab.dataset.mode);
         return;
       }
@@ -1574,9 +1698,8 @@
         if (a === 'clearCart') clearCart();
         else if (a === 'submit') submitOrder();
         else if (a === 'printReceipt') printCurrentCart();
-        else if (a === 'openCoo') openCooModal();
-        else if (a === 'closeCoo') $('[data-role="cooModal"]').classList.remove('show');
-        else if (a === 'confirmCoo') sendCooOrder();
+        else if (a === 'submitCoo') submitCooOrder();
+        else if (a === 'clearCooCart') clearCooCart();
         else if (a === 'clearCooRoom'){ var b=$('[data-role="cooSelectedRoomBox"]'); if(b) b.style.display='none'; var r=$('[data-role="cooRoomNumber"]'); if(r) r.value=''; var g=$('[data-role="cooGuestName"]'); if(g) g.value=''; var gi=$('[data-role="cooGuestId"]'); if(gi) gi.value=''; var s=$('[data-role="cooRoomSearch"]'); if(s) s.value=''; var res=$('[data-role="cooRoomResults"]'); if(res){ res.style.display='none'; res.innerHTML=''; } }
         else if (a === 'closePay') $('[data-role="payModal"]').classList.remove('show');
         else if (a === 'confirmPay') confirmPayOrder();
@@ -1605,6 +1728,17 @@
         renderOrdersTable();
         return;
       }
+      const cooCat = e.target.closest('[data-coo-cat]');
+      if (cooCat) {
+        cooActiveCat = cooCat.dataset.cooCat;
+        renderCooPicker();
+        return;
+      }
+      const cooAdd = e.target.closest('[data-coo-add]');
+      if (cooAdd) {
+        addCooItem(cooAdd.dataset.cooAdd, cooAdd.dataset.cooSource);
+        return;
+      }
       const cooPick = e.target.closest('[data-coo-pick]');
       if (cooPick) {
         var n=cooPick.dataset.cooPick, i=cooPick.dataset.cooId, u=cooPick.dataset.cooUnit, pc=parseFloat(cooPick.dataset.cooPrice)||0;
@@ -1622,11 +1756,11 @@
         return;
       }
       const cooInc = e.target.closest('[data-coo-inc]');
-      if (cooInc){ var idx=parseInt(cooInc.dataset.cooInc,10); if(cooCart[idx]){ cooCart[idx].qty++; renderCooCart(); } return; }
+      if (cooInc){ var idx=parseInt(cooInc.dataset.cooInc,10); adjustCooQty(idx, 1); return; }
       const cooDec = e.target.closest('[data-coo-dec]');
-      if (cooDec){ var idx2=parseInt(cooDec.dataset.cooDec,10); if(cooCart[idx2]){ if(cooCart[idx2].qty<=1) cooCart.splice(idx2,1); else cooCart[idx2].qty--; renderCooCart(); } return; }
+      if (cooDec){ var idx2=parseInt(cooDec.dataset.cooDec,10); adjustCooQty(idx2, -1); return; }
       const cooRm = e.target.closest('[data-coo-rm]');
-      if (cooRm){ var idx3=parseInt(cooRm.dataset.cooRm,10); cooCart.splice(idx3,1); renderCooCart(); return; }
+      if (cooRm){ var idx3=parseInt(cooRm.dataset.cooRm,10); cooCart.splice(idx3,1); renderCooCart(); renderCooPicker(); return; }
       const cooRoomPick = e.target.closest('[data-coo-room]');
       if (cooRoomPick){ selectCooRoom(cooRoomPick.dataset.cooRoom, cooRoomPick.dataset.cooGuest, cooRoomPick.dataset.cooPhone, cooRoomPick.dataset.cooGid); return; }
     });
@@ -1649,12 +1783,8 @@
       if (e.target === this) this.classList.remove('show');
     });
     if ($('[data-role="cooItemSearch"]')) {
-      $('[data-role="cooItemSearch"]').addEventListener('input', onCooSearch);
-      $('[data-role="cooItemSearch"]').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); var v=(this.value||'').trim(); if(v){ var ex=cooCart.find(function(c){return c.name.toLowerCase()===v.toLowerCase();}); if(ex) ex.qty++; else cooCart.push({name:v, id:'', unit:'portion', price:0, qty:1}); renderCooCart(); this.value=''; var b=$('[data-role="cooSuggest"]'); if(b){ b.style.display='none'; b.innerHTML=''; } } } });
+      $('[data-role="cooItemSearch"]').addEventListener('input', function(){ renderCooPicker(); });
     }
-    $('[data-role="cooModal"]').addEventListener('click', function (e) {
-      if (e.target === this) this.classList.remove('show');
-    });
     if ($('[data-role="cooMethod"]')) { $('[data-role="cooMethod"]').addEventListener('change', toggleCooRoomChargeUI); }
     if ($('[data-role="cooRoomSearch"]')) { $('[data-role="cooRoomSearch"]').addEventListener('input', onCooRoomSearch); }
 

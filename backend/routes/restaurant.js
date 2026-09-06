@@ -50,4 +50,9 @@ router.get('/requisitions', restaurantController.listRestaurantRequisitions);
 router.post('/requisitions', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateSubmitRequisition, restaurantController.submitRequisition);
 router.post('/requisitions/:id/receive', inDept, privilegeGuard('restaurant', 'canCreate'), restaurantController.receiveRequisition);
 
+/* Cook on Order — Kitchen Recipes */
+router.get('/recipes', restaurantController.listKitchenRecipes);
+router.post('/stock/from-recipe', inDept, privilegeGuard('restaurant', 'canCreate'), restaurantController.addRecipeToStock);
+router.post('/coo-orders', inDept, privilegeGuard('restaurant', 'canCreate'), restaurantController.createCooOrder);
+
 module.exports = router;

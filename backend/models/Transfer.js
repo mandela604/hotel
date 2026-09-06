@@ -4,6 +4,7 @@ const transferSchema = new mongoose.Schema({
   id:            { type: String, required: true, unique: true },
   transferNo:    { type: String, required: true, unique: true },
   productionNo:  { type: String, default: '' },
+  cooId:         { type: String, default: '' },
   meal:          { type: String, required: true },
   quantity:      { type: Number, default: 0 },
   unit:          { type: String, default: 'Plates' },

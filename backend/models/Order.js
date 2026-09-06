@@ -1,15 +1,18 @@
 const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
-  name:  { type: String, required: true },
-  qty:   { type: Number, required: true },
-  price: { type: Number, required: true },
+  name:      { type: String, required: true },
+  qty:       { type: Number, required: true },
+  price:     { type: Number, required: true },
+  recipeId:  { type: String, default: '' },
   procurementId: { type: String, default: '' },
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
   id:             { type: String, required: true, unique: true },
   department:     { type: String, enum: ['restaurant', 'poolbar'], default: 'restaurant' },
+  type:           { type: String, enum: ['regular', 'coo'], default: 'regular' },
+  cooId:          { type: String, default: '' },
   items:          [orderItemSchema],
   subtotal:       { type: Number, default: 0 },
   discount:       { type: Number, default: 0 },

@@ -131,6 +131,8 @@
   .chip-rejected, .chip-disputed{ background:var(--red-bg); color:var(--red); }
   .chip-partial{ background:var(--blue-bg); color:var(--blue); }
   .chip-pending{ background:var(--amber-bg); color:var(--amber); }
+  .chip-accepted{ background:var(--green-bg); color:var(--green); }
+  .chip-rejected{ background:var(--red-bg); color:var(--red); }
   .chip-urgent{ background:var(--red-bg); color:var(--red); }
   .chip-normal{ background:var(--blue-bg); color:var(--blue); }
   .chip-src-store{ background:var(--amber-bg); color:var(--amber); }
@@ -275,6 +277,29 @@
         <div class="pagination">
           <span id="paginLabel">—</span>
           <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+      <!-- COO SECTION -->
+      <div class="panel" id="cooPanel" style="border-left:3px solid var(--amber);">
+        <div class="panel-head">
+          <div class="panel-title" style="color:var(--amber);"><i class="fa-solid fa-fire"></i> Cook on Order — Incoming from Restaurant</div>
+          <span class="toolbar-count" id="cooCount">—</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Items</th>
+                <th>Staff</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cooTbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Loading…</td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -633,6 +658,92 @@ document.querySelectorAll('th[data-sortkey="date"]').forEach(function (th) {
   });
 });
 
+/* ── Cook on Order ──────────────────────────────────────────────── */
+let cooAll = [];
+
+async function loadCooOrders() {
+  try {
+    const r = await fetch('/api/kitchen/coo-orders', { credentials: 'include' });
+    const j = await r.json();
+    cooAll = (j.data || j || []);
+    renderCooTable();
+  } catch (e) {
+    document.getElementById('cooTbody').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;color:var(--red);">Failed to load COO orders</td></tr>';
+  }
+}
+
+function renderCooTable() {
+  const tb = document.getElementById('cooTbody');
+  const ct = document.getElementById('cooCount');
+  const pending = cooAll.filter(function (o) { return o.status === 'pending'; });
+  ct.textContent = pending.length + ' pending';
+  if (!cooAll.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">No Cook on Order requests yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = cooAll.map(function (o) {
+    return '<tr style="cursor:pointer;" onclick="openCooDetail(\'' + o.id + '\')">' +
+      '<td><b>' + escapeHtml(o.table || '—') + '</b> <span style="color:var(--text3);">' + (o.covers || 1) + ' covers</span></td>' +
+      '<td>' + (o.items || []).map(function (i) { return i.qty + 'x ' + escapeHtml(i.name); }).join(', ') + '</td>' +
+      '<td>' + escapeHtml(o.staff || '') + '</td>' +
+      '<td><span class="chip chip-' + o.status + '">' + o.status + '</span></td>' +
+      '<td>' + new Date(o.createdAt).toLocaleString() + '</td>' +
+      '<td onclick="event.stopPropagation()">' +
+        (o.status === 'pending'
+          ? '<button class="act-btn" onclick="cooAccept(\'' + o.id + '\')"><i class="fa-solid fa-check"></i> Accept</button> ' +
+            '<button class="act-btn" onclick="cooReject(\'' + o.id + '\')"><i class="fa-solid fa-ban"></i> Reject</button>'
+          : '—') +
+      '</td></tr>';
+  }).join('');
+}
+
+async function cooAccept(id) {
+  try {
+    const r = await fetch('/api/kitchen/coo-orders/' + encodeURIComponent(id) + '/accept', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'Failed');
+    showToast('Accepted — production run created', 'success');
+    loadCooOrders();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function cooReject(id) {
+  try {
+    const r = await fetch('/api/kitchen/coo-orders/' + encodeURIComponent(id) + '/reject', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'Failed');
+    showToast('Rejected', 'info');
+    loadCooOrders();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function openCooDetail(id) {
+  const o = cooAll.find(function (x) { return x.id === id; });
+  if (!o) return;
+  var container = document.getElementById('detailContainer');
+  container.innerHTML =
+    '<div style="font-weight:800;font-size:16px;margin-bottom:12px;"><i class="fa-solid fa-fire" style="color:var(--amber);"></i> Cook on Order — ' + escapeHtml(o.table || '—') + '</div>' +
+    '<div style="margin-bottom:6px;"><b>Table:</b> ' + escapeHtml(o.table || '—') + ' (' + (o.covers || 1) + ' covers)</div>' +
+    '<div style="margin-bottom:6px;"><b>Items:</b> ' + (o.items || []).map(function (i) { return i.qty + 'x ' + escapeHtml(i.name) + (i.recipeId ? ' <span style="color:var(--amber);font-size:11px;">(recipe)</span>' : ''); }).join(', ') + '</div>' +
+    '<div style="margin-bottom:6px;"><b>Staff:</b> ' + escapeHtml(o.staff || '') + '</div>' +
+    '<div style="margin-bottom:6px;"><b>Status:</b> <span class="chip chip-' + o.status + '">' + o.status + '</span></div>' +
+    '<div style="margin-bottom:6px;"><b>Payment:</b> ' + escapeHtml(o.method || '—') + '</div>' +
+    (o.roomNumber ? '<div style="margin-bottom:6px;"><b>Room:</b> ' + escapeHtml(o.roomNumber) + (o.guestName ? ' — ' + escapeHtml(o.guestName) : '') + '</div>' : '') +
+    '<div style="margin-bottom:6px;"><b>Notes:</b> ' + escapeHtml(o.notes || '—') + '</div>' +
+    '<div><b>Date:</b> ' + new Date(o.createdAt).toLocaleString() + '</div>' +
+    (o.extraIngredients && o.extraIngredients.length ? '<div style="margin-top:10px;border-top:1px solid #eef0f6;padding-top:10px;"><b>Extra Ingredients:</b> ' + o.extraIngredients.map(function (e) { return e.qty + ' ' + e.unit + ' ' + escapeHtml(e.name); }).join(', ') + '</div>' : '') +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+    '<button class="btn" onclick="closeModal(\'detailModal\')">Close</button>' +
+    (o.status === 'pending' ? '<button class="btn btn-primary" onclick="cooAccept(\'' + o.id + '\');closeModal(\'detailModal\');">Accept & Produce</button> <button class="btn" style="background:var(--red-bg);color:var(--red);border-color:rgba(240,68,56,.3);" onclick="cooReject(\'' + o.id + '\');closeModal(\'detailModal\');">Reject</button>' : '') +
+    '</div>';
+  document.getElementById('detailModal').classList.add('show');
+}
+
 /* ── Init ──────────────────────────────────────────────────────────── */
 async function init() {
   session = await waitForSession(800);
@@ -649,6 +760,8 @@ async function init() {
   if (SS) SS.onChange(function () { render(); });
 
   render();
+  loadCooOrders();
+  setInterval(loadCooOrders, 10000);
 }
 init();
 </script>

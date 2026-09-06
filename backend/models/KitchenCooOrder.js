@@ -5,6 +5,7 @@ const cooItemSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   qty: { type: Number, required: true, min: 1 },
   price: { type: Number, default: 0 },
+  recipeId: { type: String, default: '' },
 }, { _id: false });
 const extraIngSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -26,6 +27,7 @@ const cooSchema = new mongoose.Schema({
   guestPhone: { type: String, default: '' },
   total: { type: Number, default: 0 },
   extraIngredients: { type: [extraIngSchema], default: [] },
+  restaurantOrderId: { type: String, default: '' },
   status: { type: String, enum: ['pending','accepted','rejected','completed'], default: 'pending' },
   createdBy: { type: String, default: '' },
 }, { timestamps: true });

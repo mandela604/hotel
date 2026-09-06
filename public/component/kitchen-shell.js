@@ -12,11 +12,10 @@
 
   const NAV = [
     { key: 'dashboard',  label: 'Dashboard',           href: 'kitchen-dashboard.html',          icon: 'fa-solid fa-gauge-high' },
-    { key: 'coo',        label: 'Cook on Order',       href: 'kitchen-coo.html',                icon: 'fa-solid fa-fire', badgeKey: 'coo' },
     { key: 'stock',      label: 'Kitchen Stock',       href: 'kitchen-inventory.html',          icon: 'fa-solid fa-box' },
-    { key: 'recipes',    label: 'kitchen Recipes',     href: 'kitchen-recipes.html',            icon: 'fa-solid fa-book-open' },
+    { key: 'recipes',    label: 'Recipes',             href: 'kitchen-recipes.html',            icon: 'fa-solid fa-book-open' },
     { key: 'prodhist',   label: 'Production',          href: 'kitchen-production-history.html', icon: 'fa-solid fa-kitchen-set' },
-    { key: 'reqhist',    label: 'Requisition History', href: 'kitchen-requisition-history.html', icon: 'fa-solid fa-file-lines', badgeKey: 'reqhist' },
+    { key: 'reqhist',    label: 'Requisitions',        href: 'kitchen-requisition-history.html', icon: 'fa-solid fa-file-lines', badgeKey: 'reqhist' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";

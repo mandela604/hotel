@@ -9,6 +9,8 @@ const Requisition = require('../models/Requisition');
 const Guest = require('../models/Guest');
 const Activity = require('../models/Activity');
 const Category = require('../models/Category');
+const Recipe = require('../models/Recipe');
+const KitchenCooOrder = require('../models/KitchenCooOrder');
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -359,7 +361,34 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
     reason: `Transfer Accepted (${transfer.transferNo})`,
   });
 
-  await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
+  /* ── Auto-create Sale for Kitchen transfers ── */
+  if (transfer.from === 'Main Kitchen' || transfer.kitchen) {
+    const saleCount = await Sale.countDocuments({ department: DEPT });
+    const saleId = `RST-${String(saleCount + 1).padStart(5, '0')}`;
+
+    await Sale.create({
+      id: saleId,
+      source: transfer.transferNo || transfer.id,
+      department: DEPT,
+      items: [{ name: stockItem.name, stockId: stockItem.id, procurementId: stockItem.procurementId || '', qty: Number(transfer.quantity), price: stockItem.price || 0 }],
+      subtotal: (stockItem.price || 0) * Number(transfer.quantity),
+      discount: 0,
+      total: (stockItem.price || 0) * Number(transfer.quantity),
+      method: 'Transfer',
+      staff: transfer.sentBy || '',
+      table: '',
+      notes: `Auto-created from Kitchen transfer ${transfer.transferNo}`,
+      date: new Date(),
+      status: 'completed',
+      roomNumber: null,
+      guestName: null,
+      guestPhone: null,
+    });
+
+    await logActivity('green', `Transfer ${transfer.transferNo} accepted + Sale created — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
+  } else {
+    await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
+  }
   res.json({ success: true, data: transfer });
 });
 
@@ -721,4 +750,112 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
   await RestaurantStock.updateMany({ category: name }, { $set: { category: reassignTo } });
   await Category.deleteMany({ module: 'restaurant', name });
   res.json({ success: true, data: { reassignedTo: reassignTo } });
+});
+
+/* ═══════════════════════════════════════════════
+   Cook on Order — Kitchen Recipes for COO
+   Restaurant staff picks from Kitchen's recipe
+   catalog when placing COO orders.
+══════════════════════════════════════════════ */
+exports.listKitchenRecipes = asyncHandler(async (req, res) => {
+  const list = await Recipe.find().sort({ dish: 1 });
+  res.json({ success: true, count: list.length, data: list });
+});
+
+exports.addRecipeToStock = asyncHandler(async (req, res) => {
+  const { recipeId, price, category } = req.body;
+  if (!recipeId) throw new ApiError(400, 'recipeId is required');
+
+  const recipe = await Recipe.findOne({ id: recipeId });
+  if (!recipe) throw new ApiError(404, 'Recipe not found');
+
+  const existing = await RestaurantStock.findOne({ recipeId: recipe.id });
+  if (existing) throw new ApiError(409, `"${recipe.dish}" is already in Restaurant stock`);
+
+  const stockItem = await RestaurantStock.create({
+    name: recipe.dish,
+    category: category || 'Kitchen Recipes',
+    unit: recipe.expectedYieldUnit || 'portions',
+    recipeId: recipe.id,
+    price: Number(price) || 0,
+    cost: recipe.gasCostPerUnit || 0,
+    desc: `Cook-on-Order — recipe linked`,
+  });
+
+  res.status(201).json({ success: true, data: stockItem });
+});
+
+/* ═══════════════════════════════════════════════
+   Cook on Order — create COO order
+   Creates both an Order (type: coo) for tracking
+   in Active Orders / Sales, and a KitchenCooOrder
+   for Kitchen to see and accept.
+══════════════════════════════════════════════ */
+exports.createCooOrder = asyncHandler(async (req, res) => {
+  const { items, discount, staff, table, covers, notes, method, roomNumber, guestName, guestPhone, guestId, createdBy } = req.body;
+  if (!items || !items.length) throw new ApiError(400, 'Add at least one item');
+
+  const subtotal = items.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0);
+  const discountPct = Number(discount) || 0;
+  const total = subtotal * (1 - discountPct / 100);
+
+  const count = await Order.countDocuments({ department: DEPT });
+  const id = `RSO-${String(count + 1).padStart(5, '0')}`;
+
+  const orderItems = [];
+  for (const it of items) {
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    orderItems.push({
+      name: it.name.trim(),
+      qty: Number(it.qty),
+      price: Number(it.price) || 0,
+      recipeId: it.recipeId || (stockItem ? stockItem.recipeId : '') || '',
+      procurementId: stockItem ? (stockItem.procurementId || '') : '',
+    });
+  }
+
+  const order = await Order.create({
+    id,
+    department: DEPT,
+    type: 'coo',
+    items: orderItems,
+    subtotal,
+    discount: discountPct,
+    total,
+    staff: staff || (req.user ? req.user.name : ''),
+    table: table || '',
+    notes: notes || '',
+    date: new Date(),
+    status: 'open',
+    method: method || null,
+    payMethod: method || null,
+    roomNumber: roomNumber || null,
+    guestName: guestName || null,
+    guestPhone: guestPhone || null,
+    createdBy: createdBy || (req.user ? req.user.name : ''),
+  });
+
+  const coo = await KitchenCooOrder.create({
+    id: uuidv4(),
+    restaurantOrderId: id,
+    table: table || '',
+    covers: Number(covers) || 1,
+    items: orderItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, recipeId: i.recipeId })),
+    notes: notes || '',
+    staff: staff || (req.user ? req.user.name : ''),
+    method: method || 'Cash',
+    roomNumber: roomNumber || '',
+    guestName: guestName || '',
+    guestId: guestId || '',
+    guestPhone: guestPhone || '',
+    total,
+    status: 'pending',
+    createdBy: createdBy || (req.user ? req.user.name : ''),
+  });
+
+  order.cooId = coo.id;
+  await order.save();
+
+  await logActivity('gold', `COO ${id} sent to Kitchen — ${items.length} item(s)`, 'restaurant-orders.html');
+  res.status(201).json({ success: true, data: { order, coo } });
 });

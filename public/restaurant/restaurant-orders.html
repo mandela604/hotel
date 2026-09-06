@@ -54,7 +54,7 @@
 <script src="../services/permissions.js"></script>
 <script src="services/restaurant-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
-<script src="../component/orders-workspace.js"></script>
+<script src="../component/orders-workspace.js?v=999&t=20260906_999"></script>
 <script>
 /**
  * Restaurant Orders
@@ -121,6 +121,7 @@ function showGuestLoadError(msg) {
 
   OrdersWorkspace.attach('#ordersSlot', {
     module: 'restaurant',
+    showCookOnOrder: true,
     service: RestaurantService,
     guests: guests,
     allowRoomCharge: true,
