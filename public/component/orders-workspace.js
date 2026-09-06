@@ -491,10 +491,6 @@
             <i class="fa-solid fa-receipt"></i>Open Tab
             <span class="sub">Serve first, pay later</span>
           </button>
-          <button type="button" class="ow-mode-tab" data-mode="coo">
-            <i class="fa-solid fa-fire"></i>Cook on Order
-            <span class="sub">Kitchen to make</span>
-          </button>
           <button type="button" class="ow-mode-tab" data-mode="active">
             <i class="fa-solid fa-list-check"></i>Active Orders
             <span class="sub">Open & served tabs</span>
@@ -678,9 +674,9 @@
         tab.classList.toggle('active', tab.dataset.mode === m);
       });
       const isActive = m === 'active';
-      const isCoo = m === 'coo';
       $('[data-view="builder"]').classList.toggle('active', !isActive);
       $('[data-view="active"]').classList.toggle('active', isActive);
+      // Payment: Quick Sale = required; Open Tab = optional (still pay later if skipped).
       const methodWrap = $('[data-role="methodWrap"]');
       if (methodWrap) methodWrap.style.display = (m === 'quick' || m === 'tab') ? '' : 'none';
       const methodLabel = methodWrap && methodWrap.querySelector('.ow-label');
@@ -689,6 +685,7 @@
           ? 'Payment <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--ow-text3)">(optional)</span>'
           : 'Payment';
       }
+      // Open Tab gets a blank first option so staff can skip payment.
       const methodSel = $('[data-role="fMethod"]');
       if (methodSel) {
         const cur = methodSel.value;
@@ -702,14 +699,8 @@
         else methodSel.value = paymentMethods[0] || '';
       }
       toggleRoomChargeUI();
-      if (isCoo) {
-        $('[data-role="submitLabel"]').textContent = 'Send to Kitchen';
-        $('[data-role="cartTitle"]').textContent = 'Cook on Order';
-      } else {
-        $('[data-role="submitLabel"]').textContent = m === 'quick' ? 'Complete Sale' : 'Open Tab';
-        $('[data-role="cartTitle"]').textContent = m === 'quick' ? 'Quick Sale' : 'Open Tab';
-      }
-      renderPicker();
+      $('[data-role="submitLabel"]').textContent = m === 'quick' ? 'Complete Sale' : 'Open Tab';
+      $('[data-role="cartTitle"]').textContent = m === 'quick' ? 'Quick Sale' : 'Open Tab';
       if (isActive) renderOrdersTable();
     }
 
@@ -828,10 +819,9 @@
         const lvl = stockLevel(i);
         const inCart = cart.find(function (c) { return c.key === i.name; });
         const remaining = i.qty - (inCart ? inCart.qty : 0);
-        const isCooMode = mode === 'coo';
-        const disabled = !isCooMode && (i.qty <= 0 || remaining <= 0);
+        const disabled = i.qty <= 0 || remaining <= 0;
         return '<button type="button" class="ow-mi-tile" data-add="' + esc(i.name) + '" ' + (disabled ? 'disabled' : '') + '>' +
-          (i.qty <= 0 && !isCooMode ? '<span class="ow-mi-badge">Out</span>' : (i.qty <= 0 && isCooMode ? '<span class="ow-mi-badge" style="background:#f79009;color:#fff;">COO</span>' : '')) +
+          (i.qty <= 0 ? '<span class="ow-mi-badge">Out</span>' : '') +
           '<div class="ow-mi-cat">' + esc(i.category || '') + '</div>' +
           '<div class="ow-mi-name">' + esc(i.name) + '</div>' +
           '<div class="ow-mi-price">' + fmtN(i.price) + '</div>' +
@@ -1013,20 +1003,19 @@
 
     function addToCart(key) {
       const inv = stock.find(function (i) { return i.name === key; });
-      if (!inv) { showToast(key + ' not found.', 'error'); return; }
-      if (mode !== 'coo' && inv.qty <= 0) {
-        showToast(key + ' is out of stock — use Cook on Order.', 'error');
+      if (!inv || inv.qty <= 0) {
+        showToast(key + ' is out of stock.', 'error');
         return;
       }
       const existing = cart.find(function (c) { return c.key === key; });
       if (existing) {
-        if (mode !== 'coo' && existing.qty >= inv.qty) {
+        if (existing.qty >= inv.qty) {
           showToast('Only ' + inv.qty + ' ' + (inv.unit || '') + ' of ' + key + ' available.', 'error');
           return;
         }
         existing.qty++;
       } else {
-        cart.push({ key: key, qty: 1, price: inv.price, unit: inv.unit, id: inv.id || inv._id || '' });
+        cart.push({ key: key, qty: 1, price: inv.price, unit: inv.unit });
       }
       renderCart();
       renderPicker();
@@ -1092,22 +1081,6 @@
     }
 
     async function submitOrder() {
-      if (mode === 'coo') {
-        if (!cart.length) { showToast('Add items for Cook on Order.', 'error'); return; }
-        var tableCoo = ($('[data-role="fTable"]').value||'').trim() || '—';
-        var staffCoo = ($('[data-role="fStaff"]').value||'').trim() || resolveStaffName();
-        if (!staffCoo) { showToast('Staff name required.', 'error'); return; }
-        var notesCoo = ($('[data-role="fNotes"]').value||'').trim();
-        var payloadCoo = { table: tableCoo, covers: 1, items: cart.map(function(c){ return {name:c.key, qty:c.qty, price:c.price, id:c.id||''}; }), notes: notesCoo, staff: staffCoo };
-        try{
-          var resCoo = await fetch('/api/kitchen/coo-orders', {method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payloadCoo)});
-          var bodyCoo=null; try{ bodyCoo=await resCoo.json(); }catch(e){}
-          if(!resCoo.ok) throw new Error((bodyCoo&&bodyCoo.error)||'Failed to send to kitchen');
-          showToast('Cook on Order sent to kitchen — '+(bodyCoo&&bodyCoo.data&&bodyCoo.data.id||''), 'success');
-          clearCart(); $('[data-role="fTable"]').value=''; $('[data-role="fNotes"]').value=''; renderKPIs(); renderOrdersTable(); renderPicker();
-        }catch(err){ showToast(err.message||'Failed to send COO','error'); }
-        return;
-      }
       if (!cart.length) {
         showToast('Add at least one item.', 'error');
         return;
@@ -1800,5 +1773,4 @@
   }
 
   global.OrdersWorkspace = { attach: attach };
-})(window);/ /   r e d e p l o y   t r i g g e r   0 9 / 0 5 / 2 0 2 6   2 3 : 2 5 : 2 0  
- 
+})(window);

@@ -10,9 +10,10 @@
  * (+) and sale creation/void (-/+).
  */
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const restaurantStockSchema = new mongoose.Schema({
-  id:       { type: String, required: true, unique: true },
+  id:       { type: String, required: true, unique: true, default: () => uuidv4() },
   name:     { type: String, required: true, unique: true, trim: true },
   category: { type: String, default: 'Uncategorized', trim: true },
   unit:     { type: String, default: 'portion', trim: true },
