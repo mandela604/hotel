@@ -59,7 +59,18 @@ exports.acceptCoo = asyncHandler(async (req, res) => {
   const order = await KitchenCooOrder.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({success:false, error:'COO order not found'});
   if (order.status!=='pending') return res.status(400).json({success:false, error:'Only pending can be accepted'});
-  // deduct KitchenStock via Recipe (before marking accepted, so failure keeps pending)
+  // check KitchenStock via Recipe — block if insufficient (no Store lookup)
+  for (const meal of order.items) {
+    const recipe = await Recipe.findOne({ dish: meal.name });
+    if (!recipe || !recipe.ingredients || !recipe.ingredients.length) continue;
+    for (const ing of recipe.ingredients) {
+      const stock = await KitchenStock.findOne({ name: new RegExp('^'+ing.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$', 'i') });
+      if (!stock) throw new Error(`Ingredient "${ing.name}" not in Kitchen Stock — requisition from Store first`);
+      const need = (Number(ing.qty)||0) / (Number(recipe.baseQty)||1) * Number(meal.qty||0);
+      if ((Number(stock.qty)||0) < need) throw new Error(`Insufficient "${ing.name}" — need ${need} ${ing.unit||''}, have ${stock.qty} ${stock.unit||''}`);
+    }
+  }
+  // deduct after all checks pass
   for (const meal of order.items) {
     const recipe = await Recipe.findOne({ dish: meal.name });
     if (!recipe || !recipe.ingredients || !recipe.ingredients.length) continue;
