@@ -1041,7 +1041,7 @@
     function addCooItem(name, source){
       var item=cooMenuItems.find(function(i){return i.name===name;});
       if(!item) return;
-      if(source==='restaurant'){
+      if(!item.recipeId && source==='restaurant'){
         var inv=stock.find(function(i){return i.name===name;});
         if(!inv||inv.qty<=0){showToast(name+' is out of stock.','error');return;}
         var ex=cooCart.find(function(c){return c.name===name;});
@@ -1061,7 +1061,7 @@
       var next=c.qty+delta;
       if(next<1) cooCart.splice(idx,1);
       else{
-        if(c.unit&&c.unit!=='portion'){
+        if(!c.recipeId && c.unit&&c.unit!=='portion'){
           var inv=stock.find(function(i){return i.name===c.name;});
           var max=inv?inv.qty:999;
           if(next>max){showToast('Only '+max+' available.','error');return;}
