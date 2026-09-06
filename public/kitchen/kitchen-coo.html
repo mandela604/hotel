@@ -26,6 +26,12 @@ th{padding:9px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
 .chip{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700}
 .chip-pending{background:#fff4e5;color:#f79009} .chip-accepted{background:#e9f9f0;color:#12b76a} .chip-rejected{background:#feecec;color:#f04438}
+.modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,20,40,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
+.modal-overlay.show{ display:flex; }
+.modal{ background:#fff; border:1px solid #eef0f6; border-radius:14px; padding:20px; width:min(520px,96vw); box-shadow:0 20px 40px rgba(15,34,55,0.25); }
+.modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.modal-title{ font-weight:800; font-size:16px; }
+.modal-close{ background:none; border:none; font-size:16px; cursor:pointer; }
 .btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:11px;font-weight:700}
 .btn:hover{border-color:var(--gold-border);color:var(--gold)}
 .btn-primary{background:var(--gold);color:#fff;border-color:var(--gold)}
@@ -49,6 +55,7 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle
   <div class="panel-head"><div class="panel-title">Cook on Order</div><span id="count" style="font-size:11px;color:#9aa1b3"></span></div>
   <div class="tbl-wrap"><table><thead><tr><th>Table</th><th>Items</th><th>Staff</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#9aa1b3">Loading...</td></tr></tbody></table></div>
 </div>
+<div class="modal-overlay" id="cooDetailModal" onclick="if(event.target===this) closeDetail()"><div class="modal"><div class="modal-head"><div class="modal-title" id="detailTitle">Order Detail</div><button class="modal-close" onclick="closeDetail()"><i class="fa-solid fa-xmark"></i></button></div><div id="detailBody" style="font-size:13px;line-height:1.6;"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;"><button class="btn" onclick="closeDetail()">Close</button><button class="btn btn-primary" id="detailAcceptBtn" onclick="acceptFromDetail()">Accept & Produce</button><button class="btn" id="detailRejectBtn" style="background:#feecec;color:#f04438;border-color:rgba(240,68,56,.3)" onclick="rejectFromDetail()">Reject</button></div></div></div>
 </div></div></div>
 <script src="../component/kitchen-shell.js"></script>
 <script>
@@ -73,12 +80,17 @@ function render(){
   const tb=document.getElementById('tbody');
   if(!rows.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:#9aa1b3">No orders</td></tr>'; return; }
   tb.innerHTML=rows.map(function(o){
-    return '<tr><td><b>'+esc(o.table||'—')+'</b> <span style="color:#9aa1b3">'+(o.covers||1)+' covers</span></td><td>'+o.items.map(function(i){return i.qty+'x '+esc(i.name);}).join(', ')+'</td><td>'+esc(o.staff||'')+'</td><td><span class="chip chip-'+o.status+'">'+o.status+'</span></td><td>'+new Date(o.createdAt).toLocaleString()+'</td><td>'+(o.status==='pending'?'<button class="btn btn-primary" onclick="doAccept(\''+o.id+'\')">Accept</button> <button class="btn" onclick="doReject(\''+o.id+'\')">Reject</button>':'—')+'</td></tr>';
+    return '<tr onclick="openDetail(\''+o.id+'\')" style="cursor:pointer"><td><b>'+esc(o.table||'—')+'</b> <span style="color:#9aa1b3">'+(o.covers||1)+' covers</span></td><td>'+o.items.map(function(i){return i.qty+'x '+esc(i.name);}).join(', ')+'</td><td>'+esc(o.staff||'')+'</td><td><span class="chip chip-'+o.status+'">'+o.status+'</span></td><td>'+new Date(o.createdAt).toLocaleString()+'</td><td onclick="event.stopPropagation()">'+(o.status==='pending'?'<button class="btn btn-primary" onclick="doAccept(\''+o.id+'\')">Accept</button> <button class="btn" onclick="doReject(\''+o.id+'\')">Reject</button>':'—')+'</td></tr>';
   }).join('');
   if(shell.setPendingBadge) shell.setPendingBadge(all.filter(function(o){return o.status==='pending';}).length);
 }
 async function doAccept(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/accept',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); load(); }catch(e){ alert(e.message); } }
 async function doReject(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/reject',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); load(); }catch(e){ alert(e.message); } }
+let detailId=null;
+function openDetail(id){ const o=all.find(function(x){return x.id===id;}); if(!o) return; detailId=id; document.getElementById('detailTitle').textContent=(o.table||'—')+' — '+o.items.map(function(i){return i.qty+'x '+i.name;}).join(', '); document.getElementById('detailBody').innerHTML='<div style="margin-bottom:6px;"><b>Table:</b> '+esc(o.table||'—')+' ('+(o.covers||1)+' covers)</div><div style="margin-bottom:6px;"><b>Items:</b> '+o.items.map(function(i){return i.qty+'x '+esc(i.name)+' <span style="color:#9aa1b3;font-size:11px;">('+esc(i.id||'manual')+')</span>';}).join(', ')+'</div><div style="margin-bottom:6px;"><b>Staff:</b> '+esc(o.staff||'')+'</div><div style="margin-bottom:6px;"><b>Status:</b> <span class="chip chip-'+o.status+'">'+o.status+'</span></div><div style="margin-bottom:6px;"><b>Notes:</b> '+(o.notes||'—')+'</div><div><b>Date:</b> '+new Date(o.createdAt).toLocaleString()+'</div>'; document.getElementById('detailAcceptBtn').style.display=o.status==='pending'?'':'none'; document.getElementById('detailRejectBtn').style.display=o.status==='pending'?'':'none'; document.getElementById('cooDetailModal').classList.add('show'); }
+function closeDetail(){ document.getElementById('cooDetailModal').classList.remove('show'); detailId=null; }
+function acceptFromDetail(){ if(detailId) doAccept(detailId); closeDetail(); }
+function rejectFromDetail(){ if(detailId) doReject(detailId); closeDetail(); }
 document.querySelectorAll('.pill').forEach(function(b){ b.addEventListener('click', function(){ document.querySelectorAll('.pill').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); filterStatus=b.dataset.s||''; load(); }); });
 document.getElementById('q').addEventListener('input', function(){ q=this.value.toLowerCase(); render(); });
 load();

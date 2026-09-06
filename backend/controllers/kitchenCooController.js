@@ -1,5 +1,8 @@
 const KitchenCooOrder = require('../models/KitchenCooOrder');
 const Production = require('../models/Production');
+const KitchenStock = require('../models/KitchenStock');
+const Recipe = require('../models/Recipe');
+const Sale = require('../models/Sale');
 const asyncHandler = require('../middleware/asyncHandler');
 const { v4: uuidv4 } = require('uuid');
 
@@ -58,7 +61,19 @@ exports.acceptCoo = asyncHandler(async (req, res) => {
   if (order.status!=='pending') return res.status(400).json({success:false, error:'Only pending can be accepted'});
   order.status='accepted';
   await order.save();
-  // create Production batch immediately (uuid)
+  // deduct KitchenStock via Recipe
+  for (const meal of order.items) {
+    const recipe = await Recipe.findOne({ dish: meal.name });
+    if (!recipe || !recipe.ingredients || !recipe.ingredients.length) continue;
+    for (const ing of recipe.ingredients) {
+      const stock = await KitchenStock.findOne({ name: new RegExp('^'+ing.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$', 'i') });
+      if (!stock) continue;
+      const need = (Number(ing.qty)||0) / (Number(recipe.baseQty)||1) * Number(meal.qty||0);
+      stock.qty = Math.max(0, (Number(stock.qty)||0) - need);
+      await stock.save();
+    }
+  }
+  // create Production batch immediately (uuid) — appears in kitchen-production-history
   const batchNo='BATCH-'+String(Date.now()).slice(-6);
   const prodId='PROD-'+uuidv4().slice(0,8);
   await Production.create({
@@ -72,6 +87,26 @@ exports.acceptCoo = asyncHandler(async (req, res) => {
     destination: 'Main Restaurant / POS',
     kitchen: 'Main Kitchen',
     sentBy: req.user?req.user.name:'',
+  });
+  // create Sale so it appears in restaurant sales/reports and can be voided/edited (id:uuid)
+  const saleId='RST-'+String(Date.now()).slice(-6)+'-'+String(Math.floor(Math.random()*1000)).padStart(3,'0');
+  await Sale.create({
+    id: saleId,
+    source: 'COO:'+order.id,
+    department: 'restaurant',
+    items: order.items.map(i=>({name:i.name, qty:i.qty, price:i.price})),
+    subtotal: order.total||0,
+    discount: 0,
+    total: order.total||0,
+    method: order.method||'Cash',
+    staff: order.staff||'',
+    table: order.table||'',
+    notes: order.notes||'',
+    date: new Date(),
+    status: 'completed',
+    roomNumber: order.roomNumber||null,
+    guestName: order.guestName||null,
+    guestPhone: order.guestPhone||null,
   });
   res.json({ success:true, data:order });
 });
