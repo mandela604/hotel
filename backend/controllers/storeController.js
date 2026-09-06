@@ -278,13 +278,8 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
     let stockItem = null;
     if (it.stockId) {
       stockItem = await StoreStock.findOne({ id: it.stockId });
-      console.log('[Store] lookup by stockId:', it.stockId, '→', stockItem ? 'FOUND: ' + stockItem.name : 'NOT FOUND');
     }
-    if (!stockItem && it.name) {
-      stockItem = await StoreStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
-      console.log('[Store] fallback by name:', it.name, '→', stockItem ? 'FOUND: ' + stockItem.id : 'NOT FOUND');
-    }
-    if (!stockItem) throw new ApiError(404, `Store item not found for "${it.name}" — add it to Store inventory first.`);
+    if (!stockItem) throw new ApiError(404, `Store item not found for "${it.name}" (stockId: ${it.stockId || 'empty'}) — pick from Store catalog.`);
     if (!stockItem && it.name) {
       stockItem = await StoreStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
     }
