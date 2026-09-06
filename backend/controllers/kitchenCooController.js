@@ -59,9 +59,7 @@ exports.acceptCoo = asyncHandler(async (req, res) => {
   const order = await KitchenCooOrder.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({success:false, error:'COO order not found'});
   if (order.status!=='pending') return res.status(400).json({success:false, error:'Only pending can be accepted'});
-  order.status='accepted';
-  await order.save();
-  // deduct KitchenStock via Recipe
+  // deduct KitchenStock via Recipe (before marking accepted, so failure keeps pending)
   for (const meal of order.items) {
     const recipe = await Recipe.findOne({ dish: meal.name });
     if (!recipe || !recipe.ingredients || !recipe.ingredients.length) continue;
@@ -76,17 +74,23 @@ exports.acceptCoo = asyncHandler(async (req, res) => {
   // create Production batch immediately (uuid) — appears in kitchen-production-history
   const batchNo='BATCH-'+String(Date.now()).slice(-6);
   const prodId='PROD-'+uuidv4().slice(0,8);
+  const dishName = order.items.map(i=>i.name).join(', ').slice(0,120) || 'COO Order';
   await Production.create({
     id: prodId,
     batchNo, no: prodId,
+    dish: dishName,
     meals: order.items.map(i=>({name:i.name, qty:i.qty, unit:'portion'})),
     ingredients: [],
     type:'coo', mode:'coo',
     status:'sent',
+    outputQty: order.items.reduce((s,i)=>s+Number(i.qty||0),0),
+    outputUnit: 'portions',
     linkedOrder: order.id,
     destination: 'Main Restaurant / POS',
     kitchen: 'Main Kitchen',
     sentBy: req.user?req.user.name:'',
+    staff: req.user?req.user.name:'',
+    by: req.user?req.user.name:'',
   });
   // create Sale so it appears in restaurant sales/reports and can be voided/edited (id:uuid)
   const saleId='RST-'+String(Date.now()).slice(-6)+'-'+String(Math.floor(Math.random()*1000)).padStart(3,'0');
@@ -108,6 +112,8 @@ exports.acceptCoo = asyncHandler(async (req, res) => {
     guestName: order.guestName||null,
     guestPhone: order.guestPhone||null,
   });
+  order.status='accepted';
+  await order.save();
   res.json({ success:true, data:order });
 });
 

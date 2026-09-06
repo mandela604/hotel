@@ -32,6 +32,8 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle
 .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .modal-title{ font-weight:800; font-size:16px; }
 .modal-close{ background:none; border:none; font-size:16px; cursor:pointer; }
+.toast{ position:fixed; bottom:20px; right:20px; background:#fff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:12.5px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,0.18); z-index:999; display:flex; align-items:center; gap:8px; }
+.toast.success{ border-left:3px solid #12b76a; } .toast.error{ border-left:3px solid #f04438; } .toast.info{ border-left:3px solid #2f6fed; }
 .btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:11px;font-weight:700}
 .btn:hover{border-color:var(--gold-border);color:var(--gold)}
 .btn-primary{background:var(--gold);color:#fff;border-color:var(--gold)}
@@ -62,6 +64,7 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle
 const shell=KitchenShell.attach({sidebarTarget:'#sidebarSlot',topbarTarget:'#topbarSlot',activeFile:'kitchen-coo.html',pageTitle:'Cook on Order',pageSubtitle:'Restaurant → Kitchen live orders'});
 let all=[], filterStatus='', q='';
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showToast(msg,type){ type=type||'success'; var t=document.createElement('div'); t.className='toast '+type; var icon=type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info'; t.innerHTML='<i class="fa-solid '+icon+'"></i> '+esc(msg); document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3000); }
 async function load(){
   try{
     const qs=filterStatus? '?status='+filterStatus : '';
@@ -84,8 +87,8 @@ function render(){
   }).join('');
   if(shell.setPendingBadge) shell.setPendingBadge(all.filter(function(o){return o.status==='pending';}).length);
 }
-async function doAccept(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/accept',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); load(); }catch(e){ alert(e.message); } }
-async function doReject(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/reject',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); load(); }catch(e){ alert(e.message); } }
+async function doAccept(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/accept',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); showToast('Accepted — production created','success'); load(); }catch(e){ showToast(e.message,'error'); } }
+async function doReject(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/reject',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); showToast('Rejected','info'); load(); }catch(e){ showToast(e.message,'error'); } }
 let detailId=null;
 function openDetail(id){ const o=all.find(function(x){return x.id===id;}); if(!o) return; detailId=id; document.getElementById('detailTitle').textContent=(o.table||'—')+' — '+o.items.map(function(i){return i.qty+'x '+i.name;}).join(', '); document.getElementById('detailBody').innerHTML='<div style="margin-bottom:6px;"><b>Table:</b> '+esc(o.table||'—')+' ('+(o.covers||1)+' covers)</div><div style="margin-bottom:6px;"><b>Items:</b> '+o.items.map(function(i){return i.qty+'x '+esc(i.name)+' <span style="color:#9aa1b3;font-size:11px;">('+esc(i.id||'manual')+')</span>';}).join(', ')+'</div><div style="margin-bottom:6px;"><b>Staff:</b> '+esc(o.staff||'')+'</div><div style="margin-bottom:6px;"><b>Status:</b> <span class="chip chip-'+o.status+'">'+o.status+'</span></div><div style="margin-bottom:6px;"><b>Notes:</b> '+(o.notes||'—')+'</div><div><b>Date:</b> '+new Date(o.createdAt).toLocaleString()+'</div>'; document.getElementById('detailAcceptBtn').style.display=o.status==='pending'?'':'none'; document.getElementById('detailRejectBtn').style.display=o.status==='pending'?'':'none'; document.getElementById('cooDetailModal').classList.add('show'); }
 function closeDetail(){ document.getElementById('cooDetailModal').classList.remove('show'); detailId=null; }
