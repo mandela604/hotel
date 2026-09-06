@@ -182,9 +182,12 @@ exports.recordProduction = asyncHandler(async (req, res) => {
       const q = Number(ing.qty) || 0;
       if (!ing.name || q <= 0) continue;
 
-      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
+      if (!ing.stockId) {
+        return res.status(400).json({ success: false, error: `Missing stockId for "${ing.name}" — pick from Kitchen inventory.` });
+      }
+      const stockItem = await KitchenStock.findOne({ id: ing.stockId });
       if (!stockItem) {
-        return res.status(404).json({ success: false, error: `Ingredient "${ing.name}" not found in stock` });
+        return res.status(404).json({ success: false, error: `Ingredient "${ing.name}" (stockId: ${ing.stockId}) not found in KitchenStock.` });
       }
       if (stockItem.qty < q) {
         return res.status(400).json({ success: false, error: `Not enough ${stockItem.name}. Have ${stockItem.qty}, need ${q}` });
@@ -198,7 +201,7 @@ exports.recordProduction = asyncHandler(async (req, res) => {
       const q = Number(ing.qty) || 0;
       if (!ing.name || q <= 0) continue;
 
-      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
+      const stockItem = await KitchenStock.findOne({ id: ing.stockId });
 
       const unitCost = stockItem.price || stockItem.cost || 0;
       stockItem.qty = Math.max(0, stockItem.qty - q);
@@ -319,7 +322,9 @@ exports.voidProduction = asyncHandler(async (req, res) => {
 
   if (Array.isArray(run.ingredients)) {
     for (const ing of run.ingredients) {
-      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
+      const stockItem = ing.stockId
+        ? await KitchenStock.findOne({ id: ing.stockId })
+        : await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
       if (stockItem) {
         stockItem.qty += Number(ing.qty);
         await stockItem.save();

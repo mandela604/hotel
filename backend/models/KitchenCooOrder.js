@@ -6,6 +6,11 @@ const cooItemSchema = new mongoose.Schema({
   qty: { type: Number, required: true, min: 1 },
   price: { type: Number, default: 0 },
 }, { _id: false });
+const extraIngSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  qty: { type: Number, required: true, min: 0.01 },
+  unit: { type: String, default: 'kg' },
+}, { _id: false });
 
 const cooSchema = new mongoose.Schema({
   id: { type: String, default: uuidv4, unique: true, index: true },
@@ -20,6 +25,7 @@ const cooSchema = new mongoose.Schema({
   guestId: { type: String, default: '' },
   guestPhone: { type: String, default: '' },
   total: { type: Number, default: 0 },
+  extraIngredients: { type: [extraIngSchema], default: [] },
   status: { type: String, enum: ['pending','accepted','rejected','completed'], default: 'pending' },
   createdBy: { type: String, default: '' },
 }, { timestamps: true });

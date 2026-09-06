@@ -679,7 +679,10 @@ const COMMON_UNITS = [
       const status = isDraft ? 'draft' : (state.mode === 'rts' ? 'sent' : 'completed');
 
       const mealsSnap = state.meals.map(m => ({ name: m.name, qty: m.qty, unit: m.unit }));
-      const ingSnap = state.ingredients.map(i => ({ name: i.name, qty: i.qty, unit: i.unit }));
+      const ingSnap = state.ingredients.map(i => {
+        const stockItem = stockList().find(s => s.name.toLowerCase() === i.name.toLowerCase());
+        return { name: i.name, qty: i.qty, unit: i.unit, stockId: stockItem ? (stockItem.id || stockItem.storeId || '') : '' };
+      });
 
       if (!isDraft) {
         const parts = [];

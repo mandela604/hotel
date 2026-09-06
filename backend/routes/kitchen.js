@@ -56,6 +56,8 @@ router.get('/coo-orders', cooCtrl.listCoo);
 router.post('/coo-orders', departmentGuard('Restaurant'), privilegeGuard('restaurant','canCreate'), cooCtrl.createCoo);
 router.post('/coo-orders/:id/accept', inDept, privilegeGuard('kitchen','canEdit'), cooCtrl.acceptCoo);
 router.post('/coo-orders/:id/reject', inDept, cooCtrl.rejectCoo);
+router.post('/coo-orders/:id/extra-ingredient', inDept, cooCtrl.addExtraIngredient);
+router.delete('/coo-orders/:id/extra-ingredient/:idx', inDept, cooCtrl.removeExtraIngredient);
 
 /* ── Movements ──────────────────────────────── */
 router.get('/movements', ctrl.listMovements);

@@ -535,7 +535,8 @@ document.getElementById('startAllBtn').addEventListener('click', async function 
         expectedYield:     row.scale ? row.scale.expectedYield : 0,
         expectedYieldUnit: row.scale ? row.scale.expectedYieldUnit : 'portions',
         ingredients:       row.scale ? row.scale.ingredients.map(function (ing) {
-                             return { name: ing.name, qty: ing.qty };
+                             var stockItem = KitchenService.findStock(ing.name);
+                             return { name: ing.name, qty: ing.qty, stockId: stockItem ? stockItem.id : '' };
                            }) : [],
         staff:             getStaffName(),
         notes:             row.notes,
