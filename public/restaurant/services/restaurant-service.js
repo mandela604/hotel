@@ -370,6 +370,17 @@ function dashboardKPIs() {
     emitChange('stock:delete');
   }
 
+  async function listKitchenRecipes() {
+    const res = await get('/recipes');
+    return res.data || [];
+  }
+  async function addRecipeToStock(payload) {
+    const res = await post('/stock/from-recipe', payload);
+    state.stock.push(res.data);
+    emitChange('stock:add');
+    return res.data;
+  }
+
   // ── Menu ──────────────────────────────────────
   async function listMenu() {
     const res = await get('/menu');
@@ -554,7 +565,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     stockLevel, LEVEL_CHIP, LEVEL_LABEL, getLevelLabelsShort,
     getEmptyValuePlaceholder, getCurrencyConfig, getCategories,
     addCategory, renameCategory, deleteCategory,
-    findStock, addStockItem, editStockItem, deleteStockItem,
+    findStock, addStockItem, editStockItem, deleteStockItem, listKitchenRecipes, addRecipeToStock,
     listMenu, addMenuItem, updateMenuItem, patchMenuItem, deleteMenuItem,
     recordSale, voidSale,
     openTab, markServed, payOrder, cancelOrder,

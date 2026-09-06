@@ -221,10 +221,11 @@
     <div class="form-row">
       <div class="form-group span2" style="position:relative;">
         <label class="form-label">Item Name</label>
-        <input class="form-input" type="text" id="fName" placeholder="Type 1+ chars to search Store catalog…" autocomplete="off" oninput="onStoreSearch()" onfocus="onStoreSearch()">
+        <input class="form-input" type="text" id="fName" placeholder="Type to search Store catalog or Kitchen recipes…" autocomplete="off" oninput="onItemSearch()" onfocus="onItemSearch()">
         <div class="store-suggest" id="storeSuggest"></div>
         <input type="hidden" id="fStoreId">
-        <div class="form-hint">Type to match Store catalog — id comes from Store DB.</div>
+        <input type="hidden" id="fRecipeId">
+        <div class="form-hint" id="itemLinkHint">Type 1+ chars — matches both Store items and Kitchen recipes.</div>
       </div>
       <div class="form-group">
        <label class="form-label">Category</label>
@@ -596,6 +597,7 @@ function openItemModal(name) {
     document.getElementById('fName').value = i.name;
     document.getElementById('fName').disabled = true;
     document.getElementById('fStoreId').value = i.storeId || '';
+    document.getElementById('fRecipeId').value = i.recipeId || '';
     restStorePick = i.name;
     fillCatModalSelect(i.category || 'Uncategorized');
     document.getElementById('fUnit').value = i.unit || 'portion';
@@ -606,6 +608,8 @@ function openItemModal(name) {
     document.getElementById('fName').value = '';
     document.getElementById('fName').disabled = false;
     document.getElementById('fStoreId').value = '';
+    document.getElementById('fRecipeId').value = '';
+    recipePick = null;
     restStorePick = null;
     var _b=document.getElementById('storeSuggest'); if(_b) _b.classList.remove('show');
     fillCatModalSelect('Mains');
@@ -618,49 +622,68 @@ function openItemModal(name) {
 }
 
 async function saveItem() {
-  var name = document.getElementById('fName').value.trim();
-  if (!name) { showToast('Please enter an item name.', 'error'); return; }
-  var sid = document.getElementById('fStoreId').value.trim();
-  if (!editName && !sid) { showToast('Please pick item from Store catalog — type 1+ chars and select.', 'error'); return; }
-
-  var category;
-  try {
-    category = resolveCategoryFromForm();
-  } catch (e) {
-    showToast(e.message, 'error');
+  if (editName) {
+    var name = editName;
+    var category;
+    try { category = resolveCategoryFromForm(); } catch (e) { showToast(e.message, 'error'); return; }
+    var payload = {
+      category: category,
+      unit: document.getElementById('fUnit').value,
+      min: parseFloat(document.getElementById('fMin').value) || 0,
+      price: parseFloat(document.getElementById('fPrice').value) || 0,
+      desc: document.getElementById('fDesc').value.trim(),
+    };
+    try {
+      await RestaurantService.editStockItem(editName, payload);
+      showToast('Item updated.', 'success');
+      closeModal('itemModal');
+      render();
+    } catch (err) { showToast(err.message || 'Could not save item.', 'error'); }
     return;
   }
 
-  var payload = {
-    category: category,
-    unit: document.getElementById('fUnit').value,
-    storeId: sid,
-    min: parseFloat(document.getElementById('fMin').value) || 0,
-    price: parseFloat(document.getElementById('fPrice').value) || 0,
-    desc: document.getElementById('fDesc').value.trim(),
-  };
+  var recipeId = document.getElementById('fRecipeId').value.trim();
+  var storeId = document.getElementById('fStoreId').value.trim();
 
-  try {
-    if (editName) {
-      await RestaurantService.editStockItem(editName, payload);
-      showToast('Item updated.', 'success');
-    } else {
+  if (recipeId) {
+    var category;
+    try { category = resolveCategoryFromForm(); } catch (e) { showToast(e.message, 'error'); return; }
+    try {
+      await RestaurantService.addRecipeToStock({
+        recipeId: recipeId,
+        price: parseFloat(document.getElementById('fPrice').value) || 0,
+        category: category,
+      });
+      showToast('Recipe linked to inventory.', 'success');
+      closeModal('itemModal');
+      render();
+    } catch (err) { showToast(err.message || 'Could not link recipe.', 'error'); }
+    return;
+  }
+
+  if (storeId) {
+    var name = document.getElementById('fName').value.trim();
+    if (!name) { showToast('Please enter an item name.', 'error'); return; }
+    var category;
+    try { category = resolveCategoryFromForm(); } catch (e) { showToast(e.message, 'error'); return; }
+    try {
       await RestaurantService.addStockItem({
         name: name,
-        category: payload.category,
-        unit: payload.unit,
-        storeId: payload.storeId,
-        min: payload.min,
-        price: payload.price,
-        desc: payload.desc,
+        category: category,
+        unit: document.getElementById('fUnit').value,
+        storeId: storeId,
+        min: parseFloat(document.getElementById('fMin').value) || 0,
+        price: parseFloat(document.getElementById('fPrice').value) || 0,
+        desc: document.getElementById('fDesc').value.trim(),
       });
       showToast('Item added to inventory.', 'success');
-    }
-    closeModal('itemModal');
-    render();
-  } catch (err) {
-    showToast(err.message || 'Could not save item.', 'error');
+      closeModal('itemModal');
+      render();
+    } catch (err) { showToast(err.message || 'Could not save item.', 'error'); }
+    return;
   }
+
+  showToast('Please pick from Store catalog or Kitchen recipe above.', 'error');
 }
 
 function openDeleteModal(name) {
@@ -825,7 +848,83 @@ function onStoreSearch(){
   if(restStorePick && v!==restStorePick){ document.getElementById('fStoreId').value=''; restStorePick=null; }
   renderStoreSuggest();
 }
-document.addEventListener('click', function(e){ if(!e.target.closest('#fName') && !e.target.closest('#storeSuggest')){ var b=document.getElementById('storeSuggest'); if(b) b.classList.remove('show'); } });
+document.addEventListener('click', function(e){
+  if(!e.target.closest('#fName') && !e.target.closest('#storeSuggest')){ var b=document.getElementById('storeSuggest'); if(b) b.classList.remove('show'); }
+});
+
+let recipePick = null;
+
+async function onItemSearch() {
+  var inp = document.getElementById('fName');
+  var box = document.getElementById('storeSuggest');
+  var q = (inp.value || '').trim().toLowerCase();
+  if (!q || q.length < 1) { box.classList.remove('show'); box.innerHTML = ''; return; }
+
+  var storeHits = [];
+  if (window.StoreService && StoreService.state && StoreService.state.stock) {
+    storeHits = StoreService.state.stock.filter(function(s){ return s.name.toLowerCase().includes(q); }).slice(0, 5);
+  }
+
+  var recipeHits = [];
+  try {
+    var recipes = await RestaurantService.listKitchenRecipes();
+    recipeHits = recipes.filter(function(r){ return (r.dish || r.name || '').toLowerCase().includes(q); }).slice(0, 5);
+  } catch (e) {}
+
+  if (!storeHits.length && !recipeHits.length) {
+    box.innerHTML = '<div class="store-suggest-empty">No matches found</div>';
+    box.classList.add('show');
+    return;
+  }
+
+  var html = '';
+  storeHits.forEach(function(s){
+    var sid = s.id || '';
+    html += '<div class="store-suggest-item" data-pick="store" data-name="' + escapeHtml(s.name) + '" data-unit="' + escapeHtml(s.unit||'') + '" data-sid="' + escapeHtml(sid) + '">' +
+      '<span>' + escapeHtml(s.name) + '</span>' +
+      '<span style="display:flex;align-items:center;gap:6px;">' +
+        '<span style="color:var(--text3);font-size:11px;">' + escapeHtml(s.unit||'') + '</span>' +
+        '<span style="background:var(--blue-bg);color:var(--blue);font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;">STORE</span>' +
+      '</span></div>';
+  });
+  recipeHits.forEach(function(r){
+    var rid = r.id || '';
+    var rname = r.dish || r.name || '';
+    var runit = r.expectedYieldUnit || 'portions';
+    html += '<div class="store-suggest-item" data-pick="recipe" data-name="' + escapeHtml(rname) + '" data-unit="' + escapeHtml(runit) + '" data-rid="' + escapeHtml(rid) + '">' +
+      '<span>' + escapeHtml(rname) + '</span>' +
+      '<span style="display:flex;align-items:center;gap:6px;">' +
+        '<span style="color:var(--text3);font-size:11px;">' + escapeHtml(runit) + '</span>' +
+        '<span style="background:var(--amber-bg);color:var(--amber);font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;">KITCHEN</span>' +
+      '</span></div>';
+  });
+
+  box.innerHTML = html;
+  box.classList.add('show');
+
+  box.querySelectorAll('[data-pick]').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.getElementById('fName').value = el.dataset.name;
+      var unitSel = document.getElementById('fUnit');
+      var opts = Array.from(unitSel.options).map(function(o){ return o.value; });
+      if (opts.includes(el.dataset.unit)) unitSel.value = el.dataset.unit;
+
+      if (el.dataset.pick === 'recipe') {
+        document.getElementById('fRecipeId').value = el.dataset.rid || '';
+        document.getElementById('fStoreId').value = '';
+        restStorePick = null;
+        recipePick = { id: el.dataset.rid, name: el.dataset.name };
+        document.getElementById('fDesc').value = 'Cook-on-Order — recipe linked';
+      } else {
+        document.getElementById('fStoreId').value = el.dataset.sid || '';
+        document.getElementById('fRecipeId').value = '';
+        recipePick = null;
+        restStorePick = el.dataset.name;
+      }
+      box.classList.remove('show');
+    });
+  });
+}
 
 function showToast(msg, type) {
   type = type || 'success';

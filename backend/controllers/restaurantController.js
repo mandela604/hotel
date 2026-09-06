@@ -98,12 +98,39 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.addStockItem = asyncHandler(async (req, res) => {
-  const { name, category, unit, min, price, desc, storeId } = req.body;
+  const { name, category, unit, min, price, desc, storeId, recipeId } = req.body;
 
   const sid = (storeId || '').trim();
-  if (!sid) {
-    return res.status(400).json({ success: false, error: 'Please select item from Store catalog — type 1+ chars and pick from dropdown. Free-typed items not allowed.' });
+  const rid = (recipeId || '').trim();
+  if (!sid && !rid) {
+    return res.status(400).json({ success: false, error: 'Please select an item from Store catalog or Kitchen recipes — free-typed items not allowed.' });
   }
+
+  if (rid) {
+    const Recipe = require('../models/Recipe');
+    const recipe = await Recipe.findOne({ id: rid }).catch(function(){ return null; });
+    if (!recipe) {
+      return res.status(400).json({ success: false, error: 'Selected Kitchen recipe not found — please re-pick from dropdown.' });
+    }
+    const existing = await RestaurantStock.findOne({ $or: [{ recipeId: rid }, { name: new RegExp(`^${name.trim()}$`, 'i') }] });
+    if (existing) {
+      return res.status(409).json({ success: false, error: `"${name}" is already tracked` });
+    }
+    const item = await RestaurantStock.create({
+      id: rid,
+      name: name.trim(),
+      category: category || 'Kitchen Recipes',
+      unit: unit || recipe.expectedYieldUnit || 'portion',
+      recipeId: rid,
+      qty: 0,
+      min: Number(min) || 0,
+      price: Number(price) || 0,
+      cost: recipe.gasCostPerUnit || 0,
+      desc: desc || 'Cook-on-Order — recipe linked',
+    });
+    return res.status(201).json({ success: true, data: item });
+  }
+
   const StoreStock = require('../models/StoreStock');
   const storeItem = await StoreStock.findOne({ id: sid }).catch(function(){ return null; });
   if (!storeItem) {

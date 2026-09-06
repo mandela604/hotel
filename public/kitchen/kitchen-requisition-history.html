@@ -230,6 +230,14 @@
               </div>
             </div>
             <div class="flt-group">
+              <span class="flt-label">Source</span>
+              <div class="status-pills" id="sourcePills">
+                <div class="status-pill on all" data-source="">All</div>
+                <div class="status-pill" data-source="Store"><span class="pdot" style="background:var(--amber)"></span>Store</div>
+                <div class="status-pill" data-source="COO"><span class="pdot" style="background:var(--red)"></span>COO</div>
+              </div>
+            </div>
+            <div class="flt-group">
               <span class="flt-label">Priority</span>
               <select class="filter-select" id="fPriority">
                 <option value="">All</option><option>Urgent</option><option>Normal</option>
@@ -277,29 +285,6 @@
         <div class="pagination">
           <span id="paginLabel">—</span>
           <div class="page-btns" id="pageBtns"></div>
-        </div>
-      </div>
-
-      <!-- COO SECTION -->
-      <div class="panel" id="cooPanel" style="border-left:3px solid var(--amber);">
-        <div class="panel-head">
-          <div class="panel-title" style="color:var(--amber);"><i class="fa-solid fa-fire"></i> Cook on Order — Incoming from Restaurant</div>
-          <span class="toolbar-count" id="cooCount">—</span>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Table</th>
-                <th>Items</th>
-                <th>Staff</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="cooTbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">Loading…</td></tr></tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -396,7 +381,30 @@ function canRaiseFromSession(s) {
 
 /* ── Row assembly ─────────────────────────────────────────────────── */
 function getAllRows() {
-  return KS.getDepartmentHistory(KITCHEN_DEPT_LABEL);
+  var reqRows = KS.getDepartmentHistory(KITCHEN_DEPT_LABEL).map(function(r) {
+    r._source = 'Store';
+    return r;
+  });
+  var cooRows = cooAll.map(function(o) {
+    return {
+      _source: 'COO',
+      _kind: 'coo',
+      no: o.id || o._id || '',
+      id: o.id,
+      by: o.staff || '—',
+      requester: o.staff || '—',
+      items: (o.items || []).map(function(i) { return { name: i.name, qty: i.qty, issuedQty: i.qty }; }),
+      dateDisplay: o.createdAt ? new Date(o.createdAt).toLocaleString() : '—',
+      dateRaisedDisplay: o.createdAt ? new Date(o.createdAt).toLocaleString() : '—',
+      dateRaised: o.createdAt || '',
+      date: o.createdAt || '',
+      neededBy: '',
+      priority: 'Normal',
+      status: o.status === 'pending' ? 'Pending' : o.status === 'accepted' ? 'Completed' : o.status === 'rejected' ? 'Rejected' : 'Pending',
+      _rawCoo: o,
+    };
+  });
+  return reqRows.concat(cooRows);
 }
 
 function displayStatus(r) {
@@ -423,18 +431,20 @@ function itemsSummary(r) {
 }
 
 /* ── Page state ───────────────────────────────────────────────────── */
-var page = 1, statusFilter = '', sortKey = 'date', sortDir = 'desc';
+var page = 1, statusFilter = '', sourceFilter = '', sortKey = 'date', sortDir = 'desc';
 var _filteredCache = [];
 var PAGE_SIZE = 20;
 
 function renderKPIs(rows) {
-  var k = KS.getHistoryKPIs(rows);
+  var k = KS.getHistoryKPIs(rows.filter(function(r){ return r._source === 'Store'; }));
+  var cooPending = cooAll.filter(function(o){ return o.status === 'pending'; }).length;
+  var cooTotal = cooAll.length;
 
   document.getElementById('kpiRow').innerHTML =
     '<div class="kpi-card acc-amber">' +
       '<div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending / In Progress</div></div>' +
-      '<div class="kpi-value" style="color:var(--amber);">' + k.pending + '</div>' +
-      '<div class="kpi-trend ' + (k.pending > 0 ? 'warn' : 'up') + '">' + (k.pending > 0 ? 'Awaiting Store' : 'None in progress') + '</div>' +
+      '<div class="kpi-value" style="color:var(--amber);">' + (k.pending + cooPending) + '</div>' +
+      '<div class="kpi-trend ' + ((k.pending + cooPending) > 0 ? 'warn' : 'up') + '">' + ((k.pending + cooPending) > 0 ? 'Awaiting action' : 'None in progress') + '</div>' +
     '</div>' +
     '<div class="kpi-card acc-green">' +
       '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></div><div class="kpi-label">Completed</div></div>' +
@@ -442,9 +452,9 @@ function renderKPIs(rows) {
       '<div class="kpi-trend up">' + k.totalUnits + ' units received</div>' +
     '</div>' +
     '<div class="kpi-card acc-blue">' +
-      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-file-lines"></i></div><div class="kpi-label">Total Requisitions</div></div>' +
-      '<div class="kpi-value" style="color:var(--blue);">' + rows.length + '</div>' +
-      '<div class="kpi-trend info">All time</div>' +
+      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-file-lines"></i></div><div class="kpi-label">Total Records</div></div>' +
+      '<div class="kpi-value" style="color:var(--blue);">' + (rows.length) + '</div>' +
+      '<div class="kpi-trend info">' + rows.filter(function(r){return r._source==='Store';}).length + ' Store · ' + cooTotal + ' COO</div>' +
     '</div>' +
     '<div class="kpi-card acc-red">' +
       '<div class="kpi-top"><div class="kpi-ic ic-red"><i class="fa-solid fa-ban"></i></div><div class="kpi-label">Rejected / Disputed</div></div>' +
@@ -470,8 +480,19 @@ function getFiltered() {
   var parts = document.getElementById('fSort').value.split('_');
   sortKey = parts[0]; sortDir = parts[1];
 
-  var filtered = KS.filterHistory(getAllRows(), {
-    search: q, status: statusFilter, priority: priority,
+  var allRows = getAllRows();
+  var filtered = allRows.filter(function(r) {
+    if (sourceFilter && r._source !== sourceFilter) return false;
+    if (statusFilter && r.status !== statusFilter) return false;
+    if (priority && r.priority !== priority) return false;
+    if (q) {
+      var ql = q.toLowerCase();
+      var matchNo = (r.no || '').toLowerCase().includes(ql);
+      var matchBy = (r.by || r.requester || '').toLowerCase().includes(ql);
+      var matchItems = (r.items || []).some(function(i) { return (i.name || '').toLowerCase().includes(ql); });
+      if (!matchNo && !matchBy && !matchItems) return false;
+    }
+    return true;
   });
   return KS.sortHistory(filtered, sortKey, sortDir);
 }
@@ -486,8 +507,11 @@ function clearFilters() {
   document.getElementById('fPriority').value = '';
   document.getElementById('fSort').value = 'date_desc';
   statusFilter = '';
+  sourceFilter = '';
   document.querySelectorAll('.status-pill').forEach(function (x) { x.classList.remove('on'); });
   document.querySelector('.status-pill.all').classList.add('on');
+  document.querySelectorAll('#sourcePills .status-pill').forEach(function (x) { x.classList.remove('on'); });
+  document.querySelector('#sourcePills .status-pill.all').classList.add('on');
   page = 1; render();
 }
 
@@ -520,17 +544,28 @@ function renderTable() {
   document.getElementById('tblBody').innerHTML = pageRows.length === 0
     ? '<tr class="empty-row"><td colspan="9">No history matches your filters.</td></tr>'
     : pageRows.map(function (r) {
-        var st = displayStatus(r), src = displaySource(r);
-        return '<tr data-no="' + escapeHtml(r.no) + '">' +
-          '<td style="font-weight:700;">' + escapeHtml(r.no) + '</td>' +
+        var isCoo = r._source === 'COO';
+        var src = isCoo
+          ? { label: 'COO', cls: 'chip-urgent' }
+          : displaySource(r);
+        var st = isCoo
+          ? { label: r.status, cls: 'chip-' + r.status.toLowerCase() }
+          : displayStatus(r);
+        var dateStr = isCoo ? (r.dateDisplay || '—') : rowDate(r);
+        var neededStr = isCoo ? '—' : rowNeeded(r);
+        var priStr = isCoo ? '—' : escapeHtml(r.priority || 'Normal');
+        var priCls = isCoo ? '' : 'chip-' + escapeHtml((r.priority || 'Normal').toLowerCase());
+        var rowId = isCoo ? (r.id || r.no) : r.no;
+        return '<tr data-no="' + escapeHtml(r.no) + '" data-source="' + escapeHtml(r._source) + '" data-id="' + escapeHtml(rowId) + '">' +
+          '<td style="font-weight:700;">' + (isCoo ? '<i class="fa-solid fa-fire" style="color:var(--amber);margin-right:4px;"></i>' : '') + escapeHtml(r.no || rowId) + '</td>' +
           '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></td>' +
           '<td>' + escapeHtml(rowByLine(r)) + '</td>' +
           '<td class="items-summary">' + itemsSummary(r) + '</td>' +
-          '<td>' + escapeHtml(rowDate(r)) + '</td>' +
-          '<td>' + escapeHtml(rowNeeded(r)) + '</td>' +
-          '<td><span class="chip chip-' + escapeHtml((r.priority || 'Normal').toLowerCase()) + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(r.priority || 'Normal') + '</span></td>' +
+          '<td>' + escapeHtml(dateStr) + '</td>' +
+          '<td>' + escapeHtml(neededStr) + '</td>' +
+          '<td>' + (isCoo ? '—' : '<span class="chip ' + priCls + '"><i class="fa-solid fa-circle"></i>' + priStr + '</span>') + '</td>' +
           '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
-          '<td class="no-print"><button class="act-btn" data-view="' + escapeHtml(r.no) + '"><i class="fa-solid fa-eye"></i> View</button></td>' +
+          '<td class="no-print"><button class="act-btn" data-view="' + escapeHtml(r.no) + '" data-id="' + escapeHtml(rowId) + '" data-source="' + escapeHtml(r._source) + '"><i class="fa-solid fa-eye"></i> View</button></td>' +
         '</tr>';
       }).join('');
   renderPagination(rows.length);
@@ -640,8 +675,17 @@ function showToast(msg, type) {
 
 /* ── Event wiring ──────────────────────────────────────────────────── */
 document.getElementById('tblBody').addEventListener('click', function (e) {
+  var btn = e.target.closest('button[data-view]');
+  if (btn) {
+    if (btn.dataset.source === 'COO') { openCooDetail(btn.dataset.id); return; }
+    openDetail(btn.dataset.view);
+    return;
+  }
   var tr = e.target.closest('tr[data-no]');
-  if (tr) openDetail(tr.dataset.no);
+  if (tr) {
+    if (tr.dataset.source === 'COO') { openCooDetail(tr.dataset.id); return; }
+    openDetail(tr.dataset.no);
+  }
 });
 ['fSearch'].forEach(function (id) { document.getElementById(id).addEventListener('input', function () { page = 1; render(); }); });
 ['fPriority', 'fSort'].forEach(function (id) { document.getElementById(id).addEventListener('change', function () { page = 1; render(); }); });
@@ -666,38 +710,14 @@ async function loadCooOrders() {
     const r = await fetch('/api/kitchen/coo-orders', { credentials: 'include' });
     const j = await r.json();
     cooAll = (j.data || j || []);
-    renderCooTable();
+    render();
   } catch (e) {
-    document.getElementById('cooTbody').innerHTML =
-      '<tr><td colspan="6" style="text-align:center;color:var(--red);">Failed to load COO orders</td></tr>';
+    cooAll = [];
+    render();
   }
 }
 
-function renderCooTable() {
-  const tb = document.getElementById('cooTbody');
-  const ct = document.getElementById('cooCount');
-  const pending = cooAll.filter(function (o) { return o.status === 'pending'; });
-  ct.textContent = pending.length + ' pending';
-  if (!cooAll.length) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);">No Cook on Order requests yet.</td></tr>';
-    return;
-  }
-  tb.innerHTML = cooAll.map(function (o) {
-    return '<tr style="cursor:pointer;" onclick="openCooDetail(\'' + o.id + '\')">' +
-      '<td><b>' + escapeHtml(o.table || '—') + '</b> <span style="color:var(--text3);">' + (o.covers || 1) + ' covers</span></td>' +
-      '<td>' + (o.items || []).map(function (i) { return i.qty + 'x ' + escapeHtml(i.name); }).join(', ') + '</td>' +
-      '<td>' + escapeHtml(o.staff || '') + '</td>' +
-      '<td><span class="chip chip-' + o.status + '">' + o.status + '</span></td>' +
-      '<td>' + new Date(o.createdAt).toLocaleString() + '</td>' +
-      '<td onclick="event.stopPropagation()">' +
-        (o.status === 'pending'
-          ? '<button class="act-btn" onclick="cooAccept(\'' + o.id + '\')"><i class="fa-solid fa-check"></i> Accept</button> ' +
-            '<button class="act-btn" onclick="cooReject(\'' + o.id + '\')"><i class="fa-solid fa-ban"></i> Reject</button>'
-          : '—') +
-      '</td></tr>';
-  }).join('');
-}
-
+/* ── Cook on Order detail / actions ──────────────────────────────── */
 async function cooAccept(id) {
   try {
     const r = await fetch('/api/kitchen/coo-orders/' + encodeURIComponent(id) + '/accept', {
@@ -753,14 +773,22 @@ async function init() {
 
   bindStatusPills();
 
+  document.querySelectorAll('#sourcePills .status-pill').forEach(function (p) {
+    p.addEventListener('click', function () {
+      sourceFilter = p.dataset.source;
+      document.querySelectorAll('#sourcePills .status-pill').forEach(function (x) { x.classList.remove('on'); });
+      p.classList.add('on');
+      page = 1; render();
+    });
+  });
+
   await KS.loadAll();
   if (SS) await SS.loadAll();
 
   KS.onChange(function () { render(); });
   if (SS) SS.onChange(function () { render(); });
 
-  render();
-  loadCooOrders();
+  await loadCooOrders();
   setInterval(loadCooOrders, 10000);
 }
 init();

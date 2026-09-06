@@ -989,18 +989,22 @@
     }
 
     async function fetchCooMenuItems(){
-      if(cooMenuItems.length) return cooMenuItems;
-      try{
-        var r=await fetch('/api/restaurant/recipes',{credentials:'include'});
-        var j=await r.json();
-        cooMenuItems=(j.data||[]).map(function(recipe){
-          return {name:recipe.dish, id:recipe.id, unit:recipe.expectedYieldUnit||'portions', price:0, source:'kitchen', recipeId:recipe.id, category:recipe.category||'Recipes', desc:recipe.notes||''};
-        });
-      }catch(e){ cooMenuItems=[]; }
-      var rest=(stock||[]).map(function(s){
-        return {name:s.name, id:s.id||s._id||'', unit:s.unit||'portion', price:s.price||0, source:'restaurant', recipeId:s.recipeId||'', category:s.category||'Stock'};
+      // Single Source of Truth: Cook on Order grid reads exclusively from RestaurantStock items that have recipeId set
+      cooMenuItems = (stock || []).filter(function(s) {
+        return s && String(s.recipeId || '').trim() !== '';
+      }).map(function(s) {
+        return {
+          name: s.name,
+          id: s.id || s._id || '',
+          unit: s.unit || 'portion',
+          price: s.price || 0,
+          source: 'kitchen',
+          recipeId: s.recipeId,
+          category: s.category || 'Kitchen Recipes',
+          desc: s.desc || '',
+          qty: s.qty || 0
+        };
       });
-      cooMenuItems=[].concat(cooMenuItems,rest);
       return cooMenuItems;
     }
 
