@@ -239,8 +239,11 @@ function makeBatchRow() {
 /* ── Compute scale for a row from current KitchenService state ── */
 function computeScale(row) {
   if (!row.recipeId) { row.scale = null; return; }
+  console.log('[COO] computeScale looking for recipeId:', row.recipeId);
+  console.log('[COO] Available recipes:', KitchenService.state.recipes.map(function(r){ return r.id + ' - ' + r.dish; }));
   var recipe = KitchenService.findRecipeById(row.recipeId);
-  if (!recipe) { row.scale = null; return; }
+  if (!recipe) { console.warn('[COO] Recipe NOT FOUND for id:', row.recipeId); row.scale = null; return; }
+  console.log('[COO] Recipe found:', recipe.dish, recipe.id);
   var qty = parseFloat(row.batchQty) || 0;
   row.scale = qty > 0 ? KitchenService.scaleRecipe(recipe, qty) : null;
 }
@@ -638,6 +641,10 @@ async function loadCooIntoProduction(cooId) {
     var json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load COO order');
     var order = json.data;
+
+    console.log('[COO] COO order loaded:', order.id, 'Table:', order.table);
+    console.log('[COO] COO items:', JSON.stringify(items.map(function(i){ return {name:i.name, qty:i.qty, recipeId:i.recipeId}; })));
+    console.log('[COO] Kitchen recipes loaded:', KitchenService.state.recipes.length);
 
     batchRows = [];
     var missingRecipes = [];

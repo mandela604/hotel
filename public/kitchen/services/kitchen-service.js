@@ -226,7 +226,9 @@
     return state.recipes.find(r => r.dish.toLowerCase().trim() === clean);
   }
   function findRecipeById(id) {
-    return state.recipes.find(r => r.id === id);
+    var found = state.recipes.find(r => r.id === id);
+    console.log('[KitchenService] findRecipeById:', id, '→', found ? found.dish : 'NOT FOUND (have ' + state.recipes.length + ' recipes)');
+    return found;
   }
 
   async function addRecipe(raw) {
