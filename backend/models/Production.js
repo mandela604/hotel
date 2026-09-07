@@ -5,6 +5,7 @@ const productionSchema = new mongoose.Schema({
   no:                { type: String, required: true, unique: true },
   productionNo:      { type: String },
   batchNo:           { type: String, default: '' },
+  cooId:             { type: String, default: '' },
   dish:              { type: String, required: true },
   recipeId:          { type: String, default: '' },
   type:              { type: String, enum: ['rts', 'coo'], default: 'rts' },

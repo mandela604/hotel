@@ -540,6 +540,7 @@ document.getElementById('startAllBtn').addEventListener('click', async function 
                            }) : [],
         staff:             getStaffName(),
         notes:             row.notes,
+        cooId:             row._cooId || '',
       });
       succeeded++;
     } catch (err) {
@@ -617,15 +618,56 @@ function renderKPIs() {
   renderStaffPill();
   renderKPIs();
 
-  // Start with one blank dish row
-  batchRows = [makeBatchRow()];
-  renderBatchList();
+  var params = new URLSearchParams(window.location.search);
+  var cooId = params.get('cooId');
+  if (cooId) {
+    await loadCooIntoProduction(cooId);
+  } else {
+    batchRows = [makeBatchRow()];
+    renderBatchList();
+  }
 
-  // Keep KPIs live as state changes
   KitchenService.onChange(function () {
     renderKPIs();
   });
 })();
+
+async function loadCooIntoProduction(cooId) {
+  try {
+    var res = await fetch('/api/kitchen/coo-orders/' + encodeURIComponent(cooId), { credentials: 'include' });
+    var json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load COO order');
+    var order = json.data;
+
+    batchRows = [];
+    var items = order.items || [];
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var row = makeBatchRow();
+      row.productionType = 'cook_on_order';
+      row._cooId = cooId;
+      row._cooTable = order.table || '';
+      if (item.recipeId) {
+        row.recipeId = item.recipeId;
+        row.batchQty = item.qty || '';
+        computeScale(row);
+      }
+      batchRows.push(row);
+    }
+    if (!batchRows.length) batchRows = [makeBatchRow()];
+
+    renderBatchList();
+
+    var subtitle = document.querySelector('.panel-sub');
+    if (subtitle) {
+      subtitle.innerHTML = '<i class="fa-solid fa-fire" style="color:var(--amber);"></i> COO Order for <b>' + esc(order.table || '—') + '</b> — ' + items.length + ' item(s). Review and click Start.';
+    }
+  } catch (e) {
+    showToast('Failed to load COO order: ' + e.message, 'error');
+    batchRows = [makeBatchRow()];
+    renderBatchList();
+  }
+}
 </script>
 </body>
 </html>

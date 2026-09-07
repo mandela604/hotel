@@ -1,8 +1,4 @@
 const KitchenCooOrder = require('../models/KitchenCooOrder');
-const Production = require('../models/Production');
-const KitchenStock = require('../models/KitchenStock');
-const Recipe = require('../models/Recipe');
-const Sale = require('../models/Sale');
 const asyncHandler = require('../middleware/asyncHandler');
 const { v4: uuidv4 } = require('uuid');
 
@@ -14,6 +10,12 @@ exports.listCoo = asyncHandler(async (req, res) => {
   res.json({ success: true, data: list });
 });
 
+exports.getCooOrder = asyncHandler(async (req, res) => {
+  const order = await KitchenCooOrder.findOne({ id: req.params.id });
+  if (!order) return res.status(404).json({ success: false, error: 'COO order not found' });
+  res.json({ success: true, data: order });
+});
+
 exports.createCoo = asyncHandler(async (req, res) => {
   const { table, covers, items, notes, staff, method, roomNumber, guestName, guestId, guestPhone } = req.body;
   if (!items || !items.length) throw new Error('Add at least one item');
@@ -21,7 +23,7 @@ exports.createCoo = asyncHandler(async (req, res) => {
   const doc = await KitchenCooOrder.create({
     table: table || '',
     covers: Number(covers)||1,
-    items: items.map(i=>({name:i.name.trim(), qty:Number(i.qty), price:Number(i.price)||0})),
+    items: items.map(i=>({name:i.name.trim(), qty:Number(i.qty), price:Number(i.price)||0, recipeId: i.recipeId||''})),
     notes: notes||'',
     staff: staff|| (req.user?req.user.name:''),
     method: method||'Cash',
@@ -33,7 +35,6 @@ exports.createCoo = asyncHandler(async (req, res) => {
     createdBy: req.user?req.user.name:'',
     status: 'pending',
   });
-  // Room Charge -> also folio + booking like poolbar
   if ((method==='Room Charge' || doc.method==='Room Charge') && roomNumber) {
     const Guest = require('../models/Guest');
     const Booking = require('../models/Booking');
@@ -59,7 +60,6 @@ exports.acceptCoo = asyncHandler(async (req, res) => {
   const order = await KitchenCooOrder.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({success:false, error:'COO order not found'});
   if (order.status!=='pending') return res.status(400).json({success:false, error:'Only pending can be accepted'});
-  // Mark accepted — will open Production form where ingredients are added/deducted
   order.status='accepted';
   await order.save();
   res.json({ success:true, data:order });

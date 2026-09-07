@@ -89,6 +89,7 @@
   .status-pill.on.Pending{ background:var(--amber-bg); border-color:rgba(247,144,9,.35); color:var(--amber); }
   .status-pill.on.Partial{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
   .status-pill.on.Full{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
+  .status-pill.on.Accepted{ background:var(--blue-bg); border-color:rgba(47,111,237,.35); color:var(--blue); }
   .status-pill.on.Completed{ background:var(--green-bg); border-color:rgba(18,183,106,.35); color:var(--green); }
   .status-pill.on.Disputed{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
   .status-pill.on.Rejected{ background:var(--red-bg); border-color:rgba(240,68,56,.35); color:var(--red); }
@@ -131,7 +132,7 @@
   .chip-rejected, .chip-disputed{ background:var(--red-bg); color:var(--red); }
   .chip-partial{ background:var(--blue-bg); color:var(--blue); }
   .chip-pending{ background:var(--amber-bg); color:var(--amber); }
-  .chip-accepted{ background:var(--green-bg); color:var(--green); }
+  .chip-accepted{ background:var(--blue-bg); color:var(--blue); }
   .chip-rejected{ background:var(--red-bg); color:var(--red); }
   .chip-urgent{ background:var(--red-bg); color:var(--red); }
   .chip-normal{ background:var(--blue-bg); color:var(--blue); }
@@ -218,6 +219,7 @@
                 <div class="status-pill" data-status="Partial"><span class="pdot" style="background:var(--blue)"></span>Partial</div>
                 <div class="status-pill" data-status="Full"><span class="pdot" style="background:var(--green)"></span>Issued</div>
                 <div class="status-pill" data-status="Completed"><span class="pdot" style="background:var(--green)"></span>Completed</div>
+                <div class="status-pill" data-status="Accepted"><span class="pdot" style="background:var(--blue)"></span>In Production</div>
                 <div class="status-pill" data-status="Disputed"><span class="pdot" style="background:var(--red)"></span>Disputed</div>
                 <div class="status-pill" data-status="Rejected"><span class="pdot" style="background:var(--red)"></span>Rejected</div>
               </div>
@@ -400,7 +402,8 @@ function getAllRows() {
       date: o.createdAt || '',
       neededBy: '',
       priority: 'Normal',
-      status: o.status === 'pending' ? 'Pending' : o.status === 'accepted' ? 'Completed' : o.status === 'rejected' ? 'Rejected' : 'Pending',
+      status: o.status === 'pending' ? 'Pending' : o.status === 'accepted' ? 'Accepted' : o.status === 'completed' ? 'Completed' : o.status === 'rejected' ? 'Rejected' : o.status,
+      statusCls: o.status === 'pending' ? 'chip-pending' : o.status === 'accepted' ? 'chip-accepted' : o.status === 'completed' ? 'chip-completed' : o.status === 'rejected' ? 'chip-rejected' : 'chip-pending',
       _rawCoo: o,
     };
   });
@@ -438,13 +441,14 @@ var PAGE_SIZE = 20;
 function renderKPIs(rows) {
   var k = KS.getHistoryKPIs(rows.filter(function(r){ return r._source === 'Store'; }));
   var cooPending = cooAll.filter(function(o){ return o.status === 'pending'; }).length;
+  var cooAccepted = cooAll.filter(function(o){ return o.status === 'accepted'; }).length;
   var cooTotal = cooAll.length;
 
   document.getElementById('kpiRow').innerHTML =
     '<div class="kpi-card acc-amber">' +
       '<div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending / In Progress</div></div>' +
-      '<div class="kpi-value" style="color:var(--amber);">' + (k.pending + cooPending) + '</div>' +
-      '<div class="kpi-trend ' + ((k.pending + cooPending) > 0 ? 'warn' : 'up') + '">' + ((k.pending + cooPending) > 0 ? 'Awaiting action' : 'None in progress') + '</div>' +
+      '<div class="kpi-value" style="color:var(--amber);">' + (k.pending + cooPending + cooAccepted) + '</div>' +
+      '<div class="kpi-trend ' + ((k.pending + cooPending + cooAccepted) > 0 ? 'warn' : 'up') + '">' + ((k.pending + cooPending + cooAccepted) > 0 ? (cooAccepted > 0 ? cooAccepted + ' in production' : 'Awaiting action') : 'None in progress') + '</div>' +
     '</div>' +
     '<div class="kpi-card acc-green">' +
       '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-clipboard-check"></i></div><div class="kpi-label">Completed</div></div>' +
@@ -549,7 +553,7 @@ function renderTable() {
           ? { label: 'COO', cls: 'chip-urgent' }
           : displaySource(r);
         var st = isCoo
-          ? { label: r.status, cls: 'chip-' + r.status.toLowerCase() }
+          ? { label: r.status, cls: r.statusCls || 'chip-pending' }
           : displayStatus(r);
         var dateStr = isCoo ? (r.dateDisplay || '—') : rowDate(r);
         var neededStr = isCoo ? '—' : rowNeeded(r);
@@ -725,8 +729,9 @@ async function cooAccept(id) {
     });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'Failed');
-    showToast('Accepted — production run created', 'success');
-    loadCooOrders();
+    showToast('Accepted — opening Production form…', 'success');
+    closeModal('detailModal');
+    window.location.href = 'kitchen-production.html?cooId=' + encodeURIComponent(id);
   } catch (e) { showToast(e.message, 'error'); }
 }
 
@@ -746,20 +751,36 @@ function openCooDetail(id) {
   const o = cooAll.find(function (x) { return x.id === id; });
   if (!o) return;
   var container = document.getElementById('detailContainer');
+  var itemsHtml = (o.items || []).map(function (i) {
+    return '<tr><td>' + escapeHtml(i.name) + '</td><td>' + i.qty + '</td><td>' + escapeHtml(i.recipeId ? 'Yes' : '—') + '</td><td>' + escapeHtml((i.recipeId ? 'Linked' : 'No recipe')) + '</td></tr>';
+  }).join('');
+
+  var actionsHtml = '';
+  if (o.status === 'pending') {
+    actionsHtml = '<button class="btn btn-primary" onclick="cooAccept(\'' + o.id + '\')">Accept Order</button> <button class="btn" style="background:var(--red-bg);color:var(--red);border-color:rgba(240,68,56,.3);" onclick="cooReject(\'' + o.id + '\');closeModal(\'detailModal\');">Reject</button>';
+  } else if (o.status === 'accepted') {
+    actionsHtml = '<button class="btn btn-primary" onclick="window.location.href=\'kitchen-production.html?cooId=' + encodeURIComponent(o.id) + '\'"><i class="fa-solid fa-fire-burner"></i> Open Production Form</button>';
+  }
+
   container.innerHTML =
     '<div style="font-weight:800;font-size:16px;margin-bottom:12px;"><i class="fa-solid fa-fire" style="color:var(--amber);"></i> Cook on Order — ' + escapeHtml(o.table || '—') + '</div>' +
-    '<div style="margin-bottom:6px;"><b>Table:</b> ' + escapeHtml(o.table || '—') + ' (' + (o.covers || 1) + ' covers)</div>' +
-    '<div style="margin-bottom:6px;"><b>Items:</b> ' + (o.items || []).map(function (i) { return i.qty + 'x ' + escapeHtml(i.name) + (i.recipeId ? ' <span style="color:var(--amber);font-size:11px;">(recipe)</span>' : ''); }).join(', ') + '</div>' +
-    '<div style="margin-bottom:6px;"><b>Staff:</b> ' + escapeHtml(o.staff || '') + '</div>' +
-    '<div style="margin-bottom:6px;"><b>Status:</b> <span class="chip chip-' + o.status + '">' + o.status + '</span></div>' +
-    '<div style="margin-bottom:6px;"><b>Payment:</b> ' + escapeHtml(o.method || '—') + '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">' +
+      '<div><b>Table:</b> ' + escapeHtml(o.table || '—') + '</div>' +
+      '<div><b>Covers:</b> ' + (o.covers || 1) + '</div>' +
+      '<div><b>Staff:</b> ' + escapeHtml(o.staff || '') + '</div>' +
+      '<div><b>Payment:</b> ' + escapeHtml(o.method || '—') + '</div>' +
+      '<div><b>Status:</b> <span class="chip chip-' + (o.status === 'accepted' ? 'accepted' : o.status === 'completed' ? 'completed' : o.status === 'rejected' ? 'rejected' : 'pending') + '">' + escapeHtml(o.status) + '</span></div>' +
+      '<div><b>Date:</b> ' + new Date(o.createdAt).toLocaleString() + '</div>' +
+    '</div>' +
     (o.roomNumber ? '<div style="margin-bottom:6px;"><b>Room:</b> ' + escapeHtml(o.roomNumber) + (o.guestName ? ' — ' + escapeHtml(o.guestName) : '') + '</div>' : '') +
-    '<div style="margin-bottom:6px;"><b>Notes:</b> ' + escapeHtml(o.notes || '—') + '</div>' +
-    '<div><b>Date:</b> ' + new Date(o.createdAt).toLocaleString() + '</div>' +
-    (o.extraIngredients && o.extraIngredients.length ? '<div style="margin-top:10px;border-top:1px solid #eef0f6;padding-top:10px;"><b>Extra Ingredients:</b> ' + o.extraIngredients.map(function (e) { return e.qty + ' ' + e.unit + ' ' + escapeHtml(e.name); }).join(', ') + '</div>' : '') +
+    (o.notes ? '<div style="margin-bottom:6px;"><b>Notes:</b> ' + escapeHtml(o.notes) + '</div>' : '') +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;margin:12px 0;">' +
+      '<thead><tr style="border-bottom:1px solid #eef0f6;"><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#9aa1b3;">Item</th><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#9aa1b3;">Qty</th><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#9aa1b3;">Recipe</th><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#9aa1b3;">Status</th></tr></thead>' +
+      '<tbody>' + itemsHtml + '</tbody>' +
+    '</table>' +
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
     '<button class="btn" onclick="closeModal(\'detailModal\')">Close</button>' +
-    (o.status === 'pending' ? '<button class="btn btn-primary" onclick="cooAccept(\'' + o.id + '\');closeModal(\'detailModal\');">Accept & Produce</button> <button class="btn" style="background:var(--red-bg);color:var(--red);border-color:rgba(240,68,56,.3);" onclick="cooReject(\'' + o.id + '\');closeModal(\'detailModal\');">Reject</button>' : '') +
+    actionsHtml +
     '</div>';
   document.getElementById('detailModal').classList.add('show');
 }

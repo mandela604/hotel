@@ -157,7 +157,8 @@ exports.recordProduction = asyncHandler(async (req, res) => {
     staff,
     notes,
     type,
-    destination
+    destination,
+    cooId,
   } = req.body;
 
   if (!dish || !dish.trim()) {
@@ -236,6 +237,7 @@ exports.recordProduction = asyncHandler(async (req, res) => {
     expectedYield: expectedYield ? Number(expectedYield) : null,
     expectedYieldUnit: expectedYieldUnit || 'portions',
     type: type || 'rts',
+    cooId: cooId || '',
     cost: totalCost,
     gasCost: Number(gasCost) || 0,
     meals: [],
@@ -303,6 +305,35 @@ exports.completeProduction = asyncHandler(async (req, res) => {
   if (status !== undefined) run.status = status;
 
   await run.save();
+
+  if (run.cooId && run.status === 'completed') {
+    const KitchenCooOrder = require('../models/KitchenCooOrder');
+    const cooOrder = await KitchenCooOrder.findOne({ id: run.cooId });
+    const transferCount = await Transfer.countDocuments();
+    const transfer = await Transfer.create({
+      id: uuidv4(),
+      transferNo: 'KTN-' + String(transferCount + 1).padStart(5, '0'),
+      cooId: run.cooId,
+      meal: run.dish,
+      quantity: Number(run.outputQty) || 0,
+      unit: run.outputUnit || 'portions',
+      kitchen: 'Main Kitchen',
+      restaurant: 'Main Restaurant / POS',
+      from: 'Main Kitchen',
+      to: 'Main Restaurant / POS',
+      sentBy: run.staff || 'Head Chef',
+      dateSent: nowStamp(),
+      status: 'sent',
+      remarks: 'COO production — ' + (cooOrder ? cooOrder.table : ''),
+    });
+    run.transferNo = transfer.transferNo;
+    await run.save();
+    if (cooOrder) {
+      cooOrder.status = 'completed';
+      await cooOrder.save();
+    }
+  }
+
   res.json({ success: true, data: run });
 });
 

@@ -314,7 +314,7 @@
      output yet (this is what the backend calls recordProduction, but
      its behavior is exactly "start"). PUT /production/:id/complete
      records the actual yield once cooking finishes. */
-  async function startProduction({ dish, recipeId, type, expectedYield, expectedYieldUnit, ingredients, gasCost, staff, notes = '' }) {
+  async function startProduction({ dish, recipeId, type, expectedYield, expectedYieldUnit, ingredients, gasCost, staff, notes = '', cooId = '' }) {
     const run = await request('/production', {
       method: 'POST',
       body: {
@@ -327,6 +327,7 @@
         gasCost: gasCost || 0,
         staff,
         notes,
+        cooId,
       },
     });
     state.production.unshift(run);

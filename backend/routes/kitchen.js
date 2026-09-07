@@ -53,6 +53,7 @@ router.post('/requisitions/:id/receive', inDept, privilegeGuard('kitchen', 'canC
 /* ── COO Orders ───────────────────────────── */
 const cooCtrl = require('../controllers/kitchenCooController');
 router.get('/coo-orders', cooCtrl.listCoo);
+router.get('/coo-orders/:id', cooCtrl.getCooOrder);
 router.post('/coo-orders', cooCtrl.createCoo);
 router.post('/coo-orders/:id/accept', inDept, privilegeGuard('kitchen','canEdit'), cooCtrl.acceptCoo);
 router.post('/coo-orders/:id/reject', inDept, cooCtrl.rejectCoo);
