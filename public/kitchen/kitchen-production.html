@@ -643,7 +643,7 @@ async function loadCooIntoProduction(cooId) {
     var order = json.data;
 
     console.log('[COO] COO order loaded:', order.id, 'Table:', order.table);
-    console.log('[COO] COO items:', JSON.stringify(items.map(function(i){ return {name:i.name, qty:i.qty, recipeId:i.recipeId}; })));
+    console.log('[COO] COO items raw:', JSON.stringify(order.items));
     console.log('[COO] Kitchen recipes loaded:', KitchenService.state.recipes.length);
 
     batchRows = [];
