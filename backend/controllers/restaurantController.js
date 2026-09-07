@@ -796,8 +796,16 @@ exports.addRecipeToStock = asyncHandler(async (req, res) => {
   const recipe = await Recipe.findOne({ id: recipeId });
   if (!recipe) throw new ApiError(404, 'Recipe not found');
 
-  const existing = await RestaurantStock.findOne({ recipeId: recipe.id });
-  if (existing) throw new ApiError(409, `"${recipe.dish}" is already in Restaurant stock`);
+  const existingByName = await RestaurantStock.findOne({ name: new RegExp('^' + recipe.dish.trim() + '$', 'i') });
+  if (existingByName) {
+    if (!existingByName.recipeId) {
+      existingByName.recipeId = recipe.id;
+      existingByName.desc = 'Cook-on-Order — recipe linked';
+      await existingByName.save();
+      return res.status(200).json({ success: true, data: existingByName });
+    }
+    throw new ApiError(409, `"${recipe.dish}" is already in Restaurant stock`);
+  }
 
   const stockItem = await RestaurantStock.create({
     name: recipe.dish,
