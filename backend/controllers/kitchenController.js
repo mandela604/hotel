@@ -488,27 +488,6 @@ exports.createRecipe = asyncHandler(async (req, res) => {
     gasCostPerUnit: gasCostPerUnit !== undefined ? Number(gasCostPerUnit) : 0,
     notes: notes || '',
   });
-  // auto-appear in Restaurant order stock (same id, qty 0) so COO can order 0-stock like sales
-  try {
-    const RestaurantStock = require('../models/RestaurantStock');
-    const exists = await RestaurantStock.findOne({ name: new RegExp('^'+sanitizeRegex(dish.trim())+'$', 'i') });
-    if (!exists) {
-      await RestaurantStock.create({
-        id: recipe.id,
-        name: dish.trim(),
-        category: 'Mains',
-        unit: expectedYieldUnit || 'portion',
-        storeId: recipe.id,
-        qty: 0,
-        min: 0,
-        price: 0,
-        desc: notes || '',
-      });
-    } else if (!exists.storeId) {
-      exists.storeId = recipe.id;
-      await exists.save();
-    }
-  } catch(e){ console.warn('[recipe->restaurant stock]', e.message); }
 
   res.status(201).json({ success: true, data: recipe });
 });
