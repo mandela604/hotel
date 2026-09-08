@@ -799,6 +799,9 @@ function renderKPIs() {
     badge.textContent = total;
     badge.style.display = total > 0 ? '' : 'none';
   }
+  if (shell && typeof shell.setXferHistBadge === 'function') {
+    shell.setXferHistBadge(kpis.pendingCount + pendingKitchen);
+  }
 }
 
 function setStatusFilter(status) {

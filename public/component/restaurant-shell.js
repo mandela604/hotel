@@ -15,7 +15,7 @@
 
   const NAV = [
     { key: 'dashboard',  label: 'Dashboard',            href: 'restaurant-dashboard.html',       icon: 'fa-solid fa-gauge-high' },
-    { key: 'xferhist',   label: 'Requisitions',     href: 'restaurant-transfer-history.html',icon: 'fa-solid fa-clock-rotate-left' },
+    { key: 'xferhist',   label: 'Requisitions',     href: 'restaurant-transfer-history.html',icon: 'fa-solid fa-clock-rotate-left', badgeKey: 'xferhist' },
     { key: 'inventory',  label: 'Restaurant Inventory', href: 'restaurant-inventory.html',       icon: 'fa-solid fa-box' },
     { key: 'sales',      label: 'Sales',                href: 'restaurant-sales.html',           icon: 'fa-solid fa-file-invoice-dollar' },
     { key: 'reports',    label: 'Reports',              href: 'restaurant-reports.html',         icon: 'fa-solid fa-chart-column', managerOnly: true },
@@ -334,6 +334,12 @@
       },
       setPendingBadge(n) {
         const el = document.getElementById('rst-badge-pending');
+        if (!el) return;
+        if (n > 0) { el.textContent = n; el.classList.add('show'); }
+        else el.classList.remove('show');
+      },
+      setXferHistBadge(n) {
+        const el = document.getElementById('rst-badge-xferhist');
         if (!el) return;
         if (n > 0) { el.textContent = n; el.classList.add('show'); }
         else el.classList.remove('show');
