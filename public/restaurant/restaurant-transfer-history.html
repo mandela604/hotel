@@ -1093,7 +1093,7 @@ function openDetail(no) {
     document.getElementById('dRemarks').innerHTML = (row.remark || '');
     var dAcceptBtn = document.getElementById('dAcceptBtn');
     var dRejectBtn = document.getElementById('dRejectBtn');
-    if (!isReq && row.status === 'pending' && (canAccept || canReject)) {
+    if (row.status === 'pending' && (canAccept || canReject)) {
       dAcceptBtn.style.display = '';
       dAcceptBtn.onclick = function () { openAccept(no); document.getElementById('detailModal').classList.remove('show'); };
       dRejectBtn.style.display = '';
