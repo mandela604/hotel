@@ -1005,6 +1005,12 @@ function renderTable() {
           const st = displayStatus(r);
           const isReq = isRequisition(r);
           const showTransferActions = !isReq && r.status === 'pending' && (canAccept || canReject);
+          var actionsHtml = '<button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i> View</button>';
+          if (showTransferActions) {
+            actionsHtml = '<button class="act-btn" style="background:var(--green-bg);color:var(--green);border-color:rgba(18,183,106,.3);margin-right:4px;" onclick="openAccept(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-check"></i> Accept</button>' +
+              '<button class="act-btn" style="background:var(--red-bg);color:var(--red);border-color:rgba(240,68,56,.3);margin-right:4px;" onclick="openReject(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-ban"></i> Reject</button>' +
+              '<button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i></button>';
+          }
           return '<tr data-no="' + escapeHtml(r.no) + '">' +
             '<td style="font-weight:700;">' + escapeHtml(r.no) + '</td>' +
             '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></td>' +
@@ -1014,7 +1020,7 @@ function renderTable() {
             '<td>' + escapeHtml(rowNeeded(r)) + '</td>' +
             '<td>' + priorityChip(rowPriority(r)) + '</td>' +
             '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
-            '<td class="no-print"><button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i> View</button></td>' +
+            '<td class="no-print">' + actionsHtml + '</td>' +
           '</tr>';
         }).join('');
   renderPagination(rows.length);
@@ -1085,6 +1091,17 @@ function openDetail(no) {
         .map(function (i) { return '<tr><td>' + escapeHtml(i.name || '—') + '</td><td class="r">' + (i.qty || 0) + '</td><td class="r">' + (i.unit || '') + '</td></tr>'; })
         .join('');
     document.getElementById('dRemarks').innerHTML = (row.remark || '');
+    var dAcceptBtn = document.getElementById('dAcceptBtn');
+    var dRejectBtn = document.getElementById('dRejectBtn');
+    if (!isReq && row.status === 'pending' && (canAccept || canReject)) {
+      dAcceptBtn.style.display = '';
+      dAcceptBtn.onclick = function () { openAccept(no); document.getElementById('detailModal').classList.remove('show'); };
+      dRejectBtn.style.display = '';
+      dRejectBtn.onclick = function () { openReject(no); document.getElementById('detailModal').classList.remove('show'); };
+    } else {
+      dAcceptBtn.style.display = 'none';
+      dRejectBtn.style.display = 'none';
+    }
     document.getElementById('detailModal').classList.add('show');
   }
 }
@@ -1135,7 +1152,15 @@ async function confirmAccept() {
     showToast("You don't have permission to accept transfers.", 'error');
     return;
   }
-  const t = (RS.state.pending || []).find((x) => x.no === activeNo);
+  var t = (RS.state.pending || []).find((x) => x.no === activeNo);
+  var _isKitchen = false;
+  if (!t && window.KitchenService) {
+    var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === activeNo);
+    if (kt) {
+      t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], status: 'pending', _isKitchen: true };
+      _isKitchen = true;
+    }
+  }
   if (!t) return;
   const receivedBy = document.getElementById('acReceivedBy').value.trim();
   if (!receivedBy) {
@@ -1145,7 +1170,18 @@ async function confirmAccept() {
   const remarks = document.getElementById('acRemarks').value.trim();
 
   try {
-    await RS.acceptTransfer(t.no, { receivedBy, remarks });
+    if (_isKitchen) {
+      const res = await fetch('/api/restaurant/transfers/' + encodeURIComponent(t.no) + '/accept', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ receivedBy, remarks })
+      });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || 'Accept failed');
+    } else {
+      await RS.acceptTransfer(t.no, { receivedBy, remarks });
+    }
     closeModal('acceptModal');
     showToast(
       t.no + ' accepted — ' + (t.items || []).length + ' item line(s) added to stock.',
@@ -1163,7 +1199,11 @@ function openReject(no) {
     return;
   }
   activeNo = no;
-  const t = (RS.state.pending || []).find((x) => x.no === no);
+  var t = (RS.state.pending || []).find((x) => x.no === no);
+  if (!t && window.KitchenService) {
+    var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === no);
+    if (kt) t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }] };
+  }
   if (!t) return;
   document.getElementById('rjName').textContent =
     t.no + (t.batchNo ? ' — ' + t.batchNo : '');
@@ -1176,7 +1216,15 @@ async function confirmReject() {
     showToast("You don't have permission to reject transfers.", 'error');
     return;
   }
-  const t = (RS.state.pending || []).find((x) => x.no === activeNo);
+  var t = (RS.state.pending || []).find((x) => x.no === activeNo);
+  var _isKitchen = false;
+  if (!t && window.KitchenService) {
+    var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === activeNo);
+    if (kt) {
+      t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], status: 'pending', _isKitchen: true };
+      _isKitchen = true;
+    }
+  }
   if (!t) return;
   const reason = document.getElementById('rjReason').value.trim();
   if (!reason) {
@@ -1185,9 +1233,20 @@ async function confirmReject() {
   }
 
   try {
-    await RS.rejectTransfer(t.no, { reason });
+    if (_isKitchen) {
+      const res = await fetch('/api/restaurant/transfers/' + encodeURIComponent(t.no) + '/reject', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ rejectReason: reason })
+      });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || 'Reject failed');
+    } else {
+      await RS.rejectTransfer(t.no, { reason });
+    }
     closeModal('rejectModal');
-    showToast(t.no + ' rejected and moved to history.', 'error');
+    showToast(t.no + ' rejected.', 'error');
     render();
   } catch (e) {
     showToast(e.message || 'Reject failed.', 'error');
