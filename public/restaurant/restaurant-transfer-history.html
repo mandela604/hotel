@@ -1107,12 +1107,14 @@ function openDetail(no) {
 }
 
 /* ── Accept / Reject (transfer mutations only) ─────────── */
+var _activeKitchenTransfer = null;
 function openAccept(no) {
   if (!canAccept) {
     showToast("You don't have permission to accept transfers.", 'error');
     return;
   }
   activeNo = no;
+  _activeKitchenTransfer = null;
 
   // First, try RestaurantService pending (Store/Kitchen pushes)
   let t = (RS.state.pending || []).find((x) => x.no === no);
@@ -1131,8 +1133,9 @@ function openAccept(no) {
         date: kt.dateSent,
         source: 'Kitchen',
         _kind: 'transfer',
-        _isKitchen: true,  // flag to handle accept differently
+        _isKitchen: true,
       };
+      _activeKitchenTransfer = t;
     }
   }
 
@@ -1152,16 +1155,9 @@ async function confirmAccept() {
     showToast("You don't have permission to accept transfers.", 'error');
     return;
   }
-  var t = (RS.state.pending || []).find((x) => x.no === activeNo);
-  var _isKitchen = false;
-  if (!t && window.KitchenService) {
-    var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === activeNo);
-    if (kt) {
-      t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], status: 'pending', _isKitchen: true };
-      _isKitchen = true;
-    }
-  }
+  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
+  var _isKitchen = !!t._isKitchen;
   const receivedBy = document.getElementById('acReceivedBy').value.trim();
   if (!receivedBy) {
     showToast('Please enter who received the transfer.', 'error');
@@ -1183,6 +1179,7 @@ async function confirmAccept() {
       await RS.acceptTransfer(t.no, { receivedBy, remarks });
     }
     closeModal('acceptModal');
+    _activeKitchenTransfer = null;
     showToast(
       t.no + ' accepted — ' + (t.items || []).length + ' item line(s) added to stock.',
       'success'
@@ -1199,10 +1196,14 @@ function openReject(no) {
     return;
   }
   activeNo = no;
+  _activeKitchenTransfer = null;
   var t = (RS.state.pending || []).find((x) => x.no === no);
   if (!t && window.KitchenService) {
     var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === no);
-    if (kt) t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }] };
+    if (kt && kt.status === 'sent') {
+      t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], _isKitchen: true };
+      _activeKitchenTransfer = t;
+    }
   }
   if (!t) return;
   document.getElementById('rjName').textContent =
@@ -1216,16 +1217,9 @@ async function confirmReject() {
     showToast("You don't have permission to reject transfers.", 'error');
     return;
   }
-  var t = (RS.state.pending || []).find((x) => x.no === activeNo);
-  var _isKitchen = false;
-  if (!t && window.KitchenService) {
-    var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === activeNo);
-    if (kt) {
-      t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], status: 'pending', _isKitchen: true };
-      _isKitchen = true;
-    }
-  }
+  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
+  var _isKitchen = !!t._isKitchen;
   const reason = document.getElementById('rjReason').value.trim();
   if (!reason) {
     showToast('Please enter a reason for rejecting this transfer.', 'error');
@@ -1246,6 +1240,7 @@ async function confirmReject() {
       await RS.rejectTransfer(t.no, { reason });
     }
     closeModal('rejectModal');
+    _activeKitchenTransfer = null;
     showToast(t.no + ' rejected.', 'error');
     render();
   } catch (e) {
