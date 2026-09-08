@@ -370,7 +370,7 @@
       <div class="panel">
         <div class="print-header"><h2>Aurum Hotel — Restaurant Transfer History</h2><p id="printSub"></p></div>
         <div class="panel-head">
-          <div class="panel-title">Transfer History — grouped by batch</div>
+          <div class="panel-title">Transfer History — grouped by batch <span id="pendingBadge" style="background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;padding:0 5px;margin-left:6px;vertical-align:middle;display:none;align-items:center;justify-content:center;">0</span></div>
           <span class="toolbar-count" id="tblCount">—</span>
         </div>
         <div class="tbl-wrap">
@@ -767,11 +767,16 @@ function renderKPIs() {
   const decided = kpis.acceptedToday + kpis.rejectedToday;
   const acceptRate = decided ? Math.round((kpis.acceptedToday / decided) * 100) : 0;
 
+  var pendingKitchen = 0;
+  if (window.KitchenService && KitchenService.state && KitchenService.state.transfers) {
+    pendingKitchen = KitchenService.state.transfers.filter(function (t) { return t.status === 'sent'; }).length;
+  }
+
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card clickable acc-amber" data-status="pending" onclick="setStatusFilter('pending')">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending Transfers</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${kpis.pendingCount}</div>
-      <div class="kpi-trend ${kpis.pendingCount > 0 ? 'warn' : 'up'}">${kpis.pendingCount > 0 ? 'Awaiting review' : 'All clear'}</div>
+      <div class="kpi-value" style="color:var(--amber);">${kpis.pendingCount + pendingKitchen}</div>
+      <div class="kpi-trend ${(kpis.pendingCount + pendingKitchen) > 0 ? 'warn' : 'up'}">${(kpis.pendingCount + pendingKitchen) > 0 ? 'Awaiting review' : 'All clear'}</div>
     </div>
     <div class="kpi-card clickable acc-green" data-status="accepted" onclick="setStatusFilter('accepted')">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Accepted Transfers</div></div>
@@ -788,6 +793,12 @@ function renderKPIs() {
       <div class="kpi-value" style="color:var(--blue);">${acceptRate}%</div>
       <div class="kpi-trend ${acceptRate >= 80 ? 'up' : acceptRate >= 50 ? 'warn' : 'down'}">${decided} decided record${decided !== 1 ? 's' : ''}</div>
     </div>`;
+  var badge = document.getElementById('pendingBadge');
+  if (badge) {
+    var total = kpis.pendingCount + pendingKitchen;
+    badge.textContent = total;
+    badge.style.display = total > 0 ? '' : 'none';
+  }
 }
 
 function setStatusFilter(status) {
@@ -1011,7 +1022,7 @@ function renderTable() {
               '<button class="act-btn" style="background:var(--red-bg);color:var(--red);border-color:rgba(240,68,56,.3);margin-right:4px;" onclick="openReject(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-ban"></i> Reject</button>' +
               '<button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i></button>';
           }
-          return '<tr data-no="' + escapeHtml(r.no) + '">' +
+          return '<tr data-no="' + escapeHtml(r.no) + '" style="cursor:pointer;" onclick="openDetail(\'' + escapeHtml(r.no) + '\')">' +
             '<td style="font-weight:700;">' + escapeHtml(r.no) + '</td>' +
             '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></td>' +
             '<td>' + escapeHtml(rowByLine(r)) + '</td>' +
@@ -1020,7 +1031,7 @@ function renderTable() {
             '<td>' + escapeHtml(rowNeeded(r)) + '</td>' +
             '<td>' + priorityChip(rowPriority(r)) + '</td>' +
             '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
-            '<td class="no-print">' + actionsHtml + '</td>' +
+            '<td class="no-print" onclick="event.stopPropagation();">' + actionsHtml + '</td>' +
           '</tr>';
         }).join('');
   renderPagination(rows.length);
@@ -1083,11 +1094,13 @@ function openDetail(no) {
     document.getElementById('dTitle').textContent = row.no + ' — ' + (src.label === 'Restaurant Requisition' ? 'Requisition' : src.label);
     document.getElementById('dGrid').innerHTML =
       '<div class="detail-item"><div class="detail-label">Source</div><div class="detail-value"><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></div></div>' +
-      '<div class="detail-item"><div class="detail-label">Requester</div><div class="detail-value">' + escapeHtml(row.requester || row.by || '—') + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Requester</div><div class="detail-value">' + escapeHtml(row.requester || row.by || row.sentBy || '—') + '</div></div>' +
       '<div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">' + escapeHtml(rowDate(row)) + '</div></div>' +
       '<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-' + displayStatus(row).cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(displayStatus(row).label) + '</span></div></div>';
+    var _items = row.items || [];
+    if (!_items.length && row.meal) _items = [{ name: row.meal, qty: row.quantity, unit: row.unit }];
     document.getElementById('dItems').innerHTML =
-      (row.items || [])
+      _items
         .map(function (i) { return '<tr><td>' + escapeHtml(i.name || '—') + '</td><td class="r">' + (i.qty || 0) + '</td><td class="r">' + (i.unit || '') + '</td></tr>'; })
         .join('');
     document.getElementById('dRemarks').innerHTML = (row.remark || '');
@@ -1116,14 +1129,11 @@ function openAccept(no) {
   activeNo = no;
   _activeKitchenTransfer = null;
 
-  // First, try RestaurantService pending (Store/Kitchen pushes)
-  let t = (RS.state.pending || []).find((x) => x.no === no);
-
-  // If not found, check kitchen transfers (from KitchenService)
-  if (!t && window.KitchenService) {
+  // Check KitchenService first (Kitchen transfers)
+  if (window.KitchenService) {
     const kt = (KitchenService.state.transfers || []).find(x => x.transferNo === no);
     if (kt && kt.status === 'sent') {
-      t = {
+      _activeKitchenTransfer = {
         ...kt,
         no: kt.transferNo,
         items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }],
@@ -1135,15 +1145,21 @@ function openAccept(no) {
         _kind: 'transfer',
         _isKitchen: true,
       };
-      _activeKitchenTransfer = t;
     }
   }
 
+  // Fallback to RS pending (Store transfers)
+  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === no);
   if (!t) return;
 
-  // populate modal...
+  // Ensure items are normalized
+  if (!t.items || !t.items.length) {
+    if (t.meal) t.items = [{ name: t.meal, qty: t.quantity, unit: t.unit }];
+    else t.items = [];
+  }
+
   document.getElementById('acName').textContent = t.no + (t.batchNo ? ' — ' + t.batchNo : '');
-  document.getElementById('acQty').textContent = String((t.items || []).length);
+  document.getElementById('acQty').textContent = String(t.items.length);
   document.getElementById('acReceivedBy').value = (session && session.name) || '';
   document.getElementById('acRemarks').value = '';
   document.getElementById('acceptModal').classList.add('show');
@@ -1158,6 +1174,10 @@ async function confirmAccept() {
   var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
   var _isKitchen = !!t._isKitchen;
+  if (!t.items || !t.items.length) {
+    if (t.meal) t.items = [{ name: t.meal, qty: t.quantity, unit: t.unit }];
+    else t.items = [];
+  }
   const receivedBy = document.getElementById('acReceivedBy').value.trim();
   if (!receivedBy) {
     showToast('Please enter who received the transfer.', 'error');
@@ -1168,7 +1188,7 @@ async function confirmAccept() {
   try {
     if (_isKitchen) {
       const res = await fetch('/api/restaurant/transfers/' + encodeURIComponent(t.no) + '/accept', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ receivedBy, remarks })
@@ -1181,7 +1201,7 @@ async function confirmAccept() {
     closeModal('acceptModal');
     _activeKitchenTransfer = null;
     showToast(
-      t.no + ' accepted — ' + (t.items || []).length + ' item line(s) added to stock.',
+      t.no + ' accepted — ' + t.items.length + ' item line(s) added to stock.',
       'success'
     );
     render();
@@ -1197,14 +1217,13 @@ function openReject(no) {
   }
   activeNo = no;
   _activeKitchenTransfer = null;
-  var t = (RS.state.pending || []).find((x) => x.no === no);
-  if (!t && window.KitchenService) {
+  if (window.KitchenService) {
     var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === no);
     if (kt && kt.status === 'sent') {
-      t = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], _isKitchen: true };
-      _activeKitchenTransfer = t;
+      _activeKitchenTransfer = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], _isKitchen: true };
     }
   }
+  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === no);
   if (!t) return;
   document.getElementById('rjName').textContent =
     t.no + (t.batchNo ? ' — ' + t.batchNo : '');
@@ -1229,7 +1248,7 @@ async function confirmReject() {
   try {
     if (_isKitchen) {
       const res = await fetch('/api/restaurant/transfers/' + encodeURIComponent(t.no) + '/reject', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ rejectReason: reason })
