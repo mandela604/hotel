@@ -416,6 +416,23 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
   } else {
     await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
   }
+
+  if (transfer.cooId) {
+    const KitchenCooOrder = require('../models/KitchenCooOrder');
+    const cooOrder = await KitchenCooOrder.findOne({ id: transfer.cooId });
+    if (cooOrder) {
+      cooOrder.status = 'completed';
+      await cooOrder.save();
+      if (cooOrder.restaurantOrderId) {
+        const linkedOrder = await Order.findOne({ id: cooOrder.restaurantOrderId });
+        if (linkedOrder) {
+          linkedOrder.status = 'served';
+          await linkedOrder.save();
+        }
+      }
+    }
+  }
+
   res.json({ success: true, data: transfer });
 });
 
@@ -893,4 +910,29 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
 
   await logActivity('gold', `COO ${id} sent to Kitchen — ${items.length} item(s)`, 'restaurant-orders.html');
   res.status(201).json({ success: true, data: { order, coo } });
+});
+
+exports.getPendingCooTransfers = asyncHandler(async (req, res) => {
+  const KitchenCooOrder = require('../models/KitchenCooOrder');
+  const transfers = await Transfer.find({ status: 'sent', cooId: { $ne: '' } }).sort({ createdAt: -1 });
+  const results = [];
+  for (const t of transfers) {
+    const coo = await KitchenCooOrder.findOne({ id: t.cooId });
+    const order = coo && coo.restaurantOrderId
+      ? await Order.findOne({ id: coo.restaurantOrderId })
+      : null;
+    results.push({
+      transferNo: t.transferNo,
+      cooId: t.cooId,
+      meal: t.meal,
+      quantity: t.quantity,
+      unit: t.unit,
+      sentBy: t.sentBy,
+      dateSent: t.dateSent,
+      table: coo ? coo.table : '',
+      orderNo: order ? order.id : '',
+      orderStatus: order ? order.status : '',
+    });
+  }
+  res.json({ success: true, data: results });
 });

@@ -657,7 +657,12 @@ async function loadCooIntoProduction(cooId) {
       row._cooTable = order.table || '';
       if (item.recipeId) {
         row.recipeId = item.recipeId;
-        row.batchQty = item.qty || '';
+        var recipe = KitchenService.findRecipeById(item.recipeId);
+        if (recipe && recipe.expectedYield > 0 && recipe.baseQty > 0) {
+          row.batchQty = String(Math.round((Number(item.qty) / recipe.expectedYield) * recipe.baseQty * 100) / 100);
+        } else {
+          row.batchQty = item.qty || '';
+        }
         computeScale(row);
         if (!row.scale) {
           missingRecipes.push(item.name + ' (' + item.recipeId + ')');

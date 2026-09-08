@@ -328,10 +328,6 @@ exports.completeProduction = asyncHandler(async (req, res) => {
     });
     run.transferNo = transfer.transferNo;
     await run.save();
-    if (cooOrder) {
-      cooOrder.status = 'completed';
-      await cooOrder.save();
-    }
   }
 
   res.json({ success: true, data: run });

@@ -54,5 +54,6 @@ router.post('/requisitions/:id/receive', inDept, privilegeGuard('restaurant', 'c
 router.get('/recipes', restaurantController.listKitchenRecipes);
 router.post('/stock/from-recipe', inDept, privilegeGuard('restaurant', 'canCreate'), restaurantController.addRecipeToStock);
 router.post('/coo-orders', inDept, privilegeGuard('restaurant', 'canCreate'), restaurantController.createCooOrder);
+router.get('/coo-transfers/pending', inDept, restaurantController.getPendingCooTransfers);
 
 module.exports = router;

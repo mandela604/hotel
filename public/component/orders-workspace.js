@@ -1399,18 +1399,71 @@
           '<td><span class="ow-chip ow-chip-' + st + '"><i class="fa-solid fa-circle"></i>' +
           st.charAt(0).toUpperCase() + st.slice(1) + '</span></td>' +
           '<td><div class="ow-act-btns">' +
-          (st === 'open'
+          (st === 'open' && o.type !== 'coo'
             ? '<button type="button" class="ow-act-btn" data-served="' + esc(o.id) + '"><i class="fa-solid fa-bell-concierge"></i>Served</button>'
+            : '') +
+          (st === 'open' && o.type === 'coo'
+            ? '<span style="font-size:10px;color:var(--amber);font-weight:600;"><i class="fa-solid fa-fire"></i> Awaiting Kitchen</span>'
             : '') +
           (st === 'served' && !isWaiter
             ? '<button type="button" class="ow-act-btn" data-pay="' + esc(o.id) + '"><i class="fa-solid fa-naira-sign"></i>Pay</button>'
             : '') +
-          (st === 'open' || (st === 'served' && !isWaiter)
+          ((st === 'open' && o.type !== 'coo') || (st === 'served' && !isWaiter)
             ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
             : '') +
-          '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i>Print</button>' +
+          (st === 'open' && o.type === 'coo'
+            ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
+            : '') +
+          '<button type="button" class="ow-act-btn" data-view-coo="' + esc(o.id) + '" title="View details"><i class="fa-solid fa-eye"></i></button>' +
+          '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i></button>' +
           '</div></td></tr>';
       }).join('');
+    }
+
+    function showCooDetail(id) {
+      var o = orders.find(function (x) { return x.id === id; });
+      if (!o) return;
+      var items = (o.items || []).map(function (it) {
+        return '<tr style="border-bottom:1px solid #eef0f6;">' +
+          '<td style="padding:8px 10px;font-weight:600;">' + esc(it.name) + '</td>' +
+          '<td style="padding:8px 10px;text-align:center;">' + (it.qty || 0) + '</td>' +
+          '<td style="padding:8px 10px;text-align:right;">' + fmtN(it.price || 0) + '</td>' +
+          '<td style="padding:8px 10px;text-align:right;font-weight:700;">' + fmtN((it.price || 0) * (it.qty || 0)) + '</td>' +
+          '</tr>';
+      }).join('');
+      var st = (o.status || 'open').toLowerCase();
+      var html = '<div style="padding:0;">' +
+        '<div style="font-weight:800;font-size:16px;margin-bottom:12px;"><i class="fa-solid fa-fire" style="color:var(--amber);"></i> Cook on Order — ' + esc(o.id) + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:12.5px;">' +
+          '<div><b>Table:</b> ' + esc(o.table || '—') + '</div>' +
+          '<div><b>Staff:</b> ' + esc(o.staff || o.createdBy || '—') + '</div>' +
+          '<div><b>Payment:</b> ' + esc(o.payMethod || o.method || '—') + '</div>' +
+          '<div><b>Status:</b> <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:' +
+            (st === 'paid' ? 'var(--green-bg);color:var(--green)' : st === 'served' ? 'var(--blue-bg);color:var(--blue)' : 'var(--amber-bg);color:var(--amber)') + ';">' +
+            st.toUpperCase() + '</span></div>' +
+          '<div><b>Date:</b> ' + esc(o.date || '—') + '</div>' +
+          '<div><b>Total:</b> <span style="color:var(--ow-gold);font-weight:800;">' + fmtN(o.total || 0) + '</span></div>' +
+        '</div>' +
+        (o.roomNumber ? '<div style="margin-bottom:6px;font-size:12.5px;"><b>Room:</b> ' + esc(o.roomNumber) + (o.guestName ? ' — ' + esc(o.guestName) : '') + '</div>' : '') +
+        (o.notes ? '<div style="margin-bottom:6px;font-size:12.5px;"><b>Notes:</b> ' + esc(o.notes) + '</div>' : '') +
+        '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700;margin-bottom:6px;">Items Ordered</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">' +
+          '<thead><tr style="border-bottom:2px solid #eef0f6;">' +
+            '<th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--text3);">Item</th>' +
+            '<th style="text-align:center;padding:6px 10px;font-size:10px;color:var(--text3);">Qty</th>' +
+            '<th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--text3);">Price</th>' +
+            '<th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--text3);">Subtotal</th>' +
+          '</tr></thead>' +
+          '<tbody>' + items + '</tbody>' +
+        '</table>' +
+        '<div style="display:flex;justify-content:flex-end;"><button class="ow-act-btn" onclick="this.closest(\'.ow-coo-detail-wrap\').remove()">Close</button></div>' +
+        '</div>';
+      var wrap = document.createElement('div');
+      wrap.className = 'ow-coo-detail-wrap';
+      wrap.style.cssText = 'position:fixed;inset:0;background:rgba(15,26,42,0.55);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;';
+      wrap.innerHTML = '<div style="background:#fff;border:1px solid #eef0f6;border-radius:18px;padding:24px;width:min(520px,96vw);box-shadow:0 32px 80px rgba(15,34,55,0.25);max-height:80vh;overflow-y:auto;">' + html + '</div>';
+      wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
+      document.body.appendChild(wrap);
     }
 
     async function markServed(id) {
@@ -1719,6 +1772,8 @@
       if (cancel) { cancelOrder(cancel.dataset.cancel); return; }
       const pr = e.target.closest('[data-print]');
       if (pr) { printOrderById(pr.dataset.print); return; }
+      const viewCoo = e.target.closest('[data-view-coo]');
+      if (viewCoo) { showCooDetail(viewCoo.dataset.viewCoo); return; }
       const pick = e.target.closest('[data-pick-room]');
       if (pick) {
         selectRoom(pick.dataset.pickRoom, pick.dataset.pickGuest, pick.dataset.pickPhone || '', pick.dataset.pickWhich || '', pick.dataset.pickGuestId || '');
@@ -1879,6 +1934,38 @@
         if (quickTab) quickTab.style.display = 'none';
       }
       setMode(isWaiter ? 'tab' : 'quick');
+      checkPendingCooTransfers();
+    }
+
+    async function checkPendingCooTransfers() {
+      try {
+        var r = await fetch('/api/restaurant/coo-transfers/pending', { credentials: 'include' });
+        var j = await r.json();
+        if (!r.ok || !j.success) return;
+        var pending = j.data || [];
+        if (!pending.length) return;
+        var badge = document.querySelector('.ow-coo-transfer-badge');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'ow-coo-transfer-badge';
+          badge.style.cssText = 'position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;z-index:10;';
+          var navItem = document.querySelector('[data-mode="tab"]');
+          if (navItem) {
+            navItem.style.position = 'relative';
+            navItem.appendChild(badge);
+          }
+        }
+        badge.textContent = pending.length;
+        var msg = pending.map(function (t) { return t.transferNo + ' — ' + t.meal + ' (' + t.quantity + ' ' + t.unit + ') from Table ' + (t.table || '—'); }).join('\n');
+        if (!sessionStorage.getItem('cooTransferNotified')) {
+          sessionStorage.setItem('cooTransferNotified', '1');
+          setTimeout(function () {
+            if (confirm('Kitchen has ' + pending.length + ' COO transfer(s) ready:\n\n' + msg + '\n\nGo to Transfer History to accept?')) {
+              window.location.href = 'restaurant-transfer-history.html';
+            }
+          }, 500);
+        }
+      } catch (e) { /* silent */ }
     }
 
     init();
