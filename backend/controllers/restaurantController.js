@@ -359,9 +359,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { receivedBy } = req.body;
 
-  var query = { transferNo: id };
-  if (/^[0-9a-f]{24}$/i.test(id)) query = { $or: [{ _id: id }, { transferNo: id }] };
-  const transfer = await Transfer.findOne(query);
+  const transfer = await Transfer.findOne({ $or: [{ id: id }, { transferNo: id }] });
   if (!transfer) return res.status(404).json({ success: false, error: 'Transfer not found' });
   if (transfer.status !== 'sent') {
     return res.status(400).json({ success: false, error: `Cannot accept a transfer with status '${transfer.status}'` });
@@ -444,9 +442,7 @@ exports.rejectTransfer = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { rejectReason } = req.body;
 
-  var query = { transferNo: id };
-  if (/^[0-9a-f]{24}$/i.test(id)) query = { $or: [{ _id: id }, { transferNo: id }] };
-  const transfer = await Transfer.findOne(query);
+  const transfer = await Transfer.findOne({ $or: [{ id: id }, { transferNo: id }] });
   if (!transfer) return res.status(404).json({ success: false, error: 'Transfer not found' });
   if (transfer.status !== 'sent') {
     return res.status(400).json({ success: false, error: `Cannot reject a transfer with status '${transfer.status}'` });
