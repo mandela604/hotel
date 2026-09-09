@@ -356,7 +356,11 @@ exports.listTransfers = asyncHandler(async (req, res) => {
 });
 
 exports.pendingCount = asyncHandler(async (req, res) => {
-  const count = await Transfer.countDocuments({ status: 'sent' });
+  const DEPT = 'Main Restaurant / POS';
+  const count = await Transfer.countDocuments({
+    status: 'sent',
+    $or: [{ restaurant: DEPT }, { to: DEPT }],
+  });
   res.json({ success: true, count });
 });
 

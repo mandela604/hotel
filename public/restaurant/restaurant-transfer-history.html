@@ -844,7 +844,7 @@ function getFiltered() {
     const mStatus = !statusFilter || statusBucket(t) === statusFilter;
     let mDate = true;
     if (rangeStart && rangeEnd) {
-      const rawDate = isRequisition(t) ? (t.dateRaised || t.dateRaisedDisplay) : t.date;
+      const rawDate = isRequisition(t) ? (t.dateRaised || t.dateRaisedDisplay) : (t.dateSent || t.dateDisplay);
       const td = RS.dateOnly(RS.parseStamp(rawDate) || (rawDate ? new Date(rawDate) : null));
       if (!td || td < rangeStart || td > rangeEnd) mDate = false;
     }
@@ -854,8 +854,8 @@ function getFiltered() {
   rows = rows.sort((a, b) => {
     let cmp = 0;
     if (sortKey === 'date') {
-      const da = isRequisition(a) ? (a.dateRaised || a.dateRaisedDisplay) : a.date;
-      const db = isRequisition(b) ? (b.dateRaised || b.dateRaisedDisplay) : b.date;
+      const da = isRequisition(a) ? (a.dateRaised || a.dateRaisedDisplay) : (a.dateSent || a.dateDisplay);
+      const db = isRequisition(b) ? (b.dateRaised || b.dateRaisedDisplay) : (b.dateSent || b.dateDisplay);
       const ta = (RS.parseStamp(da) || (da ? new Date(da) : null) || 0);
       const tb = (RS.parseStamp(db) || (db ? new Date(db) : null) || 0);
       cmp = (ta.getTime ? ta.getTime() : ta) - (tb.getTime ? tb.getTime() : tb);
