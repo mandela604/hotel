@@ -355,6 +355,11 @@ exports.listTransfers = asyncHandler(async (req, res) => {
   res.json({ success: true, count: list.length, data: list });
 });
 
+exports.pendingCount = asyncHandler(async (req, res) => {
+  const count = await Transfer.countDocuments({ status: 'sent' });
+  res.json({ success: true, count });
+});
+
 exports.acceptTransfer = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { receivedBy } = req.body;
@@ -858,6 +863,7 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
   for (const it of items) {
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
     orderItems.push({
+      id: uuidv4(),
       name: it.name.trim(),
       qty: Number(it.qty),
       price: Number(it.price) || 0,

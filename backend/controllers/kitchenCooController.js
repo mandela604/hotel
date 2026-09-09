@@ -23,7 +23,7 @@ exports.createCoo = asyncHandler(async (req, res) => {
   const doc = await KitchenCooOrder.create({
     table: table || '',
     covers: Number(covers)||1,
-    items: items.map(i=>({name:i.name.trim(), qty:Number(i.qty), price:Number(i.price)||0, recipeId: i.recipeId||''})),
+    items: items.map(i=>({id:uuidv4(), name:i.name.trim(), qty:Number(i.qty), price:Number(i.price)||0, recipeId: i.recipeId||''})),
     notes: notes||'',
     staff: staff|| (req.user?req.user.name:''),
     method: method||'Cash',

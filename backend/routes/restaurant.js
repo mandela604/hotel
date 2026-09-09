@@ -42,6 +42,7 @@ router.patch('/orders/:id/cancel', inDept, privilegeGuard('restaurant', 'canMana
 
 /* Transfers (incoming from Kitchen/Store) */
 router.get('/transfers', restaurantController.listTransfers);
+router.get('/pending-count', restaurantController.pendingCount);
 router.post('/transfers/:id/accept', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateParam('id'), restaurantController.acceptTransfer);
 router.post('/transfers/:id/reject', inDept, privilegeGuard('restaurant', 'canReject'), v.validateParam('id'), v.validateRejectTransfer, restaurantController.rejectTransfer);
 

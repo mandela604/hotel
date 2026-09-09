@@ -376,6 +376,10 @@
       handle.setApiMode('Live');
       applyNavVisibility(user);
       if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('rst-backBtn'); if (bb) bb.style.display = 'none'; }
+      fetch('/api/restaurant/pending-count', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (j.success) handle.setXferHistBadge(j.count); })
+        .catch(function () {});
     });
 
     return handle;

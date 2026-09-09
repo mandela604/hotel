@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
+  id:      { type: String, default: function() { return require('uuid').v4(); } },
   name:      { type: String, required: true },
   qty:       { type: Number, required: true },
   price:     { type: Number, required: true },

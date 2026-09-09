@@ -767,16 +767,11 @@ function renderKPIs() {
   const decided = kpis.acceptedToday + kpis.rejectedToday;
   const acceptRate = decided ? Math.round((kpis.acceptedToday / decided) * 100) : 0;
 
-  var pendingKitchen = 0;
-  if (window.KitchenService && KitchenService.state && KitchenService.state.transfers) {
-    pendingKitchen = KitchenService.state.transfers.filter(function (t) { return t.status === 'sent'; }).length;
-  }
-
   document.getElementById('kpiRow').innerHTML = `
     <div class="kpi-card clickable acc-amber" data-status="pending" onclick="setStatusFilter('pending')">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="kpi-label">Pending Transfers</div></div>
-      <div class="kpi-value" style="color:var(--amber);">${kpis.pendingCount + pendingKitchen}</div>
-      <div class="kpi-trend ${(kpis.pendingCount + pendingKitchen) > 0 ? 'warn' : 'up'}">${(kpis.pendingCount + pendingKitchen) > 0 ? 'Awaiting review' : 'All clear'}</div>
+      <div class="kpi-value" style="color:var(--amber);" id="kpiPendingVal">—</div>
+      <div class="kpi-trend warn" id="kpiPendingTrend">Loading…</div>
     </div>
     <div class="kpi-card clickable acc-green" data-status="accepted" onclick="setStatusFilter('accepted')">
       <div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="kpi-label">Accepted Transfers</div></div>
@@ -793,15 +788,24 @@ function renderKPIs() {
       <div class="kpi-value" style="color:var(--blue);">${acceptRate}%</div>
       <div class="kpi-trend ${acceptRate >= 80 ? 'up' : acceptRate >= 50 ? 'warn' : 'down'}">${decided} decided record${decided !== 1 ? 's' : ''}</div>
     </div>`;
-  var badge = document.getElementById('pendingBadge');
-  if (badge) {
-    var total = kpis.pendingCount + pendingKitchen;
-    badge.textContent = total;
-    badge.style.display = total > 0 ? '' : 'none';
-  }
-  if (shell && typeof shell.setXferHistBadge === 'function') {
-    shell.setXferHistBadge(kpis.pendingCount + pendingKitchen);
-  }
+  refreshBadge();
+}
+
+function refreshBadge() {
+  fetch('/api/restaurant/pending-count', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j.success) return;
+      var c = j.count || 0;
+      var el = document.getElementById('kpiPendingVal');
+      if (el) el.textContent = c;
+      var trend = document.getElementById('kpiPendingTrend');
+      if (trend) { trend.textContent = c > 0 ? 'Awaiting review' : 'All clear'; trend.className = 'kpi-trend ' + (c > 0 ? 'warn' : 'up'); }
+      var badge = document.getElementById('pendingBadge');
+      if (badge) { badge.textContent = c; badge.style.display = c > 0 ? '' : 'none'; }
+      if (shell && typeof shell.setXferHistBadge === 'function') shell.setXferHistBadge(c);
+    })
+    .catch(function () {});
 }
 
 function setStatusFilter(status) {
@@ -1208,6 +1212,7 @@ async function confirmAccept() {
       'success'
     );
     render();
+    refreshBadge();
   } catch (e) {
     showToast(e.message || 'Accept failed.', 'error');
   }
@@ -1265,6 +1270,7 @@ async function confirmReject() {
     _activeKitchenTransfer = null;
     showToast(t.no + ' rejected.', 'error');
     render();
+    refreshBadge();
   } catch (e) {
     showToast(e.message || 'Reject failed.', 'error');
   }
