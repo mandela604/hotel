@@ -382,7 +382,6 @@
                 <th class="no-sort">By / From</th>
                 <th class="no-sort">Items</th>
                 <th data-sortkey="date">Date <span class="sort-arrow" id="arrow-date"></span></th>
-                <th class="no-sort">Needed By</th>
                 <th class="no-sort">Priority</th>
                 <th class="no-sort">Status</th>
                 <th class="no-print no-sort">Actions</th>
@@ -664,15 +663,6 @@ function itemsSummary(r) {
 function rowDate(r) {
   if (isRequisition(r)) return r.dateRaisedDisplay || r.dateRaised || r.date || '—';
   return r.dateDisplay || r.dateSent || r.date || '—';
-}
-
-function rowNeeded(r) {
-  if (isRequisition(r)) {
-    if (!r.needed) return '—';
-    const d = new Date(r.needed + (r.needed.includes('T') ? '' : 'T00:00:00'));
-    return isNaN(d.getTime()) ? r.needed : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  }
-  return '—';
 }
 
 function rowPriority(r) {
@@ -1062,7 +1052,6 @@ function renderTable() {
             '<td>' + escapeHtml(rowByLine(r)) + '</td>' +
             '<td class="items-summary">' + itemsSummary(r) + '</td>' +
             '<td>' + escapeHtml(rowDate(r)) + '</td>' +
-            '<td>' + escapeHtml(rowNeeded(r)) + '</td>' +
             '<td>' + priorityChip(rowPriority(r)) + '</td>' +
             '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
             '<td class="no-print" onclick="event.stopPropagation();">' + actionsHtml + '</td>' +
