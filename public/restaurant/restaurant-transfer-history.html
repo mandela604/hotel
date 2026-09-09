@@ -639,9 +639,26 @@ function rowByLine(r) {
 }
 
 function itemsSummary(r) {
-  const names = (r.items || []).map(function (i) { return escapeHtml(i.name || '—') + ' ×' + (i.qty != null ? i.qty : (i.issuedQty || 0)); });
-  if (names.length <= 2) return names.join(', ');
-  return names.slice(0, 2).join(', ') + ' <span class="more">+' + (names.length - 2) + ' more</span>';
+  console.log('[itemsSummary] kind:', r._kind, 'no:', r.no || r.transferNo,
+    'meal:', r.meal, 'quantity:', r.quantity, 'unit:', r.unit,
+    'items:', r.items, 'status:', r.status);
+
+  let items;
+  if (isRequisition(r)) {
+    items = (r.items || []).map(function (i) {
+      return escapeHtml(i.name || '—') + ' ×' + (i.qty != null ? i.qty : (i.issuedQty || 0));
+    });
+  } else {
+    // Transfer — meal/quantity/unit are the canonical fields on the Transfer model.
+    // items array does not exist on this model.
+    const name = r.meal || r.name || '—';
+    const qty  = r.quantity != null ? r.quantity : '';
+    const unit = r.unit ? ' ' + r.unit : '';
+    items = name !== '—' ? [escapeHtml(name) + ' ×' + qty + escapeHtml(unit)] : [];
+  }
+  if (!items.length) return '<span style="color:var(--text3)">—</span>';
+  if (items.length <= 2) return items.join(', ');
+  return items.slice(0, 2).join(', ') + ' <span class="more">+' + (items.length - 2) + ' more</span>';
 }
 
 function rowDate(r) {
@@ -670,27 +687,56 @@ function priorityChip(p) {
 /* Merges Restaurant's own pending/history transfers (Kitchen/Store ->
  * Restaurant pushes) and StoreService requisitions (Restaurant -> Store). */
 function getAllRecords() {
+  function normalizeItems(t) {
+    if (!t.items || !t.items.length) {
+      if (t.meal) t.items = [{ name: t.meal, qty: t.quantity, unit: t.unit }];
+      else t.items = [];
+    }
+    return t;
+  }
   const pending = (RS.state.pending || []).map((t) =>
-    Object.assign({}, t, {
+    normalizeItems(Object.assign({}, t, {
       status: 'pending',
       receivedBy: '',
       actionRemarks: '',
       actionDate: '',
       source: normalizeSource(t),
       _kind: 'transfer',
-    })
+    }))
   );
   const history = (RS.state.history || []).map((h) =>
-    Object.assign({}, h, { source: normalizeSource(h), _kind: 'transfer' })
+    normalizeItems(Object.assign({}, h, { source: normalizeSource(h), _kind: 'transfer' }))
   );
 
   let requisitions = [];
   if (window.StoreService && typeof StoreService.getRequisitions === 'function') {
-    requisitions = StoreService.getRequisitions({ mode: 'store_issue' })
+    const allReqs = StoreService.getRequisitions({ mode: 'store_issue' });
+    requisitions = allReqs
+      .filter(function (r) { return (r.dept || '') === REQ_DEPT_LABEL; })
       .map((r) => Object.assign({}, r, { _kind: 'requisition' }));
+    console.log('[getAllRecords] StoreService reqs (all):', allReqs.length,
+      allReqs.map(function(r){ return {no:r.no, dept:r.dept, status:r.status}; }));
+    console.log('[getAllRecords] StoreService reqs (filtered to Restaurant):', requisitions.length);
   }
 
-  return pending.concat(history, requisitions);
+  const all = pending.concat(history, requisitions);
+
+  // Detect duplicates by transferNo/no
+  const seen = {};
+  all.forEach(function(r) {
+    const key = r.no || r.transferNo || r.id;
+    if (seen[key]) {
+      console.warn('[getAllRecords] DUPLICATE detected:', key, 'kind:', r._kind, 'status:', r.status);
+    }
+    seen[key] = true;
+  });
+
+  console.log('[getAllRecords] pending:', pending.length, 'history:', history.length,
+    'requisitions:', requisitions.length, 'total:', all.length);
+  console.log('[getAllRecords] pending nos:', pending.map(function(t){ return t.no || t.transferNo; }));
+  console.log('[getAllRecords] history nos:', history.map(function(t){ return t.no || t.transferNo; }));
+
+  return all;
 }
 
 /* ── Date range ────────────────────────────────────────── */
@@ -1139,10 +1185,8 @@ async function confirmAccept() {
   }
   var t = (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
-  if (!t.items || !t.items.length) {
-    if (t.meal) t.items = [{ name: t.meal, qty: t.quantity, unit: t.unit }];
-    else t.items = [];
-  }
+  // Do NOT mutate t.items — it's a live reference into RS.state.
+  // Read meal/quantity directly for display; itemsSummary already handles this.
   const receivedBy = document.getElementById('acReceivedBy').value.trim();
   if (!receivedBy) {
     showToast('Please enter who received the transfer.', 'error');
@@ -1151,10 +1195,11 @@ async function confirmAccept() {
   const remarks = document.getElementById('acRemarks').value.trim();
 
   try {
-    await RS.acceptTransfer(t.no, { receivedBy, remarks });
+    // Use UUID (t.id) for the API call, not the human-readable t.no
+    await RS.acceptTransfer(t.id, { receivedBy, remarks });
     closeModal('acceptModal');
     showToast(
-      t.no + ' accepted — ' + t.items.length + ' item line(s) added to stock.',
+      t.no + ' accepted — ' + (t.meal || 'transfer') + ' added to stock.',
       'success'
     );
     render();
@@ -1192,7 +1237,8 @@ async function confirmReject() {
   }
 
   try {
-    await RS.rejectTransfer(t.no, { reason });
+    // Use UUID (t.id) for the API call, not the human-readable t.no
+    await RS.rejectTransfer(t.id, { reason });
     closeModal('rejectModal');
     showToast(t.no + ' rejected.', 'error');
     render();

@@ -351,7 +351,7 @@ exports.voidSale = asyncHandler(async (req, res) => {
    never raises these (that's Kitchen's addTransfer).
 ═══════════════════════════════════════════════ */
 exports.listTransfers = asyncHandler(async (req, res) => {
-  const list = await Transfer.find({ $or: [{ restaurant: DESTINATION }, { to: DESTINATION }] }).sort({ createdAt: -1 });
+  const list = await Transfer.find({ to: DESTINATION }).sort({ createdAt: -1 });
   res.json({ success: true, count: list.length, data: list });
 });
 
@@ -368,7 +368,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { receivedBy } = req.body;
 
-  const transfer = await Transfer.findOne({ $or: [{ id: id }, { transferNo: id }] });
+  const transfer = await Transfer.findOne({ id: id });
   if (!transfer) return res.status(404).json({ success: false, error: 'Transfer not found' });
   if (transfer.status !== 'sent') {
     return res.status(400).json({ success: false, error: `Cannot accept a transfer with status '${transfer.status}'` });
@@ -424,7 +424,7 @@ exports.rejectTransfer = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { rejectReason } = req.body;
 
-  const transfer = await Transfer.findOne({ $or: [{ id: id }, { transferNo: id }] });
+  const transfer = await Transfer.findOne({ id: id });
   if (!transfer) return res.status(404).json({ success: false, error: 'Transfer not found' });
   if (transfer.status !== 'sent') {
     return res.status(400).json({ success: false, error: `Cannot reject a transfer with status '${transfer.status}'` });
