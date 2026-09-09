@@ -383,6 +383,13 @@ exports.addTransfer = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Meal name and valid quantity required' });
   }
 
+  if (productionNo) {
+    const existing = await Transfer.findOne({ productionNo });
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Transfer already created for this production run' });
+    }
+  }
+
   const count = await Transfer.countDocuments();
   const transferNo = `KTN-${String(count + 46).padStart(5, '0')}`;
 

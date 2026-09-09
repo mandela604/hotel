@@ -393,34 +393,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
     reason: `Transfer Accepted (${transfer.transferNo})`,
   });
 
-  /* ── Auto-create Sale for Kitchen transfers ── */
-  if (transfer.from === 'Main Kitchen' || transfer.kitchen) {
-    const saleCount = await Sale.countDocuments({ department: DEPT });
-    const saleId = `RST-${String(saleCount + 1).padStart(5, '0')}`;
-
-    await Sale.create({
-      id: saleId,
-      source: transfer.transferNo || transfer.id,
-      department: DEPT,
-      items: [{ name: stockItem.name, stockId: stockItem.id, procurementId: stockItem.procurementId || '', qty: Number(transfer.quantity), price: stockItem.price || 0 }],
-      subtotal: (stockItem.price || 0) * Number(transfer.quantity),
-      discount: 0,
-      total: (stockItem.price || 0) * Number(transfer.quantity),
-      method: 'Transfer',
-      staff: transfer.sentBy || '',
-      table: '',
-      notes: `Auto-created from Kitchen transfer ${transfer.transferNo}`,
-      date: new Date(),
-      status: 'completed',
-      roomNumber: null,
-      guestName: null,
-      guestPhone: null,
-    });
-
-    await logActivity('green', `Transfer ${transfer.transferNo} accepted + Sale created — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
-  } else {
-    await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
-  }
+  await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
 
   if (transfer.cooId) {
     const KitchenCooOrder = require('../models/KitchenCooOrder');

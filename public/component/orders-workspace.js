@@ -1851,9 +1851,7 @@
       // ── Preferred path: module service ──
       if (service) {
         try {
-          if (!service.state || !service.state.ready) {
-            if (typeof service.loadAll === 'function') await service.loadAll();
-          }
+          if (typeof service.loadAll === 'function') await service.loadAll();
           syncFromService();
           const fromSvc = resolvePaymentMethodsFromService();
           if (fromSvc) applyPaymentMethods(fromSvc);
@@ -1935,6 +1933,7 @@
       }
       setMode(isWaiter ? 'tab' : 'quick');
       checkPendingCooTransfers();
+      setInterval(checkPendingCooTransfers, 30000);
     }
 
     async function checkPendingCooTransfers() {
@@ -1943,8 +1942,11 @@
         var j = await r.json();
         if (!r.ok || !j.success) return;
         var pending = j.data || [];
-        if (!pending.length) return;
         var badge = document.querySelector('.ow-coo-transfer-badge');
+        if (!pending.length) {
+          if (badge) badge.remove();
+          return;
+        }
         if (!badge) {
           badge = document.createElement('span');
           badge.className = 'ow-coo-transfer-badge';
@@ -1956,15 +1958,6 @@
           }
         }
         badge.textContent = pending.length;
-        var msg = pending.map(function (t) { return t.transferNo + ' — ' + t.meal + ' (' + t.quantity + ' ' + t.unit + ') from Table ' + (t.table || '—'); }).join('\n');
-        if (!sessionStorage.getItem('cooTransferNotified')) {
-          sessionStorage.setItem('cooTransferNotified', '1');
-          setTimeout(function () {
-            if (confirm('Kitchen has ' + pending.length + ' COO transfer(s) ready:\n\n' + msg + '\n\nGo to Transfer History to accept?')) {
-              window.location.href = 'restaurant-transfer-history.html';
-            }
-          }, 500);
-        }
       } catch (e) { /* silent */ }
     }
 

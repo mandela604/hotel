@@ -461,6 +461,10 @@ function dashboardKPIs() {
     const res = await post('/transfers/' + encodeURIComponent(no) + '/accept', opts || {});
     state.pending = state.pending.filter(function (t) { return (t.no || t.transferNo) !== no; });
     state.history.unshift(res.data);
+    try {
+      const ordersRes = await get('/orders');
+      state.orders = ordersRes.data || [];
+    } catch (e) { /* ignore — will refresh on next loadAll */ }
     emitChange('transfer:accept');
     return res.data;
   }

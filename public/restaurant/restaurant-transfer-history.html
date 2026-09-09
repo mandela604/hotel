@@ -496,8 +496,6 @@
 <script src="services/restaurant-service.js"></script>
 <script src="../store/data/store-seed.js"></script>
 <script src="../store/services/store-service.js"></script>
-<script src="../kitchen/services/kitchen-service.js"></script>
-<script src="../kitchen/data/kitchen-seed.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script src="../component/grace-store-approval.js"></script>
 <script src="../component/grace-request-form.js"></script>
@@ -670,8 +668,7 @@ function priorityChip(p) {
 }
 
 /* Merges Restaurant's own pending/history transfers (Kitchen/Store ->
- * Restaurant pushes), KitchenService sent transfers, and every
- * StoreService requisition Restaurant has raised (Restaurant -> Store). */
+ * Restaurant pushes) and StoreService requisitions (Restaurant -> Store). */
 function getAllRecords() {
   const pending = (RS.state.pending || []).map((t) =>
     Object.assign({}, t, {
@@ -687,29 +684,13 @@ function getAllRecords() {
     Object.assign({}, h, { source: normalizeSource(h), _kind: 'transfer' })
   );
 
-  let kitchenTransfers = [];
-  if (window.KitchenService && KitchenService.state && KitchenService.state.transfers) {
-    kitchenTransfers = KitchenService.state.transfers
-      .filter((t) => t.status === 'sent')
-      .map((t) => ({
-        no: t.transferNo,
-        items: [{ name: t.meal, qty: t.quantity, unit: t.unit }],
-        status: 'pending',
-        from: 'Kitchen',
-        sentBy: t.sentBy,
-        date: t.dateSent,
-        source: 'Kitchen',
-        _kind: 'transfer',
-      }));
-  }
-
   let requisitions = [];
   if (window.StoreService && typeof StoreService.getRequisitions === 'function') {
     requisitions = StoreService.getRequisitions({ mode: 'store_issue' })
       .map((r) => Object.assign({}, r, { _kind: 'requisition' }));
   }
 
-  return pending.concat(history, kitchenTransfers, requisitions);
+  return pending.concat(history, requisitions);
 }
 
 /* ── Date range ────────────────────────────────────────── */
@@ -1127,36 +1108,14 @@ function openDetail(no) {
 }
 
 /* ── Accept / Reject (transfer mutations only) ─────────── */
-var _activeKitchenTransfer = null;
 function openAccept(no) {
   if (!canAccept) {
     showToast("You don't have permission to accept transfers.", 'error');
     return;
   }
   activeNo = no;
-  _activeKitchenTransfer = null;
 
-  // Check KitchenService first (Kitchen transfers)
-  if (window.KitchenService) {
-    const kt = (KitchenService.state.transfers || []).find(x => x.transferNo === no);
-    if (kt && kt.status === 'sent') {
-      _activeKitchenTransfer = {
-        ...kt,
-        no: kt.transferNo,
-        items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }],
-        status: 'pending',
-        from: 'Kitchen',
-        sentBy: kt.sentBy,
-        date: kt.dateSent,
-        source: 'Kitchen',
-        _kind: 'transfer',
-        _isKitchen: true,
-      };
-    }
-  }
-
-  // Fallback to RS pending (Store transfers)
-  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === no);
+  var t = (RS.state.pending || []).find((x) => x.no === no);
   if (!t) return;
 
   // Ensure items are normalized
@@ -1178,9 +1137,8 @@ async function confirmAccept() {
     showToast("You don't have permission to accept transfers.", 'error');
     return;
   }
-  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === activeNo);
+  var t = (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
-  var _isKitchen = !!t._isKitchen;
   if (!t.items || !t.items.length) {
     if (t.meal) t.items = [{ name: t.meal, qty: t.quantity, unit: t.unit }];
     else t.items = [];
@@ -1193,20 +1151,8 @@ async function confirmAccept() {
   const remarks = document.getElementById('acRemarks').value.trim();
 
   try {
-    if (_isKitchen) {
-      const res = await fetch('/api/restaurant/transfers/' + encodeURIComponent(t.no) + '/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ receivedBy, remarks })
-      });
-      const j = await res.json();
-      if (!res.ok || !j.success) throw new Error(j.error || 'Accept failed');
-    } else {
-      await RS.acceptTransfer(t.no, { receivedBy, remarks });
-    }
+    await RS.acceptTransfer(t.no, { receivedBy, remarks });
     closeModal('acceptModal');
-    _activeKitchenTransfer = null;
     showToast(
       t.no + ' accepted — ' + t.items.length + ' item line(s) added to stock.',
       'success'
@@ -1224,14 +1170,7 @@ function openReject(no) {
     return;
   }
   activeNo = no;
-  _activeKitchenTransfer = null;
-  if (window.KitchenService) {
-    var kt = (KitchenService.state.transfers || []).find(x => x.transferNo === no);
-    if (kt && kt.status === 'sent') {
-      _activeKitchenTransfer = { ...kt, no: kt.transferNo, items: [{ name: kt.meal, qty: kt.quantity, unit: kt.unit }], _isKitchen: true };
-    }
-  }
-  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === no);
+  var t = (RS.state.pending || []).find((x) => x.no === no);
   if (!t) return;
   document.getElementById('rjName').textContent =
     t.no + (t.batchNo ? ' — ' + t.batchNo : '');
@@ -1244,9 +1183,8 @@ async function confirmReject() {
     showToast("You don't have permission to reject transfers.", 'error');
     return;
   }
-  var t = _activeKitchenTransfer || (RS.state.pending || []).find((x) => x.no === activeNo);
+  var t = (RS.state.pending || []).find((x) => x.no === activeNo);
   if (!t) return;
-  var _isKitchen = !!t._isKitchen;
   const reason = document.getElementById('rjReason').value.trim();
   if (!reason) {
     showToast('Please enter a reason for rejecting this transfer.', 'error');
@@ -1254,20 +1192,8 @@ async function confirmReject() {
   }
 
   try {
-    if (_isKitchen) {
-      const res = await fetch('/api/restaurant/transfers/' + encodeURIComponent(t.no) + '/reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ rejectReason: reason })
-      });
-      const j = await res.json();
-      if (!res.ok || !j.success) throw new Error(j.error || 'Reject failed');
-    } else {
-      await RS.rejectTransfer(t.no, { reason });
-    }
+    await RS.rejectTransfer(t.no, { reason });
     closeModal('rejectModal');
-    _activeKitchenTransfer = null;
     showToast(t.no + ' rejected.', 'error');
     render();
     refreshBadge();
@@ -1408,14 +1334,6 @@ function printPage() {
 
 /* ── Init (call service, then render) ──────────────────── */
 async function init() {
-  if (window.KitchenService) {
-  try {
-    await KitchenService.loadAll();
-    KitchenService.onChange(render); // optional, keeps UI fresh
-  } catch (e) {
-    console.warn('KitchenService load failed', e);
-  }
-}
   session = await waitForSession(800);
   canAccept = canAcceptFromSession(session);
   canReject = canRejectFromSession(session);
