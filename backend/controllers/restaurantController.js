@@ -11,8 +11,20 @@ const Activity = require('../models/Activity');
 const Category = require('../models/Category');
 const Recipe = require('../models/Recipe');
 const KitchenCooOrder = require('../models/KitchenCooOrder');
+const Booking = require('../models/Booking');
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
+
+function recomputePayStatus(booking) {
+  const total = ((booking.rate || 0) - (booking.discount || 0)) *
+    (Math.max(1, (new Date(booking.checkout) - new Date(booking.checkin)) / 86400000) || 1);
+  const paid = Array.isArray(booking.payments) && booking.payments.length
+    ? booking.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+    : (Number(booking.paid) || 0);
+  if (paid <= 0) booking.payStatus = 'Pending';
+  else if (paid >= total) booking.payStatus = 'Fully Paid';
+  else booking.payStatus = 'Deposit Paid';
+}
 
 const DEPT = 'restaurant';
 const DESTINATION = 'Main Restaurant / POS';
@@ -356,10 +368,9 @@ exports.listTransfers = asyncHandler(async (req, res) => {
 });
 
 exports.pendingCount = asyncHandler(async (req, res) => {
-  const DEPT = 'Main Restaurant / POS';
   const count = await Transfer.countDocuments({
     status: 'sent',
-    $or: [{ restaurant: DEPT }, { to: DEPT }],
+    to: DESTINATION,
   });
   res.json({ success: true, count });
 });

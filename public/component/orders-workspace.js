@@ -990,7 +990,7 @@
 
     async function fetchCooMenuItems(){
       cooMenuItems = (stock || []).filter(function(s) {
-        return s && s.qty > 0;
+        return s && s.name;
       }).map(function(s) {
         var isKitchen = String(s.recipeId || '').trim() !== '';
         return {
@@ -1018,7 +1018,7 @@
       if(tabs) tabs.innerHTML=cats.map(function(c){
         return '<button type="button" class="ow-cat-tab'+(c===cooActiveCat?' active':'')+'" data-coo-cat="'+esc(c)+'">'+esc(c)+'</button>';
       }).join('');
-      var q=(($('[data-role="cooItemSearch]')||{}).value||'').toLowerCase();
+      var q=(($('[data-role="cooItemSearch"]')||{}).value||'').toLowerCase();
       var items=cooMenuItems.filter(function(i){
         return (cooActiveCat==='All'||i.category===cooActiveCat)&&(!q||(i.name||'').toLowerCase().includes(q));
       });
@@ -1027,24 +1027,26 @@
       if(!items.length){ grid.innerHTML='<div class="ow-empty-note">No items match.</div>'; return; }
       grid.innerHTML=items.map(function(i){
         var inCart=cooCart.find(function(c){return c.name===i.name;});
+        var isKitchen=i.source==='kitchen';
         var remaining=(i.qty||0)-(inCart?inCart.qty:0);
-        var disabled=i.qty<=0||remaining<=0;
+        var disabled=!isKitchen&&(i.qty<=0||remaining<=0);
         return '<button type="button" class="ow-mi-tile" data-coo-add="'+esc(i.name)+'" data-coo-source="'+esc(i.source)+'" '+(disabled?'disabled':'')+'>'+
-          (i.source==='kitchen'?'<span class="ow-mi-badge" style="background:#f79009;color:#fff;">Kitchen</span>':'')+
+          (isKitchen?'<span class="ow-mi-badge" style="background:#f79009;color:#fff;">Kitchen</span>':'')+
           '<div class="ow-mi-cat">'+esc(i.category||'')+'</div>'+
           '<div class="ow-mi-name">'+esc(i.name)+'</div>'+
           '<div class="ow-mi-price">'+fmtN(i.price)+'</div>'+
-          '<div class="ow-mi-stock">'+(i.qty>0?(i.qty||0)+' '+esc(i.unit)+' on hand':'Out of stock')+'</div></button>';
+          '<div class="ow-mi-stock">'+(isKitchen?'Made to order':(i.qty>0?(i.qty||0)+' '+esc(i.unit)+' on hand':'Out of stock'))+'</div></button>';
       }).join('');
     }
 
     function addCooItem(name, source){
       var item=cooMenuItems.find(function(i){return i.name===name;});
       if(!item) return;
-      if(item.qty<=0){showToast(name+' is out of stock.','error');return;}
+      var isKitchen=source==='kitchen'||item.source==='kitchen';
+      if(!isKitchen&&item.qty<=0){showToast(name+' is out of stock.','error');return;}
       var ex=cooCart.find(function(c){return c.name===name;});
       if(ex){
-        if(ex.qty>=item.qty){showToast('Only '+item.qty+' available.','error');return;}
+        if(!isKitchen&&ex.qty>=item.qty){showToast('Only '+item.qty+' available.','error');return;}
         ex.qty++;
       } else {
         cooCart.push({name:name, id:item.id, unit:item.unit, price:item.price, qty:1, recipeId:item.recipeId||''});
@@ -1478,6 +1480,8 @@
     }
 
     function renderEditCooModal(o) {
+      var existing = document.querySelector('.ow-coo-edit-wrap');
+      if (existing) existing.remove();
       var itemsHtml = _editCooCart.map(function (c, idx) {
         return '<tr style="border-bottom:1px solid #eef0f6;">' +
           '<td style="padding:6px 8px;font-weight:600;">' + esc(c.name) + (c.recipeId ? ' <span style="font-size:9px;color:#f79009;">Kitchen</span>' : '') + '</td>' +

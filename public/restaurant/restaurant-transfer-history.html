@@ -1119,7 +1119,7 @@ function openDetail(no) {
       '<div class="detail-item"><div class="detail-label">Source</div><div class="detail-value"><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></div></div>' +
       '<div class="detail-item"><div class="detail-label">Requester</div><div class="detail-value">' + escapeHtml(row.requester || row.by || row.sentBy || '—') + '</div></div>' +
       '<div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">' + escapeHtml(rowDate(row)) + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip chip-' + displayStatus(row).cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(displayStatus(row).label) + '</span></div></div>';
+      '<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="chip ' + displayStatus(row).cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(displayStatus(row).label) + '</span></div></div>';
     var _items = row.items || [];
     if (!_items.length && row.meal) _items = [{ name: row.meal, qty: row.quantity, unit: row.unit }];
     document.getElementById('dItems').innerHTML =
