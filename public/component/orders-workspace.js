@@ -1517,6 +1517,9 @@
         setMode('coo');
         renderCooCart();
         renderCooPicker();
+        var t = $('[data-role="cooTable"]'); if (t) t.value = o.table || '';
+        var c = $('[data-role="cooCovers"]'); if (c) c.value = o.covers || 1;
+        var n = $('[data-role="cooNotes"]'); if (n) n.value = o.notes || '';
         var btn = $('[data-role="cooSubmitBtn"]'); if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes'; btn.disabled = false; }
       } else {
         cart = (o.items || []).map(function (it) {
@@ -1525,6 +1528,9 @@
         setMode('quick');
         renderCart();
         renderPicker();
+        var ft = $('[data-role="fTable"]'); if (ft) ft.value = o.table || '';
+        var fn = $('[data-role="fNotes"]'); if (fn) fn.value = o.notes || '';
+        var fd = $('[data-role="cartDisc"]'); if (fd) fd.value = o.discount || 0;
         var btn2 = $('[data-role="submitBtn"]'); if (btn2) { btn2.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes'; btn2.disabled = false; }
       }
       showToast('Editing ' + id + ' — modify items and save.', 'info');
