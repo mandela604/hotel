@@ -1480,6 +1480,10 @@
         '</table>' +
         '<div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;">' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          (st === 'open' && o.type !== 'coo'
+            ? '<button class="ow-act-btn" data-detail-served="' + esc(o.id) + '" style="background:var(--blue);color:#fff;border-color:var(--blue);"><i class="fa-solid fa-bell-concierge"></i> Served</button>' : '') +
+          (st === 'open' && o.type === 'coo'
+            ? '<span style="font-size:10px;color:var(--amber);font-weight:600;display:inline-flex;align-items:center;height:32px;"><i class="fa-solid fa-fire"></i> Awaiting Kitchen</span>' : '') +
           (st === 'open'
             ? '<button class="ow-act-btn" data-detail-edit="' + esc(o.id) + '"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
           (st === 'open'
@@ -1496,6 +1500,18 @@
       wrap.style.cssText = 'position:fixed;inset:0;background:rgba(15,26,42,0.55);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;';
       wrap.innerHTML = '<div style="background:#fff;border:1px solid #eef0f6;border-radius:18px;padding:24px;width:min(520px,96vw);box-shadow:0 32px 80px rgba(15,34,55,0.25);max-height:80vh;overflow-y:auto;">' + html + '</div>';
       wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
+      wrap.addEventListener('click', function (e) {
+        var ds = e.target.closest('[data-detail-served]');
+        if (ds) { wrap.remove(); markServed(ds.dataset.detailServed); return; }
+        var de = e.target.closest('[data-detail-edit]');
+        if (de) { wrap.remove(); openEditCoo(de.dataset.detailEdit); return; }
+        var dc = e.target.closest('[data-detail-cancel]');
+        if (dc) { wrap.remove(); cancelOrder(dc.dataset.detailCancel); return; }
+        var dp = e.target.closest('[data-detail-pay]');
+        if (dp) { wrap.remove(); openPayModal(dp.dataset.detailPay); return; }
+        var dpr = e.target.closest('[data-detail-print]');
+        if (dpr) { wrap.remove(); printOrderById(dpr.dataset.detailPrint); return; }
+      });
       document.body.appendChild(wrap);
     }
 
@@ -1958,14 +1974,6 @@
       if (pr) { printOrderById(pr.dataset.print); return; }
       const viewCoo = e.target.closest('[data-view-coo]');
       if (viewCoo) { showCooDetail(viewCoo.dataset.viewCoo); return; }
-      const detailEdit = e.target.closest('[data-detail-edit]');
-      if (detailEdit) { var _dm = document.querySelector('.ow-coo-detail-wrap'); if (_dm) _dm.remove(); openEditCoo(detailEdit.dataset.detailEdit); return; }
-      const detailCancel = e.target.closest('[data-detail-cancel]');
-      if (detailCancel) { var _dm2 = document.querySelector('.ow-coo-detail-wrap'); if (_dm2) _dm2.remove(); cancelOrder(detailCancel.dataset.detailCancel); return; }
-      const detailPay = e.target.closest('[data-detail-pay]');
-      if (detailPay) { var _dm3 = document.querySelector('.ow-coo-detail-wrap'); if (_dm3) _dm3.remove(); openPayModal(detailPay.dataset.detailPay); return; }
-      const detailPrint = e.target.closest('[data-detail-print]');
-      if (detailPrint) { var _dm4 = document.querySelector('.ow-coo-detail-wrap'); if (_dm4) _dm4.remove(); printOrderById(detailPrint.dataset.detailPrint); return; }
       const editCoo = e.target.closest('[data-edit-coo]');
       if (editCoo) { openEditCoo(editCoo.dataset.editCoo); return; }
       const pick = e.target.closest('[data-pick-room]');
