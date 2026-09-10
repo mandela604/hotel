@@ -407,7 +407,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
       await cooOrder.save();
       if (cooOrder.restaurantOrderId) {
         const linkedOrder = await Order.findOne({ id: cooOrder.restaurantOrderId });
-        if (linkedOrder) {
+        if (linkedOrder && linkedOrder.status !== 'paid') {
           linkedOrder.status = 'served';
           await linkedOrder.save();
         }
@@ -616,11 +616,14 @@ exports.payOrder = asyncHandler(async (req, res) => {
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
+  if (order.status !== 'open' && order.status !== 'served') {
+    return res.status(400).json({ success: false, error: `Cannot pay an order with status '${order.status}'` });
+  }
 
   const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
   const payMethod = method || 'Cash';
 
-  /* ── Deduct RestaurantStock per item (same as createSale) ── */
+  /* ── Deduct RestaurantStock per item (skip items not yet in stock) ── */
   const stockIdMap = {};
   const procIdMap2 = {};
   for (const it of order.items) {
@@ -849,6 +852,8 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
     });
   }
 
+  const kitchenItems = orderItems.filter(i => i.recipeId);
+
   const order = await Order.create({
     id,
     department: DEPT,
@@ -870,28 +875,35 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
     createdBy: createdBy || (req.user ? req.user.name : ''),
   });
 
-  const coo = await KitchenCooOrder.create({
-    id: uuidv4(),
-    restaurantOrderId: id,
-    table: table || '',
-    covers: Number(covers) || 1,
-    items: orderItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, recipeId: i.recipeId })),
-    notes: notes || '',
-    staff: staff || (req.user ? req.user.name : ''),
-    method: method || 'Cash',
-    roomNumber: roomNumber || '',
-    guestName: guestName || '',
-    guestId: guestId || '',
-    guestPhone: guestPhone || '',
-    total,
-    status: 'pending',
-    createdBy: createdBy || (req.user ? req.user.name : ''),
-  });
+  let coo = null;
+  if (kitchenItems.length) {
+    coo = await KitchenCooOrder.create({
+      id: uuidv4(),
+      restaurantOrderId: id,
+      table: table || '',
+      covers: Number(covers) || 1,
+      items: kitchenItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, recipeId: i.recipeId })),
+      notes: notes || '',
+      staff: staff || (req.user ? req.user.name : ''),
+      method: method || 'Cash',
+      roomNumber: roomNumber || '',
+      guestName: guestName || '',
+      guestId: guestId || '',
+      guestPhone: guestPhone || '',
+      total: kitchenItems.reduce((s, i) => s + i.price * i.qty, 0),
+      status: 'pending',
+      createdBy: createdBy || (req.user ? req.user.name : ''),
+    });
+    order.cooId = coo.id;
+    await order.save();
+  }
 
-  order.cooId = coo.id;
-  await order.save();
-
-  await logActivity('gold', `COO ${id} sent to Kitchen — ${items.length} item(s)`, 'restaurant-orders.html');
+  const kitchenCount = kitchenItems.length;
+  const regularCount = orderItems.length - kitchenCount;
+  let activityText = `COO ${id} — ${orderItems.length} item(s)`;
+  if (kitchenCount && regularCount) activityText += ` (${kitchenCount} kitchen, ${regularCount} regular)`;
+  else if (kitchenCount) activityText += ` sent to Kitchen`;
+  await logActivity('gold', activityText, 'restaurant-orders.html');
   res.status(201).json({ success: true, data: { order, coo } });
 });
 
@@ -918,4 +930,103 @@ exports.getPendingCooTransfers = asyncHandler(async (req, res) => {
     });
   }
   res.json({ success: true, data: results });
+});
+
+/* ═══════════════════════════════════════════════
+   COO Order — get single, update items
+═══════════════════════════════════════════════ */
+exports.getOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findOne({ id: req.params.id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  res.json({ success: true, data: order });
+});
+
+exports.updateCooOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { items, discount, notes, table, covers } = req.body;
+
+  const order = await Order.findOne({ id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.type !== 'coo') return res.status(400).json({ success: false, error: 'Only COO orders can be edited' });
+  if (order.status !== 'open') return res.status(400).json({ success: false, error: `Cannot edit a '${order.status}' order` });
+
+  if (order.cooId) {
+    const cooOrder = await KitchenCooOrder.findOne({ id: order.cooId });
+    if (cooOrder && cooOrder.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Kitchen has already started — editing is locked' });
+    }
+  }
+
+  if (items && items.length) {
+    const orderItems = [];
+    for (const it of items) {
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+      orderItems.push({
+        id: it.id || uuidv4(),
+        name: it.name.trim(),
+        qty: Number(it.qty),
+        price: Number(it.price) || 0,
+        recipeId: it.recipeId || (stockItem ? stockItem.recipeId : '') || '',
+        procurementId: stockItem ? (stockItem.procurementId || '') : '',
+      });
+    }
+    order.items = orderItems;
+    order.subtotal = orderItems.reduce((s, i) => s + i.price * i.qty, 0);
+    order.discount = Number(discount) || order.discount || 0;
+    order.total = order.subtotal * (1 - order.discount / 100);
+
+    const kitchenItems = orderItems.filter(i => i.recipeId);
+    if (order.cooId) {
+      const cooOrder = await KitchenCooOrder.findOne({ id: order.cooId });
+      if (cooOrder) {
+        cooOrder.items = kitchenItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, recipeId: i.recipeId }));
+        cooOrder.total = kitchenItems.reduce((s, i) => s + i.price * i.qty, 0);
+        await cooOrder.save();
+      }
+    } else if (kitchenItems.length) {
+      const coo = await KitchenCooOrder.create({
+        id: uuidv4(),
+        restaurantOrderId: id,
+        table: order.table || '',
+        covers: Number(covers) || 1,
+        items: kitchenItems.map(i => ({ name: i.name, qty: i.qty, price: i.price, recipeId: i.recipeId })),
+        notes: order.notes || '',
+        staff: order.staff || '',
+        method: order.payMethod || 'Cash',
+        total: kitchenItems.reduce((s, i) => s + i.price * i.qty, 0),
+        status: 'pending',
+        createdBy: order.createdBy || '',
+      });
+      order.cooId = coo.id;
+    }
+  }
+
+  if (notes !== undefined) order.notes = notes;
+  if (table !== undefined) order.table = table;
+  await order.save();
+
+  res.json({ success: true, data: order });
+});
+
+exports.deleteCooOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const order = await Order.findOne({ id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.type !== 'coo') return res.status(400).json({ success: false, error: 'Only COO orders can be deleted' });
+  if (order.status !== 'open') return res.status(400).json({ success: false, error: `Cannot delete a '${order.status}' order` });
+
+  if (order.cooId) {
+    const cooOrder = await KitchenCooOrder.findOne({ id: order.cooId });
+    if (cooOrder && cooOrder.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Kitchen has already started — cannot cancel' });
+    }
+    if (cooOrder) {
+      cooOrder.status = 'rejected';
+      await cooOrder.save();
+    }
+  }
+
+  order.status = 'cancelled';
+  await order.save();
+  res.json({ success: true, data: order });
 });

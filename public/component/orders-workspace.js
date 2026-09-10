@@ -989,18 +989,18 @@
     }
 
     async function fetchCooMenuItems(){
-      // Single Source of Truth: Cook on Order grid reads exclusively from RestaurantStock items that have recipeId set
       cooMenuItems = (stock || []).filter(function(s) {
-        return s && String(s.recipeId || '').trim() !== '';
+        return s && s.qty > 0;
       }).map(function(s) {
+        var isKitchen = String(s.recipeId || '').trim() !== '';
         return {
           name: s.name,
           id: s.id || s._id || '',
           unit: s.unit || 'portion',
           price: s.price || 0,
-          source: 'kitchen',
-          recipeId: s.recipeId,
-          category: s.category || 'Kitchen Recipes',
+          source: isKitchen ? 'kitchen' : 'stock',
+          recipeId: s.recipeId || '',
+          category: isKitchen ? (s.category || 'Kitchen Recipes') : (s.category || 'Restaurant Items'),
           desc: s.desc || '',
           qty: s.qty || 0
         };
@@ -1027,29 +1027,27 @@
       if(!items.length){ grid.innerHTML='<div class="ow-empty-note">No items match.</div>'; return; }
       grid.innerHTML=items.map(function(i){
         var inCart=cooCart.find(function(c){return c.name===i.name;});
-        var remaining=i.source==='restaurant'?(i.qty||0)-(inCart?inCart.qty:0):999;
-        var disabled=(i.source==='restaurant'&&i.qty<=0)||remaining<=0;
+        var remaining=(i.qty||0)-(inCart?inCart.qty:0);
+        var disabled=i.qty<=0||remaining<=0;
         return '<button type="button" class="ow-mi-tile" data-coo-add="'+esc(i.name)+'" data-coo-source="'+esc(i.source)+'" '+(disabled?'disabled':'')+'>'+
           (i.source==='kitchen'?'<span class="ow-mi-badge" style="background:#f79009;color:#fff;">Kitchen</span>':'')+
           '<div class="ow-mi-cat">'+esc(i.category||'')+'</div>'+
           '<div class="ow-mi-name">'+esc(i.name)+'</div>'+
           '<div class="ow-mi-price">'+fmtN(i.price)+'</div>'+
-          '<div class="ow-mi-stock">'+(i.source==='restaurant'?(i.qty||0)+' '+esc(i.unit)+' on hand':'Tap to add')+'</div></button>';
+          '<div class="ow-mi-stock">'+(i.qty>0?(i.qty||0)+' '+esc(i.unit)+' on hand':'Out of stock')+'</div></button>';
       }).join('');
     }
 
     function addCooItem(name, source){
       var item=cooMenuItems.find(function(i){return i.name===name;});
       if(!item) return;
-      if(!item.recipeId && source==='restaurant'){
-        var inv=stock.find(function(i){return i.name===name;});
-        if(!inv||inv.qty<=0){showToast(name+' is out of stock.','error');return;}
-        var ex=cooCart.find(function(c){return c.name===name;});
-        if(ex){if(ex.qty>=inv.qty){showToast('Only '+inv.qty+' available.','error');return;}ex.qty++;}
-        else cooCart.push({name:name, id:item.id, unit:item.unit, price:item.price, qty:1, recipeId:item.recipeId||''});
-      }else{
-        var ex2=cooCart.find(function(c){return c.name===name;});
-        if(ex2) ex2.qty++; else cooCart.push({name:name, id:item.id, unit:item.unit, price:item.price, qty:1, recipeId:item.recipeId||''});
+      if(item.qty<=0){showToast(name+' is out of stock.','error');return;}
+      var ex=cooCart.find(function(c){return c.name===name;});
+      if(ex){
+        if(ex.qty>=item.qty){showToast('Only '+item.qty+' available.','error');return;}
+        ex.qty++;
+      } else {
+        cooCart.push({name:name, id:item.id, unit:item.unit, price:item.price, qty:1, recipeId:item.recipeId||''});
       }
       renderCooCart();
       renderCooPicker();
@@ -1403,15 +1401,15 @@
             ? '<button type="button" class="ow-act-btn" data-served="' + esc(o.id) + '"><i class="fa-solid fa-bell-concierge"></i>Served</button>'
             : '') +
           (st === 'open' && o.type === 'coo'
-            ? '<span style="font-size:10px;color:var(--amber);font-weight:600;"><i class="fa-solid fa-fire"></i> Awaiting Kitchen</span>'
-            : '') +
-          (st === 'served' && !isWaiter
-            ? '<button type="button" class="ow-act-btn" data-pay="' + esc(o.id) + '"><i class="fa-solid fa-naira-sign"></i>Pay</button>'
-            : '') +
-          ((st === 'open' && o.type !== 'coo') || (st === 'served' && !isWaiter)
-            ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
+            ? '<span style="font-size:10px;color:var(--amber);font-weight:600;margin-right:4px;"><i class="fa-solid fa-fire"></i> Awaiting Kitchen</span>'
             : '') +
           (st === 'open' && o.type === 'coo'
+            ? '<button type="button" class="ow-act-btn" data-edit-coo="' + esc(o.id) + '"><i class="fa-solid fa-pen"></i>Edit</button>'
+            : '') +
+          ((st === 'open' || st === 'served') && !isWaiter
+            ? '<button type="button" class="ow-act-btn" data-pay="' + esc(o.id) + '"><i class="fa-solid fa-naira-sign"></i>Pay</button>'
+            : '') +
+          ((st === 'open' && o.type !== 'coo') || (st === 'open' && o.type === 'coo')
             ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
             : '') +
           '<button type="button" class="ow-act-btn" data-view-coo="' + esc(o.id) + '" title="View details"><i class="fa-solid fa-eye"></i></button>' +
@@ -1464,6 +1462,125 @@
       wrap.innerHTML = '<div style="background:#fff;border:1px solid #eef0f6;border-radius:18px;padding:24px;width:min(520px,96vw);box-shadow:0 32px 80px rgba(15,34,55,0.25);max-height:80vh;overflow-y:auto;">' + html + '</div>';
       wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
       document.body.appendChild(wrap);
+    }
+
+    var _editCooCart = [];
+    var _editCooOrderId = null;
+    function openEditCoo(id) {
+      var o = orders.find(function (x) { return x.id === id; });
+      if (!o) return;
+      if (o.status !== 'open' || o.type !== 'coo') { showToast('Only open COO orders can be edited.', 'error'); return; }
+      _editCooOrderId = id;
+      _editCooCart = (o.items || []).map(function (it) {
+        return { name: it.name, id: it.id || '', unit: 'portion', price: it.price || 0, qty: it.qty || 1, recipeId: it.recipeId || '' };
+      });
+      renderEditCooModal(o);
+    }
+
+    function renderEditCooModal(o) {
+      var itemsHtml = _editCooCart.map(function (c, idx) {
+        return '<tr style="border-bottom:1px solid #eef0f6;">' +
+          '<td style="padding:6px 8px;font-weight:600;">' + esc(c.name) + (c.recipeId ? ' <span style="font-size:9px;color:#f79009;">Kitchen</span>' : '') + '</td>' +
+          '<td style="padding:6px 8px;text-align:center;">' +
+            '<button type="button" data-ec-dec="' + idx + '" style="border:1px solid #ddd;border-radius:4px;width:22px;cursor:pointer;background:#fff;">−</button> ' +
+            '<span style="min-width:20px;display:inline-block;text-align:center;">' + c.qty + '</span> ' +
+            '<button type="button" data-ec-inc="' + idx + '" style="border:1px solid #ddd;border-radius:4px;width:22px;cursor:pointer;background:#fff;">+</button>' +
+          '</td>' +
+          '<td style="padding:6px 8px;text-align:right;">' + fmtN(c.price) + '</td>' +
+          '<td style="padding:6px 8px;text-align:right;font-weight:700;">' + fmtN(c.price * c.qty) + '</td>' +
+          '<td style="padding:6px 8px;text-align:center;"><button type="button" data-ec-rm="' + idx + '" style="color:#f04438;border:none;background:none;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button></td>' +
+          '</tr>';
+      }).join('');
+      var total = _editCooCart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
+      var html = '<div style="padding:0;">' +
+        '<div style="font-weight:800;font-size:16px;margin-bottom:12px;"><i class="fa-solid fa-pen" style="color:var(--gold);"></i> Edit COO — ' + esc(o.id) + '</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">' +
+          '<thead><tr style="border-bottom:2px solid #eef0f6;">' +
+            '<th style="text-align:left;padding:6px 8px;font-size:10px;color:var(--text3);">Item</th>' +
+            '<th style="text-align:center;padding:6px 8px;font-size:10px;color:var(--text3);">Qty</th>' +
+            '<th style="text-align:right;padding:6px 8px;font-size:10px;color:var(--text3);">Price</th>' +
+            '<th style="text-align:right;padding:6px 8px;font-size:10px;color:var(--text3);">Subtotal</th>' +
+            '<th style="width:30px;"></th>' +
+          '</tr></thead>' +
+          '<tbody>' + (itemsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3);">No items</td></tr>') + '</tbody>' +
+        '</table>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+          '<div><input type="text" id="ecSearch" placeholder="Add item…" style="padding:6px 10px;border:1px solid #eef0f6;border-radius:8px;font-size:12px;width:200px;"></div>' +
+          '<div style="font-weight:800;font-size:14px;color:var(--ow-gold);">Total: ' + fmtN(total) + '</div>' +
+        '</div>' +
+        '<div id="ecSearchResults" style="max-height:120px;overflow-y:auto;margin-bottom:12px;"></div>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button class="ow-act-btn" id="ecCancelBtn">Cancel</button>' +
+          '<button class="ow-act-btn" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);" id="ecSaveBtn">Save Changes</button>' +
+        '</div></div>';
+      var wrap = document.createElement('div');
+      wrap.className = 'ow-coo-edit-wrap';
+      wrap.style.cssText = 'position:fixed;inset:0;background:rgba(15,26,42,0.55);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;';
+      wrap.innerHTML = '<div style="background:#fff;border:1px solid #eef0f6;border-radius:18px;padding:24px;width:min(560px,96vw);box-shadow:0 32px 80px rgba(15,34,55,0.25);max-height:80vh;overflow-y:auto;">' + html + '</div>';
+      wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
+      document.body.appendChild(wrap);
+      document.getElementById('ecCancelBtn').addEventListener('click', function () { wrap.remove(); });
+      document.getElementById('ecSaveBtn').addEventListener('click', function () { submitCooEdit(wrap); });
+      wrap.addEventListener('click', function (e) {
+        var inc = e.target.closest('[data-ec-inc]');
+        if (inc) { var i = parseInt(inc.dataset.ecInc, 10); if (_editCooCart[i]) _editCooCart[i].qty++; renderEditCooModal(o); return; }
+        var dec = e.target.closest('[data-ec-dec]');
+        if (dec) { var j = parseInt(dec.dataset.ecDec, 10); if (_editCooCart[j]) { _editCooCart[j].qty--; if (_editCooCart[j].qty <= 0) _editCooCart.splice(j, 1); } renderEditCooModal(o); return; }
+        var rm = e.target.closest('[data-ec-rm]');
+        if (rm) { var k = parseInt(rm.dataset.ecRm, 10); _editCooCart.splice(k, 1); renderEditCooModal(o); return; }
+      });
+      var searchInput = document.getElementById('ecSearch');
+      searchInput.addEventListener('input', function () {
+        var q = this.value.toLowerCase();
+        var results = document.getElementById('ecSearchResults');
+        if (!q) { results.innerHTML = ''; return; }
+        var hits = (stock || []).filter(function (s) { return s.qty > 0 && s.name.toLowerCase().includes(q); });
+        results.innerHTML = hits.map(function (s) {
+          var inCart = _editCooCart.find(function (c) { return c.name === s.name; });
+          return '<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #eef0f6;display:flex;justify-content:space-between;align-items:center;" data-ec-add="' + esc(s.name) + '">' +
+            '<span>' + esc(s.name) + (s.recipeId ? ' <span style="font-size:9px;color:#f79009;">Kitchen</span>' : '') + '</span>' +
+            '<span style="font-size:11px;color:var(--text3);">' + fmtN(s.price) + (inCart ? ' (x' + inCart.qty + ')' : '') + '</span>' +
+            '</div>';
+        }).join('');
+      });
+      document.getElementById('ecSearchResults').addEventListener('click', function (e) {
+        var add = e.target.closest('[data-ec-add]');
+        if (add) {
+          var name = add.dataset.ecAdd;
+          var item = stock.find(function (s) { return s.name === name; });
+          if (item) {
+            var ex = _editCooCart.find(function (c) { return c.name === name; });
+            if (ex) ex.qty++;
+            else _editCooCart.push({ name: name, id: item.id || '', unit: item.unit || 'portion', price: item.price || 0, qty: 1, recipeId: item.recipeId || '' });
+            renderEditCooModal(o);
+            searchInput.value = '';
+            document.getElementById('ecSearchResults').innerHTML = '';
+          }
+        }
+      });
+    }
+
+    async function submitCooEdit(wrap) {
+      if (!_editCooOrderId || !_editCooCart.length) { showToast('No items to save.', 'error'); return; }
+      try {
+        var payload = { items: _editCooCart.map(function (c) { return { id: c.id, name: c.name, qty: c.qty, price: c.price, recipeId: c.recipeId || '' }; }) };
+        var res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editCooOrderId), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+        var j = await res.json();
+        if (!res.ok || !j.success) throw new Error(j.error || 'Update failed');
+        if (wrap) wrap.remove();
+        _editCooOrderId = null;
+        _editCooCart = [];
+        showToast('Order updated.', 'success');
+        if (service && typeof service.loadAll === 'function') { await service.loadAll(); syncFromService(); }
+        renderOrdersTable();
+      } catch (e) {
+        showToast(e.message || 'Update failed.', 'error');
+      }
     }
 
     async function markServed(id) {
@@ -1618,17 +1735,26 @@
 
     async function cancelOrder(id) {
       try {
-        if (service && typeof service.cancelOrder === 'function') {
+        var o = orders.find(function (x) { return x.id === id; });
+        if (o && o.type === 'coo') {
+          var res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(id), {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+          });
+          var j = await res.json();
+          if (!res.ok || !j.success) throw new Error(j.error || 'Cancel failed');
+        } else if (service && typeof service.cancelOrder === 'function') {
           await service.cancelOrder(id);
           syncFromService();
         } else {
-          const o = orders.find(function (x) { return x.id === id; });
           if (!o) return;
           o.status = 'cancelled';
           await saveShared(keys.orders, orders);
           apiSave('PATCH', apiPaths.orders + '/' + id, { status: 'cancelled' });
         }
         showToast(id + ' cancelled.', 'error');
+        if (service && typeof service.loadAll === 'function') { await service.loadAll(); syncFromService(); }
         renderOrdersTable();
         renderKPIs();
       } catch (err) {
@@ -1774,6 +1900,8 @@
       if (pr) { printOrderById(pr.dataset.print); return; }
       const viewCoo = e.target.closest('[data-view-coo]');
       if (viewCoo) { showCooDetail(viewCoo.dataset.viewCoo); return; }
+      const editCoo = e.target.closest('[data-edit-coo]');
+      if (editCoo) { openEditCoo(editCoo.dataset.editCoo); return; }
       const pick = e.target.closest('[data-pick-room]');
       if (pick) {
         selectRoom(pick.dataset.pickRoom, pick.dataset.pickGuest, pick.dataset.pickPhone || '', pick.dataset.pickWhich || '', pick.dataset.pickGuestId || '');
