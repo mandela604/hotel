@@ -751,8 +751,7 @@
         toggleCooRoomChargeUI();
         fetchCooMenuItems();
         renderCooPicker();
-        renderCooCartItems();
-      } else {
+        renderCooCart();      } else {
         $('[data-role="submitLabel"]').textContent = m === 'quick' ? 'Complete Sale' : 'Open Tab';
         $('[data-role="cartTitle"]').textContent = m === 'quick' ? 'Quick Sale' : 'Open Tab';
       }

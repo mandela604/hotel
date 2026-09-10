@@ -232,9 +232,9 @@ function dashboardKPIs() {
     const today = todayDDMMYY();
     return {
       pendingCount: pending.length,
-      acceptedToday: history.filter(function (t) { return t.status === 'accepted' && (t.date || '').startsWith(today); }).length,
-      rejectedToday: history.filter(function (t) { return t.status === 'rejected' && (t.date || '').startsWith(today); }).length,
-      totalToday: pending.concat(history).filter(function (t) { return (t.date || '').startsWith(today); }).length,
+      acceptedToday: history.filter(function (t) { return t.status === 'accepted' && (t.dateSent || t.dateReceived || t.date || '').startsWith(today); }).length,
+      rejectedToday: history.filter(function (t) { return t.status === 'rejected' && (t.dateSent || t.date || '').startsWith(today); }).length,
+      totalToday: pending.concat(history).filter(function (t) { return (t.dateSent || t.date || '').startsWith(today); }).length,
     };
   }
 
@@ -327,6 +327,8 @@ function dashboardKPIs() {
       state.extraCategories = (catRes && catRes.data) ? catRes.data : [];
     } catch (e) { state.extraCategories = []; }
     const transfers = transfersRes.data || [];
+    console.log('[RestaurantService.loadAll] raw transfers from API:', transfers.length,
+      transfers.map(function(t){ return {no: t.transferNo, meal: t.meal, quantity: t.quantity, unit: t.unit, status: t.status, items: t.items}; }));
     // 'sent' = awaiting review (pending); everything else (accepted/
     // rejected/cancelled) is history — same status vocabulary as
     // Kitchen's Transfer model.
@@ -457,21 +459,16 @@ function dashboardKPIs() {
     return res.data;
   }
 
-  async function acceptTransfer(no, opts) {
-    const res = await post('/transfers/' + encodeURIComponent(no) + '/accept', opts || {});
-    state.pending = state.pending.filter(function (t) { return (t.no || t.transferNo) !== no; });
-    state.history.unshift(res.data);
-    try {
-      const ordersRes = await get('/orders');
-      state.orders = ordersRes.data || [];
-    } catch (e) { /* ignore — will refresh on next loadAll */ }
+  async function acceptTransfer(id, opts) {
+    const res = await post('/transfers/' + encodeURIComponent(id) + '/accept', opts || {});
+    // Reload full state for a clean single source of truth — no manual patching.
+    await loadAll();
     emitChange('transfer:accept');
     return res.data;
   }
-  async function rejectTransfer(no, opts) {
-    const res = await post('/transfers/' + encodeURIComponent(no) + '/reject', opts || {});
-    state.pending = state.pending.filter(function (t) { return (t.no || t.transferNo) !== no; });
-    state.history.unshift(res.data);
+  async function rejectTransfer(id, opts) {
+    const res = await post('/transfers/' + encodeURIComponent(id) + '/reject', opts || {});
+    await loadAll();
     emitChange('transfer:reject');
     return res.data;
   }
