@@ -708,6 +708,11 @@
 
     function setMode(m) {
       if (isWaiter && m === 'quick') m = 'tab';
+      if (m !== 'quick' && m !== 'coo' && _editCooOrderId) {
+        _editCooOrderId = null;
+        var btnCoo = $('[data-role="cooSubmitBtn"]'); if (btnCoo) btnCoo.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send to Kitchen';
+        var btnOrd = $('[data-role="submitBtn"]'); if (btnOrd) btnOrd.innerHTML = '<i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>';
+      }
       mode = m;
       $$('.ow-mode-tab').forEach(function (tab) {
         tab.classList.toggle('active', tab.dataset.mode === m);
@@ -1117,6 +1122,21 @@
       if(method==='Room Charge'&&!room){showToast('Select room for Room Charge.','error');return;}
       var location=method==='Room Charge'&&room?'Room '+room:table;
       var items=cooCart.map(function(c){return {name:c.name, qty:c.qty, price:c.price, recipeId:c.recipeId||''};});
+
+      if(_editCooOrderId){
+        try{
+          var res=await fetch('/api/restaurant/coo-orders/'+encodeURIComponent(_editCooOrderId),{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({items:items,table:location,covers:covers,notes:notes})});
+          var body=null;try{body=await res.json();}catch(e){}
+          if(!res.ok) throw new Error((body&&body.error)||'Failed to update');
+          showToast(_editCooOrderId+' updated.','success');
+          _editCooOrderId=null; cooCart=[]; renderCooCart();
+          var btn=$('[data-role="cooSubmitBtn"]'); if(btn) btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Send to Kitchen';
+          if(typeof service!=='undefined'&&service&&typeof service.loadAll==='function'){try{await service.loadAll();syncFromService();}catch(e){}}
+          setMode('active'); renderOrdersTable(); renderKPIs();
+        }catch(err){showToast(err.message||'Failed to update','error');}
+        return;
+      }
+
       var payload={table:location, covers:covers, items:items, notes:notes, staff:staff, method:method, roomNumber:room, guestName:guest, guestId:gid, guestPhone:phone};
       try{
         var res=await fetch('/api/restaurant/coo-orders',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
@@ -1213,6 +1233,22 @@
         showToast('Add at least one item.', 'error');
         return;
       }
+
+      if (_editCooOrderId) {
+        var editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
+        try {
+          var res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editCooOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
+          var body = null; try { body = await res.json(); } catch (e) {}
+          if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
+          showToast(_editCooOrderId + ' updated.', 'success');
+          _editCooOrderId = null; cart = []; renderCart();
+          var btn = $('[data-role="submitBtn"]'); if (btn) btn.innerHTML = '<i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>';
+          if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
+          setMode('active'); renderOrdersTable(); renderKPIs();
+        } catch (err) { showToast(err.message || 'Failed to update', 'error'); }
+        return;
+      }
+
       const table = ($('[data-role="fTable"]').value || '').trim(); // optional
       let staff = ($('[data-role="fStaff"]').value || '').trim() || resolveStaffName();
       if (!staff) { showToast('Staff name is required.', 'error'); return; }
@@ -1405,7 +1441,7 @@
           (st === 'open' && o.type === 'coo'
             ? '<span style="font-size:10px;color:var(--amber);font-weight:600;margin-right:4px;"><i class="fa-solid fa-fire"></i> Awaiting Kitchen</span>'
             : '') +
-          (st === 'open' && o.type === 'coo'
+          (st === 'open'
             ? '<button type="button" class="ow-act-btn" data-edit-coo="' + esc(o.id) + '"><i class="fa-solid fa-pen"></i>Edit</button>'
             : '') +
           ((st === 'open' || st === 'served') && !isWaiter
@@ -1471,12 +1507,27 @@
     function openEditCoo(id) {
       var o = orders.find(function (x) { return x.id === id; });
       if (!o) return;
-      if (o.status !== 'open' || o.type !== 'coo') { showToast('Only open COO orders can be edited.', 'error'); return; }
+      if (o.status !== 'open') { showToast('Only open orders can be edited.', 'error'); return; }
       _editCooOrderId = id;
-      _editCooCart = (o.items || []).map(function (it) {
-        return { name: it.name, id: it.id || '', unit: 'portion', price: it.price || 0, qty: it.qty || 1, recipeId: it.recipeId || '' };
-      });
-      renderEditCooModal(o);
+      if (o.type === 'coo') {
+        _editCooCart = (o.items || []).map(function (it) {
+          return { name: it.name, id: it.id || '', unit: it.unit || 'portion', price: it.price || 0, qty: it.qty || 1, recipeId: it.recipeId || '' };
+        });
+        cooCart = _editCooCart.slice();
+        setMode('coo');
+        renderCooCart();
+        renderCooPicker();
+        var btn = $('[data-role="cooSubmitBtn"]'); if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes'; btn.disabled = false; }
+      } else {
+        cart = (o.items || []).map(function (it) {
+          return { key: it.name, name: it.name, qty: it.qty || 1, price: it.price || 0 };
+        });
+        setMode('quick');
+        renderCart();
+        renderPicker();
+        var btn2 = $('[data-role="submitBtn"]'); if (btn2) { btn2.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes'; btn2.disabled = false; }
+      }
+      showToast('Editing ' + id + ' — modify items and save.', 'info');
     }
 
     function renderEditCooModal(o) {

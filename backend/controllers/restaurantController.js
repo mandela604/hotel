@@ -958,7 +958,6 @@ exports.updateCooOrder = asyncHandler(async (req, res) => {
 
   const order = await Order.findOne({ id, department: DEPT });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
-  if (order.type !== 'coo') return res.status(400).json({ success: false, error: 'Only COO orders can be edited' });
   if (order.status !== 'open') return res.status(400).json({ success: false, error: `Cannot edit a '${order.status}' order` });
 
   if (order.cooId) {
