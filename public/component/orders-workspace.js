@@ -1434,23 +1434,10 @@
           '<td><span class="ow-chip ow-chip-' + st + '"><i class="fa-solid fa-circle"></i>' +
           st.charAt(0).toUpperCase() + st.slice(1) + '</span></td>' +
           '<td><div class="ow-act-btns">' +
-          (st === 'open' && o.type !== 'coo'
-            ? '<button type="button" class="ow-act-btn" data-served="' + esc(o.id) + '"><i class="fa-solid fa-bell-concierge"></i>Served</button>'
-            : '') +
           (st === 'open' && o.type === 'coo'
             ? '<span style="font-size:10px;color:var(--amber);font-weight:600;margin-right:4px;"><i class="fa-solid fa-fire"></i> Awaiting Kitchen</span>'
             : '') +
-          (st === 'open'
-            ? '<button type="button" class="ow-act-btn" data-edit-coo="' + esc(o.id) + '"><i class="fa-solid fa-pen"></i>Edit</button>'
-            : '') +
-          ((st === 'open' || st === 'served') && !isWaiter
-            ? '<button type="button" class="ow-act-btn" data-pay="' + esc(o.id) + '"><i class="fa-solid fa-naira-sign"></i>Pay</button>'
-            : '') +
-          ((st === 'open' && o.type !== 'coo') || (st === 'open' && o.type === 'coo')
-            ? '<button type="button" class="ow-act-btn" data-cancel="' + esc(o.id) + '"><i class="fa-solid fa-ban"></i>Cancel</button>'
-            : '') +
-          '<button type="button" class="ow-act-btn" data-view-coo="' + esc(o.id) + '" title="View details"><i class="fa-solid fa-eye"></i></button>' +
-          '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print receipt"><i class="fa-solid fa-print"></i></button>' +
+          '<button type="button" class="ow-act-btn" data-view-coo="' + esc(o.id) + '" style="font-weight:700;">View</button>' +
           '</div></td></tr>';
       }).join('');
     }
@@ -1468,7 +1455,7 @@
       }).join('');
       var st = (o.status || 'open').toLowerCase();
       var html = '<div style="padding:0;">' +
-        '<div style="font-weight:800;font-size:16px;margin-bottom:12px;"><i class="fa-solid fa-fire" style="color:var(--amber);"></i> Cook on Order — ' + esc(o.id) + '</div>' +
+        '<div style="font-weight:800;font-size:16px;margin-bottom:12px;"><i class="fa-solid ' + (o.type === 'coo' ? 'fa-fire" style="color:var(--amber)' : 'fa-receipt" style="color:var(--ow-gold)') + ';"></i> ' + (o.type === 'coo' ? 'Cook on Order' : 'Order') + ' — ' + esc(o.id) + '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:12.5px;">' +
           '<div><b>Table:</b> ' + esc(o.table || '—') + '</div>' +
           '<div><b>Staff:</b> ' + esc(o.staff || o.createdBy || '—') + '</div>' +
@@ -1491,7 +1478,18 @@
           '</tr></thead>' +
           '<tbody>' + items + '</tbody>' +
         '</table>' +
-        '<div style="display:flex;justify-content:flex-end;"><button class="ow-act-btn" onclick="this.closest(\'.ow-coo-detail-wrap\').remove()">Close</button></div>' +
+        '<div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;">' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          (st === 'open'
+            ? '<button class="ow-act-btn" data-detail-edit="' + esc(o.id) + '"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
+          (st === 'open'
+            ? '<button class="ow-act-btn" data-detail-cancel="' + esc(o.id) + '" style="color:var(--red);"><i class="fa-solid fa-ban"></i> Cancel</button>' : '') +
+          ((st === 'open' || st === 'served') && !isWaiter
+            ? '<button class="ow-act-btn" data-detail-pay="' + esc(o.id) + '" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);"><i class="fa-solid fa-naira-sign"></i> Pay</button>' : '') +
+          '<button class="ow-act-btn" data-detail-print="' + esc(o.id) + '"><i class="fa-solid fa-print"></i> Print</button>' +
+          '</div>' +
+          '<button class="ow-act-btn" onclick="this.closest(\'.ow-coo-detail-wrap\').remove()">Close</button>' +
+          '</div>' +
         '</div>';
       var wrap = document.createElement('div');
       wrap.className = 'ow-coo-detail-wrap';
@@ -1960,6 +1958,14 @@
       if (pr) { printOrderById(pr.dataset.print); return; }
       const viewCoo = e.target.closest('[data-view-coo]');
       if (viewCoo) { showCooDetail(viewCoo.dataset.viewCoo); return; }
+      const detailEdit = e.target.closest('[data-detail-edit]');
+      if (detailEdit) { var _dm = document.querySelector('.ow-coo-detail-wrap'); if (_dm) _dm.remove(); openEditCoo(detailEdit.dataset.detailEdit); return; }
+      const detailCancel = e.target.closest('[data-detail-cancel]');
+      if (detailCancel) { var _dm2 = document.querySelector('.ow-coo-detail-wrap'); if (_dm2) _dm2.remove(); cancelOrder(detailCancel.dataset.detailCancel); return; }
+      const detailPay = e.target.closest('[data-detail-pay]');
+      if (detailPay) { var _dm3 = document.querySelector('.ow-coo-detail-wrap'); if (_dm3) _dm3.remove(); openPayModal(detailPay.dataset.detailPay); return; }
+      const detailPrint = e.target.closest('[data-detail-print]');
+      if (detailPrint) { var _dm4 = document.querySelector('.ow-coo-detail-wrap'); if (_dm4) _dm4.remove(); printOrderById(detailPrint.dataset.detailPrint); return; }
       const editCoo = e.target.closest('[data-edit-coo]');
       if (editCoo) { openEditCoo(editCoo.dataset.editCoo); return; }
       const pick = e.target.closest('[data-pick-room]');
