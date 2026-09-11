@@ -116,9 +116,8 @@
     .aur-sidebar.aur-collapsed .aur-sb-footer{ padding:12px 8px; }
     .aur-sidebar.aur-collapsed .aur-theme-btn{ justify-content:center; padding:10px; }
 
-    .aur-nav{ flex:1; overflow-y:auto; padding:8px 10px; }
-    .aur-nav::-webkit-scrollbar{ width:3px; }
-    .aur-nav::-webkit-scrollbar-thumb{ background:var(--aur-border); border-radius:3px; }
+    .aur-nav{ flex:1; overflow-y:auto; padding:8px 10px; scrollbar-width:none; -ms-overflow-style:none; }
+    .aur-nav::-webkit-scrollbar{ width:0; height:0; }
     .aur-item{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:var(--aur-text2); font-size:13.5px; font-weight:400; cursor:pointer; text-decoration:none; border:1px solid transparent; margin-bottom:2px; transition:all .2s; white-space:nowrap; }
     .aur-item:hover{ background:var(--aur-surface2); color:var(--aur-text); }
     .aur-item.aur-active{ background:var(--aur-gold-dim); border-color:var(--aur-gold-border); color:var(--aur-gold-light); font-weight:500; }

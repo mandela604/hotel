@@ -78,9 +78,8 @@
   .prc-back:hover{ color:var(--gold); }
 
   .prc-navlabel{ font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); padding:18px 16px 6px; }
-  .prc-nav{ flex:1; overflow-y:auto; padding:4px 10px; }
-  .prc-nav::-webkit-scrollbar{ width:3px; }
-  .prc-nav::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:3px; }
+    .prc-nav{ flex:1; overflow-y:auto; padding:4px 10px; scrollbar-width:none; -ms-overflow-style:none; }
+    .prc-nav::-webkit-scrollbar{ width:0; height:0; }
   .prc-navitem{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:var(--radius-sm); color:var(--text2);
     font-size:13.5px; cursor:pointer; text-decoration:none; border:1px solid transparent; margin-bottom:2px; transition:all .2s; white-space:nowrap; }
   .prc-navitem:hover{ background:var(--surface2); color:var(--text); }
