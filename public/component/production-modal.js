@@ -183,7 +183,6 @@
 
   var STATUS_LBL = { 'in-progress': 'Awaiting Yield', completed: 'Completed', voided: 'Voided' };
   var TYPE_LBL = { rts: 'Ready-to-Serve', coo: 'Cook-on-Order' };
-  var DESTINATIONS = ['Main Restaurant / POS'];
 
   function create(opts) {
     opts = opts || {};
@@ -194,7 +193,6 @@
     var session = opts.session || null;
 
     var current = null; // the production record
-    var sendingTransfer = false;
 
     var root = document.createElement('div');
     root.className = 'pmx-overlay';
@@ -474,13 +472,6 @@
       var pNo = current.id || current.no;
       return (service.state.transfers || []).filter(function (t) { return t.productionNo === pNo || t.productionNo === current.id; });
     }
-    function transferredQty(list, mealName) {
-      return list.reduce(function (s, t) {
-        if (t.status === 'cancelled' || t.status === 'rejected') return s;
-        if (mealName && t.meal !== mealName) return s;
-        return s + (Number(t.quantity) || 0);
-      }, 0);
-    }
 
     function renderTransferSection(p) {
       var sec = $('[data-role="transferSection"]');
@@ -505,135 +496,6 @@
           '<td>' + esc((t.status || '').toUpperCase()) + '</td>' +
         '</tr>';
       }).join('') : '<tr><td colspan="5" class="pmx-ledger-empty">No transfers sent yet.</td></tr>';
-
-      // Transfer form: per-dish line items for batch, single form for legacy
-      var formBody = $('[data-role="transferFormBody"]');
-      if (!formBody) {
-        // Create the form body container if not present
-        var transferSec = $('[data-role="transferSection"]');
-        var sectionBody = transferSec.querySelector('.pmx-section-body');
-        var formDiv = document.createElement('div');
-        formDiv.setAttribute('data-role', 'transferFormBody');
-        sectionBody.appendChild(formDiv);
-        formBody = formDiv;
-      }
-
-      if (hasBatch) {
-        // Batch mode: line-item transfer form
-        var html = '<div class="pmx-hint" style="margin-bottom:8px;">Send completed dishes to Restaurant / Poolbar. Each dish is a separate transfer.</div>';
-        html += '<div style="overflow-x:auto;margin-bottom:8px;">';
-        html += '<table class="pmx-ledger"><thead><tr><th>Dish</th><th>Available</th><th>Qty to Send</th><th>Unit</th><th>Dest</th><th></th></tr></thead><tbody>';
-        completedDishes.forEach(function (d, idx) {
-          var sent = transferredQty(list, d.dish);
-          var remaining = Math.max(0, (d.outputQty || 0) - sent);
-          if (remaining <= 0) return;
-          var realIdx = p.dishes.indexOf(d);
-          html += '<tr data-dish-idx="' + realIdx + '">' +
-            '<td style="font-weight:700;">' + esc(d.dish) + '</td>' +
-            '<td>' + fmtQty(remaining) + ' ' + esc(d.outputUnit || '') + '</td>' +
-            '<td><input class="pmx-input" data-role="xferQty_' + realIdx + '" type="number" min="0.1" step="0.1" value="' + fmtQty(remaining) + '" style="width:80px;padding:5px 8px;font-size:12px;"></td>' +
-            '<td><select class="pmx-select" data-role="xferUnit_' + realIdx + '" style="padding:5px 8px;font-size:12px;">' +
-              ['Plates','Portions','Pieces','Packs'].map(function(u){ return '<option' + (u === (d.outputUnit || 'Plates') ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
-            '</select></td>' +
-            '<td><select class="pmx-select" data-role="xferDest_' + realIdx + '" style="padding:5px 8px;font-size:12px;">' +
-              DESTINATIONS.map(function(dd){ return '<option>' + dd + '</option>'; }).join('') +
-            '</select></td>' +
-            '<td><button class="pmx-btn pmx-btn-primary pmx-btn-sm" data-act="sendDishTransfer" data-dish-idx="' + realIdx + '"><i class="fa-solid fa-paper-plane"></i></button></td>' +
-          '</tr>';
-        });
-        html += '</tbody></table></div>';
-        formBody.innerHTML = html;
-      } else {
-        // Legacy single-dish form
-        var sent = transferredQty(list);
-        var remaining = Math.max(0, (Number(p.outputQty) || 0) - sent);
-        var defaultUnit = (p.outputUnit && ['Plates', 'Portions', 'Pieces', 'Packs'].indexOf(p.outputUnit) !== -1) ? p.outputUnit : 'Plates';
-        formBody.innerHTML =
-          '<div class="pmx-hint" style="margin-bottom:8px;">' +
-            (sent > 0 ? fmtQty(sent) + ' of ' + fmtQty(p.outputQty) + ' ' + (p.outputUnit || '') + ' transferred · ' + fmtQty(remaining) + ' remaining' : fmtQty(p.outputQty) + ' ' + (p.outputUnit || '') + ' available') +
-          '</div>' +
-          '<div class="pmx-grid-3">' +
-            '<div class="pmx-fg"><label class="pmx-label">Meal</label><input class="pmx-input" data-role="tMeal" type="text" value="' + esc(p.dish || '') + '"></div>' +
-            '<div class="pmx-fg"><label class="pmx-label">Quantity</label><input class="pmx-input" data-role="tQty" type="number" min="1" step="1" value="' + fmtQty(remaining > 0 ? remaining : (p.outputQty || '')) + '"></div>' +
-            '<div class="pmx-fg"><label class="pmx-label">Unit</label><select class="pmx-select" data-role="tUnit">' +
-              ['Plates','Portions','Pieces','Packs'].map(function(u){ return '<option' + (u === defaultUnit ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
-            '</select></div>' +
-          '</div>' +
-          '<div class="pmx-grid-2">' +
-            '<div class="pmx-fg"><label class="pmx-label">Destination</label><select class="pmx-select" data-role="tDest">' +
-              DESTINATIONS.map(function(dd){ return '<option>' + dd + '</option>'; }).join('') +
-            '</select></div>' +
-            '<div class="pmx-fg"><label class="pmx-label">Remarks</label><input class="pmx-input" data-role="tRemarks" type="text" placeholder="Optional"></div>' +
-          '</div>' +
-          '<button type="button" class="pmx-btn pmx-btn-primary" data-act="sendTransfer"><i class="fa-solid fa-paper-plane"></i> Send Transfer</button>';
-      }
-    }
-
-    async function sendTransfer() {
-      if (!current || sendingTransfer) return;
-      var meal = val('tMeal').trim();
-      var qty = parseFloat(val('tQty')) || 0;
-      var unit = val('tUnit');
-      var dest = val('tDest');
-      var remarks = val('tRemarks').trim();
-      if (!meal) { toast('Enter the meal name.', 'error'); return; }
-      if (qty <= 0) { toast('Enter a valid quantity.', 'error'); return; }
-
-      sendingTransfer = true;
-      var btn = $('[data-act="sendTransfer"]');
-      if (btn) btn.disabled = true;
-      try {
-        var pNo = current.id || current.no;
-        var entry = await service.addTransfer({
-          meal: meal, quantity: qty, unit: unit,
-          sentBy: getStaffName(), remarks: remarks,
-          productionNo: pNo, restaurant: dest,
-        });
-        toast(entry.transferNo + ' sent to ' + dest + '.', 'success');
-        onSaved(current);
-        renderTransferSection(current);
-      } catch (err) {
-        toast((err && err.message) || 'Failed to send transfer.', 'error');
-      } finally {
-        sendingTransfer = false;
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    async function sendDishTransfer(dishIdx) {
-      if (!current || sendingTransfer) return;
-      var p = current;
-      if (!Array.isArray(p.dishes) || !p.dishes[dishIdx]) return;
-      var dish = p.dishes[dishIdx];
-
-      var qtyEl = $('[data-role="xferQty_' + dishIdx + '"]');
-      var unitEl = $('[data-role="xferUnit_' + dishIdx + '"]');
-      var destEl = $('[data-role="xferDest_' + dishIdx + '"]');
-      var qty = parseFloat(qtyEl ? qtyEl.value : 0) || 0;
-      var unit = unitEl ? unitEl.value : 'Plates';
-      var dest = destEl ? destEl.value : DESTINATIONS[0];
-
-      if (qty <= 0) { toast('Enter a valid quantity for ' + dish.dish + '.', 'error'); return; }
-
-      sendingTransfer = true;
-      var btn = root.querySelector('[data-act="sendDishTransfer"][data-dish-idx="' + dishIdx + '"]');
-      if (btn) btn.disabled = true;
-      try {
-        var pNo = current.id || current.no;
-        var entry = await service.addTransfer({
-          meal: dish.dish, quantity: qty, unit: unit,
-          sentBy: getStaffName(), remarks: '',
-          productionNo: pNo, restaurant: dest,
-        });
-        toast(entry.transferNo + ' — ' + dish.dish + ' sent to ' + dest + '.', 'success');
-        onSaved(current);
-        renderTransferSection(current);
-      } catch (err) {
-        toast((err && err.message) || 'Failed to send transfer.', 'error');
-      } finally {
-        sendingTransfer = false;
-        if (btn) btn.disabled = false;
-      }
     }
 
     /* ── Void ── */
@@ -797,8 +659,6 @@
       if (a === 'toggleVoid') { toggleSection('voidSection'); return; }
       if (a === 'saveYield') { saveYield(); return; }
       if (a === 'saveBatchYield') { saveYield(); return; }
-      if (a === 'sendTransfer') { sendTransfer(); return; }
-      if (a === 'sendDishTransfer') { sendDishTransfer(Number(act.dataset.dishIdx)); return; }
       if (a === 'requestVoid') { requestVoid(); return; }
       if (a === 'requestBatchVoid') { requestVoid(); return; }
       if (a === 'confirmYes') { hideConfirm(true); return; }
