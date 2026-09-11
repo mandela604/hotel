@@ -423,32 +423,6 @@ exports.completeProduction = asyncHandler(async (req, res) => {
         dish.yieldVariancePct = Math.round(((q - dish.expectedYield) / dish.expectedYield) * 10000) / 100;
       }
       dish.status = 'completed';
-
-      // Auto-create transfer for COO dish
-      if (run.cooId && dish.recipeId) {
-        const existingTransfer = await Transfer.findOne({ cooId: run.cooId, meal: dish.dish });
-        if (!existingTransfer) {
-          const transferCount = await Transfer.countDocuments();
-          const transfer = await Transfer.create({
-            id: uuidv4(),
-            transferNo: 'KTN-' + String(transferCount + 1).padStart(5, '0'),
-            cooId: run.cooId,
-            productionNo: run.id,
-            meal: dish.dish,
-            quantity: q,
-            unit: dish.outputUnit || 'portions',
-            kitchen: 'Main Kitchen',
-            restaurant: 'Main Restaurant / POS',
-            from: 'Main Kitchen',
-            to: 'Main Restaurant / POS',
-            sentBy: run.staff || 'Head Chef',
-            dateSent: nowStamp(),
-            status: 'sent',
-            remarks: 'COO batch production',
-          });
-          dish.transferNo = transfer.transferNo;
-        }
-      }
     }
 
     // Compute top-level aggregated values
@@ -491,32 +465,7 @@ exports.completeProduction = asyncHandler(async (req, res) => {
       if (Array.isArray(run.meals) && run.meals[0]) run.meals[0].unit = outputUnit;
     }
 
-    // Auto-create transfer for COO single-dish
-    if (run.cooId && run.status === 'completed') {
-      const existingTransfer = await Transfer.findOne({ cooId: run.cooId });
-      if (!existingTransfer) {
-        const KitchenCooOrder = require('../models/KitchenCooOrder');
-        const cooOrder = await KitchenCooOrder.findOne({ id: run.cooId });
-        const transferCount = await Transfer.countDocuments();
-        const transfer = await Transfer.create({
-          id: uuidv4(),
-          transferNo: 'KTN-' + String(transferCount + 1).padStart(5, '0'),
-          cooId: run.cooId,
-          meal: run.dish,
-          quantity: Number(run.outputQty) || 0,
-          unit: run.outputUnit || 'portions',
-          kitchen: 'Main Kitchen',
-          restaurant: 'Main Restaurant / POS',
-          from: 'Main Kitchen',
-          to: 'Main Restaurant / POS',
-          sentBy: run.staff || 'Head Chef',
-          dateSent: nowStamp(),
-          status: 'sent',
-          remarks: 'COO production — ' + (cooOrder ? cooOrder.table : ''),
-        });
-        run.transferNo = transfer.transferNo;
-      }
-    }
+    run.transferNo = undefined;
   }
 
   if (notes !== undefined) {
