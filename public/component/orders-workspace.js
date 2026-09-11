@@ -1488,7 +1488,7 @@
             ? '<button class="ow-act-btn" data-detail-edit="' + esc(o.id) + '"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
           (st === 'open'
             ? '<button class="ow-act-btn" data-detail-cancel="' + esc(o.id) + '" style="color:var(--red);"><i class="fa-solid fa-ban"></i> Cancel</button>' : '') +
-          ((st === 'open' || st === 'served') && !isWaiter
+          (st === 'open' || st === 'served'
             ? '<button class="ow-act-btn" data-detail-pay="' + esc(o.id) + '" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);"><i class="fa-solid fa-naira-sign"></i> Pay</button>' : '') +
           '<button class="ow-act-btn" data-detail-print="' + esc(o.id) + '"><i class="fa-solid fa-print"></i> Print</button>' +
           '</div>' +
