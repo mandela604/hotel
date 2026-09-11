@@ -273,24 +273,7 @@
                 '<tbody data-role="transferBody"></tbody>' +
               '</table>' +
             '</div>' +
-            '<div class="pmx-hint" data-role="transferHint" style="margin-bottom:8px;"></div>' +
-            '<div class="pmx-fg" style="margin-bottom:8px;">' +
-              '<label class="pmx-label">Destination</label>' +
-              '<select class="pmx-select" data-role="tDest">' +
-                '<option>Main Restaurant / POS</option><option>Poolbar</option>' +
-              '</select>' +
-            '</div>' +
-            '<div class="pmx-grid-3">' +
-              '<div class="pmx-fg"><label class="pmx-label">Meal</label><input class="pmx-input" data-role="tMeal" type="text"></div>' +
-              '<div class="pmx-fg"><label class="pmx-label">Quantity</label><input class="pmx-input" data-role="tQty" type="number" min="1" step="1"></div>' +
-              '<div class="pmx-fg"><label class="pmx-label">Unit</label>' +
-                '<select class="pmx-select" data-role="tUnit"><option>Plates</option><option>Portions</option><option>Pieces</option><option>Packs</option></select></div>' +
-            '</div>' +
-            '<div class="pmx-grid-2">' +
-              '<div class="pmx-fg"><label class="pmx-label">Sent by</label><input class="pmx-input" data-role="tSentBy" type="text" readonly></div>' +
-              '<div class="pmx-fg"><label class="pmx-label">Remarks</label><input class="pmx-input" data-role="tRemarks" type="text" placeholder="Optional"></div>' +
-            '</div>' +
-            '<button type="button" class="pmx-btn pmx-btn-primary" data-act="sendTransfer"><i class="fa-solid fa-paper-plane"></i> Send Transfer</button>' +
+            '<div data-role="transferFormBody"></div>' +
           '</div>' +
         '</div>' +
 
