@@ -428,6 +428,8 @@
     let mode = 'quick'; // quick | tab | active
     let activeCat = 'All';
     let statusFilter = '';
+    let ordersPage = 1;
+    const ORDERS_PER_PAGE = 10;
     let payOrderId = null;
     let unsubService = null;
     const uid = 'ow' + Math.random().toString(36).slice(2, 8);
@@ -599,6 +601,7 @@
                 <tbody data-role="ordBody"></tbody>
               </table>
             </div>
+            <div data-role="ordPagination" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;font-size:12px;"></div>
           </div>
         </div>
 
@@ -1410,9 +1413,15 @@
       if (!rows.length) {
         $('[data-role="ordBody"]').innerHTML =
           '<tr class="ow-empty-row"><td colspan="10">No orders match this filter.</td></tr>';
+        $('[data-role="ordPagination"]').innerHTML = '';
         return;
       }
-      $('[data-role="ordBody"]').innerHTML = rows.map(function (o) {
+      const totalPages = Math.ceil(rows.length / ORDERS_PER_PAGE);
+      if (ordersPage > totalPages) ordersPage = totalPages;
+      if (ordersPage < 1) ordersPage = 1;
+      const start = (ordersPage - 1) * ORDERS_PER_PAGE;
+      const pageRows = rows.slice(start, start + ORDERS_PER_PAGE);
+      $('[data-role="ordBody"]').innerHTML = pageRows.map(function (o) {
         let payCell;
         if (o.roomNumber) {
           payCell = '<div class="ow-pay-cell"><span>Room ' + esc(o.roomNumber) + '</span>' +
@@ -1440,6 +1449,12 @@
           '<button type="button" class="ow-act-btn" data-view-coo="' + esc(o.id) + '" style="font-weight:700;">View</button>' +
           '</div></td></tr>';
       }).join('');
+      var pag = $('[data-role="ordPagination"]');
+      if (totalPages <= 1) { pag.innerHTML = ''; return; }
+      pag.innerHTML =
+        '<button class="ow-act-btn" data-ord-page="prev"' + (ordersPage <= 1 ? ' disabled' : '') + '><i class="fa-solid fa-chevron-left"></i></button>' +
+        '<span>Page ' + ordersPage + ' of ' + totalPages + '</span>' +
+        '<button class="ow-act-btn" data-ord-page="next"' + (ordersPage >= totalPages ? ' disabled' : '') + '><i class="fa-solid fa-chevron-right"></i></button>';
     }
 
     function showCooDetail(id) {
@@ -1986,6 +2001,14 @@
       if (pr) { printOrderById(pr.dataset.print); return; }
       const viewCoo = e.target.closest('[data-view-coo]');
       if (viewCoo) { showCooDetail(viewCoo.dataset.viewCoo); return; }
+      const ordPage = e.target.closest('[data-ord-page]');
+      if (ordPage) {
+        var dir = ordPage.dataset.ordPage;
+        if (dir === 'prev') ordersPage--;
+        else if (dir === 'next') ordersPage++;
+        renderOrdersTable();
+        return;
+      }
       const editCoo = e.target.closest('[data-edit-coo]');
       if (editCoo) { openEditCoo(editCoo.dataset.editCoo); return; }
       const pick = e.target.closest('[data-pick-room]');
@@ -1996,6 +2019,7 @@
       const pill = e.target.closest('.ow-status-pill');
       if (pill) {
         statusFilter = pill.dataset.status || '';
+        ordersPage = 1;
         $$('.ow-status-pill').forEach(function (p) { p.classList.remove('on'); });
         pill.classList.add('on');
         renderOrdersTable();
