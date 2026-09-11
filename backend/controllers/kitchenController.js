@@ -257,20 +257,148 @@ exports.recordProduction = asyncHandler(async (req, res) => {
 });
 
 /**
+ * POST /production/batch
+ * Creates a single Production document containing multiple dishes.
+ * Each dish has its own recipe, expected yield, and ingredient deductions.
+ * Works for both normal (rts) and Cook on Order (coo) production.
+ */
+exports.recordBatchProduction = asyncHandler(async (req, res) => {
+  const { dishes, type, cooId, staff, notes, destination } = req.body;
+
+  if (!dishes || !dishes.length) {
+    return res.status(400).json({ success: false, error: 'At least one dish is required' });
+  }
+
+  const count = await Production.countDocuments();
+  const no = `PROD-${String(count + 97).padStart(5, '0')}`;
+  const batchNo = `BATCH-${String(count + 51).padStart(5, '0')}`;
+
+  let totalCost = 0;
+  const processedDishes = [];
+  const allIngredients = [];
+
+  // ── Pass 1: validate ALL ingredients for ALL dishes before touching stock ──
+  for (let di = 0; di < dishes.length; di++) {
+    const d = dishes[di];
+    if (!d.recipeId) {
+      return res.status(400).json({ success: false, error: `Dish ${di + 1}: recipeId is required` });
+    }
+    const recipe = await Recipe.findOne({ id: d.recipeId });
+    if (!recipe) {
+      return res.status(400).json({ success: false, error: `Dish ${di + 1}: recipe not found` });
+    }
+    const batchQty = Number(d.batchQty) || 0;
+    if (batchQty <= 0) {
+      return res.status(400).json({ success: false, error: `Dish ${di + 1} (${recipe.dish}): batchQty must be > 0` });
+    }
+    const factor = recipe.baseQty > 0 ? batchQty / recipe.baseQty : 0;
+    const scaledIngredients = recipe.ingredients.map(ing => ({
+      name: ing.name,
+      unit: ing.unit || '',
+      qty: Math.round(ing.qty * factor * 1000) / 1000,
+    }));
+    for (const ing of scaledIngredients) {
+      if (!ing.name || ing.qty <= 0) continue;
+      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
+      if (!stockItem) {
+        return res.status(400).json({ success: false, error: `Dish ${di + 1} (${recipe.dish}): ingredient "${ing.name}" not in Kitchen Stock` });
+      }
+      if (stockItem.qty < ing.qty) {
+        return res.status(400).json({ success: false, error: `Dish ${di + 1} (${recipe.dish}): not enough ${stockItem.name}. Have ${stockItem.qty}, need ${ing.qty}` });
+      }
+    }
+  }
+
+  // ── Pass 2: all validated — deduct ingredients and build dishes array ──
+  for (let di = 0; di < dishes.length; di++) {
+    const d = dishes[di];
+    const recipe = await Recipe.findOne({ id: d.recipeId });
+    const batchQty = Number(d.batchQty) || 0;
+    const factor = recipe.baseQty > 0 ? batchQty / recipe.baseQty : 0;
+    const expectedYield = Math.round(recipe.expectedYield * factor * 100) / 100;
+
+    let dishCost = 0;
+    const dishIngredients = [];
+
+    for (const ing of recipe.ingredients) {
+      const q = Math.round(ing.qty * factor * 1000) / 1000;
+      if (!ing.name || q <= 0) continue;
+
+      const stockItem = await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
+      const unitCost = stockItem ? (stockItem.price || stockItem.cost || 0) : 0;
+
+      if (stockItem) {
+        stockItem.qty = Math.max(0, stockItem.qty - q);
+        await stockItem.save();
+
+        await KitchenMovement.create({
+          date: nowStamp(),
+          item: stockItem.name,
+          qtyIn: 0,
+          qtyOut: q,
+          balance: stockItem.qty,
+          reason: `Batch Production (${no}) — ${recipe.dish}`,
+        });
+      }
+
+      dishCost += unitCost * q;
+      dishIngredients.push({ name: ing.name, qty: q, unit: stockItem ? stockItem.unit : (ing.unit || ''), stockId: stockItem ? stockItem.id : '', cost: unitCost * q });
+      allIngredients.push({ name: ing.name, qty: q, unit: stockItem ? stockItem.unit : (ing.unit || '') });
+    }
+
+    totalCost += dishCost;
+
+    processedDishes.push({
+      recipeId: recipe.id,
+      dish: recipe.dish,
+      batchQty,
+      expectedYield,
+      expectedYieldUnit: recipe.expectedYieldUnit || 'portions',
+      outputQty: 0,
+      outputUnit: recipe.expectedYieldUnit || 'portions',
+      yieldVariancePct: 0,
+      ingredients: dishIngredients,
+      cost: dishCost,
+      status: 'in-progress',
+      transferNo: '',
+    });
+  }
+
+  const run = await Production.create({
+    id: uuidv4(),
+    no,
+    productionNo: no,
+    batchNo,
+    dish: processedDishes.map(d => d.dish).join(', '),
+    recipeId: processedDishes.length === 1 ? processedDishes[0].recipeId : '',
+    type: type || 'rts',
+    cooId: cooId || '',
+    cost: totalCost,
+    gasCost: 0,
+    meals: [],
+    ingredients: allIngredients,
+    dishes: processedDishes,
+    staff: staff || (req.user ? req.user.name : 'Head Chef'),
+    by: staff || (req.user ? req.user.name : 'Head Chef'),
+    notes: notes || '',
+    remarks: notes || '',
+    date: nowStamp(),
+    status: 'in-progress',
+    destination: destination || 'Main Restaurant / POS',
+  });
+
+  res.status(201).json({ success: true, data: run });
+});
+
+/**
  * PUT /production/:id
- * Records the actual yield once a run finishes — outputQty/outputUnit
- * and notes. Does NOT re-touch stock/ingredient deductions (those were
- * already applied at record time). Blocked once a run has been voided,
- * since voiding already restored stock and closed the run out.
- *
- * When outputQty is recorded and an expectedYield was captured at start,
- * this also computes yieldVariancePct and costPerUnit, and — unless the
- * caller explicitly sends a different status — flips the run from
- * 'in-progress' ("Awaiting Yield" in the UI) to 'completed'.
+ * Records actual yield. Supports both batch (dishes[]) and legacy single-dish.
+ * For batch: pass { dishes: [{ dishIndex, outputQty, outputUnit }] }
+ * For legacy: pass { outputQty, outputUnit }
  */
 exports.completeProduction = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { outputQty, outputUnit, notes, status } = req.body;
+  const { outputQty, outputUnit, notes, status, dishes: dishUpdates } = req.body;
 
   const run = await Production.findOne({ id });
   if (!run) return res.status(404).json({ success: false, error: 'Production run not found' });
@@ -278,81 +406,231 @@ exports.completeProduction = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Cannot edit a voided production run' });
   }
 
-  if (outputQty !== undefined) {
-    const q = Number(outputQty);
-    if (!q || q <= 0) {
-      return res.status(400).json({ success: false, error: 'outputQty must be a number > 0' });
-    }
-    run.outputQty = q;
-    if (Array.isArray(run.meals) && run.meals[0]) run.meals[0].qty = q;
+  // ── Batch mode: per-dish yield updates ──
+  if (Array.isArray(dishUpdates) && dishUpdates.length && Array.isArray(run.dishes) && run.dishes.length) {
+    for (const du of dishUpdates) {
+      const idx = Number(du.dishIndex);
+      if (isNaN(idx) || idx < 0 || idx >= run.dishes.length) continue;
+      const dish = run.dishes[idx];
+      if (dish.status === 'voided' || dish.status === 'completed') continue;
 
+      const q = Number(du.outputQty) || 0;
+      if (q <= 0) continue;
+
+      dish.outputQty = q;
+      if (du.outputUnit) dish.outputUnit = du.outputUnit;
+      if (dish.expectedYield) {
+        dish.yieldVariancePct = Math.round(((q - dish.expectedYield) / dish.expectedYield) * 10000) / 100;
+      }
+      dish.status = 'completed';
+
+      // Auto-create transfer for COO dish
+      if (run.cooId && dish.recipeId) {
+        const existingTransfer = await Transfer.findOne({ cooId: run.cooId, meal: dish.dish });
+        if (!existingTransfer) {
+          const transferCount = await Transfer.countDocuments();
+          const transfer = await Transfer.create({
+            id: uuidv4(),
+            transferNo: 'KTN-' + String(transferCount + 1).padStart(5, '0'),
+            cooId: run.cooId,
+            productionNo: run.id,
+            meal: dish.dish,
+            quantity: q,
+            unit: dish.outputUnit || 'portions',
+            kitchen: 'Main Kitchen',
+            restaurant: 'Main Restaurant / POS',
+            from: 'Main Kitchen',
+            to: 'Main Restaurant / POS',
+            sentBy: run.staff || 'Head Chef',
+            dateSent: nowStamp(),
+            status: 'sent',
+            remarks: 'COO batch production',
+          });
+          dish.transferNo = transfer.transferNo;
+        }
+      }
+    }
+
+    // Compute top-level aggregated values
+    const completedDishes = run.dishes.filter(d => d.status === 'completed');
+    run.outputQty = completedDishes.reduce((s, d) => s + (d.outputQty || 0), 0);
+    run.outputUnit = completedDishes.length ? (completedDishes[0].outputUnit || 'portions') : run.outputUnit;
     if (run.expectedYield) {
-      run.yieldVariancePct = Math.round(((q - run.expectedYield) / run.expectedYield) * 10000) / 100;
+      run.yieldVariancePct = Math.round(((run.outputQty - run.expectedYield) / run.expectedYield) * 10000) / 100;
     }
-    if (run.cost) {
-      run.costPerUnit = Math.round((run.cost / q) * 100) / 100;
+    if (run.cost && run.outputQty) {
+      run.costPerUnit = Math.round((run.cost / run.outputQty) * 100) / 100;
     }
-    if (status === undefined) {
-      run.status = 'completed';
+
+    // All dishes completed → batch completed
+    const allDone = run.dishes.every(d => d.status === 'completed' || d.status === 'voided');
+    if (allDone || (status !== undefined)) {
+      run.status = status || 'completed';
+    }
+  } else {
+    // ── Legacy single-dish mode ──
+    if (outputQty !== undefined) {
+      const q = Number(outputQty);
+      if (!q || q <= 0) {
+        return res.status(400).json({ success: false, error: 'outputQty must be a number > 0' });
+      }
+      run.outputQty = q;
+      if (Array.isArray(run.meals) && run.meals[0]) run.meals[0].qty = q;
+      if (run.expectedYield) {
+        run.yieldVariancePct = Math.round(((q - run.expectedYield) / run.expectedYield) * 10000) / 100;
+      }
+      if (run.cost) {
+        run.costPerUnit = Math.round((run.cost / q) * 100) / 100;
+      }
+      if (status === undefined) {
+        run.status = 'completed';
+      }
+    }
+    if (outputUnit !== undefined) {
+      run.outputUnit = outputUnit;
+      if (Array.isArray(run.meals) && run.meals[0]) run.meals[0].unit = outputUnit;
+    }
+
+    // Auto-create transfer for COO single-dish
+    if (run.cooId && run.status === 'completed') {
+      const existingTransfer = await Transfer.findOne({ cooId: run.cooId });
+      if (!existingTransfer) {
+        const KitchenCooOrder = require('../models/KitchenCooOrder');
+        const cooOrder = await KitchenCooOrder.findOne({ id: run.cooId });
+        const transferCount = await Transfer.countDocuments();
+        const transfer = await Transfer.create({
+          id: uuidv4(),
+          transferNo: 'KTN-' + String(transferCount + 1).padStart(5, '0'),
+          cooId: run.cooId,
+          meal: run.dish,
+          quantity: Number(run.outputQty) || 0,
+          unit: run.outputUnit || 'portions',
+          kitchen: 'Main Kitchen',
+          restaurant: 'Main Restaurant / POS',
+          from: 'Main Kitchen',
+          to: 'Main Restaurant / POS',
+          sentBy: run.staff || 'Head Chef',
+          dateSent: nowStamp(),
+          status: 'sent',
+          remarks: 'COO production — ' + (cooOrder ? cooOrder.table : ''),
+        });
+        run.transferNo = transfer.transferNo;
+      }
     }
   }
-  if (outputUnit !== undefined) {
-    run.outputUnit = outputUnit;
-    if (Array.isArray(run.meals) && run.meals[0]) run.meals[0].unit = outputUnit;
-  }
+
   if (notes !== undefined) {
     run.notes = notes;
     run.remarks = notes;
   }
-  if (status !== undefined) run.status = status;
+  if (status !== undefined && !Array.isArray(dishUpdates)) run.status = status;
 
   await run.save();
-
-  if (run.cooId && run.status === 'completed') {
-    const KitchenCooOrder = require('../models/KitchenCooOrder');
-    const cooOrder = await KitchenCooOrder.findOne({ id: run.cooId });
-    const existingTransfer = await Transfer.findOne({ cooId: run.cooId });
-    if (!existingTransfer) {
-      const transferCount = await Transfer.countDocuments();
-      const transfer = await Transfer.create({
-        id: uuidv4(),
-        transferNo: 'KTN-' + String(transferCount + 1).padStart(5, '0'),
-        cooId: run.cooId,
-        meal: run.dish,
-        quantity: Number(run.outputQty) || 0,
-        unit: run.outputUnit || 'portions',
-        kitchen: 'Main Kitchen',
-        restaurant: 'Main Restaurant / POS',
-        from: 'Main Kitchen',
-        to: 'Main Restaurant / POS',
-        sentBy: run.staff || 'Head Chef',
-        dateSent: nowStamp(),
-        status: 'sent',
-        remarks: 'COO production — ' + (cooOrder ? cooOrder.table : ''),
-      });
-      run.transferNo = transfer.transferNo;
-      await run.save();
-    }
-  }
-
   res.json({ success: true, data: run });
 });
 
 exports.voidProduction = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { reason } = req.body;
+  const { reason, dishIndex } = req.body;
 
   const run = await Production.findOne({ id });
   if (!run) return res.status(404).json({ success: false, error: 'Production run not found' });
   if (run.status === 'voided') return res.status(400).json({ success: false, error: 'Already voided' });
 
+  // ── Single-dish void (batch mode) ──
+  if (dishIndex !== undefined && Array.isArray(run.dishes) && run.dishes.length) {
+    const idx = Number(dishIndex);
+    if (isNaN(idx) || idx < 0 || idx >= run.dishes.length) {
+      return res.status(400).json({ success: false, error: 'Invalid dish index' });
+    }
+    const dish = run.dishes[idx];
+    if (dish.status === 'voided') {
+      return res.status(400).json({ success: false, error: 'Dish already voided' });
+    }
+
+    // Restore ingredients for this specific dish
+    if (Array.isArray(dish.ingredients)) {
+      for (const ing of dish.ingredients) {
+        const stockItem = ing.stockId
+          ? await KitchenStock.findOne({ id: ing.stockId })
+          : await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
+        if (stockItem) {
+          stockItem.qty += Number(ing.qty);
+          await stockItem.save();
+          await KitchenMovement.create({
+            date: nowStamp(),
+            item: stockItem.name,
+            qtyIn: Number(ing.qty),
+            qtyOut: 0,
+            balance: stockItem.qty,
+            reason: `Void Batch Production (${run.no}) — ${dish.dish} — Restored`,
+          });
+        }
+      }
+    }
+
+    dish.status = 'voided';
+
+    // Recompute top-level output
+    const activeDishes = run.dishes.filter(d => d.status !== 'voided');
+    const completedDishes = run.dishes.filter(d => d.status === 'completed');
+    run.outputQty = completedDishes.reduce((s, d) => s + (d.outputQty || 0), 0);
+    if (run.cost && run.outputQty) {
+      run.costPerUnit = Math.round((run.cost / run.outputQty) * 100) / 100;
+    }
+
+    // If all dishes voided → void entire batch
+    const allVoided = run.dishes.every(d => d.status === 'voided');
+    if (allVoided) {
+      run.status = 'voided';
+      run.voidReason = reason || 'All dishes voided';
+      run.voidDate = new Date();
+      run.voidedBy = req.user ? req.user.name : 'Head Chef';
+    }
+
+    await run.save();
+    return res.json({ success: true, data: run });
+  }
+
+  // ── Full batch void (legacy or entire batch) ──
   run.status = 'voided';
   run.voidReason = reason || 'Discarded batch';
   run.voidDate = new Date();
   run.voidedBy = req.user ? req.user.name : 'Head Chef';
-  await run.save();
 
-  if (Array.isArray(run.ingredients)) {
+  // Void all dishes in batch
+  if (Array.isArray(run.dishes)) {
+    for (const dish of run.dishes) {
+      if (dish.status !== 'voided') dish.status = 'voided';
+    }
+  }
+
+  // Restore ingredients
+  if (Array.isArray(run.dishes) && run.dishes.length) {
+    // Batch mode: restore per-dish ingredients
+    for (const dish of run.dishes) {
+      if (Array.isArray(dish.ingredients)) {
+        for (const ing of dish.ingredients) {
+          const stockItem = ing.stockId
+            ? await KitchenStock.findOne({ id: ing.stockId })
+            : await KitchenStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name.trim())}$`, 'i') });
+          if (stockItem) {
+            stockItem.qty += Number(ing.qty);
+            await stockItem.save();
+            await KitchenMovement.create({
+              date: nowStamp(),
+              item: stockItem.name,
+              qtyIn: Number(ing.qty),
+              qtyOut: 0,
+              balance: stockItem.qty,
+              reason: `Void Batch Production (${run.no}) — ${dish.dish} — Restored`,
+            });
+          }
+        }
+      }
+    }
+  } else if (Array.isArray(run.ingredients)) {
+    // Legacy mode
     for (const ing of run.ingredients) {
       const stockItem = ing.stockId
         ? await KitchenStock.findOne({ id: ing.stockId })
@@ -360,7 +638,6 @@ exports.voidProduction = asyncHandler(async (req, res) => {
       if (stockItem) {
         stockItem.qty += Number(ing.qty);
         await stockItem.save();
-
         await KitchenMovement.create({
           date: nowStamp(),
           item: stockItem.name,
@@ -373,6 +650,7 @@ exports.voidProduction = asyncHandler(async (req, res) => {
     }
   }
 
+  await run.save();
   res.json({ success: true, data: run });
 });
 

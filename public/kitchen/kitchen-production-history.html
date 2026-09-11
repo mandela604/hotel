@@ -243,11 +243,19 @@ function formatTime12(t){
 }
 
 function mealSummary(p){
-  const meals = p.meals || (p.dish ? [{ name: p.dish, qty: p.outputQty, unit: p.outputUnit }] : []);
+  // Batch mode: show dish count and names
+  if (Array.isArray(p.dishes) && p.dishes.length) {
+    var names = p.dishes.map(function(d){ return d.dish; });
+    var label = names[0] + (names.length > 1 ? ' +' + (names.length - 1) + ' more' : '');
+    var completedCount = p.dishes.filter(function(d){ return d.status === 'completed'; }).length;
+    return '<span style="font-weight:700;">' + esc(label) + '</span> <span style="font-size:10.5px;color:var(--text3);">(' + p.dishes.length + ' dishes, ' + completedCount + ' done)</span>';
+  }
+  // Legacy single-dish
+  var meals = p.meals || (p.dish ? [{ name: p.dish, qty: p.outputQty, unit: p.outputUnit }] : []);
   if (!meals.length) return '—';
-  const first = meals[0];
-  const label = `${first.name} (${fmtQty(first.qty)} ${first.unit || ''})`.trim();
-  return meals.length > 1 ? `${label} +${meals.length - 1} more` : label;
+  var first = meals[0];
+  var lbl = esc(first.name) + ' (' + fmtQty(first.qty) + ' ' + esc(first.unit || '') + ')';
+  return meals.length > 1 ? lbl + ' +' + (meals.length - 1) + ' more' : lbl;
 }
 
 function renderKPIs(){

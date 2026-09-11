@@ -31,6 +31,7 @@ router.post('/stock/deduct', inDept, privilegeGuard('kitchen', 'canEdit'), valid
 /* ── Production ─────────────────────────────── */
 router.get('/production', ctrl.listProduction);
 router.post('/production', inDept, privilegeGuard('kitchen', 'canCreate'), validateRecordProduction, ctrl.recordProduction);
+router.post('/production/batch', inDept, privilegeGuard('kitchen', 'canCreate'), ctrl.recordBatchProduction);
 router.put('/production/:id/complete', inDept, privilegeGuard('kitchen', 'canEdit'), validateObjectIdParam('id'), validateCompleteProduction, ctrl.completeProduction);
 router.post('/production/:id/void', inDept, privilegeGuard('kitchen', 'canVoid'), validateObjectIdParam('id'), validateVoidProduction, ctrl.voidProduction);
 

@@ -344,6 +344,71 @@
     return run;
   }
 
+  /**
+   * Batch production: creates a single Production document with multiple dishes.
+   * Each dish has its own recipe, batchQty, and ingredient deductions.
+   */
+  async function startBatchProduction({ dishes, type, cooId, staff, notes, destination }) {
+    const run = await request('/production/batch', {
+      method: 'POST',
+      body: {
+        dishes: dishes.map(d => ({
+          recipeId: d.recipeId,
+          batchQty: d.batchQty,
+        })),
+        type: normalizeProductionType(type),
+        cooId: cooId || '',
+        staff: staff || '',
+        notes: notes || '',
+        destination: destination || '',
+      },
+    });
+    state.production.unshift(run);
+    // Refresh local stock
+    (run.ingredients || []).forEach(ing => {
+      const s = findStock(ing.name);
+      if (s) s.qty = Math.max(0, s.qty - ing.qty);
+    });
+    emitChange('production:batch:start');
+    return run;
+  }
+
+  /**
+   * Complete one or more dishes in a batch production.
+   * dishUpdates: [{ dishIndex, outputQty, outputUnit }]
+   */
+  async function completeBatchProduction(productionId, dishUpdates) {
+    const run = await request(`/production/${productionId}/complete`, {
+      method: 'PUT',
+      body: { dishes: dishUpdates },
+    });
+    const idx = state.production.findIndex(p => p.id === productionId);
+    if (idx > -1) state.production[idx] = run; else state.production.unshift(run);
+    emitChange('production:batch:complete');
+    return run;
+  }
+
+  /**
+   * Void a single dish within a batch production.
+   */
+  async function voidBatchDish(productionId, dishIndex, reason) {
+    const run = await request(`/production/${productionId}/void`, {
+      method: 'POST',
+      body: { reason, dishIndex },
+    });
+    const idx = state.production.findIndex(p => p.id === productionId);
+    if (idx > -1) state.production[idx] = run; else state.production.unshift(run);
+    // Restore ingredients locally
+    if (Array.isArray(run.dishes) && run.dishes[dishIndex]) {
+      (run.dishes[dishIndex].ingredients || []).forEach(ing => {
+        const s = findStock(ing.name);
+        if (s) s.qty += Number(ing.qty) || 0;
+      });
+    }
+    emitChange('production:batch:dish:void');
+    return run;
+  }
+
   async function completeProduction(productionId, { outputQty, outputUnit }) {
     const run = await request(`/production/${productionId}/complete`, {
       method: 'PUT',
@@ -629,6 +694,7 @@
     addStockItem, editStockItem, deleteStockItem, deductStock,
     findRecipe, findRecipeById, addRecipe, editRecipe, deleteRecipe, scaleRecipe, estimateRecipeCost, getPlateCost,
     recordProduction, voidProduction, startProduction, completeProduction,
+    startBatchProduction, completeBatchProduction, voidBatchDish,
     addTransfer, updateTransferStatus,
     getKitchenRequisitions, receivedSoFar,
     submitRequisition, receiveRequisition, confirmReceipt,

@@ -363,8 +363,20 @@
     }
 
     function renderMeals(p) {
-      var meals = p.meals && p.meals.length ? p.meals : (p.dish ? [{ name: p.dish, qty: p.outputQty, unit: p.outputUnit }] : []);
       var el = $('[data-role="mealsList"]');
+      // Batch mode: show each dish with its status
+      if (Array.isArray(p.dishes) && p.dishes.length) {
+        el.innerHTML = p.dishes.map(function (d, idx) {
+          var statusChip = d.status === 'completed' ? '<span style="color:var(--pmx-green);font-size:10px;font-weight:700;">DONE</span>'
+            : d.status === 'voided' ? '<span style="color:var(--pmx-red);font-size:10px;font-weight:700;">VOID</span>'
+            : '<span style="color:var(--pmx-amber);font-size:10px;font-weight:700;">COOKING</span>';
+          var yieldTxt = d.outputQty ? (fmtQty(d.outputQty) + ' ' + (d.outputUnit || '')) : (d.expectedYield ? '≈ ' + fmtQty(d.expectedYield) + ' ' + (d.expectedYieldUnit || '') : '—');
+          return '<div class="pmx-line"><span>' + esc(d.dish) + ' ' + statusChip + '</span><span>' + yieldTxt + '</span></div>';
+        }).join('');
+        return;
+      }
+      // Legacy single-dish mode
+      var meals = p.meals && p.meals.length ? p.meals : (p.dish ? [{ name: p.dish, qty: p.outputQty, unit: p.outputUnit }] : []);
       if (!meals.length) { el.innerHTML = '<div class="pmx-empty-note">No meals recorded yet — awaiting yield.</div>'; return; }
       el.innerHTML = meals.map(function (m) {
         return '<div class="pmx-line"><span>' + esc(m.name) + '</span><span>' + fmtQty(m.qty) + ' ' + esc(m.unit || '') + '</span></div>';
@@ -384,26 +396,86 @@
     function renderYieldSection(p) {
       var sec = $('[data-role="yieldSection"]');
       if (p.status !== 'in-progress') { sec.hidden = true; return; }
+      // Check if any dish is still in-progress
+      var hasBatch = Array.isArray(p.dishes) && p.dishes.length;
+      if (hasBatch) {
+        var pendingDishes = p.dishes.filter(function (d) { return d.status === 'in-progress'; });
+        if (!pendingDishes.length) { sec.hidden = true; return; }
+      }
       sec.hidden = false;
-      $('[data-role="yieldSub"]').textContent =
-        'How much ' + (p.dish || '') + ' actually came out of this batch?' +
-        (p.expectedYield ? ' Expected ≈ ' + p.expectedYield + ' ' + (p.expectedYieldUnit || '') + '.' : '');
-      setVal('yieldQty', '');
-      setVal('yieldUnit', p.expectedYieldUnit || 'plates');
+
+      var body = sec.querySelector('.pmx-section-body');
+      if (hasBatch) {
+        // Batch mode: per-dish yield inputs
+        var html = '<div class="pmx-hint" style="margin-bottom:10px;">Record actual yield for each dish in this batch.</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+        p.dishes.forEach(function (d, idx) {
+          if (d.status === 'voided') return;
+          var isDone = d.status === 'completed';
+          html += '<div style="background:var(--pmx-surface2);border:1px solid var(--pmx-border);border-radius:10px;padding:10px 12px;">' +
+            '<div style="font-weight:700;font-size:12.5px;margin-bottom:6px;">' + esc(d.dish) +
+            (isDone ? ' <span style="color:var(--pmx-green);font-size:10px;">✓ Completed</span>' : '') +
+            (d.expectedYield ? '<span style="color:var(--pmx-text3);font-size:11px;font-weight:600;margin-left:8px;">Expected ≈ ' + fmtQty(d.expectedYield) + ' ' + (d.expectedYieldUnit || '') + '</span>' : '') +
+            '</div>';
+          if (!isDone) {
+            html += '<div class="pmx-grid-2">' +
+              '<div class="pmx-fg"><label class="pmx-label">Actual quantity</label>' +
+                '<input class="pmx-input" data-role="dishYieldQty_' + idx + '" type="number" min="0.1" step="0.1" placeholder="e.g. 27"></div>' +
+              '<div class="pmx-fg"><label class="pmx-label">Unit</label>' +
+                '<input class="pmx-input" data-role="dishYieldUnit_' + idx + '" type="text" placeholder="plates" value="' + esc(d.expectedYieldUnit || 'plates') + '"></div>' +
+            '</div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+        html += '<button type="button" class="pmx-btn pmx-btn-primary" data-act="saveBatchYield" style="margin-top:10px;"><i class="fa-solid fa-check"></i> Save All Yields</button>';
+        body.innerHTML = html;
+      } else {
+        // Legacy single-dish mode
+        $('[data-role="yieldSub"]').textContent =
+          'How much ' + (p.dish || '') + ' actually came out of this batch?' +
+          (p.expectedYield ? ' Expected ≈ ' + p.expectedYield + ' ' + (p.expectedYieldUnit || '') + '.' : '');
+        setVal('yieldQty', '');
+        setVal('yieldUnit', p.expectedYieldUnit || 'plates');
+      }
       openSection('yieldSection');
     }
 
     async function saveYield() {
       if (!current) return;
-      var qty = parseFloat(val('yieldQty')) || 0;
-      var unit = val('yieldUnit').trim();
       var btn = $('[data-act="saveYield"]');
       if (btn) btn.disabled = true;
       try {
         var pNo = current.id || current.no;
-        var row = await service.completeProduction(pNo, { outputQty: qty, outputUnit: unit });
-        current = row;
-        toast('Actual yield recorded.', 'success');
+        // Batch mode
+        if (Array.isArray(current.dishes) && current.dishes.length) {
+          var dishUpdates = [];
+          current.dishes.forEach(function (d, idx) {
+            if (d.status === 'completed' || d.status === 'voided') return;
+            var qtyEl = $('[data-role="dishYieldQty_' + idx + '"]');
+            var unitEl = $('[data-role="dishYieldUnit_' + idx + '"]');
+            var qty = parseFloat(qtyEl ? qtyEl.value : 0) || 0;
+            var unit = unitEl ? unitEl.value.trim() : (d.expectedYieldUnit || 'plates');
+            if (qty > 0) {
+              dishUpdates.push({ dishIndex: idx, outputQty: qty, outputUnit: unit });
+            }
+          });
+          if (!dishUpdates.length) {
+            toast('Enter yield for at least one dish.', 'error');
+            if (btn) btn.disabled = false;
+            return;
+          }
+          var row = await service.completeBatchProduction(pNo, dishUpdates);
+          current = row;
+          toast('Yield recorded for ' + dishUpdates.length + ' dish(es).', 'success');
+        } else {
+          // Legacy mode
+          var qty = parseFloat(val('yieldQty')) || 0;
+          var unit = val('yieldUnit').trim();
+          var row = await service.completeProduction(pNo, { outputQty: qty, outputUnit: unit });
+          current = row;
+          toast('Actual yield recorded.', 'success');
+        }
         onSaved(row);
         renderAll();
       } catch (err) {
@@ -417,18 +489,25 @@
     function transfersForCurrent() {
       if (!current || !service) return [];
       var pNo = current.id || current.no;
-      return (service.state.transfers || []).filter(function (t) { return t.productionNo === pNo; });
+      return (service.state.transfers || []).filter(function (t) { return t.productionNo === pNo || t.productionNo === current.id; });
     }
-    function transferredQty(list) {
+    function transferredQty(list, mealName) {
       return list.reduce(function (s, t) {
         if (t.status === 'cancelled' || t.status === 'rejected') return s;
+        if (mealName && t.meal !== mealName) return s;
         return s + (Number(t.quantity) || 0);
       }, 0);
     }
 
     function renderTransferSection(p) {
       var sec = $('[data-role="transferSection"]');
-      if (p.status !== 'completed') { sec.hidden = true; return; }
+      if (p.status !== 'completed' && p.status !== 'in-progress') { sec.hidden = true; return; }
+      // Batch mode: check if any dish is completed
+      var hasBatch = Array.isArray(p.dishes) && p.dishes.length;
+      if (hasBatch) {
+        var completedDishes = p.dishes.filter(function (d) { return d.status === 'completed'; });
+        if (!completedDishes.length) { sec.hidden = true; return; }
+      }
       sec.hidden = false;
 
       var list = transfersForCurrent();
@@ -443,16 +522,32 @@
         '</tr>';
       }).join('') : '<tr><td colspan="5" class="pmx-ledger-empty">No transfers sent yet for this production.</td></tr>';
 
-      var sent = transferredQty(list);
-      var remaining = Math.max(0, (Number(p.outputQty) || 0) - sent);
-      $('[data-role="transferHint"]').textContent =
-        sent > 0
-          ? fmtQty(sent) + ' of ' + fmtQty(p.outputQty) + ' ' + (p.outputUnit || '') + ' transferred so far · ' + fmtQty(remaining) + ' remaining'
-          : fmtQty(p.outputQty) + ' ' + (p.outputUnit || '') + ' available to send';
+      // For batch mode, show per-dish available qty
+      if (hasBatch) {
+        var hints = [];
+        completedDishes.forEach(function (d) {
+          var sent = transferredQty(list, d.dish);
+          var remaining = Math.max(0, (d.outputQty || 0) - sent);
+          hints.push(esc(d.dish) + ': ' + fmtQty(remaining) + ' remaining');
+        });
+        $('[data-role="transferHint"]').textContent = hints.join(' · ');
+      } else {
+        var sent = transferredQty(list);
+        var remaining = Math.max(0, (Number(p.outputQty) || 0) - sent);
+        $('[data-role="transferHint"]').textContent =
+          sent > 0
+            ? fmtQty(sent) + ' of ' + fmtQty(p.outputQty) + ' ' + (p.outputUnit || '') + ' transferred so far · ' + fmtQty(remaining) + ' remaining'
+            : fmtQty(p.outputQty) + ' ' + (p.outputUnit || '') + ' available to send';
+      }
 
-      setVal('tMeal', p.dish || '');
-      setVal('tQty', remaining > 0 ? remaining : (p.outputQty || ''));
-      setVal('tUnit', (p.outputUnit && ['Plates', 'Portions', 'Pieces', 'Packs'].indexOf(p.outputUnit) !== -1) ? p.outputUnit : 'Plates');
+      // Pre-fill meal name from first completed dish or top-level
+      var defaultMeal = hasBatch ? (completedDishes[0] ? completedDishes[0].dish : '') : (p.dish || '');
+      var defaultQty = hasBatch ? (completedDishes[0] ? completedDishes[0].outputQty : '') : (p.outputQty || '');
+      var defaultUnit = hasBatch ? (completedDishes[0] ? completedDishes[0].outputUnit : 'Plates') : (p.outputUnit || 'Plates');
+
+      setVal('tMeal', defaultMeal);
+      setVal('tQty', defaultQty);
+      setVal('tUnit', (defaultUnit && ['Plates', 'Portions', 'Pieces', 'Packs'].indexOf(defaultUnit) !== -1) ? defaultUnit : 'Plates');
       setVal('tSentBy', getStaffName());
       setVal('tRemarks', '');
       setVal('tDest', DESTINATIONS[0]);
@@ -504,28 +599,83 @@
         setText('voidNoticeText', 'Voided' + (p.voidReason ? ' — ' + p.voidReason : '') + (p.voidedBy ? ' by ' + p.voidedBy : ''));
       } else {
         notice.classList.remove('show');
-        sec.hidden = !canVoid;
-        setVal('voidReason', '');
+        // Batch mode: show per-dish void options
+        var hasBatch = Array.isArray(p.dishes) && p.dishes.length;
+        if (hasBatch) {
+          var pendingDishes = p.dishes.filter(function (d) { return d.status !== 'voided'; });
+          if (!pendingDishes.length) { sec.hidden = true; return; }
+          sec.hidden = !canVoid;
+          var body = sec.querySelector('.pmx-section-body');
+          var html = '<div class="pmx-hint" style="margin-bottom:8px;">Voiding restores deducted ingredients back into Kitchen Stock. Cannot be undone.</div>';
+          html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">';
+          p.dishes.forEach(function (d, idx) {
+            if (d.status === 'voided') return;
+            html += '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;cursor:pointer;">' +
+              '<input type="checkbox" data-role="voidCheck_' + idx + '" value="' + idx + '"> ' +
+              esc(d.dish) + (d.status === 'completed' ? ' (completed)' : ' (in-progress)') +
+            '</label>';
+          });
+          html += '</div>';
+          html += '<div class="pmx-fg" style="margin-bottom:8px;"><label class="pmx-label">Reason for voiding</label><input class="pmx-input" data-role="voidReason" type="text" placeholder="e.g. Over-salted batch"></div>';
+          html += '<button type="button" class="pmx-btn pmx-btn-danger" data-act="requestBatchVoid"><i class="fa-solid fa-ban"></i> Void Selected Dishes</button>';
+          body.innerHTML = html;
+        } else {
+          sec.hidden = !canVoid;
+          setVal('voidReason', '');
+        }
       }
     }
 
     async function requestVoid() {
       if (!current) return;
-      var reason = val('voidReason').trim();
-      var ok = await showConfirm(
-        'Void this production run?',
-        'This restores all deducted ingredients back into Kitchen Stock and cannot be undone.'
-      );
-      if (!ok) return;
-      try {
-        var pNo = current.id || current.no;
-        var row = await service.voidProduction(pNo, reason, getStaffName());
-        current = row;
-        toast('Production run voided — ingredients restored.', 'info');
-        onSaved(row);
-        renderAll();
-      } catch (err) {
-        toast((err && err.message) || 'Failed to void run.', 'error');
+      var hasBatch = Array.isArray(current.dishes) && current.dishes.length;
+
+      if (hasBatch) {
+        // Batch void: collect checked dishes
+        var toVoid = [];
+        current.dishes.forEach(function (d, idx) {
+          if (d.status === 'voided') return;
+          var cb = $('[data-role="voidCheck_' + idx + '"]');
+          if (cb && cb.checked) toVoid.push(idx);
+        });
+        if (!toVoid.length) { toast('Select at least one dish to void.', 'error'); return; }
+
+        var reason = val('voidReason').trim();
+        var ok = await showConfirm(
+          'Void ' + toVoid.length + ' dish(es)?',
+          'This restores deducted ingredients back into Kitchen Stock and cannot be undone.'
+        );
+        if (!ok) return;
+
+        try {
+          var pNo = current.id || current.no;
+          for (var i = 0; i < toVoid.length; i++) {
+            current = await service.voidBatchDish(pNo, toVoid[i], reason);
+          }
+          toast(toVoid.length + ' dish(es) voided — ingredients restored.', 'info');
+          onSaved(current);
+          renderAll();
+        } catch (err) {
+          toast((err && err.message) || 'Failed to void.', 'error');
+        }
+      } else {
+        // Legacy single void
+        var reason = val('voidReason').trim();
+        var ok = await showConfirm(
+          'Void this production run?',
+          'This restores all deducted ingredients back into Kitchen Stock and cannot be undone.'
+        );
+        if (!ok) return;
+        try {
+          var pNo = current.id || current.no;
+          var row = await service.voidProduction(pNo, reason, getStaffName());
+          current = row;
+          toast('Production run voided — ingredients restored.', 'info');
+          onSaved(row);
+          renderAll();
+        } catch (err) {
+          toast((err && err.message) || 'Failed to void run.', 'error');
+        }
       }
     }
 
@@ -592,8 +742,10 @@
       if (a === 'toggleTransfer') { toggleSection('transferSection'); return; }
       if (a === 'toggleVoid') { toggleSection('voidSection'); return; }
       if (a === 'saveYield') { saveYield(); return; }
+      if (a === 'saveBatchYield') { saveYield(); return; }
       if (a === 'sendTransfer') { sendTransfer(); return; }
       if (a === 'requestVoid') { requestVoid(); return; }
+      if (a === 'requestBatchVoid') { requestVoid(); return; }
       if (a === 'confirmYes') { hideConfirm(true); return; }
       if (a === 'confirmNo') { hideConfirm(false); return; }
     });
