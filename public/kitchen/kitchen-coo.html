@@ -25,10 +25,16 @@ table{width:100%;border-collapse:collapse;min-width:760px}
 th{padding:9px 12px;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
 .chip{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700}
-.chip-pending{background:#fff4e5;color:#f79009} .chip-accepted{background:#e9f9f0;color:#12b76a} .chip-rejected{background:#feecec;color:#f04438}
+.chip-pending{background:#fff4e5;color:#f79009}
+.chip-accepted{background:#e9f9f0;color:#12b76a}
+.chip-rejected{background:#feecec;color:#f04438}
+.chip-in-progress{background:#eff6ff;color:#2f6fed}
+.chip-completed{background:#f0f9ff;color:#0ea5e9}
+.chip-transferred{background:#f5f3ff;color:#7c3aed}
+.chip-served{background:#ecfdf5;color:#059669}
 .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(15,20,40,0.55); backdrop-filter:blur(4px); z-index:300; align-items:flex-start; justify-content:center; padding:20px; overflow-y:auto; }
 .modal-overlay.show{ display:flex; }
-.modal{ background:#fff; border:1px solid #eef0f6; border-radius:14px; padding:20px; width:min(520px,96vw); box-shadow:0 20px 40px rgba(15,34,55,0.25); }
+.modal{ background:#fff; border:1px solid #eef0f6; border-radius:14px; padding:20px; width:min(560px,96vw); box-shadow:0 20px 40px rgba(15,34,55,0.25); }
 .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .modal-title{ font-weight:800; font-size:16px; }
 .modal-close{ background:none; border:none; font-size:16px; cursor:pointer; }
@@ -37,6 +43,23 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle
 .btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:11px;font-weight:700}
 .btn:hover{border-color:var(--gold-border);color:var(--gold)}
 .btn-primary{background:var(--gold);color:#fff;border-color:var(--gold)}
+.btn-success{background:#12b76a;color:#fff;border-color:#12b76a}
+.btn-warn{background:#f79009;color:#fff;border-color:#f79009}
+.form-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:flex-end}
+.form-row .fg{display:flex;flex-direction:column;gap:3px}
+.form-row label{font-size:11px;font-weight:600;color:var(--text2)}
+.form-row input,.form-row select{padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;outline:none}
+.payment-methods{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.payment-method{padding:10px 16px;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-weight:700;font-size:12px;text-align:center;min-width:100px}
+.payment-method.selected{border-color:var(--gold);background:var(--gold-dim);color:var(--gold)}
+.payment-method:hover{border-color:var(--gold-border)}
+.edit-items-table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.edit-items-table th{padding:6px 8px;font-size:9px;text-transform:uppercase;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border)}
+.edit-items-table td{padding:5px 6px;border-bottom:1px solid var(--border)}
+.edit-items-table input{padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%}
+.edit-items-table .qty-col{width:60px}
+.edit-items-table .price-col{width:80px}
+.edit-items-table .del-col{width:30px}
 </style>
 </head>
 <body>
@@ -46,7 +69,8 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle
     <button class="pill on" data-s="">All</button>
     <button class="pill" data-s="pending">Pending</button>
     <button class="pill" data-s="accepted">Accepted</button>
-    <button class="pill" data-s="rejected">Rejected</button>
+    <button class="pill" data-s="transferred">Transferred</button>
+    <button class="pill" data-s="served">Served</button>
   </div>
   <div style="display:flex;gap:8px;">
     <input type="text" id="q" placeholder="Search table, item..." style="padding:8px 12px;border:1px solid #eef0f6;border-radius:10px;outline:none;">
@@ -55,16 +79,80 @@ td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle
 </div>
 <div class="panel">
   <div class="panel-head"><div class="panel-title">Cook on Order</div><span id="count" style="font-size:11px;color:#9aa1b3"></span></div>
-  <div class="tbl-wrap"><table><thead><tr><th>Table</th><th>Items</th><th>Staff</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#9aa1b3">Loading...</td></tr></tbody></table></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Table</th><th>Items</th><th>Total</th><th>Staff</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:#9aa1b3">Loading...</td></tr></tbody></table></div>
 </div>
-<div class="modal-overlay" id="cooDetailModal" onclick="if(event.target===this) closeDetail()"><div class="modal"><div class="modal-head"><div class="modal-title" id="detailTitle">Order Detail</div><button class="modal-close" onclick="closeDetail()"><i class="fa-solid fa-xmark"></i></button></div><div id="detailBody" style="font-size:13px;line-height:1.6;"></div><div id="extraIngSection" style="margin-top:12px; border-top:1px solid #eef0f6; padding-top:10px; display:none;"><div style="font-weight:700; margin-bottom:6px; font-size:13px;">Extra Ingredients (manual — from Kitchen Stock)</div><div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;"><input type="text" id="extraIngName" placeholder="Ingredient name" list="kitchenStockList" style="flex:1; min-width:120px; padding:6px 8px; border:1px solid #eef0f6; border-radius:8px;"><datalist id="kitchenStockList"></datalist><input type="number" id="extraIngQty" placeholder="Qty" min="0.01" step="0.01" style="width:80px; padding:6px 8px; border:1px solid #eef0f6; border-radius:8px;"><input type="text" id="extraIngUnit" placeholder="Unit" style="width:70px; padding:6px 8px; border:1px solid #eef0f6; border-radius:8px;"><button class="btn btn-primary" onclick="addExtraIng()" style="padding:6px 10px;">Add</button></div><div id="extraIngList" style="font-size:12px;"></div></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;"><button class="btn" onclick="closeDetail()">Close</button><button class="btn btn-primary" id="detailAcceptBtn" onclick="acceptFromDetail()">Accept & Produce</button><button class="btn" id="detailRejectBtn" style="background:#feecec;color:#f04438;border-color:rgba(240,68,56,.3)" onclick="rejectFromDetail()">Reject</button></div></div></div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="cooDetailModal" onclick="if(event.target===this) closeDetail()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="detailTitle">Order Detail</div>
+      <button class="modal-close" onclick="closeDetail()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="detailBody"></div>
+    <div id="editSection" style="margin-top:12px;border-top:1px solid #eef0f6;padding-top:10px;display:none;"></div>
+    <div id="extraIngSection" style="margin-top:12px;border-top:1px solid #eef0f6;padding-top:10px;display:none;">
+      <div style="font-weight:700;margin-bottom:6px;font-size:13px;">Extra Ingredients</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <input type="text" id="extraIngName" placeholder="Ingredient name" list="kitchenStockList" style="flex:1;min-width:120px;padding:6px 8px;border:1px solid #eef0f6;border-radius:8px;">
+        <datalist id="kitchenStockList"></datalist>
+        <input type="number" id="extraIngQty" placeholder="Qty" min="0.01" step="0.01" style="width:80px;padding:6px 8px;border:1px solid #eef0f6;border-radius:8px;">
+        <input type="text" id="extraIngUnit" placeholder="Unit" style="width:70px;padding:6px 8px;border:1px solid #eef0f6;border-radius:8px;">
+        <button class="btn btn-primary" onclick="addExtraIng()" style="padding:6px 10px;">Add</button>
+      </div>
+      <div id="extraIngList" style="font-size:12px;"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn" onclick="closeDetail()">Close</button>
+      <button class="btn btn-primary" id="detailAcceptBtn" onclick="acceptFromDetail()" style="display:none;">Accept</button>
+      <button class="btn" id="detailRejectBtn" style="background:#feecec;color:#f04438;border-color:rgba(240,68,56,.3);display:none;" onclick="rejectFromDetail()">Reject</button>
+      <button class="btn" id="detailEditBtn" onclick="toggleEditMode()" style="display:none;"><i class="fa-solid fa-pen"></i> Edit</button>
+      <button class="btn btn-success" id="detailPayBtn" onclick="openPayModal()" style="display:none;"><i class="fa-solid fa-credit-card"></i> Pay</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal-overlay" id="payModal" onclick="if(event.target===this) closePayModal()">
+  <div class="modal" style="min-width:380px;">
+    <div class="modal-head">
+      <div class="modal-title">Payment</div>
+      <button class="modal-close" onclick="closePayModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="payBody">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">Amount to pay</div>
+      <div id="payAmount" style="font-size:28px;font-weight:800;margin-bottom:16px;"></div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Select payment method</div>
+      <div class="payment-methods" id="paymentMethods">
+        <div class="payment-method" data-m="Cash" onclick="selectPayMethod(this)"><i class="fa-solid fa-money-bill-wave"></i><br>Cash</div>
+        <div class="payment-method" data-m="Card" onclick="selectPayMethod(this)"><i class="fa-solid fa-credit-card"></i><br>Card</div>
+        <div class="payment-method" data-m="Room Charge" onclick="selectPayMethod(this)"><i class="fa-solid fa-bed"></i><br>Room Charge</div>
+        <div class="payment-method" data-m="Bank Transfer" onclick="selectPayMethod(this)"><i class="fa-solid fa-building-columns"></i><br>Bank Transfer</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn" onclick="closePayModal()">Cancel</button>
+      <button class="btn btn-success" id="confirmPayBtn" onclick="confirmPay()" disabled><i class="fa-solid fa-check"></i> Confirm Payment</button>
+    </div>
+  </div>
+</div>
+
 </div></div></div>
 <script src="../component/kitchen-shell.js"></script>
 <script>
 const shell=KitchenShell.attach({sidebarTarget:'#sidebarSlot',topbarTarget:'#topbarSlot',activeFile:'kitchen-coo.html',pageTitle:'Cook on Order',pageSubtitle:'Restaurant → Kitchen live orders'});
-let all=[], filterStatus='', q='';
+let all=[], filterStatus='', q='', detailId=null, detailOrder=null, editing=false, selectedPayMethod='';
+
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function showToast(msg,type){ type=type||'success'; var t=document.createElement('div'); t.className='toast '+type; var icon=type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-circle-info'; t.innerHTML='<i class="fa-solid '+icon+'"></i> '+esc(msg); document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3000); }
+function fmtN(n){ return Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:0,maximumFractionDigits:2}); }
+
+var STATUS_LABEL = {
+  'pending':'Pending','accepted':'Accepted','rejected':'Rejected',
+  'in-progress':'In Progress','completed':'Completed',
+  'transferred':'Transferred','served':'Served'
+};
+
 async function load(){
   try{
     const qs=filterStatus? '?status='+filterStatus : '';
@@ -72,8 +160,9 @@ async function load(){
     const j=await r.json();
     all=(j.data||j||[]);
     render();
-  }catch(e){ document.getElementById('tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:#f04438">'+e.message+'</td></tr>'; }
+  }catch(e){ document.getElementById('tbody').innerHTML='<tr><td colspan="7" style="text-align:center;color:#f04438">'+e.message+'</td></tr>'; }
 }
+
 function render(){
   const rows=all.filter(function(o){
     if(q && !(o.table||'').toLowerCase().includes(q) && !(o.items||[]).some(function(i){return i.name.toLowerCase().includes(q);} )) return false;
@@ -81,71 +170,231 @@ function render(){
   });
   document.getElementById('count').textContent=rows.length+' order'+(rows.length!==1?'s':'');
   const tb=document.getElementById('tbody');
-  if(!rows.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:#9aa1b3">No orders</td></tr>'; return; }
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:#9aa1b3">No orders</td></tr>'; return; }
   tb.innerHTML=rows.map(function(o){
-    return '<tr onclick="openDetail(\''+o.id+'\')" style="cursor:pointer"><td><b>'+esc(o.table||'—')+'</b> <span style="color:#9aa1b3">'+(o.covers||1)+' covers</span></td><td>'+o.items.map(function(i){return i.qty+'x '+esc(i.name);}).join(', ')+'</td><td>'+esc(o.staff||'')+'</td><td><span class="chip chip-'+o.status+'">'+o.status+'</span></td><td>'+new Date(o.createdAt).toLocaleString()+'</td><td onclick="event.stopPropagation()">'+(o.status==='pending'?'<button class="btn btn-primary" onclick="doAccept(\''+o.id+'\')">Accept</button> <button class="btn" onclick="doReject(\''+o.id+'\')">Reject</button>':'—')+'</td></tr>';
+    var items=o.items.map(function(i){return i.qty+'x '+esc(i.name);}).join(', ');
+    var actionBtn='';
+    if(o.status==='pending') actionBtn='<button class="btn btn-primary" onclick="event.stopPropagation();doAccept(\''+o.id+'\')">Accept</button> <button class="btn" onclick="event.stopPropagation();doReject(\''+o.id+'\')">Reject</button>';
+    else if(o.status==='transferred') actionBtn='<span style="color:#7c3aed;font-size:11px;font-weight:600;">Awaiting Accept</span>';
+    else actionBtn='<span style="color:#9aa1b3;">—</span>';
+    var paid=o.paid?'<i class="fa-solid fa-circle-check" style="color:#12b76a;margin-left:4px;" title="Paid"></i>':'';
+    return '<tr onclick="openDetail(\''+o.id+'\')" style="cursor:pointer"><td><b>'+esc(o.table||'—')+'</b> <span style="color:#9aa1b3">'+(o.covers||1)+' covers</span></td><td>'+items+'</td><td style="font-weight:700;">₦'+fmtN(o.total)+paid+'</td><td>'+esc(o.staff||'')+'</td><td><span class="chip chip-'+o.status+'">'+(STATUS_LABEL[o.status]||o.status)+'</span></td><td>'+new Date(o.createdAt).toLocaleString()+'</td><td onclick="event.stopPropagation()">'+actionBtn+'</td></tr>';
   }).join('');
   if(shell.setPendingBadge) shell.setPendingBadge(all.filter(function(o){return o.status==='pending';}).length);
 }
+
 async function doAccept(id){
   try{
-    // First accept the COO order
     var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/accept',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}});
     var j=await r.json();
     if(!r.ok) throw new Error(j.error||'Failed');
-
-    // Then try to auto-create batch production for items with recipes
-    var order = j.data;
-    var itemsWithRecipes = (order.items||[]).filter(function(i){ return i.recipeId; });
-    if (itemsWithRecipes.length) {
-      try {
-        // Load recipes to compute batch quantities
-        var recipesRes = await fetch('/api/kitchen/recipes', {credentials:'include'});
-        var recipesJson = await recipesRes.json();
-        var recipes = recipesJson.data || [];
-
-        var dishes = itemsWithRecipes.map(function(item) {
-          var recipe = recipes.find(function(r){ return r.id === item.recipeId; });
-          var batchQty = item.qty || 1;
-          if (recipe && recipe.expectedYield > 0 && recipe.baseQty > 0) {
-            batchQty = Math.round((item.qty / recipe.expectedYield) * recipe.baseQty * 100) / 100;
-          }
-          return { recipeId: item.recipeId, batchQty: batchQty };
+    var order=j.data;
+    var itemsWithRecipes=(order.items||[]).filter(function(i){return i.recipeId;});
+    if(itemsWithRecipes.length){
+      try{
+        var recipesRes=await fetch('/api/kitchen/recipes',{credentials:'include'});
+        var recipesJson=await recipesRes.json();
+        var recipes=recipesJson.data||[];
+        var dishes=itemsWithRecipes.map(function(item){
+          var recipe=recipes.find(function(r){return r.id===item.recipeId;});
+          var batchQty=item.qty||1;
+          if(recipe&&recipe.expectedYield>0&&recipe.baseQty>0) batchQty=Math.round((item.qty/recipe.expectedYield)*recipe.baseQty*100)/100;
+          return {recipeId:item.recipeId,batchQty:batchQty};
         });
-
-        var batchRes = await fetch('/api/kitchen/production/batch', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({
-            dishes: dishes,
-            type: 'coo',
-            cooId: id,
-            staff: order.staff || '',
-            notes: 'COO Order — ' + (order.table || ''),
-          })
-        });
-        var batchJson = await batchRes.json();
-        if (batchRes.ok && batchJson.success) {
-          showToast('Accepted — batch production ' + (batchJson.data.no || '') + ' created with ' + dishes.length + ' dish(es)','success');
-        } else {
-          showToast('Accepted — production page to start cooking','success');
-        }
-      } catch (prodErr) {
-        showToast('Accepted — production page to start cooking','success');
-      }
-    } else {
-      showToast('Accepted','success');
-    }
+        var batchRes=await fetch('/api/kitchen/production/batch',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({dishes:dishes,type:'coo',cooId:id,staff:order.staff||'',notes:'COO Order — '+(order.table||'')})});
+        var batchJson=await batchRes.json();
+        if(batchRes.ok&&batchJson.success) showToast('Accepted — batch production '+(batchJson.data.no||'')+' created','success');
+        else showToast('Accepted — start production from Production page','success');
+      }catch(prodErr){ showToast('Accepted — start production from Production page','success'); }
+    }else{ showToast('Accepted','success'); }
     load();
   }catch(e){ showToast(e.message,'error'); }
 }
-async function doReject(id){ try{ const r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/reject',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed'); showToast('Rejected','info'); load(); }catch(e){ showToast(e.message,'error'); } }
-let detailId=null;
-function openDetail(id){ const o=all.find(function(x){return x.id===id;}); if(!o) return; detailId=id; document.getElementById('detailTitle').textContent=(o.table||'—')+' — '+o.items.map(function(i){return i.qty+'x '+i.name;}).join(', '); document.getElementById('detailBody').innerHTML='<div style="margin-bottom:6px;"><b>Table:</b> '+esc(o.table||'—')+' ('+(o.covers||1)+' covers)</div><div style="margin-bottom:6px;"><b>Items:</b> '+o.items.map(function(i){return i.qty+'x '+esc(i.name)+' <span style="color:#9aa1b3;font-size:11px;">('+esc(i.id||'manual')+')</span>';}).join(', ')+'</div><div style="margin-bottom:6px;"><b>Staff:</b> '+esc(o.staff||'')+'</div><div style="margin-bottom:6px;"><b>Status:</b> <span class="chip chip-'+o.status+'">'+o.status+'</span></div><div style="margin-bottom:6px;"><b>Notes:</b> '+(o.notes||'—')+'</div><div><b>Date:</b> '+new Date(o.createdAt).toLocaleString()+'</div>'; document.getElementById('detailAcceptBtn').style.display=o.status==='pending'?'':'none'; document.getElementById('detailRejectBtn').style.display=o.status==='pending'?'':'none'; document.getElementById('cooDetailModal').classList.add('show'); }
-function closeDetail(){ document.getElementById('cooDetailModal').classList.remove('show'); detailId=null; }
+
+async function doReject(id){
+  try{
+    var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(id)+'/reject',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}});
+    var j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Failed');
+    showToast('Rejected','info'); load();
+  }catch(e){ showToast(e.message,'error'); }
+}
+
+function openDetail(id){
+  var o=all.find(function(x){return x.id===id;});
+  if(!o) return;
+  detailId=id; detailOrder=o; editing=false;
+  var items=o.items.map(function(i){return i.qty+'x '+esc(i.name)+' <span style="color:#9aa1b3;font-size:11px;">₦'+fmtN(i.price)+'</span>';}).join('<br>');
+  var paid=o.paid?'<span style="color:#12b76a;font-weight:700;">Paid — '+esc(o.paymentMethod)+' ₦'+fmtN(o.paymentAmount)+'</span>':'<span style="color:#f79009;font-weight:700;">Unpaid</span>';
+  document.getElementById('detailBody').innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'+
+      '<div><b>Table:</b> '+esc(o.table||'—')+' ('+(o.covers||1)+' covers)</div>'+
+      '<div><b>Staff:</b> '+esc(o.staff||'')+'</div>'+
+      '<div><b>Status:</b> <span class="chip chip-'+o.status+'">'+(STATUS_LABEL[o.status]||o.status)+'</span></div>'+
+      '<div><b>Payment:</b> '+paid+'</div>'+
+      '<div><b>Method:</b> '+esc(o.method||'')+'</div>'+
+      '<div><b>Date:</b> '+new Date(o.createdAt).toLocaleString()+'</div>'+
+    '</div>'+
+    '<div style="margin-bottom:6px;"><b>Items:</b><div style="margin-top:4px;padding:8px;background:#f9fafb;border-radius:8px;font-size:12px;">'+items+'</div></div>'+
+    '<div style="font-size:16px;font-weight:800;text-align:right;margin-top:8px;">Total: ₦'+fmtN(o.total)+'</div>'+
+    (o.notes?'<div style="margin-top:4px;"><b>Notes:</b> '+esc(o.notes)+'</div>':'');
+
+  var canEdit=o.status!=='rejected'&&o.status!=='served';
+  document.getElementById('detailAcceptBtn').style.display=o.status==='pending'?'':'none';
+  document.getElementById('detailRejectBtn').style.display=o.status==='pending'?'':'none';
+  document.getElementById('detailEditBtn').style.display=canEdit?'':'none';
+  document.getElementById('detailPayBtn').style.display=(!o.paid&&o.status!=='pending'&&o.status!=='rejected')?'':'none';
+  document.getElementById('editSection').style.display='none';
+  document.getElementById('editSection').innerHTML='';
+  document.getElementById('extraIngSection').style.display=o.status==='pending'?'':'none';
+  document.getElementById('cooDetailModal').classList.add('show');
+  loadKitchenStockList();
+}
+
+function closeDetail(){ document.getElementById('cooDetailModal').classList.remove('show'); detailId=null; detailOrder=null; editing=false; }
 function acceptFromDetail(){ if(detailId) doAccept(detailId); closeDetail(); }
 function rejectFromDetail(){ if(detailId) doReject(detailId); closeDetail(); }
+
+function toggleEditMode(){
+  editing=!editing;
+  var sec=document.getElementById('editSection');
+  if(!editing){ sec.style.display='none'; sec.innerHTML=''; return; }
+  if(!detailOrder) return;
+  var o=detailOrder;
+  var html='<div style="font-weight:700;margin-bottom:6px;">Edit Order</div>';
+  html+='<div class="form-row"><div class="fg" style="flex:1;"><label>Table</label><input id="editTable" value="'+esc(o.table||'')+'"></div><div class="fg"><label>Covers</label><input id="editCovers" type="number" min="1" value="'+(o.covers||1)+'" style="width:60px;"></div></div>';
+  html+='<table class="edit-items-table"><thead><tr><th>Item</th><th class="qty-col">Qty</th><th class="price-col">Price</th><th class="del-col"></th></tr></thead><tbody id="editItemsBody">';
+  (o.items||[]).forEach(function(item,i){
+    html+='<tr data-idx="'+i+'"><td><input class="eName" value="'+esc(item.name)+'"></td><td><input class="eQty qty-col" type="number" min="1" value="'+item.qty+'"></td><td><input class="ePrice price-col" type="number" min="0" value="'+item.price+'"></td><td><button class="btn" onclick="removeEditItem('+i+')" style="color:#f04438;padding:3px 6px;"><i class="fa-solid fa-trash"></i></button></td></tr>';
+  });
+  html+='</tbody></table>';
+  html+='<div style="display:flex;gap:8px;margin-top:6px;"><button class="btn" onclick="addEditItem()"><i class="fa-solid fa-plus"></i> Add Item</button></div>';
+  html+='<div class="form-row" style="margin-top:8px;"><div class="fg" style="flex:1;"><label>Notes</label><input id="editNotes" value="'+esc(o.notes||'')+'"></div></div>';
+  html+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;"><button class="btn" onclick="toggleEditMode()">Cancel</button><button class="btn btn-primary" onclick="saveEdit()">Save</button></div>';
+  sec.innerHTML=html;
+  sec.style.display='';
+}
+
+function addEditItem(){
+  var tbody=document.getElementById('editItemsBody');
+  var i=tbody.children.length;
+  var tr=document.createElement('tr');
+  tr.setAttribute('data-idx',i);
+  tr.innerHTML='<td><input class="eName" value=""></td><td><input class="eQty qty-col" type="number" min="1" value="1"></td><td><input class="ePrice price-col" type="number" min="0" value="0"></td><td><button class="btn" onclick="this.closest(\'tr\').remove()" style="color:#f04438;padding:3px 6px;"><i class="fa-solid fa-trash"></i></button></td>';
+  tbody.appendChild(tr);
+}
+
+function removeEditItem(idx){
+  var rows=document.getElementById('editItemsBody').children;
+  for(var i=0;i<rows.length;i++){ if(Number(rows[i].getAttribute('data-idx'))===idx){ rows[i].remove(); break; } }
+}
+
+async function saveEdit(){
+  var rows=document.getElementById('editItemsBody').children;
+  var items=[];
+  for(var i=0;i<rows.length;i++){
+    var name=rows[i].querySelector('.eName').value.trim();
+    var qty=Number(rows[i].querySelector('.eQty').value)||1;
+    var price=Number(rows[i].querySelector('.ePrice').value)||0;
+    if(!name) continue;
+    items.push({name:name,qty:qty,price:price});
+  }
+  if(!items.length){ showToast('Add at least one item','error'); return; }
+  var table=document.getElementById('editTable').value.trim();
+  var covers=Number(document.getElementById('editCovers').value)||1;
+  var notes=document.getElementById('editNotes').value.trim();
+  try{
+    var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(detailId)+'/edit',{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:items,table:table,covers:covers,notes:notes})});
+    var j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Failed');
+    showToast('Order updated','success');
+    detailOrder=j.data;
+    editing=false;
+    load();
+    openDetail(detailId);
+  }catch(e){ showToast(e.message,'error'); }
+}
+
+function openPayModal(){
+  if(!detailOrder) return;
+  selectedPayMethod='';
+  document.getElementById('payAmount').textContent='₦'+fmtN(detailOrder.total);
+  document.querySelectorAll('.payment-method').forEach(function(el){el.classList.remove('selected');});
+  document.getElementById('confirmPayBtn').disabled=true;
+  document.getElementById('payModal').classList.add('show');
+}
+function closePayModal(){ document.getElementById('payModal').classList.remove('show'); selectedPayMethod=''; }
+function selectPayMethod(el){
+  document.querySelectorAll('.payment-method').forEach(function(m){m.classList.remove('selected');});
+  el.classList.add('selected');
+  selectedPayMethod=el.getAttribute('data-m');
+  document.getElementById('confirmPayBtn').disabled=false;
+}
+
+async function confirmPay(){
+  if(!detailId||!selectedPayMethod) return;
+  try{
+    var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(detailId)+'/pay',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentMethod:selectedPayMethod})});
+    var j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Failed');
+    showToast('Payment recorded — '+selectedPayMethod,'success');
+    closePayModal();
+    detailOrder=j.data;
+    load();
+    openDetail(detailId);
+  }catch(e){ showToast(e.message,'error'); }
+}
+
+async function loadKitchenStockList(){
+  try{
+    var r=await fetch('/api/kitchen/stock',{credentials:'include'});
+    var j=await r.json();
+    var list=j.data||j||[];
+    var dl=document.getElementById('kitchenStockList');
+    if(dl) dl.innerHTML=list.map(function(s){return '<option value="'+esc(s.name)+'">';}).join('');
+  }catch(e){}
+}
+
+async function addExtraIng(){
+  if(!detailId) return;
+  var name=document.getElementById('extraIngName').value.trim();
+  var qty=Number(document.getElementById('extraIngQty').value);
+  var unit=document.getElementById('extraIngUnit').value.trim();
+  if(!name||!qty){showToast('Name and qty required','error');return;}
+  try{
+    var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(detailId)+'/extra-ingredient',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,qty:qty,unit:unit})});
+    var j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Failed');
+    showToast('Ingredient added','success');
+    detailOrder=j.data;
+    renderExtraIngs();
+    document.getElementById('extraIngName').value='';
+    document.getElementById('extraIngQty').value='';
+    document.getElementById('extraIngUnit').value='';
+  }catch(e){showToast(e.message,'error');}
+}
+
+async function removeExtraIng(idx){
+  if(!detailId) return;
+  try{
+    var r=await fetch('/api/kitchen/coo-orders/'+encodeURIComponent(detailId)+'/extra-ingredient/'+idx,{method:'DELETE',credentials:'include'});
+    var j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Failed');
+    detailOrder=j.data;
+    renderExtraIngs();
+  }catch(e){showToast(e.message,'error');}
+}
+
+function renderExtraIngs(){
+  if(!detailOrder) return;
+  var list=detailOrder.extraIngredients||[];
+  var el=document.getElementById('extraIngList');
+  if(!list.length){el.innerHTML='<span style="color:#9aa1b3;">None</span>';return;}
+  el.innerHTML=list.map(function(ing,i){
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span>'+esc(ing.qty)+' '+esc(ing.unit)+' '+esc(ing.name)+'</span><button class="btn" onclick="removeExtraIng('+i+')" style="color:#f04438;padding:2px 6px;font-size:10px;"><i class="fa-solid fa-xmark"></i></button></div>';
+  }).join('');
+}
+
 document.querySelectorAll('.pill').forEach(function(b){ b.addEventListener('click', function(){ document.querySelectorAll('.pill').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); filterStatus=b.dataset.s||''; load(); }); });
 document.getElementById('q').addEventListener('input', function(){ q=this.value.toLowerCase(); render(); });
 load();

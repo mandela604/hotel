@@ -610,7 +610,7 @@ exports.listTransfers = asyncHandler(async (req, res) => {
 });
 
 exports.addTransfer = asyncHandler(async (req, res) => {
-  const { productionNo, meal, quantity, unit, sentBy, remarks, restaurant } = req.body;
+  const { productionNo, meal, quantity, unit, sentBy, remarks, restaurant, cooId } = req.body;
   if (!meal || !quantity || Number(quantity) <= 0) {
     return res.status(400).json({ success: false, error: 'Meal name and valid quantity required' });
   }
@@ -640,6 +640,15 @@ exports.addTransfer = asyncHandler(async (req, res) => {
     remarks: remarks || '',
     restaurant: restaurant || 'Main Restaurant / POS',
   });
+
+  if (cooId) {
+    const KitchenCooOrder = require('../models/KitchenCooOrder');
+    const cooOrder = await KitchenCooOrder.findOne({ id: cooId });
+    if (cooOrder) {
+      cooOrder.status = 'transferred';
+      await cooOrder.save();
+    }
+  }
 
   res.status(201).json({ success: true, data: transfer });
 });

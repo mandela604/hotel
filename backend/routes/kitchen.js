@@ -58,6 +58,8 @@ router.get('/coo-orders/:id', cooCtrl.getCooOrder);
 router.post('/coo-orders', cooCtrl.createCoo);
 router.post('/coo-orders/:id/accept', inDept, privilegeGuard('kitchen','canEdit'), cooCtrl.acceptCoo);
 router.post('/coo-orders/:id/reject', inDept, cooCtrl.rejectCoo);
+router.put('/coo-orders/:id/edit', inDept, cooCtrl.editCoo);
+router.post('/coo-orders/:id/pay', inDept, cooCtrl.payCoo);
 router.post('/coo-orders/:id/extra-ingredient', inDept, cooCtrl.addExtraIngredient);
 router.delete('/coo-orders/:id/extra-ingredient/:idx', inDept, cooCtrl.removeExtraIngredient);
 

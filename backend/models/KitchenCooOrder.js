@@ -29,7 +29,12 @@ const cooSchema = new mongoose.Schema({
   total: { type: Number, default: 0 },
   extraIngredients: { type: [extraIngSchema], default: [] },
   restaurantOrderId: { type: String, default: '' },
-  status: { type: String, enum: ['pending','accepted','rejected','completed'], default: 'pending' },
+  status: { type: String, enum: ['pending','accepted','rejected','in-progress','completed','transferred','served'], default: 'pending' },
+  paid: { type: Boolean, default: false },
+  paymentMethod: { type: String, default: '' },
+  paymentAmount: { type: Number, default: 0 },
+  paidAt: { type: String, default: '' },
+  saleId: { type: String, default: '' },
   createdBy: { type: String, default: '' },
 }, { timestamps: true });
 

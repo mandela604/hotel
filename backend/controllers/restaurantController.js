@@ -414,7 +414,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
     const KitchenCooOrder = require('../models/KitchenCooOrder');
     const cooOrder = await KitchenCooOrder.findOne({ id: transfer.cooId });
     if (cooOrder) {
-      cooOrder.status = 'completed';
+      cooOrder.status = 'served';
       await cooOrder.save();
       if (cooOrder.restaurantOrderId) {
         const linkedOrder = await Order.findOne({ id: cooOrder.restaurantOrderId });

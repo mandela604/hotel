@@ -450,10 +450,10 @@
      that only worked because everything shared one localStorage/demo
      store. In production, Restaurant reads its own incoming-transfers
      list from its own API, backed by the same Transfer collection. */
-  async function addTransfer({ meal, quantity, unit, sentBy, remarks = '', productionNo = '', restaurant = 'Main Restaurant / POS' }) {
+  async function addTransfer({ meal, quantity, unit, sentBy, remarks = '', productionNo = '', restaurant = 'Main Restaurant / POS', cooId = '' }) {
     const transfer = await request('/transfers', {
       method: 'POST',
-      body: { meal, quantity, unit, sentBy, remarks, productionNo, restaurant },
+      body: { meal, quantity, unit, sentBy, remarks, productionNo, restaurant, cooId },
     });
     state.transfers.unshift(transfer);
     emitChange('transfer:add');
@@ -683,6 +683,23 @@
     return map[status] || { label: status || '—', cls: '' };
   }
 
+  /* ── COO Orders ── */
+  async function payCoo(id, paymentMethod, amount) {
+    const result = await request('/coo-orders/' + id + '/pay', {
+      method: 'POST',
+      body: { paymentMethod, amount },
+    });
+    return result.data || result;
+  }
+
+  async function editCoo(id, updates) {
+    const result = await request('/coo-orders/' + id + '/edit', {
+      method: 'PUT',
+      body: updates,
+    });
+    return result.data || result;
+  }
+
   global.KitchenService = {
     API_BASE,
     fmtN, nowStamp, fmtStamp, todayDDMMYY, todayISO,
@@ -703,5 +720,6 @@
     can, canVoidProduction,
     listStaffNames,
     getShiftProduction, isManagerLike,
+    payCoo, editCoo,
   };
 })(window);
