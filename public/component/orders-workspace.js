@@ -1502,7 +1502,19 @@
       wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
       wrap.addEventListener('click', function (e) {
         var ds = e.target.closest('[data-detail-served]');
-        if (ds) { wrap.remove(); markServed(ds.dataset.detailServed); return; }
+        if (ds) {
+          var servedId = ds.dataset.detailServed;
+          ds.disabled = true;
+          ds.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Serving...';
+          (async function() {
+            try {
+              await markServed(servedId);
+              wrap.remove();
+              showCooDetail(servedId);
+            } catch(e) { wrap.remove(); }
+          })();
+          return;
+        }
         var de = e.target.closest('[data-detail-edit]');
         if (de) { wrap.remove(); openEditCoo(de.dataset.detailEdit); return; }
         var dc = e.target.closest('[data-detail-cancel]');

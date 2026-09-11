@@ -21,7 +21,7 @@ const saleSchema = new mongoose.Schema({
   table:          { type: String, default: '' },
   notes:          { type: String, default: '' },
   date:           { type: Date, default: Date.now },
-  status:         { type: String, enum: ['completed', 'voided'], default: 'completed' },
+  status:         { type: String, enum: ['pending', 'completed', 'voided'], default: 'pending' },
   voidReason:     { type: String, default: '' },
   voidedBy:       { type: String, default: '' },
   voidDate:       { type: Date },

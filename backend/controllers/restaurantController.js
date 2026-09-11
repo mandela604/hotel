@@ -615,25 +615,6 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: `Cannot mark a '${order.status}' order as served` });
   }
 
-  order.status = 'served';
-  await order.save();
-
-  await logActivity('green', `Tab ${order.id} marked as served`, 'restaurant-orders.html');
-  res.json({ success: true, data: order });
-});
-
-exports.payOrder = asyncHandler(async (req, res) => {
-  const order = await Order.findOne({ id: req.params.id, department: DEPT });
-  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
-  if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order already paid' });
-  if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
-  if (order.status !== 'open' && order.status !== 'served') {
-    return res.status(400).json({ success: false, error: `Cannot pay an order with status '${order.status}'` });
-  }
-
-  const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
-  const payMethod = method || 'Cash';
-
   /* ── Deduct RestaurantStock per item (skip items not yet in stock) ── */
   const stockIdMap = {};
   const procIdMap2 = {};
@@ -657,32 +638,114 @@ exports.payOrder = asyncHandler(async (req, res) => {
       qtyIn: 0,
       qtyOut: qty,
       balance: stockItem.qty,
-      reason: `Tab ${order.id} paid`,
+      reason: `Tab ${order.id} served`,
     });
   }
 
-  /* ── Create Sale record (source = tab) ── */
+  /* ── Create pending Sale record ── */
   const saleCount = await Sale.countDocuments({ department: DEPT });
-  const saleId = `RST-${String(saleCount + 1).padStart(5, '0')}`;
+  const pendingSaleId = `RST-${String(saleCount + 1).padStart(5, '0')}`;
 
   const sale = await Sale.create({
-    id: saleId,
+    id: pendingSaleId,
     source: order.id,
     department: DEPT,
     items: order.items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', procurementId: procIdMap2[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
     subtotal: order.subtotal,
     discount: order.discount,
     total: order.total,
-    method: payMethod,
+    method: '',
     staff: order.staff,
     table: order.table,
     notes: order.notes,
     date: new Date(),
-    status: 'completed',
-    roomNumber: roomNumber || null,
-    guestName: guestName || null,
-    guestPhone: guestPhone || null,
+    status: 'pending',
   });
+
+  /* ── Update order ── */
+  order.status = 'served';
+  order.pendingSaleId = pendingSaleId;
+  await order.save();
+
+  await logActivity('green', `Tab ${order.id} marked as served`, 'restaurant-orders.html');
+  res.json({ success: true, data: order, sale });
+});
+
+exports.payOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findOne({ id: req.params.id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order already paid' });
+  if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
+  if (order.status !== 'open' && order.status !== 'served') {
+    return res.status(400).json({ success: false, error: `Cannot pay an order with status '${order.status}'` });
+  }
+
+  const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
+  const payMethod = method || 'Cash';
+
+  let sale;
+
+  if (order.pendingSaleId) {
+    /* ── Already served — find the pending Sale and finalize it ── */
+    sale = await Sale.findOne({ id: order.pendingSaleId });
+    if (sale) {
+      sale.status = 'completed';
+      sale.method = payMethod;
+      if (roomNumber) sale.roomNumber = roomNumber;
+      if (guestName) sale.guestName = guestName;
+      if (guestPhone) sale.guestPhone = guestPhone;
+      await sale.save();
+    }
+  } else {
+    /* ── Direct pay (skip serve) — deduct stock + create completed Sale ── */
+    const stockIdMap = {};
+    const procIdMap2 = {};
+    for (const it of order.items) {
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+      if (!stockItem) continue;
+      stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
+      procIdMap2[it.name.trim().toLowerCase()] = stockItem.procurementId || '';
+      const qty = Number(it.qty);
+      if (stockItem.qty < qty) {
+        const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
+        err.statusCode = 400;
+        throw err;
+      }
+      stockItem.qty -= qty;
+      await stockItem.save();
+
+      await RestaurantMovement.create({
+        date: nowStamp(),
+        item: stockItem.name,
+        qtyIn: 0,
+        qtyOut: qty,
+        balance: stockItem.qty,
+        reason: `Tab ${order.id} paid`,
+      });
+    }
+
+    const saleCount = await Sale.countDocuments({ department: DEPT });
+    const saleId = `RST-${String(saleCount + 1).padStart(5, '0')}`;
+
+    sale = await Sale.create({
+      id: saleId,
+      source: order.id,
+      department: DEPT,
+      items: order.items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', procurementId: procIdMap2[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
+      subtotal: order.subtotal,
+      discount: order.discount,
+      total: order.total,
+      method: payMethod,
+      staff: order.staff,
+      table: order.table,
+      notes: order.notes,
+      date: new Date(),
+      status: 'completed',
+      roomNumber: roomNumber || null,
+      guestName: guestName || null,
+      guestPhone: guestPhone || null,
+    });
+  }
 
   /* ── Room Charge → post to guest folio ── */
   if (payMethod === 'Room Charge') {
@@ -733,7 +796,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   if (roomNumber) order.roomNumber = roomNumber;
   if (guestName) order.guestName = guestName;
   if (guestPhone) order.guestPhone = guestPhone;
-  order.paidSaleId = saleId;
+  order.paidSaleId = sale ? sale.id : order.pendingSaleId || '';
   await order.save();
 
   await logActivity('green', `Tab ${order.id} paid — ${order.total} (${payMethod})`, 'restaurant-orders.html');
@@ -748,6 +811,35 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   }
   if (order.status === 'cancelled') {
     return res.status(400).json({ success: false, error: 'Order already cancelled' });
+  }
+
+  /* ── If served with pending sale: restore stock + void sale ── */
+  if (order.status === 'served' && order.pendingSaleId) {
+    for (const it of order.items) {
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+      if (!stockItem) continue;
+      const qty = Number(it.qty);
+      stockItem.qty += qty;
+      await stockItem.save();
+
+      await RestaurantMovement.create({
+        date: nowStamp(),
+        item: stockItem.name,
+        qtyIn: qty,
+        qtyOut: 0,
+        balance: stockItem.qty,
+        reason: `Tab ${order.id} cancelled — stock restored`,
+      });
+    }
+
+    const pendingSale = await Sale.findOne({ id: order.pendingSaleId });
+    if (pendingSale) {
+      pendingSale.status = 'voided';
+      pendingSale.voidReason = 'Order cancelled';
+      pendingSale.voidedBy = req.user ? req.user.name : '';
+      pendingSale.voidDate = new Date();
+      await pendingSale.save();
+    }
   }
 
   order.status = 'cancelled';
