@@ -183,7 +183,7 @@
 
   var STATUS_LBL = { 'in-progress': 'Awaiting Yield', completed: 'Completed', voided: 'Voided' };
   var TYPE_LBL = { rts: 'Ready-to-Serve', coo: 'Cook-on-Order' };
-  var DESTINATIONS = ['Main Restaurant / POS', 'Poolbar'];
+  var DESTINATIONS = ['Main Restaurant / POS'];
 
   function create(opts) {
     opts = opts || {};

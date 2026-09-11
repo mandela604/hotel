@@ -667,9 +667,11 @@ exports.addTransfer = asyncHandler(async (req, res) => {
   }
 
   if (productionNo) {
-    const existing = await Transfer.findOne({ productionNo });
+    // For batch production, allow multiple transfers (one per dish).
+    // Only block if a transfer with the same meal name already exists for this production.
+    const existing = await Transfer.findOne({ productionNo, meal: meal.trim() });
     if (existing) {
-      return res.status(400).json({ success: false, error: 'Transfer already created for this production run' });
+      return res.status(400).json({ success: false, error: 'Transfer already created for ' + meal + ' in this production run' });
     }
   }
 
