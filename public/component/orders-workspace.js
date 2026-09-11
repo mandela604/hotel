@@ -1502,7 +1502,7 @@
       wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
       wrap.addEventListener('click', function (e) {
         var ds = e.target.closest('[data-detail-served]');
-        if (ds) { wrap.remove(); markServed(ds.dataset.detailServed); return; }
+        if (ds) { (async function(){ await markServed(ds.dataset.detailServed); wrap.remove(); showCooDetail(ds.dataset.detailServed); })(); return; }
         var de = e.target.closest('[data-detail-edit]');
         if (de) { wrap.remove(); openEditCoo(de.dataset.detailEdit); return; }
         var dc = e.target.closest('[data-detail-cancel]');
