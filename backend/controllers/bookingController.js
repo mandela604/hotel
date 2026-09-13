@@ -298,6 +298,14 @@ exports.getBooking = asyncHandler(async (req, res) => {
   res.json({ success: true, data: booking });
 });
 
+exports.getActiveBookingForRoom = asyncHandler(async (req, res) => {
+  const room = (req.query.room || '').trim();
+  if (!room) return res.status(400).json({ success: false, error: 'room query param required' });
+  const booking = await Booking.findOne({ room, status: { $in: ['reserved', 'checkedin'] } }).sort({ createdAt: -1 });
+  if (!booking) return res.status(404).json({ success: false, error: 'No active booking for this room' });
+  res.json({ success: true, data: booking });
+});
+
 // Creates/fills a booking onto an existing room. A Booking doc always
 // pre-exists per room (created in addRoom), so "create" here means:
 // take a vacant room and assign a guest to it — same action whether it's

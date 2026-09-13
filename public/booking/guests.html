@@ -820,73 +820,52 @@ function renderCharges(g){
   buildPagination('chargePageBtns','chargePaginLabel',pfChargePage,total,CHARGE_PER_PAGE,p=>{pfChargePage=p;renderCharges(g);});
 }
 
-/* ── Settle opens the Booking Modal — or settles directly if no active booking ── */
-function settleCharge(idx){
+/* ── Settle opens the Booking Modal — always via backend lookup ── */
+async function settleCharge(idx){
   const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
   const c = g.charges[idx];
   if(c.status !== 'Pending') {
     showToast('Charge already settled.', 'info');
     return;
   }
-
-  // If the charge has a room and there's an active booking for it, open
-  // the booking modal so staff can settle in context. Otherwise settle
-  // the charge directly via the API (guest checked out but charge remains).
-  if(c.room) {
-    const booking = bookingsData.find(b => b.room === c.room && b.guest === g.name);
-    if(booking) {
-      _settleReturnGuestId = g.id;
-      closeProfile();
-      setTimeout(() => {
-        if(bookingModal) bookingModal.openEdit(booking);
-      }, 350);
-      return;
-    }
+  if(!c.room) {
+    showToast('No room linked to this charge.', 'error');
+    return;
   }
-
-  // Fallback: no active booking found — settle the charge directly.
-  BookingData.settleCharge(g.id, idx)
-    .then(async () => {
-      showToast('Charge settled.', 'success');
-      await loadGuestsData();
-      openProfile(g.id);
-      const folioBtn = document.querySelector('.subtab[data-sub="folio"]');
-      if (folioBtn) switchSub('folio', folioBtn);
-    })
-    .catch(err => showToast((err && err.message) || 'Failed to settle charge.', 'error'));
+  try {
+    const res = await fetch('/api/booking/bookings/active-for-room?room=' + encodeURIComponent(c.room), { credentials: 'include' });
+    const j = await res.json();
+    if(!res.ok || !j.success) throw new Error(j.error || 'No active booking');
+    _settleReturnGuestId = g.id;
+    closeProfile();
+    setTimeout(() => {
+      if(bookingModal) bookingModal.openEdit(j.data);
+    }, 350);
+  } catch(err) {
+    showToast((err && err.message) || 'No active booking for room ' + c.room, 'error');
+  }
 }
 
 async function settleAll(){
   const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
   const pending = g.charges.filter(c=>c.status==='Pending');
   if(!pending.length){ showToast('No pending charges.','info'); return; }
-
-  // If there's an active booking for the first pending charge, open the
-  // booking modal so staff can settle in context. Otherwise settle all
-  // charges directly via the API (e.g. guest already checked out).
   const firstCharge = pending[0];
-  if(firstCharge && firstCharge.room) {
-    const booking = bookingsData.find(b => b.room === firstCharge.room && b.guest === g.name);
-    if(booking) {
-      _settleReturnGuestId = g.id;
-      closeProfile();
-      setTimeout(() => {
-        if(bookingModal) bookingModal.openEdit(booking);
-      }, 350);
-      return;
-    }
+  if(!firstCharge || !firstCharge.room) {
+    showToast('No room linked to pending charges.', 'error');
+    return;
   }
-
-  // Fallback: settle all charges directly via API.
   try {
-    await BookingData.settleAllCharges(g.id);
-    showToast('All charges settled.', 'success');
-    await loadGuestsData();
-    openProfile(g.id);
-    const folioBtn = document.querySelector('.subtab[data-sub="folio"]');
-    if (folioBtn) switchSub('folio', folioBtn);
+    const res = await fetch('/api/booking/bookings/active-for-room?room=' + encodeURIComponent(firstCharge.room), { credentials: 'include' });
+    const j = await res.json();
+    if(!res.ok || !j.success) throw new Error(j.error || 'No active booking');
+    _settleReturnGuestId = g.id;
+    closeProfile();
+    setTimeout(() => {
+      if(bookingModal) bookingModal.openEdit(j.data);
+    }, 350);
   } catch(err) {
-    showToast((err && err.message) || 'Failed to settle charges.', 'error');
+    showToast((err && err.message) || 'No active booking for room ' + firstCharge.room, 'error');
   }
 }
 
