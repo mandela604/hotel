@@ -473,6 +473,7 @@ let bookingsData = [];
 let gPage = 1, pfStayPage = 1, pfChargePage = 1;
 const G_PER_PAGE = 8, STAY_PER_PAGE = 3, CHARGE_PER_PAGE = 3;
 let activeGuestId = null;
+let activeFolioBookingId = null;
 let filteredGuests = [];
 
 /* ── Helpers ── */
@@ -706,10 +707,13 @@ function openProfile(id, preserveTab){
   ].map(m=>`<div class="mstat"><div class="mstat-lbl">${m.l}</div><div class="mstat-val" style="color:${m.c}">${m.v}</div></div>`).join('');
 
   document.getElementById('tbHistCount').textContent  = g.stays.length + activeBookingsForGuest(g).length;
-  document.getElementById('tbFolioCount').textContent = g.charges.length;
+  var activeBooking = activeBookingsForGuest(g)[0] || null;
+  activeFolioBookingId = activeBooking ? activeBooking.id : '';
+  var filteredCharges = activeFolioBookingId ? g.charges.filter(function(c){ return c.bookingRef && c.bookingRef === activeFolioBookingId; }) : g.charges;
+  document.getElementById('tbFolioCount').textContent = filteredCharges.length;
 
   renderStayHistory(g);
-  renderCharges(g);
+  renderCharges(g, activeFolioBookingId);
   document.getElementById('pfNoteView').textContent = g.notes || 'No notes on file yet.';
   document.getElementById('pfNoteEdit').value       = g.notes || '';
 
@@ -787,8 +791,12 @@ function renderStayHistory(g){
    (openSalesDetailForCharge). The "+N more" link inside the description
    cell and the Settle button both stop propagation so they don't also
    trigger the row's own click-to-open. */
-function renderCharges(g){
-  const charges = [...g.charges].sort((a,b)=>{ if(a.status==='Pending'&&b.status!=='Pending') return -1; if(a.status!=='Pending'&&b.status==='Pending') return 1; return new Date(b.date)-new Date(a.date); });
+function renderCharges(g, filterBookingId){
+  var allCharges = [...g.charges];
+  if (filterBookingId) {
+    allCharges = allCharges.filter(function(c){ return c.bookingRef && c.bookingRef === filterBookingId; });
+  }
+  const charges = allCharges.sort((a,b)=>{ if(a.status==='Pending'&&b.status!=='Pending') return -1; if(a.status!=='Pending'&&b.status==='Pending') return 1; return new Date(b.date)-new Date(a.date); });
   const total = charges.length;
   const start = (pfChargePage-1)*CHARGE_PER_PAGE;
   const page  = charges.slice(start, start+CHARGE_PER_PAGE);
@@ -817,7 +825,7 @@ function renderCharges(g){
         </tr>`;
       }).join('');
 
-  buildPagination('chargePageBtns','chargePaginLabel',pfChargePage,total,CHARGE_PER_PAGE,p=>{pfChargePage=p;renderCharges(g);});
+  buildPagination('chargePageBtns','chargePaginLabel',pfChargePage,total,CHARGE_PER_PAGE,p=>{pfChargePage=p;renderCharges(g, activeFolioBookingId);});
 }
 
 /* ── Settle opens the Booking Modal — always via backend lookup ── */
