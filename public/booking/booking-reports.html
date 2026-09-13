@@ -343,16 +343,18 @@ function setStatusPill(value, btn) {
 }
 function clearInlineFilters() {
   document.querySelectorAll('#fbStatusPills .fb-pill').forEach(b => b.classList.remove('active'));
-  document.querySelector('#fbStatusPills .fb-pill[data-status=""]').classList.add('active');
+  var allStatus = document.querySelector('#fbStatusPills .fb-pill[data-status=""]');
+  if (allStatus) allStatus.classList.add('active');
   document.getElementById('fbPayment').value = '';
   document.getElementById('fbStaff').value = '';
   document.getElementById('fbSearch').value = '';
   dateFrom=''; dateTo=''; rangeStart=null; rangeEnd=null; updateDateFilterLabel();
   document.querySelectorAll('#periodPills .fb-pill').forEach(b => b.classList.remove('active'));
-  document.querySelector('#periodPills .fb-pill[data-period="all"]').classList.add('active');
+  var allPeriod = document.querySelector('#periodPills .fb-pill[data-period="all"]');
+  if (allPeriod) allPeriod.classList.add('active');
   applyInlineFilters();
 }
-function applyInlineFilters() {
+async function applyInlineFilters() {
   const activeStatusPill = document.querySelector('#fbStatusPills .fb-pill.active');
   const status = activeStatusPill ? activeStatusPill.dataset.status : '';
   const payStatus = document.getElementById('fbPayment').value;
@@ -381,26 +383,25 @@ function applyInlineFilters() {
     params.set('period', 'today');
   }
 
-  fetch('/api/booking/reports?' + params.toString(), { credentials: 'include' })
-    .then(function(r) { return r.json(); })
-    .then(function(j) {
-      var data = j.data || {};
-      var rows = data.bookings || [];
-      var kpis = data.kpis || { totalRevenue: 0, collected: 0, balanceDue: 0, totalNights: 0, fullyPaidCount: 0, totalCount: 0, refundedTotal: 0 };
+  try {
+    var r = await fetch('/api/booking/reports?' + params.toString(), { credentials: 'include' });
+    var j = await r.json();
+    var data = j.data || {};
+    var rows = data.bookings || [];
+    var kpis = data.kpis || { totalRevenue: 0, collected: 0, balanceDue: 0, totalNights: 0, fullyPaidCount: 0, totalCount: 0, refundedTotal: 0 };
 
-      // Update title
-      var title = 'Full Report';
-      if (period === 'today') title = "Today's Report";
-      else if (period === '7d') title = 'Last 7 Days';
-      else if (period === '30d') title = 'Last 30 Days';
-      else if (dateFrom || dateTo) title = 'Report: ' + (dateFrom ? fmtDateShort(dateFrom) : '...') + ' – ' + (dateTo ? fmtDateShort(dateTo) : '...');
+    // Update title
+    var title = 'Full Report';
+    if (period === 'today') title = "Today's Report";
+    else if (period === '7d') title = 'Last 7 Days';
+    else if (period === '30d') title = 'Last 30 Days';
+    else if (dateFrom || dateTo) title = 'Report: ' + (dateFrom ? fmtDateShort(dateFrom) : '...') + ' – ' + (dateTo ? fmtDateShort(dateTo) : '...');
 
-      if (table) { table.setTitle(title); table.setRows(rows); }
-      updateKPI(kpis, kpis.totalCount);
-    })
-    .catch(function(err) {
-      console.error('Reports fetch error:', err);
-    });
+    if (table) { table.setTitle(title); table.setRows(rows); }
+    updateKPI(kpis, kpis.totalCount);
+  } catch (err) {
+    console.error('Reports fetch error:', err);
+  }
 }
 
 /* ═══ Store-style date popover calendar === */
@@ -581,7 +582,10 @@ async function init() {
       onView: (b) => openReportInModal(b)
     });
 
-    applyInlineFilters();
+    // Populate table with initial (unfiltered) data
+    var initKpis = data.kpis || { totalRevenue: 0, collected: 0, balanceDue: 0, totalNights: 0, fullyPaidCount: 0, totalCount: 0, refundedTotal: 0 };
+    table.setRows(bookings);
+    updateKPI(initKpis, initKpis.totalCount);
 
     applyRoleUI();
     if (!isPrivileged()) {
