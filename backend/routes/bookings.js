@@ -24,6 +24,7 @@ const bookingWriteLimiter = createRateLimiter({ windowMs: 5 * 60 * 1000, max: 30
 /* Combined read — one round trip for dashboard/list/rooms/reports/guests,
    mirrors the frontend's BookingData.getBookingData() call. */
 router.get('/data', bookingController.getBookingData);
+router.get('/reports', bookingController.getReports);
 
 /* Rooms */
 router.get('/rooms', bookingController.listRooms);

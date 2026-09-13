@@ -285,9 +285,6 @@ const bookingModal = BookingModal.create({
   service: BookingData,
   session: shell.getUser(),
   onSaved: async () => {
-    const fresh = await BookingData.getBookingData();
-    allRooms = fresh.rooms;
-    bookings = fresh.bookings;
     applyInlineFilters();
   },
 });
@@ -312,26 +309,19 @@ function applyRoleUI() {
   else { notice.style.display = 'flex'; notice.innerHTML = `<i class="fa-solid fa-lock"></i> Showing today's data only — full-range reports require manager or admin access.`; }
 }
 
-function updateKPI(rows) {
-  const totRev = rows.reduce((s,b) => s+calcTotal(b), 0);
-  const totRefunded = rows.reduce((s,b) => s+(Number(b.refunded)||0), 0);
-  const netRev = totRev - totRefunded;
-  const totPaid = rows.reduce((s,b) => s+calcPaid(b), 0);
-  const totBal = rows.reduce((s,b) => s+calcBal(b), 0);
-  const collRate = netRev>0 ? Math.round(totPaid/netRev*100) : 0;
-  const nights_ = rows.reduce((s,b) => s+(nights(b.checkin,b.checkout)||0), 0);
-  const fullyPaid = rows.filter(b=>b.payStatus==='Fully Paid').length;
+function updateKPI(kpis, count) {
   document.querySelectorAll('#kpiRow .skeleton').forEach(function(el){ el.classList.remove('skeleton'); el.style.height=''; });
-  document.getElementById('kpi-revenue').textContent = fmtN(netRev);
-  document.getElementById('kpi-revenue-sub').textContent = `${rows.length} bookings` + (totRefunded > 0 ? ` (₦${fmtN(totRefunded)} refunded)` : '');
-  document.getElementById('kpi-collected').textContent = fmtN(totPaid);
+  document.getElementById('kpi-revenue').textContent = fmtN(kpis.totalRevenue);
+  document.getElementById('kpi-revenue-sub').textContent = `${count} bookings` + (kpis.refundedTotal > 0 ? ` (₦${fmtN(kpis.refundedTotal)} refunded)` : '');
+  document.getElementById('kpi-collected').textContent = fmtN(kpis.collected);
+  var collRate = kpis.totalRevenue > 0 ? Math.round(kpis.collected / kpis.totalRevenue * 100) : 0;
   document.getElementById('kpi-collected-sub').textContent = `${collRate}% collection`;
-  document.getElementById('kpi-balance').textContent = fmtN(totBal);
-  var balSub=document.querySelector('#kpiRow .kpi-card:nth-child(3) .kpi-sub'); if(balSub){ balSub.classList.remove('skeleton'); balSub.style.height=''; balSub.textContent='Outstanding'; }
-  document.getElementById('kpi-nights').textContent = nights_.toLocaleString();
-  var nightSub=document.querySelector('#kpiRow .kpi-card:nth-child(4) .kpi-sub'); if(nightSub){ nightSub.classList.remove('skeleton'); nightSub.style.height=''; nightSub.textContent='room-nights booked'; }
-  document.getElementById('kpi-paidcount').textContent = fullyPaid;
-  document.getElementById('kpi-paidcount-sub').textContent = `of ${rows.length} bookings`;
+  document.getElementById('kpi-balance').textContent = fmtN(kpis.balanceDue);
+  var balSub = document.querySelector('#kpiRow .kpi-card:nth-child(3) .kpi-sub'); if(balSub){ balSub.classList.remove('skeleton'); balSub.style.height=''; balSub.textContent='Outstanding'; }
+  document.getElementById('kpi-nights').textContent = kpis.totalNights.toLocaleString();
+  var nightSub = document.querySelector('#kpiRow .kpi-card:nth-child(4) .kpi-sub'); if(nightSub){ nightSub.classList.remove('skeleton'); nightSub.style.height=''; nightSub.textContent='room-nights booked'; }
+  document.getElementById('kpi-paidcount').textContent = kpis.fullyPaidCount;
+  document.getElementById('kpi-paidcount-sub').textContent = `of ${count} bookings`;
 }
 
 /* ── INLINE FILTER LOGIC ── */
@@ -368,42 +358,49 @@ function applyInlineFilters() {
   const payStatus = document.getElementById('fbPayment').value;
   const staff = document.getElementById('fbStaff').value;
   const search = document.getElementById('fbSearch').value;
-  let bounds = { start: null, end: null, label: 'All time' };
-  if (dateFrom && dateTo) { bounds.start=new Date(dateFrom); bounds.end=new Date(dateTo); bounds.label=fmtDateShort(dateFrom)+' – '+fmtDateShort(dateTo); }
-  else if (dateFrom) { bounds.start=new Date(dateFrom); bounds.end=new Date(dateFrom); bounds.label=fmtDateShort(dateFrom); }
 
+  // Determine period from pills
+  const activePeriodPill = document.querySelector('#periodPills .fb-pill.active');
+  const period = activePeriodPill ? activePeriodPill.dataset.period : 'all';
+
+  // Build query params
+  const params = new URLSearchParams();
+  if (period && period !== 'all') {
+    params.set('period', period);
+  } else {
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+  }
+  if (status) params.set('status', status);
+  if (payStatus) params.set('payment', payStatus);
+  if (staff) params.set('staff', staff);
+  if (search) params.set('search', search);
+
+  // Non-privileged users forced to today
   if (!isPrivileged()) {
-    const todayStart = new Date(TODAY);
-    const todayEnd   = new Date(TODAY);
-    bounds = { start: todayStart, end: todayEnd, label: "Today's Report" };
+    params.set('period', 'today');
   }
 
-  const filtered = bookings.filter(b => {
-    if (!b.guest && b.status !== 'vacant' && b.status !== 'maintenance') return true;
-    if (status && b.status !== status) return false;
-    if (payStatus && b.payStatus !== payStatus) return false;
-    if (staff && b.recordedBy !== staff) return false;
-    if (search) {
-      const q = search.toLowerCase().trim();
-      const hit = (b.room||'').toLowerCase().includes(q) || (b.guest||'').toLowerCase().includes(q) || (b.email||'').toLowerCase().includes(q) || (b.type||'').toLowerCase().includes(q) || (b.phone||'').toLowerCase().includes(q) || (b.recordedBy||'').toLowerCase().includes(q);
-      if (!hit) return false;
-    }
-    if (bounds.start && bounds.end) {
-      const hasRefund = Number(b.refunded) > 0;
-      if (!hasRefund) {
-        const ci = new Date(b.checkin); ci.setHours(0,0,0,0);
-        const co = b.checkout ? new Date(b.checkout) : ci; co.setHours(0,0,0,0);
-        if (isNaN(ci.getTime())) return false;
-        if (ci > bounds.end || co < bounds.start) return false;
-      }
-    }
-    return true;
-  });
+  fetch('/api/booking/reports?' + params.toString(), { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      var data = j.data || {};
+      var rows = data.bookings || [];
+      var kpis = data.kpis || { totalRevenue: 0, collected: 0, balanceDue: 0, totalNights: 0, fullyPaidCount: 0, totalCount: 0, refundedTotal: 0 };
 
-  const title = bounds.label && bounds.label !== 'All time' ? 'Report: ' + bounds.label : 'Full Report';
-  if (table) { table.setTitle(title); table.setRows(filtered); }
-  updateKPI(filtered);
-  if (shell.setPendingBadge) shell.setPendingBadge(bookings.filter(b=>b.status==='reserved').length);
+      // Update title
+      var title = 'Full Report';
+      if (period === 'today') title = "Today's Report";
+      else if (period === '7d') title = 'Last 7 Days';
+      else if (period === '30d') title = 'Last 30 Days';
+      else if (dateFrom || dateTo) title = 'Report: ' + (dateFrom ? fmtDateShort(dateFrom) : '...') + ' – ' + (dateTo ? fmtDateShort(dateTo) : '...');
+
+      if (table) { table.setTitle(title); table.setRows(rows); }
+      updateKPI(kpis, kpis.totalCount);
+    })
+    .catch(function(err) {
+      console.error('Reports fetch error:', err);
+    });
 }
 
 /* ═══ Store-style date popover calendar === */
@@ -526,15 +523,15 @@ async function init() {
   }
   try {
     if (shell && shell.ready) await shell.ready();
-    const data = await BookingData.getBookingData();
-    allRooms = data.rooms;
-    // Exclude the vacant "room keeper" booking records (created alongside
-    // every room). They are placeholders, not real bookings — the report
-    // should only show actual booked rooms with revenue.
-    // BUT: include vacant rooms that have refunds (cancelled bookings).
-    bookings = (data.bookings || []).filter(b => b.status !== 'vacant' || (Number(b.refunded) > 0));
     currentSession = shell.getUser();
     bookingModal.setSession(currentSession);
+
+    // Fetch reports from backend (filter-aware KPIs)
+    const r = await fetch('/api/booking/reports', { credentials: 'include' });
+    const j = await r.json();
+    const data = j.data || {};
+    bookings = data.bookings || [];
+    allRooms = [];
 
     const staffNames = [...new Set(bookings.map(b => b.recordedBy).filter(Boolean))].sort();
 
@@ -571,12 +568,13 @@ async function init() {
 
     updateDateFilterLabel();
     // 4. Mount Table — rows now open the shared BookingModal in view mode
+    // calc.paid subtracts refunded to match backend calcPaid
     table = FrontDeskTable.create({
       target: '#tableSlot',
       title: 'Full Report',
       columns: [roomColumn, guestColumn, 'checkin', 'checkout', 'nights', 'total', 'paid', 'balance', 'payment', statusColumn, 'actions'],
       summaryLabels: { count:'Records', total:'Total Revenue', paid:'Collected', balance:'Balance Due' },
-      calc: { nights, total: calcTotal, paid: calcPaid, balance: calcBal },
+      calc: { nights, total: calcTotal, paid: function(b) { return Math.max(0, (Array.isArray(b.payments)?b.payments.reduce(function(s,p){return s+(Number(p.amount)||0);},0):Number(b.paid)||0) - (Number(b.refunded)||0)); }, balance: function(b) { var tot=calcTotal(b); var pd=Math.max(0,(Array.isArray(b.payments)?b.payments.reduce(function(s,p){return s+(Number(p.amount)||0);},0):Number(b.paid)||0)-(Number(b.refunded)||0)); return Math.max(0,tot-pd); } },
       statusMap: BookingData.getStatusConfig().reduce((map, s) => { map[s.value] = { label: s.label, cls: 'ft-chip-' + s.tone }; return map; }, {}),
       getRowPerm: (b, session) => ({ canView: true, canEdit: false, canDelete: false }),
       onRowClick: (b) => openReportInModal(b),

@@ -24,7 +24,8 @@ function calcTotal(b) {
   return ((b.rate || 0) - (b.discount || 0)) * n;
 }
 function calcPaid(b) {
-  return (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
+  const raw = (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
+  return Math.max(0, raw - (Number(b.refunded) || 0));
 }
 function calcBal(b) {
   return Math.max(0, calcTotal(b) - calcPaid(b));
@@ -513,11 +514,11 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
   booking.refundBy = req.user ? req.user.name : '';
   booking.refundReason = reason || '';
 
-  // Clear guest data — room becomes available
+  // Keep original booking data (rate, dates) for accurate revenue reporting.
+  // Only clear guest PII and set status to cancelled.
   Object.assign(booking, {
     guest: '', phone: '', email: '', address: '', idNum: '',
-    checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
-    notes: '', status: 'vacant', rate: 0,
+    status: 'cancelled',
   });
   // Keep payments[] and paid for financial record, but mark as refunded
   booking.payStatus = refund >= totalPaid ? 'Refunded' : (refund > 0 ? 'Partial Refund' : booking.payStatus);
@@ -535,9 +536,7 @@ exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
   const result = await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
     { $set: { status: 'no-show', updatedAt: Date.now(),
-      guest: '', phone: '', email: '', address: '', idNum: '',
-      checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
-      notes: '', rate: 0 } }
+      guest: '', phone: '', email: '', address: '', idNum: '' } }
   );
   if (result.modifiedCount > 0) {
     await logActivity('Booking', 'amber', `Auto-cancelled ${result.modifiedCount} expired reservation(s)`, 'booking-rooms.html');
@@ -552,9 +551,7 @@ exports.getBookingData = asyncHandler(async (req, res) => {
   await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
     { $set: { status: 'no-show', updatedAt: Date.now(),
-      guest: '', phone: '', email: '', address: '', idNum: '',
-      checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
-      notes: '', rate: 0 } }
+      guest: '', phone: '', email: '', address: '', idNum: '' } }
   );
   return origGetBookingData(req, res);
 });
@@ -812,6 +809,85 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
   }
 
   res.json({ success: true, message: `${settledCount} charge(s) settled`, data: guest });
+});
+
+/* ═══════════════════════════════════════════════
+   GET /reports — filter-aware KPIs + filtered bookings
+   All filtering + KPI computation happens server-side
+   so figures always match between cards and table.
+═══════════════════════════════════════════════ */
+exports.getReports = asyncHandler(async (req, res) => {
+  const { period, status, payment, staff, dateFrom, dateTo, search } = req.query;
+
+  // Exclude the vacant "room keeper" placeholder records
+  let bookings = await Booking.find({}).sort({ createdAt: -1 });
+  bookings = bookings.filter(b => b.status !== 'vacant' || (Number(b.refunded) > 0));
+
+  // Period shortcut
+  let start = null, end = null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (period === 'today') {
+    start = new Date(today); end = new Date(today);
+    end.setHours(23,59,59,999);
+  } else if (period === '7d') {
+    start = new Date(today); start.setDate(start.getDate() - 6);
+    end = new Date(today); end.setHours(23,59,59,999);
+  } else if (period === '30d') {
+    start = new Date(today); start.setDate(start.getDate() - 29);
+    end = new Date(today); end.setHours(23,59,59,999);
+  }
+  if (dateFrom) { start = new Date(dateFrom); start.setHours(0,0,0,0); }
+  if (dateTo) { end = new Date(dateTo); end.setHours(23,59,59,999); }
+
+  const filtered = bookings.filter(b => {
+    // Status filter
+    if (status && b.status !== status) return false;
+    // Payment status filter
+    if (payment && b.payStatus !== payment) return false;
+    // Staff filter
+    if (staff && b.recordedBy !== staff) return false;
+    // Search filter
+    if (search) {
+      const q = search.toLowerCase().trim();
+      const hit = (b.room||'').toLowerCase().includes(q) || (b.guest||'').toLowerCase().includes(q) ||
+        (b.email||'').toLowerCase().includes(q) || (b.type||'').toLowerCase().includes(q) ||
+        (b.phone||'').toLowerCase().includes(q) || (b.recordedBy||'').toLowerCase().includes(q);
+      if (!hit) return false;
+    }
+    // Date filter — applies to ALL bookings including cancelled
+    if (start && end) {
+      const ci = b.checkin ? new Date(b.checkin) : null;
+      const co = b.checkout ? new Date(b.checkout) : ci;
+      if (!ci) return false;
+      if (ci > end || (co ? co < start : ci < start)) return false;
+    }
+    return true;
+  });
+
+  // Compute KPIs from filtered results
+  const totRev = filtered.reduce((s, b) => s + calcTotal(b), 0);
+  const totRefunded = filtered.reduce((s, b) => s + (Number(b.refunded) || 0), 0);
+  const netRev = totRev - totRefunded;
+  const totPaid = filtered.reduce((s, b) => s + calcPaid(b), 0);
+  const totBal = filtered.reduce((s, b) => s + calcBal(b), 0);
+  const nightsCount = filtered.reduce((s, b) => s + (nights(b.checkin, b.checkout) || 0), 0);
+  const fullyPaid = filtered.filter(b => b.payStatus === 'Fully Paid').length;
+
+  res.json({
+    success: true,
+    data: {
+      bookings: filtered,
+      kpis: {
+        totalRevenue: netRev,
+        collected: totPaid,
+        balanceDue: totBal,
+        totalNights: nightsCount,
+        fullyPaidCount: fullyPaid,
+        totalCount: filtered.length,
+        refundedTotal: totRefunded,
+      },
+    },
+  });
 });
 
 /* ═══════════════════════════════════════════════
