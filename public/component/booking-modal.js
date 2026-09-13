@@ -952,7 +952,7 @@
       var list = $('[data-role="chargesList"]');
       if (!acc || !list) return;
       var allCharges = (currentGuest && currentGuest.charges) || [];
-      var bookingId = currentBooking && currentBooking.id ? currentBooking.id : '';
+      var bookingId = editBooking && editBooking.id ? editBooking.id : '';
       var charges = allCharges.filter(function(c) { return !c.bookingRef || c.bookingRef === bookingId; });
       var countEl = $('[data-role="chargesCount"]');
       acc.hidden = false;
