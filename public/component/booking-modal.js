@@ -968,7 +968,7 @@
       list.innerHTML = charges.map(function (c, idx) {
         var bal = chargeBal(c);
         var paid = chargePaid(c);
-        var open = settlingIdx === idx;
+        var open = settlingIdx === c.id;
 
         var ledgerHtml = '';
         if (Array.isArray(c.payments) && c.payments.length) {
@@ -984,14 +984,14 @@
           formHtml =
             '<div class="bkm-settle-form">' +
               '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Amount</label>' +
-                '<input class="bkm-input" data-role="settleAmount" data-idx="' + idx + '" type="number" min="0" step="100" value="' + bal + '"></div>' +
+                '<input class="bkm-input" data-role="settleAmount" data-charge-id="' + c.id + '" type="number" min="0" step="100" value="' + bal + '"></div>' +
               '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Mode</label>' +
-                '<select class="bkm-select" data-role="settleMode" data-idx="' + idx + '">' +
+                '<select class="bkm-select" data-role="settleMode" data-charge-id="' + c.id + '">' +
                   '<option>Cash</option><option>POS</option><option>Transfer</option></select></div>' +
               '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Recorded by</label>' +
                 '<input class="bkm-input" type="text" readonly value="' + esc((session && session.name) || '') + '"></div>' +
               '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-                '<button type="button" class="bkm-btn bkm-btn-primary" data-act="confirmSettle" data-idx="' + idx + '" style="padding:7px 12px;font-size:12px;">Confirm</button>' +
+                '<button type="button" class="bkm-btn bkm-btn-primary" data-act="confirmSettle" data-charge-id="' + c.id + '" style="padding:7px 12px;font-size:12px;">Confirm</button>' +
                 '<button type="button" class="bkm-btn bkm-btn-outline" data-act="cancelSettle" style="padding:7px 10px;font-size:12px;">Cancel</button>' +
               '</div>' +
             '</div>';
@@ -1013,7 +1013,7 @@
                 (bal > 0 ? fmtN(bal) + ' due' : fmtN(paid) + ' settled') +
               '</div>' +
               (bal > 0 && allow && !open
-                ? '<button type="button" class="bkm-btn-sm-inline" data-act="openSettle" data-idx="' + idx + '" style="margin-top:4px;">Settle</button>'
+                ? '<button type="button" class="bkm-btn-sm-inline" data-act="openSettle" data-charge-id="' + c.id + '" style="margin-top:4px;">Settle</button>'
                 : '') +
             '</div>' +
           '</div>' +
@@ -1022,16 +1022,16 @@
       }).join('');
     }
 
-    async function requestSettle(idx) {
-      if (!currentGuest || !currentGuest.charges || !currentGuest.charges[idx]) return;
-      var amountEl = root.querySelector('[data-role="settleAmount"][data-idx="' + idx + '"]');
-      var modeEl = root.querySelector('[data-role="settleMode"][data-idx="' + idx + '"]');
+    async function requestSettle(chargeId) {
+      if (!currentGuest || !currentGuest.charges) return;
+      var ch = currentGuest.charges.find(function(c){ return c.id === chargeId; });
+      if (!ch) return;
+      var amountEl = root.querySelector('[data-role="settleAmount"][data-charge-id="' + chargeId + '"]');
+      var modeEl = root.querySelector('[data-role="settleMode"][data-charge-id="' + chargeId + '"]');
       var amt = parseFloat(amountEl && amountEl.value) || 0;
       if (amt <= 0) { toast('Enter an amount greater than zero.', 'error'); return; }
       var payMode = (modeEl && modeEl.value) || 'Cash';
-      var ch = currentGuest.charges[idx];
-      console.log('[SETTLE] idx:', idx, 'chargeId:', ch.id, 'status:', ch.status, 'amount:', ch.amount, 'paid:', ch.paid);
-      pendingSettle = { idx: idx, chargeId: ch.id, amt: amt, mode: payMode };
+      pendingSettle = { chargeId: chargeId, amt: amt, mode: payMode };
       var ok = await showConfirm(
         'Confirm settlement?',
         'Record ' + fmtN(amt) + ' (' + payMode + ') against this charge. This action cannot be reversed.'
@@ -1049,17 +1049,13 @@
       var payMode = pendingSettle.mode;
       var chargeId = pendingSettle.chargeId;
       pendingSettle = null;
-      console.log('[DOSETTLE] chargeId:', chargeId, 'amt:', amt, 'payMode:', payMode);
       try {
-        // Find real index in full charges array by charge ID
         var realIdx = -1;
         if (currentGuest.charges) {
           for (var i = 0; i < currentGuest.charges.length; i++) {
-            console.log('[DOSETTLE] charges[' + i + '].id:', currentGuest.charges[i].id, 'status:', currentGuest.charges[i].status);
             if (currentGuest.charges[i].id === chargeId) { realIdx = i; break; }
           }
         }
-        console.log('[DOSETTLE] realIdx:', realIdx);
         if (realIdx === -1) throw new Error('Charge not found');
         await service.addChargePayment(currentGuest.id, realIdx, { amount: amt, mode: payMode });
         // Re-fetch guest to get updated charge statuses
@@ -1305,7 +1301,7 @@
         }
         if (a === 'confirmPay') { confirmPay(); return; }
         if (a === 'openSettle') {
-          settlingIdx = parseInt(act.getAttribute('data-idx'), 10);
+          settlingIdx = act.getAttribute('data-charge-id');
           renderCharges();
           return;
         }
@@ -1315,7 +1311,7 @@
           return;
         }
         if (a === 'confirmSettle') {
-          requestSettle(parseInt(act.getAttribute('data-idx'), 10));
+          requestSettle(act.getAttribute('data-charge-id'));
           return;
         }
         if (a === 'confirmYes') { hideConfirm(true); return; }

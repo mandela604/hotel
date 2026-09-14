@@ -832,7 +832,6 @@ function renderCharges(g, filterBookingId){
 async function settleCharge(idx){
   const g = guestsData.find(x=>x.id===activeGuestId); if(!g) return;
   const c = g.charges[idx];
-  console.log('[FOLIO SETTLE] idx:', idx, 'chargeId:', c.id, 'status:', c.status, 'room:', c.room, 'bookingRef:', c.bookingRef, 'total charges:', g.charges.length);
   if(c.status !== 'Pending') {
     showToast('Charge already settled.', 'info');
     return;
