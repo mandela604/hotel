@@ -241,7 +241,7 @@
     const calcNights = (options.calc && options.calc.nights) || (BD && BD.nights) || defaultNights;
     const calcTotal = (options.calc && options.calc.total) || (BD && BD.calcTotal) || function (b) {
       const n = calcNights(b.checkin, b.checkout) || 1;
-      return (b.rate || 0) * n * (1 - (b.discount || 0) / 100);
+      return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
     };
     const calcPaid = (options.calc && options.calc.paid) || (BD && BD.calcPaid) || function (b) {
       if (Array.isArray(b.payments) && b.payments.length) {

@@ -19,9 +19,14 @@ function nights(ci, co) {
   const n = (new Date(co) - new Date(ci)) / 86400000;
   return n > 0 ? n : 0;
 }
+const NO_SHOW_FIELDS = {
+  guest: '', phone: '', email: '', address: '', idNum: '',
+  checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
+  notes: '', rate: 0,
+};
 function calcTotal(b) {
   const n = nights(b.checkin, b.checkout) || 1;
-  return ((b.rate || 0) - (b.discount || 0)) * n;
+  return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
 }
 function calcPaid(b) {
   const raw = (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
@@ -477,11 +482,7 @@ exports.markNoShow = asyncHandler(async (req, res) => {
   }
   const guestName = booking.guest;
   booking.status = 'no-show';
-  Object.assign(booking, {
-    guest: '', phone: '', email: '', address: '', idNum: '',
-    checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
-    notes: '', rate: 0,
-  });
+  Object.assign(booking, NO_SHOW_FIELDS);
   booking.updatedAt = Date.now();
   await booking.save();
   await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${booking.room} marked as no-show`, 'booking-rooms.html');
@@ -535,8 +536,7 @@ exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   const result = await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
-    { $set: { status: 'no-show', updatedAt: Date.now(),
-      guest: '', phone: '', email: '', address: '', idNum: '' } }
+    { $set: Object.assign({ status: 'no-show', updatedAt: Date.now() }, NO_SHOW_FIELDS) }
   );
   if (result.modifiedCount > 0) {
     await logActivity('Booking', 'amber', `Auto-cancelled ${result.modifiedCount} expired reservation(s)`, 'booking-rooms.html');
@@ -550,8 +550,7 @@ exports.getBookingData = asyncHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
-    { $set: { status: 'no-show', updatedAt: Date.now(),
-      guest: '', phone: '', email: '', address: '', idNum: '' } }
+    { $set: Object.assign({ status: 'no-show', updatedAt: Date.now() }, NO_SHOW_FIELDS) }
   );
   return origGetBookingData(req, res);
 });
@@ -819,9 +818,9 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
 exports.getReports = asyncHandler(async (req, res) => {
   const { period, status, payment, staff, dateFrom, dateTo, search } = req.query;
 
-  // Exclude the vacant "room keeper" placeholder records
+  // Exclude vacant, cancelled, and no-show placeholder records
   let bookings = await Booking.find({}).sort({ createdAt: -1 });
-  bookings = bookings.filter(b => b.status !== 'vacant' || (Number(b.refunded) > 0));
+  bookings = bookings.filter(b => !['vacant', 'cancelled', 'no-show'].includes(b.status));
 
   // Period shortcut
   let start = null, end = null;
