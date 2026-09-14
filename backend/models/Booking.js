@@ -38,6 +38,6 @@ const bookingSchema = new mongoose.Schema({
   refundReason:   { type: String, default: '' },
   createdAt:  { type: Number, default: 0 },
   updatedAt:  { type: Number, default: 0 },
-}, { timestamps: false });
+}, { timestamps: false, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 module.exports = mongoose.model('Booking', bookingSchema);
