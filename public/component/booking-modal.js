@@ -1029,7 +1029,9 @@
       var amt = parseFloat(amountEl && amountEl.value) || 0;
       if (amt <= 0) { toast('Enter an amount greater than zero.', 'error'); return; }
       var payMode = (modeEl && modeEl.value) || 'Cash';
-      pendingSettle = { idx: idx, amt: amt, mode: payMode };
+      var ch = currentGuest.charges[idx];
+      console.log('[SETTLE] idx:', idx, 'chargeId:', ch.id, 'status:', ch.status, 'amount:', ch.amount, 'paid:', ch.paid);
+      pendingSettle = { idx: idx, chargeId: ch.id, amt: amt, mode: payMode };
       var ok = await showConfirm(
         'Confirm settlement?',
         'Record ' + fmtN(amt) + ' (' + payMode + ') against this charge. This action cannot be reversed.'
@@ -1043,18 +1045,27 @@
 
     async function doSettle() {
       if (!pendingSettle || !currentGuest) return;
-      var idx = pendingSettle.idx;
       var amt = pendingSettle.amt;
       var payMode = pendingSettle.mode;
+      var chargeId = pendingSettle.chargeId;
       pendingSettle = null;
+      console.log('[DOSETTLE] chargeId:', chargeId, 'amt:', amt, 'payMode:', payMode);
       try {
-        var updatedGuest = await service.addChargePayment(
-          currentGuest.id,
-          idx,
-          { amount: amt, mode: payMode }
-        );
-        if (updatedGuest && updatedGuest.charges && updatedGuest.charges[idx]) {
-          currentGuest.charges[idx] = updatedGuest.charges[idx];
+        // Find real index in full charges array by charge ID
+        var realIdx = -1;
+        if (currentGuest.charges) {
+          for (var i = 0; i < currentGuest.charges.length; i++) {
+            console.log('[DOSETTLE] charges[' + i + '].id:', currentGuest.charges[i].id, 'status:', currentGuest.charges[i].status);
+            if (currentGuest.charges[i].id === chargeId) { realIdx = i; break; }
+          }
+        }
+        console.log('[DOSETTLE] realIdx:', realIdx);
+        if (realIdx === -1) throw new Error('Charge not found');
+        await service.addChargePayment(currentGuest.id, realIdx, { amount: amt, mode: payMode });
+        // Re-fetch guest to get updated charge statuses
+        if (service.getGuest) {
+          var fresh = await service.getGuest(currentGuest.id);
+          if (fresh) currentGuest = fresh;
         }
         settlingIdx = null;
         renderCharges();
