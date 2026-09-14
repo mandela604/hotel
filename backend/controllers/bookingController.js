@@ -685,26 +685,15 @@ exports.settleCharge = asyncHandler(async (req, res) => {
   charge.paid += pay;
   charge.status = charge.paid >= charge.amount ? 'Settled' : 'Partially Settled';
 
-  // Rollback safe: create Sale first, only then persist guest change — avoids "sale validation failed" leaving charge half-settled
-  const folioDept = /pool/i.test(charge.source||'') ? 'poolbar' : 'restaurant';
-  const saleId = `FOL-${String(Date.now()).slice(-6)}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
-  await Sale.create({
-    id: saleId,
-    source: 'Folio',
-    department: folioDept,
-    items: [{ name: charge.desc || charge.source || 'Room Charge', qty: 1, price: pay }],
-    subtotal: pay,
-    discount: 0,
-    total: pay,
-    method: payMode,
-    staff: req.user ? req.user.name : '',
-    table: '',
-    notes: 'Folio charge settled',
-    date: new Date(),
-    status: 'completed',
-    roomNumber: charge.room || null,
-    guestName: guest.name || null,
-  });
+  /* Update the original Room Charge Sale to completed + paidDate */
+  if (charge.originalSaleId) {
+    const origSale = await Sale.findOne({ id: charge.originalSaleId });
+    if (origSale) {
+      origSale.status = 'completed';
+      origSale.paidDate = new Date();
+      await origSale.save();
+    }
+  }
 
   await guest.save();
 
@@ -757,29 +746,16 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
     charge.status = 'Settled';
     settledCount += 1;
     totalSettled += remaining;
-  }
-  /* Create Sale first for atomicity */
-  if (totalSettled > 0) {
-    const firstSrc = (guest.charges.find(function(c){return c.status==='Settled';})||{}).source || '';
-    const folioDept = /pool/i.test(firstSrc) ? 'poolbar' : 'restaurant';
-    const saleId = `FOL-${String(Date.now()).slice(-6)}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
-    await Sale.create({
-      id: saleId,
-      source: 'Folio',
-      department: folioDept,
-      items: [{ name: 'Folio Settlement', qty: 1, price: totalSettled }],
-      subtotal: totalSettled,
-      discount: 0,
-      total: totalSettled,
-      method: payMode,
-      staff: req.user ? req.user.name : '',
-      table: '',
-      notes: `${settledCount} charge(s) settled`,
-      date: new Date(),
-      status: 'completed',
-      roomNumber: guest.charges[0] && guest.charges[0].room || null,
-      guestName: guest.name || null,
-    });
+
+    /* Update the original Room Charge Sale to completed + paidDate */
+    if (charge.originalSaleId) {
+      const origSale = await Sale.findOne({ id: charge.originalSaleId });
+      if (origSale) {
+        origSale.status = 'completed';
+        origSale.paidDate = new Date();
+        await origSale.save();
+      }
+    }
   }
 
   await guest.save();

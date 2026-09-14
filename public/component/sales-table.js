@@ -82,6 +82,7 @@
 .st-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
 .st-chip i{ font-size:7px; }
 .st-chip-completed{ background:var(--st-green-bg); color:var(--st-green); }
+.st-chip-pending{ background:rgba(245,158,11,.1); color:#d97706; }
 .st-chip-voided{ background:var(--st-red-bg); color:var(--st-red); }
 .st-chip-pay{ background:var(--st-gold-dim); color:var(--st-gold); }
 .st-chip-source{ background:var(--st-bg3); color:var(--st-text3); }
@@ -184,6 +185,7 @@
 
   function statusLabel(st) {
     if (st === 'completed') return 'Completed';
+    if (st === 'pending') return 'Pending';
     if (st === 'voided') return 'Voided';
     return st || '—';
   }

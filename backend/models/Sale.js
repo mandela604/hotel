@@ -28,6 +28,7 @@ const saleSchema = new mongoose.Schema({
   roomNumber:     { type: String, default: null },
   guestName:      { type: String, default: null },
   guestPhone:     { type: String, default: null },
+  paidDate:       { type: Date, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Sale', saleSchema);

@@ -37,6 +37,7 @@ const chargeSchema = new mongoose.Schema({
   by:         { type: String, default: '' },
   status:     { type: String, enum: ['Pending', 'Partially Settled', 'Settled'], default: 'Pending' },
   payments:   { type: [chargePaymentSchema], default: [] },
+  originalSaleId: { type: String, default: '' },
 }, { _id: false });
 
 const guestSchema = new mongoose.Schema({

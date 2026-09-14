@@ -238,6 +238,7 @@
     statusOptions: [
       { value: '', label: 'All', tone: 'all' },
       { value: 'completed', label: 'Completed', tone: 'completed', color: '#12b76a' },
+      { value: 'pending', label: 'Pending', tone: 'pending', color: '#d97706' },
       { value: 'voided', label: 'Voided', tone: 'voided', color: '#f04438' },
     ],
     sourceOptions: [

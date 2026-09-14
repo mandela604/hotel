@@ -275,7 +275,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     staff: req.user ? req.user.name : '',
     table: table || '',
     date: new Date(),
-    status: 'completed',
+    status: method === 'Room Charge' ? 'pending' : 'completed',
   });
 
   if (method === 'Room Charge') {
@@ -294,6 +294,7 @@ exports.createSale = asyncHandler(async (req, res) => {
         by: req.user ? req.user.name : '',
         status: 'Pending',
         payments: [],
+        originalSaleId: id,
       });
       await guest.save();
     } else {
@@ -689,7 +690,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     /* ── Already served — find the pending Sale and finalize it ── */
     sale = await Sale.findOne({ id: order.pendingSaleId });
     if (sale) {
-      sale.status = 'completed';
+      sale.status = payMethod === 'Room Charge' ? 'pending' : 'completed';
       sale.method = payMethod;
       if (roomNumber) sale.roomNumber = roomNumber;
       if (guestName) sale.guestName = guestName;
@@ -740,7 +741,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
       table: order.table,
       notes: order.notes,
       date: new Date(),
-      status: 'completed',
+      status: payMethod === 'Room Charge' ? 'pending' : 'completed',
       roomNumber: roomNumber || null,
       guestName: guestName || null,
       guestPhone: guestPhone || null,
@@ -764,6 +765,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
         by: order.staff,
         status: 'Pending',
         payments: [],
+        originalSaleId: sale ? sale.id : '',
       });
       await guest.save();
     } else {

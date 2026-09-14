@@ -287,6 +287,7 @@ exports.createSale = asyncHandler(async (req, res) => {
         by: staff || (req.user ? req.user.name : 'Barman'),
         status: 'Pending',
         payments: [],
+        originalSaleId: saleId,
       });
       await guest.save();
     }
@@ -308,7 +309,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     table: table || '',
     notes: notes || '',
     date: new Date(),
-    status: 'completed',
+    status: effectiveMethod === 'Room Charge' ? 'pending' : 'completed',
     roomNumber: roomNumber || null,
     guestName: guestName || null,
     guestPhone: guestPhone || null,
@@ -487,6 +488,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
         by: order.staff || (req.user ? req.user.name : 'Barman'),
         status: 'Pending',
         payments: [],
+        originalSaleId: saleId,
       });
       await guest.save();
     }
@@ -509,7 +511,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     table: order.table,
     notes: order.notes,
     date: new Date(),
-    status: 'completed',
+    status: effectiveMethod === 'Room Charge' ? 'pending' : 'completed',
     roomNumber: effectiveRoom,
     guestName: effectiveGuest,
     guestPhone: effectivePhone,
