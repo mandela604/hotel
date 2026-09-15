@@ -283,7 +283,7 @@ exports.createSale = asyncHandler(async (req, res) => {
   });
 
   if (method === 'Room Charge') {
-    const guest = guestId ? await Guest.findOne({ guestId: guestId }) : await Guest.findOne({ name: guestName });
+    const guest = guestId ? (await Guest.findOne({ id: guestId }) || await Guest.findOne({ guestId: guestId })) : await Guest.findOne({ name: guestName });
     if (guest) {
       var bRefR = '';
       if (roomNumber) { var bkR = await Booking.findOne({ room: roomNumber, status: 'checkedin' }); if (bkR) bRefR = bkR.id; }
@@ -484,7 +484,7 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
     requisitionNo,
     mode: 'store_issue',
     requester: requester || 'Restaurant Staff',
-    dept: 'Restaurant',
+    dept: req.body.dept || 'Restaurant',
     neededBy: neededBy || '',
     priority: priority || 'Normal',
     remark: remark || '',
@@ -763,7 +763,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
 
   /* ── Room Charge → post to guest folio ── */
   if (payMethod === 'Room Charge') {
-    const guest = guestId ? await Guest.findOne({ guestId: guestId }) : await Guest.findOne({ name: guestName });
+    const guest = guestId ? (await Guest.findOne({ id: guestId }) || await Guest.findOne({ guestId: guestId })) : await Guest.findOne({ name: guestName });
     if (guest) {
       var bRefR2 = '';
       if (roomNumber) { var bkR2 = await Booking.findOne({ room: roomNumber, status: 'checkedin' }); if (bkR2) bRefR2 = bkR2.id; }

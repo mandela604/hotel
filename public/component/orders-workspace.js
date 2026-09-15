@@ -583,7 +583,7 @@
                     <span style="font-weight:700;font-size:11px;color:var(--ow-gold);" data-role="orderEditLabel"></span>
                     <div style="display:flex;gap:6px;">
                       <button type="button" class="ow-btn ow-btn-sm" data-act="saveEditOrder" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);font-size:11px;"><i class="fa-solid fa-check"></i> Save</button>
-                      <button type="button" class="ow-btn ow-btn-sm" data-act="cancelEditOrder" style="font-size:11px;">Cancel</button>
+                      <button type="button" class="ow-btn ow-btn-sm" data-act="cancelEditOrder" style="font-size:11px;"><i class="fa-solid fa-arrow-left"></i> Exit</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="deleteEditOrder" data-role="deleteBtn" style="display:none;color:var(--red);border-color:var(--red);font-size:11px;"><i class="fa-solid fa-trash"></i> Delete</button>
                     </div>
                   </div>
@@ -788,19 +788,20 @@
       const methodSel = $('[data-role="fMethod"]');
       if (methodSel) {
         const cur = methodSel.value;
-        const opts = (t === 'tab' ? [''] : []).concat(paymentMethods);
+        const useMethods = t === 'quick' ? paymentMethods.filter(function (m) { return m !== 'Room Charge'; }) : paymentMethods;
+        const opts = (t === 'tab' ? [''] : []).concat(useMethods);
         methodSel.innerHTML = opts.map(function (pm) {
           if (!pm) return '<option value="">— Pay later —</option>';
           return '<option value="' + esc(pm) + '">' + esc(pm) + '</option>';
         }).join('');
-        if (t === 'tab' && (!cur || paymentMethods.indexOf(cur) < 0)) methodSel.value = '';
-        else if (paymentMethods.indexOf(cur) >= 0) methodSel.value = cur;
-        else methodSel.value = paymentMethods[0] || '';
+        if (t === 'tab' && (!cur || useMethods.indexOf(cur) < 0)) methodSel.value = '';
+        else if (useMethods.indexOf(cur) >= 0) methodSel.value = cur;
+        else methodSel.value = useMethods[0] || '';
       }
       toggleRoomChargeUI();
       // Update submit label
       if (!_editingOrderId) {
-        if (t === 'quick') $('[data-role="submitLabel"]').textContent = 'Complete Sale';
+        if (t === 'quick') $('[data-role="submitLabel"]').textContent = 'Pay';
         else if (t === 'tab') $('[data-role="submitLabel"]').textContent = 'Open Tab';
         else $('[data-role="submitLabel"]').textContent = 'Send to Kitchen';
       }
@@ -1204,10 +1205,12 @@
         var res=await fetch('/api/restaurant/coo-orders',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
         var body=null;try{body=await res.json();}catch(e){}
         if(!res.ok) throw new Error((body&&body.error)||'Failed to send to kitchen');
-        showToast('Order sent to kitchen — '+(body&&body.data&&body.data.order&&body.data.order.id||''),'success');
+        var createdId = body && body.data && body.data.order && body.data.order.id;
+        showToast('Order sent to kitchen — ' + (createdId || ''), 'success');
         clearCart();
         if(typeof service!=='undefined'&&service&&typeof service.loadAll==='function'){try{await service.loadAll();syncFromService();}catch(e){}}
         renderKPIs();renderOrdersTable();renderPicker();
+        if (createdId) { loadRecordInView(createdId); }
       }catch(err){showToast(err.message||'Failed to send order','error');}
     }
 
@@ -1296,6 +1299,47 @@
       };
     }
 
+    async function saveEditOrderOnly() {
+      if (!_editingOrderId) return;
+      const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
+      const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
+      const isCooEdit = editOrder && editOrder.type === 'coo';
+      try {
+        if (isCooEdit) {
+          const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
+          const body = null; try { await res.json(); } catch (e) {}
+          if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
+        } else if (service && typeof service.openTab === 'function') {
+          const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+          const edTable = ($('[data-role="fTable"]').value || '').trim();
+          const edNotes = ($('[data-role="fNotes"]').value || '').trim();
+          await apiFetch('PATCH', '/api/' + moduleName + '/orders/' + encodeURIComponent(_editingOrderId), {
+            items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
+          });
+        } else {
+          const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+          const edSubtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
+          const edTable = ($('[data-role="fTable"]').value || '').trim();
+          const edNotes = ($('[data-role="fNotes"]').value || '').trim();
+          const o2 = orders.find(function (x) { return x.id === _editingOrderId; });
+          if (o2) {
+            o2.items = editItems;
+            o2.discount = edDiscount;
+            o2.subtotal = edSubtotal;
+            o2.total = edSubtotal * (1 - edDiscount / 100);
+            o2.table = edTable || '—';
+            o2.notes = edNotes;
+            await saveShared(keys.orders, orders);
+            apiSave('PATCH', apiPaths.orders + '/' + _editingOrderId, { items: editItems, discount: edDiscount, table: edTable, notes: edNotes });
+          }
+        }
+        showToast(_editingOrderId + ' updated.', 'success');
+        if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
+        exitEditMode();
+        setMode('active');
+      } catch (err) { showToast(err.message || 'Failed to update', 'error'); }
+    }
+
     async function submitOrder() {
       if (!cart.length) {
         showToast('Add at least one item.', 'error');
@@ -1338,8 +1382,9 @@
           }
           showToast(_editingOrderId + ' updated.', 'success');
           if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
+          var tId = _editingOrderId;
           exitEditMode();
-          setMode('active');
+          openPayModal(tId);
         } catch (err) { showToast(err.message || 'Failed to update', 'error'); }
         return;
       }
@@ -1705,9 +1750,9 @@
 
       // Disable toggle buttons if viewing/editing
       $$('[data-order-type]').forEach(function (btn) {
-        btn.disabled = isCompleted;
-        if (isCompleted) btn.style.opacity = '0.5';
-        else btn.style.opacity = '';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+
       });
 
       // Load items into cart
@@ -1769,11 +1814,12 @@
       if (submitBtn) {
         if (isCompleted) {
           submitBtn.disabled = true;
-          submitBtn.style.display = 'none';
+          submitBtn.style.display = '';
+          $('[data-role="submitLabel"]').textContent = st === 'paid' || isSale || st === 'completed' ? 'Paid' : 'Cancelled';
         } else {
           submitBtn.disabled = false;
           submitBtn.style.display = '';
-          $('[data-role="submitLabel"]').textContent = 'Save Changes';
+          $('[data-role="submitLabel"]').textContent = 'Pay';
         }
       }
 
@@ -2250,7 +2296,7 @@
         else if (a === 'confirmPay') confirmPayOrder();
         else if (a === 'clearRoom') clearSelectedRoom('');
         else if (a === 'clearPayRoom') clearSelectedRoom('pay');
-        else if (a === 'saveEditOrder') { submitOrder(); }
+        else if (a === 'saveEditOrder') { saveEditOrderOnly(); }
         else if (a === 'cancelEditOrder') { exitEditMode(); setMode('active'); }
         else if (a === 'deleteEditOrder') { deleteOrderInView(); }
         return;

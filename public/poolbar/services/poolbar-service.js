@@ -588,6 +588,8 @@
       roomNumber, guestName, guestPhone, guestId,
     });
     state.sales.unshift(res.data);
+    // Reload stock so picker tiles reflect deducted quantities immediately
+    try { await loadAll(); } catch (e) { emitChange('sale:record'); }
     emitChange('sale:record');
     return res.data;
   }
@@ -608,6 +610,8 @@
     const cleanItems = items.map(c => ({ name: c.key || c.name, qty: c.qty, price: c.price }));
     const res = await apiPost('/orders', { items: cleanItems, discount, staff, table, notes, roomNumber, guestName, guestPhone, guestId, createdBy: createdBy || staff });
     state.orders.unshift(res.data);
+    // Reload stock so live counts stay accurate
+    try { await loadAll(); } catch (e) { emitChange('order:open'); }
     emitChange('order:open');
     return res.data;
   }
@@ -640,6 +644,8 @@
     const idx = state.orders.findIndex(o => o.id === orderId || o._id === orderId);
     if (idx > -1) state.orders[idx] = res.data.order;
     state.sales.unshift(res.data.sale);
+    // Reload stock so picker tiles reflect deducted quantities immediately
+    try { await loadAll(); } catch (e) { emitChange('order:paid'); }
     emitChange('order:paid');
     return res.data;
   }

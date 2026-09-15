@@ -795,7 +795,7 @@
     function findGuestForBooking(bk) {
       if (!bk) return null;
       if (bk.guestId) {
-        var byId = (guests || []).find(function (g) { return g.guestId === bk.guestId; });
+        var byId = (guests || []).find(function (g) { return g.id === bk.guestId || g.guestId === bk.guestId; });
         if (byId) return byId;
       }
       return (guests || []).find(function (g) {

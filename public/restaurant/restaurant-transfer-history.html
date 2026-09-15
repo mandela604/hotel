@@ -598,7 +598,7 @@ let fp = null;
 let activeNo = null;
 
 const RS = window.RestaurantService;
-const REQ_DEPT_LABEL = 'Restaurant / Bar'; // must match GraceHotelRequestForm's SECTION_META.restaurant.deptLabel
+const REQ_DEPT_LABEL = 'Restaurant'; // must match backend dept value
 
 /* ── Helpers ───────────────────────────────────────────── */
 function isRequisition(t) { return t._kind === 'requisition'; }
@@ -702,7 +702,11 @@ function getAllRecords() {
   if (window.StoreService && typeof StoreService.getRequisitions === 'function') {
     const allReqs = StoreService.getRequisitions({ mode: 'store_issue' });
     requisitions = allReqs
-      .filter(function (r) { return (r.dept || '') === REQ_DEPT_LABEL; })
+      .filter(function (r) {
+        // Match 'Restaurant', 'Restaurant / Bar', or any case-insensitive variant
+        const d = (r.dept || '').toLowerCase();
+        return d === 'restaurant' || d.startsWith('restaurant');
+      })
       .map((r) => Object.assign({}, r, { _kind: 'requisition' }));
     console.log('[getAllRecords] StoreService reqs (all):', allReqs.length,
       allReqs.map(function(r){ return {no:r.no, dept:r.dept, status:r.status}; }));

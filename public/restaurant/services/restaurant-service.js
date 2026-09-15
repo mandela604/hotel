@@ -418,6 +418,8 @@ function dashboardKPIs() {
   async function recordSale(payload) {
     const res = await post('/sales', payload);
     state.sales.unshift(res.data);
+    // Reload stock so picker tiles reflect deducted quantities immediately
+    try { await loadAll(); } catch (e) { emitChange('sale:record'); }
     emitChange('sale:record');
     return res.data;
   }
@@ -432,6 +434,8 @@ function dashboardKPIs() {
   async function openTab(payload) {
     const res = await post('/orders', payload);
     state.orders.unshift(res.data);
+    // Reload stock so live counts stay accurate
+    try { await loadAll(); } catch (e) { emitChange('order:open'); }
     emitChange('order:open');
     return res.data;
   }
@@ -448,6 +452,8 @@ function dashboardKPIs() {
     const idx = state.orders.findIndex(function (o) { return o.id === orderId; });
     if (idx > -1) state.orders[idx] = res.data;
     if (res.sale) state.sales.unshift(res.sale);
+    // Reload stock so picker tiles reflect deducted quantities immediately
+    try { await loadAll(); } catch (e) { emitChange('order:paid'); }
     emitChange('order:paid');
     return { order: res.data, sale: res.sale };
   }
