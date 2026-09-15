@@ -309,8 +309,8 @@ function applyFilters(state) {
 }
 
 function openDetail(s) {
-  if (!s || !salesDetail) return;
-  salesDetail.open(buildDetailSale(s));
+  if (!s) return;
+  window.location.href = 'restaurant-orders.html?view=' + encodeURIComponent(s.id);
 }
 function openVoidDirect(s) {
   if (!canVoid) { showToast("You don't have permission to void sales.", 'error'); return; }

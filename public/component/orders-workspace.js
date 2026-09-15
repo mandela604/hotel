@@ -767,7 +767,7 @@
       }
       // Payment: tab = optional, others = required
       const methodWrap = $('[data-role="methodWrap"]');
-      if (methodWrap) methodWrap.style.display = t === 'coo' ? 'none' : '';
+      if (methodWrap) methodWrap.style.display = '';
       const methodLabel = methodWrap && methodWrap.querySelector('.ow-label');
       if (methodLabel) {
         methodLabel.innerHTML = t === 'tab'
@@ -1177,7 +1177,19 @@
       var phone=$('[data-role="fGuestPhone"]')?$('[data-role="fGuestPhone"]').value:'';
       var items=cart.map(function(c){return {name:c.name || c.key, key:c.key, qty:c.qty, price:c.price};});
 
-      var payload={table:table, covers:1, items:items, notes:notes, staff:staff, method:'Room Charge', roomNumber:room, guestName:guest, guestId:gid, guestPhone:phone};
+      var roomObj = getRoomFields('');
+      var method = (($('[data-role="fMethod"]') || {}).value || '').trim() || 'Cash';
+      var isRoomCharge = method === 'Room Charge';
+      if (isRoomCharge && !roomObj.room) {
+        showToast('Select a room for Room Charge.', 'error');
+        return;
+      }
+      var roomNumber = isRoomCharge ? (roomObj.room || null) : null;
+      var guestName = isRoomCharge ? (roomObj.guest || null) : null;
+      var guestPhone = isRoomCharge ? (roomObj.phone || null) : null;
+      var guestId = isRoomCharge ? (roomObj.guestId || null) : null;
+
+      var payload={table:table, covers:1, items:items, discount:discount, notes:notes, staff:staff, method:method, payMethod:method, roomNumber:roomNumber, guestName:guestName, guestId:guestId, guestPhone:guestPhone};
       try{
         var res=await fetch('/api/restaurant/coo-orders',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
         var body=null;try{body=await res.json();}catch(e){}
@@ -1533,6 +1545,8 @@
     }
 
     function showCooDetail(id) {
+      loadRecordInView(id);
+      return;
       var o = orders.find(function (x) { return x.id === id; });
       if (!o) return;
       var items = (o.items || []).map(function (it) {
@@ -1652,12 +1666,17 @@
     }
 
     /* ── Load order into sale form directly (replaces modal) ── */
-    function loadOrderInView(id) {
+    function loadRecordInView(id) {
       var o = orders.find(function (x) { return x.id === id; });
+      var isSale = false;
+      if (!o) {
+        o = sales.find(function (x) { return x.id === id; });
+        if (o) isSale = true;
+      }
       if (!o) return;
       _editingOrderId = id;
-      var st = (o.status || 'open').toLowerCase();
-      var isCompleted = st === 'paid' || st === 'cancelled';
+      var st = (o.status || (isSale ? 'completed' : 'open')).toLowerCase();
+      var isCompleted = isSale || st === 'paid' || st === 'completed' || st === 'cancelled';
       var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
 
       // Switch to builder view
@@ -1683,7 +1702,7 @@
 
       // Load items into cart
       cart = (o.items || []).map(function (it) {
-        return { key: it.name, name: it.name, qty: it.qty || 1, price: it.price || 0 };
+        var nm = it.name || it.meal || it.key || 'Item'; return { key: nm, name: nm, qty: it.qty || 1, price: it.price || 0 };
       });
       renderCart();
       renderPicker();
@@ -1701,10 +1720,24 @@
       }
       toggleRoomChargeUI();
 
+      if (o.roomNumber) {
+        if ($('[data-role="fRoomNumber"]')) $('[data-role="fRoomNumber"]').value = o.roomNumber;
+        if ($('[data-role="fGuestName"]')) $('[data-role="fGuestName"]').value = o.guestName || '';
+        if ($('[data-role="fGuestPhone"]')) $('[data-role="fGuestPhone"]').value = o.guestPhone || '';
+        if ($('[data-role="fGuestId"]')) $('[data-role="fGuestId"]').value = o.guestId || '';
+        var box = $('[data-role="selectedRoomBox"]');
+        if (box) {
+          box.querySelector('.info').innerHTML = 'Room ' + esc(o.roomNumber) + '<span>' + esc(o.guestName || '') + (o.guestPhone ? ' · ' + esc(o.guestPhone) : '') + '</span>';
+          box.classList.add('show');
+        }
+        var roomWrap = $('[data-role="roomWrap"]');
+        if (roomWrap) roomWrap.style.display = '';
+      }
+
       // Update title
       var titleEl = $('[data-role="cartTitle"]');
       if (titleEl) {
-        var typeLabel = oType === 'coo' ? '<i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order' : oType === 'tab' ? 'Open Tab' : 'Quick Sale';
+        var typeLabel = isSale ? 'Sale Record' : (oType === 'coo' ? '<i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order' : oType === 'tab' ? 'Open Tab' : 'Quick Sale');
         titleEl.innerHTML = esc(o.id) + ' — ' + typeLabel;
       }
 
@@ -1714,7 +1747,7 @@
       var deleteBtn = $('[data-role="deleteBtn"]');
       if (editBar) editBar.style.display = '';
       if (editLabel) {
-        if (isCompleted) editLabel.textContent = st === 'paid' ? '✓ Paid — View Only' : '✕ Cancelled — View Only';
+        if (isSale) editLabel.textContent = '✓ Completed Sale — View Only'; else if (isCompleted) editLabel.textContent = st === 'paid' ? '✓ Paid — View Only' : '✕ Cancelled — View Only';
         else editLabel.textContent = 'Editing ' + o.id;
       }
       if (deleteBtn) {
@@ -2397,6 +2430,13 @@
       if (isWaiter) setOrderType('tab');
       checkPendingCooTransfers();
       setInterval(checkPendingCooTransfers, 30000);
+      var urlParams = new URLSearchParams(window.location.search);
+      var viewParam = urlParams.get('view') || urlParams.get('id');
+      if (viewParam) {
+        setTimeout(function () {
+          loadRecordInView(viewParam);
+        }, 150);
+      }
     }
 
     async function checkPendingCooTransfers() {

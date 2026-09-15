@@ -948,8 +948,16 @@ exports.addRecipeToStock = asyncHandler(async (req, res) => {
    for Kitchen to see and accept.
 ══════════════════════════════════════════════ */
 exports.createCooOrder = asyncHandler(async (req, res) => {
-  const { items, discount, staff, table, covers, notes, method, roomNumber, guestName, guestPhone, guestId, createdBy } = req.body;
+  const { items, discount, staff, table, covers, notes, method, payMethod, roomNumber, guestName, guestPhone, guestId, createdBy } = req.body;
   if (!items || !items.length) throw new ApiError(400, 'Add at least one item');
+
+  const chosenMethod = method || payMethod || 'Cash';
+  if (chosenMethod === 'Room Charge' && roomNumber) {
+    const booking = await Booking.findOne({ room: String(roomNumber).trim(), status: 'checkedin' });
+    if (!booking) {
+      throw new ApiError(400, `Room ${roomNumber} is not currently checked in`);
+    }
+  }
 
   const subtotal = items.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0);
   const discountPct = Number(discount) || 0;
@@ -987,11 +995,12 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
     notes: notes || '',
     date: new Date(),
     status: 'open',
-    method: method || null,
-    payMethod: method || null,
+    method: chosenMethod,
+    payMethod: chosenMethod,
     roomNumber: roomNumber || null,
     guestName: guestName || null,
     guestPhone: guestPhone || null,
+    guestId: guestId || null,
     createdBy: createdBy || (req.user ? req.user.name : ''),
   });
 
