@@ -349,6 +349,9 @@
      (shifts, cash counts, variance) rather than being generic UI chrome. -->
 <script src="shift-reconciliation-detail.js"></script>
 <script>
+let _shellUser;
+try { _shellUser = AccountingData.getSession(); } catch (e) { /* shell.attach will redirect to login */ }
+
 const shell = AccountingShell.attach({
   sidebarTarget: '#sidebarSlot',
   topbarTarget:  '#topbarSlot',
@@ -356,7 +359,7 @@ const shell = AccountingShell.attach({
   pageTitle:     'Shift Reconciliation',
   pageSubtitle:  'One cashier, one department, one shift — count cash against expected revenue',
   apiMode:       'Live',
-  user:          AccountingData.getSession(),
+  user:          _shellUser || null,
 });
 
 /* ═══════════════════════════════════════════

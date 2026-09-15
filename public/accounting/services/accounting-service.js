@@ -7,6 +7,14 @@
 (function (global) {
   'use strict';
 
+  // Inject toast animation CSS once
+  if (!document.getElementById('acc-toast-css')) {
+    const style = document.createElement('style');
+    style.id = 'acc-toast-css';
+    style.textContent = '@keyframes accToastIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}';
+    document.head.appendChild(style);
+  }
+
   const KEYS = {
     ROOM_TX: 'accounting-room-tx',
     REST: 'restaurant-sales',
@@ -28,13 +36,41 @@
 
   function configure(opts) { Object.assign(CONFIG, opts || {}); }
 
+  /* ═══════════ Toast ═══════════ */
+  function showToast(msg, type) {
+    type = type || 'error';
+    const existing = document.getElementById('acc-toast');
+    if (existing) existing.remove();
+    const t = document.createElement('div');
+    t.id = 'acc-toast';
+    t.textContent = msg;
+    const colors = { success: '#12b76a', error: '#f04438', info: '#2f6fed', warning: '#f79009' };
+    const borders = { success: '#0e9355', error: '#d92d20', info: '#1554d1', warning: '#d97706' };
+    Object.assign(t.style, {
+      position: 'fixed', bottom: '24px', right: '24px', zIndex: '999999',
+      background: colors[type] || colors.error, color: '#fff',
+      border: '1px solid ' + (borders[type] || borders.error),
+      borderRadius: '10px', padding: '13px 22px', fontSize: '13.5px',
+      fontWeight: '700', fontFamily: "'Segoe UI', system-ui, sans-serif",
+      boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+      animation: 'accToastIn .3s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+      maxWidth: 'calc(100vw - 40px)',
+    });
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 4000);
+    setTimeout(() => { if (t.parentNode) t.remove(); }, 4500);
+  }
+
   async function loadShiftHour() {
-    try {
-      const res = await fetch('/api/settings', { credentials: 'include' });
-      const json = await res.json();
-      const cfg = json && json.data ? json.data : {};
-      if (typeof cfg.shiftStartHour === 'number') SHIFT_START_HOUR = cfg.shiftStartHour;
-    } catch (_) {}
+    const res = await fetch('/api/settings', { credentials: 'include' });
+    if (!res.ok) {
+      console.error('[AccountingService] Failed to load settings: HTTP ' + res.status);
+      showToast('Failed to load shift settings (HTTP ' + res.status + '). Using default 9 AM.', 'warning');
+      return;
+    }
+    const json = await res.json();
+    const cfg = json && json.data ? json.data : {};
+    if (typeof cfg.shiftStartHour === 'number') SHIFT_START_HOUR = cfg.shiftStartHour;
   }
 
   /* ═══════════ Token + apiFetch ═══════════ */
@@ -199,7 +235,8 @@
     const rooms = rows.filter((t) => t.dept === 'Rooms').reduce((s, t) => s + t.amount, 0);
     const restaurant = rows.filter((t) => t.dept === 'Restaurant').reduce((s, t) => s + t.amount, 0);
     const poolbar = rows.filter((t) => t.dept === 'Pool Bar').reduce((s, t) => s + t.amount, 0);
-    return { rooms, restaurant, poolbar, total: rooms + restaurant + poolbar };
+    const gym = rows.filter((t) => t.dept === 'Gym').reduce((s, t) => s + t.amount, 0);
+    return { rooms, restaurant, poolbar, gym, total: rooms + restaurant + poolbar + gym };
   }
 
   const PAY_METHODS = ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'];
@@ -215,7 +252,7 @@
     const map = {};
     (transactions || []).forEach((t) => {
       const k = keyForMode(t.date, mode);
-      if (!map[k]) map[k] = { key: k, Rooms: 0, Restaurant: 0, 'Pool Bar': 0, total: 0, count: 0, methods: {} };
+      if (!map[k]) map[k] = { key: k, Rooms: 0, Restaurant: 0, 'Pool Bar': 0, Gym: 0, total: 0, count: 0, methods: {} };
       map[k][t.dept] = (map[k][t.dept] || 0) + t.amount;
       map[k].total += t.amount;
       map[k].count += 1;
@@ -327,7 +364,10 @@
         })),
         _id: s._id,
       }));
-    } catch (e) { console.warn('[AccountingService] shifts load failed:', e.message); }
+    } catch (e) {
+      showToast('Failed to load shifts: ' + e.message, 'error');
+      throw e;
+    }
 
     state.roomTx = roomTx;
     state.restSales = restSales;
@@ -610,8 +650,16 @@
   }
 
   function getSession() {
-    try { return JSON.parse(localStorage.getItem(KEYS.SESSION) || 'null') || { name: 'Finance Manager', initials: 'FM', role: 'staff', privilege: 'accountant' }; }
-    catch (e) { return { name: 'Finance Manager', initials: 'FM', role: 'staff', privilege: 'accountant' }; }
+    const raw = localStorage.getItem(KEYS.SESSION);
+    if (!raw) {
+      showToast('No active session found. Please log in again.', 'error');
+      throw new Error('No active session — redirect to login required');
+    }
+    try { return JSON.parse(raw); }
+    catch (e) {
+      showToast('Session data is corrupted. Please log in again.', 'error');
+      throw new Error('Corrupt session data');
+    }
   }
   function setSession(s) { try { localStorage.setItem(KEYS.SESSION, JSON.stringify(s)); } catch (e) { /* */ } }
 
@@ -625,7 +673,7 @@
 
   global.AccountingData = {
     KEYS, CONFIG, configure,
-    getSession, setSession,
+    getSession, setSession, showToast,
 
     state, onChange, loadAll,
     getAccountingData,

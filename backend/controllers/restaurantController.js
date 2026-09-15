@@ -241,10 +241,11 @@ exports.createSale = asyncHandler(async (req, res) => {
   const stockIdMap = {};
   const procIdMap = {};
   for (const it of items) {
-    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    const itemName = (it.name || it.key || '').trim();
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
     if (!stockItem) continue;
-    stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
-    procIdMap[it.name.trim().toLowerCase()] = stockItem.procurementId || '';
+    stockIdMap[itemName.toLowerCase()] = stockItem.id;
+    procIdMap[itemName.toLowerCase()] = stockItem.procurementId || '';
     const qty = Number(it.qty);
     if (stockItem.qty < qty) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -267,7 +268,10 @@ exports.createSale = asyncHandler(async (req, res) => {
   const sale = await Sale.create({
     id,
     department: DEPT,
-    items: items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', procurementId: procIdMap[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
+    items: items.map((i) => {
+      const nm = (i.name || i.key || '').trim();
+      return { name: nm, stockId: stockIdMap[nm.toLowerCase()] || '', procurementId: procIdMap[nm.toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) };
+    }),
     subtotal,
     discount: discountPct,
     total,
@@ -581,8 +585,9 @@ exports.openTab = asyncHandler(async (req, res) => {
 
   const orderItems = [];
   for (const it of items) {
-    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
-    orderItems.push({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price), procurementId: stockItem ? (stockItem.procurementId || '') : '' });
+    const itemName = (it.name || it.key || '').trim();
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
+    orderItems.push({ name: itemName, qty: Number(it.qty), price: Number(it.price), procurementId: stockItem ? (stockItem.procurementId || '') : '' });
   }
 
   const order = await Order.create({
@@ -620,10 +625,11 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
   const stockIdMap = {};
   const procIdMap2 = {};
   for (const it of order.items) {
-    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    const itemName = (it.name || it.key || '').trim();
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
     if (!stockItem) continue;
-    stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
-    procIdMap2[it.name.trim().toLowerCase()] = stockItem.procurementId || '';
+    stockIdMap[itemName.toLowerCase()] = stockItem.id;
+    procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
     const qty = Number(it.qty);
     if (stockItem.qty < qty) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -651,7 +657,10 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
     id: pendingSaleId,
     source: order.id,
     department: DEPT,
-    items: order.items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', procurementId: procIdMap2[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
+    items: order.items.map((i) => {
+      const nm = (i.name || i.key || '').trim();
+      return { name: nm, stockId: stockIdMap[nm.toLowerCase()] || '', procurementId: procIdMap2[nm.toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) };
+    }),
     subtotal: order.subtotal,
     discount: order.discount,
     total: order.total,
@@ -702,10 +711,11 @@ exports.payOrder = asyncHandler(async (req, res) => {
     const stockIdMap = {};
     const procIdMap2 = {};
     for (const it of order.items) {
-      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+      const itemName = (it.name || it.key || '').trim();
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
       if (!stockItem) continue;
-      stockIdMap[it.name.trim().toLowerCase()] = stockItem.id;
-      procIdMap2[it.name.trim().toLowerCase()] = stockItem.procurementId || '';
+      stockIdMap[itemName.toLowerCase()] = stockItem.id;
+      procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
       const qty = Number(it.qty);
       if (stockItem.qty < qty) {
         const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -732,7 +742,10 @@ exports.payOrder = asyncHandler(async (req, res) => {
       id: saleId,
       source: order.id,
       department: DEPT,
-      items: order.items.map((i) => ({ name: i.name, stockId: stockIdMap[i.name.trim().toLowerCase()] || '', procurementId: procIdMap2[i.name.trim().toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) })),
+      items: order.items.map((i) => {
+        const nm = (i.name || i.key || '').trim();
+        return { name: nm, stockId: stockIdMap[nm.toLowerCase()] || '', procurementId: procIdMap2[nm.toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) };
+      }),
       subtotal: order.subtotal,
       discount: order.discount,
       total: order.total,
@@ -818,7 +831,8 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   /* ── If served with pending sale: restore stock + void sale ── */
   if (order.status === 'served' && order.pendingSaleId) {
     for (const it of order.items) {
-      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+      const itemName = (it.name || it.key || '').trim();
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
       if (!stockItem) continue;
       const qty = Number(it.qty);
       stockItem.qty += qty;
@@ -946,10 +960,11 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
 
   const orderItems = [];
   for (const it of items) {
-    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+    const itemName = (it.name || it.key || '').trim();
+    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
     orderItems.push({
       id: uuidv4(),
-      name: it.name.trim(),
+      name: itemName,
       qty: Number(it.qty),
       price: Number(it.price) || 0,
       recipeId: it.recipeId || (stockItem ? stockItem.recipeId : '') || '',
@@ -1064,10 +1079,11 @@ exports.updateCooOrder = asyncHandler(async (req, res) => {
   if (items && items.length) {
     const orderItems = [];
     for (const it of items) {
-      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${it.name.trim()}$`, 'i') });
+      const itemName = (it.name || it.key || '').trim();
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
       orderItems.push({
         id: it.id || uuidv4(),
-        name: it.name.trim(),
+        name: itemName,
         qty: Number(it.qty),
         price: Number(it.price) || 0,
         recipeId: it.recipeId || (stockItem ? stockItem.recipeId : '') || '',

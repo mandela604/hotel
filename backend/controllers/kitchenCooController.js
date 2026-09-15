@@ -24,7 +24,7 @@ exports.createCoo = asyncHandler(async (req, res) => {
   const doc = await KitchenCooOrder.create({
     table: table || '',
     covers: Number(covers)||1,
-    items: items.map(i=>({id:uuidv4(), name:i.name.trim(), qty:Number(i.qty), price:Number(i.price)||0, recipeId: i.recipeId||''})),
+    items: items.map(i=>({id:uuidv4(), name:(i.name || i.key || '').trim(), qty:Number(i.qty), price:Number(i.price)||0, recipeId: i.recipeId||''})),
     notes: notes||'',
     staff: staff|| (req.user?req.user.name:''),
     method: method||'Cash',
@@ -61,7 +61,7 @@ exports.editCoo = asyncHandler(async (req, res) => {
   if (!order) return res.status(404).json({success:false, error:'COO order not found'});
   const { items, notes, table, covers } = req.body;
   if (items && items.length) {
-    order.items = items.map(i=>({id:i.id||uuidv4(), name:i.name.trim(), qty:Number(i.qty), price:Number(i.price)||0, recipeId: i.recipeId||''}));
+    order.items = items.map(i=>({id:i.id||uuidv4(), name:(i.name || i.key || '').trim(), qty:Number(i.qty), price:Number(i.price)||0, recipeId: i.recipeId||''}));
     order.total = order.items.reduce((s,i)=> s + Number(i.price||0)*Number(i.qty||0),0);
   }
   if (notes !== undefined) order.notes = notes;

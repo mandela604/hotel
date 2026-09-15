@@ -1175,7 +1175,7 @@
       var guest=$('[data-role="fGuestName"]')?$('[data-role="fGuestName"]').value:'';
       var gid=$('[data-role="fGuestId"]')?$('[data-role="fGuestId"]').value:'';
       var phone=$('[data-role="fGuestPhone"]')?$('[data-role="fGuestPhone"]').value:'';
-      var items=cart.map(function(c){return {name:c.name, qty:c.qty, price:c.price};});
+      var items=cart.map(function(c){return {name:c.name || c.key, key:c.key, qty:c.qty, price:c.price};});
 
       var payload={table:table, covers:1, items:items, notes:notes, staff:staff, method:'Room Charge', roomNumber:room, guestName:guest, guestId:gid, guestPhone:phone};
       try{

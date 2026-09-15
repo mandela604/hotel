@@ -1,8 +1,8 @@
-const Booking = require('../database/models/Booking');
-const GymCheckin = require('../database/models/GymCheckin');
-const GymMember = require('../database/models/GymMember');
-const Payment = require('../database/models/Payment');
-const Sale = require('../database/models/Sale');
+const Booking = require('../models/Booking');
+const GymCheckin = require('../models/GymCheckin');
+const GymMember = require('../models/GymMember');
+const Payment = require('../models/Payment');
+const Sale = require('../models/Sale');
 const asyncHandler = require('../middleware/asyncHandler');
 const { total, balance, nights } = require('../utils/calc');
 

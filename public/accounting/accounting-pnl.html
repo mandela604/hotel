@@ -579,7 +579,7 @@ function renderTblPagination(containerId, total, page, onPage) {
    visible page.
 ═══════════════════════════════════════════════ */
 function renderIncomeTable() {
-  const all = filteredIncome().slice().sort((a,b)=>a.date.localeCompare(b.date) || a.department.localeCompare(b.department));
+  const all = filteredIncome().slice().sort((a,b)=>b.date.localeCompare(a.date) || a.department.localeCompare(b.department));
   document.getElementById('incCount').textContent = all.length + ' entr' + (all.length!==1?'ies':'y');
 
   const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
@@ -601,7 +601,7 @@ function renderIncomeTable() {
 }
 
 function renderExpenseTable() {
-  const all = filteredExpenses().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const all = filteredExpenses().slice().sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('expCount').textContent = all.length + ' period' + (all.length!==1?'s':'');
 
   const totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));

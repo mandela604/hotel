@@ -389,49 +389,6 @@ function fmtDisplayDate(dt){
          dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   NORMALIZE — every source is folded into one shape:
-   { id, dept, deptChip, desc, sub, date(Date obj), method, amount,
-     status ('completed'|'pending'|'voided'), staff, raw }
-═══════════════════════════════════════════════════════════════ */
-function fromPoolBar(sales){
-  return sales.map(s => ({
-    id: s.id, dept: 'Pool Bar', deptChip: 'dept-poolbar',
-    desc: (s.items||[]).map(i=>`${i.name} ×${i.qty}`).join(', ') || 'Pool Bar Sale',
-    sub: s.table || '', date: parseAnyDate(s.date), method: s.method || '—',
-    amount: s.total || 0, status: s.status === 'voided' ? 'voided' : 'completed',
-    staff: s.staff || '—', source: 'poolbar-sales',
-  }));
-}
-function fromRestaurant(sales){
-  return sales.map(s => ({
-    id: s.id, dept: (s.items||[]).some(i => /chapman|heineken|guinness|drink|beer|wine|cocktail/i.test(i.meal||'')) ? 'Bar' : 'Restaurant',
-    deptChip: (s.items||[]).some(i => /chapman|heineken|guinness|drink|beer|wine|cocktail/i.test(i.meal||'')) ? 'dept-bar' : 'dept-restaurant',
-    desc: (s.items||[]).map(i=>`${i.meal} ×${i.qty}`).join(', ') || 'Restaurant Sale',
-    sub: s.table || '', date: parseAnyDate(s.date), method: s.method || '—',
-    amount: s.total || 0, status: s.status === 'voided' ? 'voided' : 'completed',
-    staff: s.staff || '—', source: 'restaurant-sales',
-  }));
-}
-function fromBookings(bookings){
-  return bookings.filter(b => b.guest && (b.paid || 0) > 0).map(b => ({
-    id: 'RM-' + b.room + '-' + (b.checkin || '').replace(/-/g,''), dept: 'Rooms', deptChip: 'dept-rooms',
-    desc: `Room ${b.room} — ${b.guest}`, sub: `${b.checkin || '—'} → ${b.checkout || '—'}`,
-    date: parseAnyDate(b.checkin) || new Date(), method: b.payMethod || '—',
-    amount: b.paid || 0, status: b.payStatus === 'Pending' ? 'pending' : 'completed',
-    staff: b.recordedBy || '—', source: 'booking-bookings',
-  }));
-}
-function fromGym(members){
-  return members.filter(m => (m.amountPaid || 0) > 0).map(m => ({
-    id: 'GYM-' + m.id, dept: 'Gym', deptChip: 'dept-gym',
-    desc: `Membership Payment — ${m.name}`, sub: m.planId || '',
-    date: parseAnyDate(m.joined) || new Date(), method: 'Cash',
-    amount: m.amountPaid || 0, status: 'completed',
-    staff: 'Gym Attendant', source: 'gym-members',
-  }));
-}
-
 async function refreshData(manual){
   document.getElementById('tblBody').innerHTML = `<tr class="empty-row"><td colspan="8"><i class="fa-solid fa-spinner fa-spin"></i> Loading transactions…</td></tr>`;
   try {
