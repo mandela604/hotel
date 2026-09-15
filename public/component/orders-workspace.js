@@ -418,6 +418,16 @@
       return '';
     }
 
+    function getSessionUser() {
+      try {
+        if (shell && typeof shell.getUser === 'function') {
+          const u = shell.getUser();
+          if (u) return u;
+        }
+      } catch (e) {}
+      return options.currentUser || null;
+    }
+
     const isWaiter = resolveUserRole() === 'waiter';
 
     let stock = [];
@@ -1677,7 +1687,7 @@
       _editingOrderId = id;
       var st = (o.status || (isSale ? 'completed' : 'open')).toLowerCase();
       var isCompleted = isSale || st === 'paid' || st === 'completed' || st === 'cancelled';
-      var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
+      var session = getSessionUser(); var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
 
       // Switch to builder view
       mode = 'quick';
@@ -1794,7 +1804,7 @@
 
     async function deleteOrderInView() {
       if (!_editingOrderId) return;
-      var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
+      var session = getSessionUser(); var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
       if (!isManager) { showToast('Only managers and admins can delete orders.', 'error'); return; }
       var o = orders.find(function (x) { return x.id === _editingOrderId; });
       if (!o) return;
@@ -2254,7 +2264,7 @@
       const pr = e.target.closest('[data-print]');
       if (pr) { printOrderById(pr.dataset.print); return; }
       const viewOrder = e.target.closest('[data-view-order]');
-      if (viewOrder) { loadOrderInView(viewOrder.dataset.viewOrder); return; }
+      if (viewOrder) { loadRecordInView(viewOrder.dataset.viewOrder); return; }
       const orderTypeBtn = e.target.closest('[data-order-type]');
       if (orderTypeBtn && !orderTypeBtn.disabled) { setOrderType(orderTypeBtn.dataset.orderType); return; }
       const ordPage = e.target.closest('[data-ord-page]');
