@@ -195,6 +195,10 @@
     .ow-btn-primary{ background:var(--ow-gold); color:#fff; }
     .ow-btn-primary:hover{ background:var(--ow-gold-light); transform:translateY(-1px); }
     .ow-btn-primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+    .ow-btn-sm{ padding:5px 10px; font-size:11px; border-radius:7px; }
+    .ow-order-type-btn{ background:var(--ow-surface); border:1.5px solid var(--ow-border); color:var(--ow-text2); font-weight:600; transition:all .15s; }
+    .ow-order-type-btn.active{ background:var(--ow-gold-dim); border-color:var(--ow-gold); color:var(--ow-gold); font-weight:700; }
+    .ow-order-type-btn:hover:not(.active){ border-color:var(--ow-border2); background:var(--ow-surface2); }
     .ow-btn-outline{ background:none; border-color:var(--ow-border); color:var(--ow-text2); }
     .ow-btn-outline:hover{ border-color:var(--ow-gold); color:var(--ow-gold); }
     .ow-btn-sm{ padding:6px 12px; font-size:11.5px; }
@@ -425,7 +429,9 @@
     let cooMenuItems = [];
     let kitchenStockCache = [];
     let cooActiveCat = 'All';
-    let mode = 'quick'; // quick | tab | active
+    let mode = 'quick'; // quick | active
+    let orderType = 'quick'; // quick | tab | coo — sub-mode inside builder
+    let _editingOrderId = null; // when viewing/editing an order from Active Orders
     let activeCat = 'All';
     let statusFilter = '';
     let ordersPage = 1;
@@ -490,15 +496,6 @@
             <i class="fa-solid fa-bolt"></i>Quick Sale
             <span class="sub">Charge & complete now</span>
           </button>
-          <button type="button" class="ow-mode-tab" data-mode="tab">
-            <i class="fa-solid fa-receipt"></i>Open Tab
-            <span class="sub">Serve first, pay later</span>
-          </button>
-          ${(moduleName === 'restaurant' || moduleName.indexOf('restaurant') !== -1 || options.showCookOnOrder !== false) ? `
-          <button type="button" class="ow-mode-tab" data-mode="coo">
-            <i class="fa-solid fa-fire"></i>Cook on Order
-            <span class="sub">Kitchen sends when ready</span>
-          </button>` : ''}
           <button type="button" class="ow-mode-tab" data-mode="active">
             <i class="fa-solid fa-list-check"></i>Active Orders
             <span class="sub">Open & served tabs</span>
@@ -564,6 +561,23 @@
                   <input class="ow-disc-input" type="number" min="0" max="100" value="0" data-role="cartDisc">
                 </div>
                 <div class="ow-ct-row total"><span>Total</span><span class="ow-ct-val" data-role="cartTotal">₦0</span></div>
+                <div class="ow-order-type-row" data-role="orderTypeRow" style="display:flex;gap:6px;margin-top:10px;">
+                  <button type="button" class="ow-btn ow-btn-sm ow-order-type-btn active" data-order-type="quick" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-bolt"></i> Quick Sale</button>
+                  <button type="button" class="ow-btn ow-btn-sm ow-order-type-btn" data-order-type="tab" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-receipt"></i> Open Tab</button>
+                  ${moduleName === 'restaurant' || (moduleName && moduleName.indexOf('restaurant') !== -1) || options.showCookOnOrder !== false ?
+                    '<button type="button" class="ow-btn ow-btn-sm ow-order-type-btn" data-order-type="coo" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-fire"></i> Cook</button>' : ''}
+                </div>
+                <div class="ow-order-type-hint" data-role="orderTypeHint" style="font-size:10px;color:var(--ow-text3);margin-top:4px;text-align:center;">Instant payment</div>
+                <div id="orderEditBar" data-role="orderEditBar" style="display:none;margin-top:10px;padding:8px 10px;background:var(--ow-blue-bg);border-radius:8px;border:1px solid var(--ow-gold-border);">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:700;font-size:11px;color:var(--ow-gold);" data-role="orderEditLabel"></span>
+                    <div style="display:flex;gap:6px;">
+                      <button type="button" class="ow-btn ow-btn-sm" data-act="saveEditOrder" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);font-size:11px;"><i class="fa-solid fa-check"></i> Save</button>
+                      <button type="button" class="ow-btn ow-btn-sm" data-act="cancelEditOrder" style="font-size:11px;">Cancel</button>
+                      <button type="button" class="ow-btn ow-btn-sm" data-act="deleteEditOrder" data-role="deleteBtn" style="display:none;color:var(--red);border-color:var(--red);font-size:11px;"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </div>
+                  </div>
+                </div>
                 <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:10px;" data-act="submit" disabled data-role="submitBtn">
                   <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>
                 </button>
@@ -641,7 +655,7 @@
           </div>
         </div>
 
-        <div class="ow-view" data-view="coo">
+        <div class="ow-view" data-view="coo" style="display:none;">
           <div class="ow-builder">
             <div class="ow-menu">
               <div class="ow-mp-header">
@@ -710,27 +724,53 @@
     }
 
     function setMode(m) {
-      if (isWaiter && m === 'quick') m = 'tab';
-      if (m !== 'quick' && m !== 'coo' && _editCooOrderId) {
-        _editCooOrderId = null;
-        var btnCoo = $('[data-role="cooSubmitBtn"]'); if (btnCoo) btnCoo.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send to Kitchen';
-        var btnOrd = $('[data-role="submitBtn"]'); if (btnOrd) btnOrd.innerHTML = '<i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>';
+      if (m !== 'quick' && m !== 'active') m = 'quick';
+      // clear edit state if leaving builder
+      if (m === 'active' && _editingOrderId) {
+        exitEditMode();
       }
       mode = m;
       $$('.ow-mode-tab').forEach(function (tab) {
         tab.classList.toggle('active', tab.dataset.mode === m);
       });
       const isActive = m === 'active';
-      const isCoo = m === 'coo';
-      $('[data-view="builder"]').classList.toggle('active', !isActive && !isCoo);
+      $('[data-view="builder"]').classList.toggle('active', !isActive);
       $('[data-view="active"]').classList.toggle('active', isActive);
-      $('[data-view="coo"]').classList.toggle('active', isCoo);
-      // Payment: Quick Sale = required; Open Tab = optional; COO = required
+      // hide COO view (merged into builder now)
+      var cooView = $('[data-view="coo"]');
+      if (cooView) cooView.classList.remove('active');
+      if (isActive) renderOrdersTable();
+    }
+
+    function setOrderType(t) {
+      if (t !== 'quick' && t !== 'tab' && t !== 'coo') t = 'quick';
+      // Waiters can only use Open Tab
+      if (isWaiter && t === 'quick') t = 'tab';
+      orderType = t;
+      // Update toggle buttons
+      $$('[data-order-type]').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.orderType === t);
+      });
+      // Update hints
+      var hint = $('[data-role="orderTypeHint"]');
+      if (hint) {
+        if (t === 'quick') hint.textContent = 'Instant payment';
+        else if (t === 'tab') hint.textContent = 'Serve first, pay later';
+        else hint.textContent = 'Kitchen sends when ready';
+      }
+      // Update cart title
+      var titleEl = $('[data-role="cartTitle"]');
+      if (titleEl && !_editingOrderId) {
+        if (t === 'quick') titleEl.textContent = 'Quick Sale';
+        else if (t === 'tab') titleEl.textContent = 'Open Tab';
+        else titleEl.innerHTML = '<i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order';
+      }
+      // Payment: tab = optional, others = required
       const methodWrap = $('[data-role="methodWrap"]');
-      if (methodWrap) methodWrap.style.display = (m === 'quick' || m === 'tab') ? '' : 'none';
+      if (methodWrap) methodWrap.style.display = t === 'coo' ? 'none' : '';
       const methodLabel = methodWrap && methodWrap.querySelector('.ow-label');
       if (methodLabel) {
-        methodLabel.innerHTML = m === 'tab'
+        methodLabel.innerHTML = t === 'tab'
           ? 'Payment <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--ow-text3)">(optional)</span>'
           : 'Payment';
       }
@@ -738,27 +778,28 @@
       const methodSel = $('[data-role="fMethod"]');
       if (methodSel) {
         const cur = methodSel.value;
-        const opts = (m === 'tab' ? [''] : []).concat(paymentMethods);
+        const opts = (t === 'tab' ? [''] : []).concat(paymentMethods);
         methodSel.innerHTML = opts.map(function (pm) {
           if (!pm) return '<option value="">— Pay later —</option>';
           return '<option value="' + esc(pm) + '">' + esc(pm) + '</option>';
         }).join('');
-        if (m === 'tab' && (!cur || paymentMethods.indexOf(cur) < 0)) methodSel.value = '';
+        if (t === 'tab' && (!cur || paymentMethods.indexOf(cur) < 0)) methodSel.value = '';
         else if (paymentMethods.indexOf(cur) >= 0) methodSel.value = cur;
         else methodSel.value = paymentMethods[0] || '';
       }
       toggleRoomChargeUI();
-      if (m === 'coo') {
-        $('[data-role="submitLabel"]').textContent = 'Complete Sale';
-        $('[data-role="cartTitle"]').textContent = 'Quick Sale';
-        toggleCooRoomChargeUI();
-        fetchCooMenuItems();
-        renderCooPicker();
-        renderCooCart();      } else {
-        $('[data-role="submitLabel"]').textContent = m === 'quick' ? 'Complete Sale' : 'Open Tab';
-        $('[data-role="cartTitle"]').textContent = m === 'quick' ? 'Quick Sale' : 'Open Tab';
+      // Update submit label
+      if (!_editingOrderId) {
+        if (t === 'quick') $('[data-role="submitLabel"]').textContent = 'Complete Sale';
+        else if (t === 'tab') $('[data-role="submitLabel"]').textContent = 'Open Tab';
+        else $('[data-role="submitLabel"]').textContent = 'Send to Kitchen';
       }
-      if (isActive) renderOrdersTable();
+      // Fetch COO menu items if switching to COO
+      if (t === 'coo') {
+        fetchCooMenuItems().then(function () { renderPicker(); });
+      } else {
+        renderPicker();
+      }
     }
 
     function applyPaymentMethods(list) {
@@ -857,32 +898,44 @@
     }
 
     function renderPicker() {
-      const cats = getCategories();
-      $('[data-role="catTabs"]').innerHTML = cats.map(function (c) {
-        return '<button type="button" class="ow-cat-tab' + (c === activeCat ? ' active' : '') +
-          '" data-cat="' + esc(c) + '">' + esc(c) + '</button>';
-      }).join('');
+      var useItems = stock;
+      var activeCategory = activeCat;
+      if (orderType === 'coo') {
+        if (cooMenuItems && cooMenuItems.length) useItems = cooMenuItems;
+        activeCategory = cooActiveCat;
+      }
+      var cats = orderType === 'coo' ? getCooCategories() : getCategories();
+      var catTarget = orderType === 'coo' ? $('[data-role="cooCatTabs"]') : $('[data-role="catTabs"]');
+      if (catTarget) {
+        catTarget.innerHTML = cats.map(function (c) {
+          return '<button type="button" class="ow-cat-tab' + (c === activeCategory ? ' active' : '') +
+            '" data-cat="' + esc(c) + '">' + esc(c) + '</button>';
+        }).join('');
+      }
       const q = ($('[data-role="itemSearch"]').value || '').toLowerCase();
-      const items = stock.filter(function (i) {
-        return (activeCat === 'All' || i.category === activeCat) &&
+      const items = useItems.filter(function (i) {
+        return (activeCategory === 'All' || (i.category || '') === activeCategory) &&
           (!q || (i.name || '').toLowerCase().includes(q));
       });
       const grid = $('[data-role="itemGrid"]');
       if (!items.length) {
-        grid.innerHTML = '<div class="ow-empty-note">No stock items match.</div>';
+        grid.innerHTML = '<div class="ow-empty-note">No items match.</div>';
         return;
       }
       grid.innerHTML = items.map(function (i) {
         const lvl = stockLevel(i);
         const inCart = cart.find(function (c) { return c.key === i.name; });
-        const remaining = i.qty - (inCart ? inCart.qty : 0);
-        const disabled = i.qty <= 0 || remaining <= 0;
+        const remaining = (i.qty || 0) - (inCart ? inCart.qty : 0);
+        const disabled = orderType !== 'coo' && (i.qty || 0) <= 0;
+        const isKitchen = String(i.recipeId || '').trim() !== '';
         return '<button type="button" class="ow-mi-tile" data-add="' + esc(i.name) + '" ' + (disabled ? 'disabled' : '') + '>' +
-          (i.qty <= 0 ? '<span class="ow-mi-badge">Out</span>' : '') +
+          (orderType !== 'coo' && (i.qty || 0) <= 0 ? '<span class="ow-mi-badge">Out</span>' : '') +
+          (isKitchen ? '<span class="ow-mi-badge" style="background:var(--ow-amber-bg);color:var(--ow-amber);position:absolute;top:4px;left:4px;"><i class="fa-solid fa-fire"></i> Kitchen</span>' : '') +
           '<div class="ow-mi-cat">' + esc(i.category || '') + '</div>' +
           '<div class="ow-mi-name">' + esc(i.name) + '</div>' +
           '<div class="ow-mi-price">' + fmtN(i.price) + '</div>' +
-          '<div class="ow-mi-stock ' + lvl + '">' + i.qty + ' ' + esc(i.unit || '') + ' on hand</div></button>';
+          (orderType !== 'coo' ? '<div class="ow-mi-stock ' + lvl + '">' + (i.qty || 0) + ' ' + esc(i.unit || '') + ' on hand</div>' : '') +
+          '</button>';
       }).join('');
     }
 
@@ -917,7 +970,7 @@
 
     function generateReceipt(orderData, isSale) {
       var header = moduleName === 'restaurant' ? 'Boston Leisure Restaurant' : 'Boston Leisure Pool Bar';
-      var orderType = isSale ? (mode === 'tab' ? 'Tab' : 'Sale') : 'Order';
+      var orderTypeLabel = isSale ? (orderType === 'tab' ? 'Tab' : 'Sale') : 'Order';
       var brand = moduleName === 'restaurant' ? 'Restaurant' : 'Pool Bar';
       var itemsHtml = (orderData.items || []).map(function(i) {
         return '<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">' + esc(i.name) + '</td><td style="text-align:center;padding:6px 0;border-bottom:1px solid #eee;">' + esc(i.qty) + '</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">' + fmtN(i.price) + '</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">' + fmtN(i.price * i.qty) + '</td></tr>';
@@ -946,8 +999,8 @@
       var table = ($('[data-role="fTable"]').value || '').trim() || '—';
       var staff = ($('[data-role="fStaff"]').value || '').trim() || resolveStaffName();
       var room = getRoomFields('');
-      var method = ($('[data-role="fMethod"]').value || '').trim() || (mode === 'tab' ? '' : 'Cash');
-      var previewId = mode === 'tab' ? nextOrderId() + ' (Preview)' : nextSaleId() + ' (Preview)';
+      var method = ($('[data-role="fMethod"]').value || '').trim() || (orderType === 'tab' ? '' : 'Cash');
+      var previewId = orderType === 'tab' ? nextOrderId() + ' (Preview)' : nextSaleId() + ' (Preview)';
       var orderData = {
         id: previewId,
         items: cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; }),
@@ -1111,55 +1164,45 @@
     }
 
     async function submitCooOrder(){
-      if(!cooCart.length){showToast('Add at least one item.','error');return;}
-      var table=($('[data-role="cooTable"]').value||'').trim()||'—';
-      var covers=parseInt(($('[data-role="cooCovers"]').value||'1'),10)||1;
+      if(!cart.length){showToast('Add at least one item.','error');return;}
+      var table=($('[data-role="fTable"]').value||'').trim()||'—';
       var staff=($('[data-role="fStaff"]').value||'').trim()||resolveStaffName();
-      var notes=($('[data-role="cooNotes"]').value||'').trim();
-      var method=($('[data-role="cooMethod"]').value||'Cash');
-      var room=$('[data-role="cooRoomNumber"]').value||'';
-      var guest=$('[data-role="cooGuestName"]').value||'';
-      var gid=$('[data-role="cooGuestId"]').value||'';
-      var phone=$('[data-role="cooGuestPhone"]').value||'';
-      if(method==='Room Charge'&&!room){showToast('Select room for Room Charge.','error');return;}
-      var location=method==='Room Charge'&&room?'Room '+room:table;
-      var items=cooCart.map(function(c){return {name:c.name, qty:c.qty, price:c.price, recipeId:c.recipeId||''};});
+      var notes=($('[data-role="fNotes"]').value||'').trim();
+      var discount=parseFloat($('[data-role="cartDisc"]').value)||0;
+      var subtotal=cart.reduce(function(s,c){return s+c.price*c.qty;},0);
+      var total=subtotal*(1-discount/100);
+      var room=$('[data-role="fRoomNumber"]')?$('[data-role="fRoomNumber"]').value:'';
+      var guest=$('[data-role="fGuestName"]')?$('[data-role="fGuestName"]').value:'';
+      var gid=$('[data-role="fGuestId"]')?$('[data-role="fGuestId"]').value:'';
+      var phone=$('[data-role="fGuestPhone"]')?$('[data-role="fGuestPhone"]').value:'';
+      var items=cart.map(function(c){return {name:c.name, qty:c.qty, price:c.price};});
 
-      if(_editCooOrderId){
-        try{
-          var res=await fetch('/api/restaurant/coo-orders/'+encodeURIComponent(_editCooOrderId),{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({items:items,table:location,covers:covers,notes:notes})});
-          var body=null;try{body=await res.json();}catch(e){}
-          if(!res.ok) throw new Error((body&&body.error)||'Failed to update');
-          showToast(_editCooOrderId+' updated.','success');
-          _editCooOrderId=null; cooCart=[]; renderCooCart();
-          var btn=$('[data-role="cooSubmitBtn"]'); if(btn) btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Send to Kitchen';
-          if(typeof service!=='undefined'&&service&&typeof service.loadAll==='function'){try{await service.loadAll();syncFromService();}catch(e){}}
-          setMode('active'); renderOrdersTable(); renderKPIs();
-        }catch(err){showToast(err.message||'Failed to update','error');}
-        return;
-      }
-
-      var payload={table:location, covers:covers, items:items, notes:notes, staff:staff, method:method, roomNumber:room, guestName:guest, guestId:gid, guestPhone:phone};
+      var payload={table:table, covers:1, items:items, notes:notes, staff:staff, method:'Room Charge', roomNumber:room, guestName:guest, guestId:gid, guestPhone:phone};
       try{
         var res=await fetch('/api/restaurant/coo-orders',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
         var body=null;try{body=await res.json();}catch(e){}
         if(!res.ok) throw new Error((body&&body.error)||'Failed to send to kitchen');
-        showToast('COO order sent to kitchen — '+(body&&body.data&&body.data.order&&body.data.order.id||''),'success');
-        cooCart=[];renderCooCart();renderCooPicker();
+        showToast('Order sent to kitchen — '+(body&&body.data&&body.data.order&&body.data.order.id||''),'success');
+        clearCart();
         if(typeof service!=='undefined'&&service&&typeof service.loadAll==='function'){try{await service.loadAll();syncFromService();}catch(e){}}
-        renderKPIs();renderOrdersTable();
-      }catch(err){showToast(err.message||'Failed to send COO','error');}
+        renderKPIs();renderOrdersTable();renderPicker();
+      }catch(err){showToast(err.message||'Failed to send order','error');}
     }
 
     function addToCart(key) {
       const inv = stock.find(function (i) { return i.name === key; });
-      if (!inv || inv.qty <= 0) {
+      if (!inv) {
+        showToast(key + ' not found.', 'error');
+        return;
+      }
+      var isKitchen = String(inv.recipeId || '').trim() !== '';
+      if (!isKitchen && inv.qty <= 0) {
         showToast(key + ' is out of stock.', 'error');
         return;
       }
       const existing = cart.find(function (c) { return c.key === key; });
       if (existing) {
-        if (existing.qty >= inv.qty) {
+        if (!isKitchen && existing.qty >= inv.qty) {
           showToast('Only ' + inv.qty + ' ' + (inv.unit || '') + ' of ' + key + ' available.', 'error');
           return;
         }
@@ -1175,7 +1218,8 @@
       const c = cart.find(function (x) { return x.key === key; });
       if (!c) return;
       const inv = stock.find(function (i) { return i.name === key; });
-      const max = inv ? inv.qty : c.qty;
+      var isKitchen = inv && String(inv.recipeId || '').trim() !== '';
+      const max = isKitchen ? 999 : (inv ? inv.qty : c.qty);
       const next = c.qty + delta;
       if (next < 1) {
         cart = cart.filter(function (x) { return x.key !== key; });
@@ -1236,17 +1280,46 @@
         return;
       }
 
-      if (_editCooOrderId) {
+      // Editing an order from Active Orders (via loadOrderInView)
+      if (_editingOrderId) {
         var editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
+        var editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
+        var isCooEdit = editOrder && editOrder.type === 'coo';
         try {
-          var res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editCooOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
-          var body = null; try { body = await res.json(); } catch (e) {}
-          if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
-          showToast(_editCooOrderId + ' updated.', 'success');
-          _editCooOrderId = null; cart = []; renderCart();
-          var btn = $('[data-role="submitBtn"]'); if (btn) btn.innerHTML = '<i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>';
+          if (isCooEdit) {
+            var res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
+            var body = null; try { body = await res.json(); } catch (e) {}
+            if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
+          } else if (service && typeof service.openTab === 'function') {
+            // Use PATCH via service for tab edits
+            var discount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+            var subtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
+            var table = ($('[data-role="fTable"]').value || '').trim();
+            var notes = ($('[data-role="fNotes"]').value || '').trim();
+            await apiFetch('PATCH', '/api/' + moduleName + '/orders/' + encodeURIComponent(_editingOrderId), {
+              items: editItems, discount: discount, table: table || '—', notes: notes,
+            });
+          } else {
+            var discount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+            var subtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
+            var table = ($('[data-role="fTable"]').value || '').trim();
+            var notes = ($('[data-role="fNotes"]').value || '').trim();
+            var o2 = orders.find(function (x) { return x.id === _editingOrderId; });
+            if (o2) {
+              o2.items = editItems;
+              o2.discount = discount;
+              o2.subtotal = subtotal;
+              o2.total = subtotal * (1 - discount / 100);
+              o2.table = table || '—';
+              o2.notes = notes;
+              await saveShared(keys.orders, orders);
+              apiSave('PATCH', apiPaths.orders + '/' + _editingOrderId, { items: editItems, discount: discount, table: table, notes: notes });
+            }
+          }
+          showToast(_editingOrderId + ' updated.', 'success');
           if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
-          setMode('active'); renderOrdersTable(); renderKPIs();
+          exitEditMode();
+          setMode('active');
         } catch (err) { showToast(err.message || 'Failed to update', 'error'); }
         return;
       }
@@ -1262,7 +1335,7 @@
       const items = cart.map(function (c) { return { name: c.key, key: c.key, qty: c.qty, price: c.price }; });
 
       try {
-        if (mode === 'quick') {
+        if (orderType === 'quick') {
           // Payment required only for Quick Sale
           const room = getRoomFields('');
           let method = ($('[data-role="fMethod"]') || {}).value || 'Cash';
@@ -1326,6 +1399,10 @@
               'success'
             );
           }
+        } else if (orderType === 'coo') {
+          // Cook on Order — delegate to COO submit
+          submitCooOrder();
+          return;
         } else {
           // Open Tab — payment optional (can still pay later via Active Orders → Pay).
           const room = getRoomFields('');
@@ -1444,9 +1521,9 @@
           st.charAt(0).toUpperCase() + st.slice(1) + '</span></td>' +
           '<td><div class="ow-act-btns">' +
           (st === 'open' && o.type === 'coo'
-            ? '<span style="font-size:10px;color:var(--amber);font-weight:600;margin-right:4px;"><i class="fa-solid fa-fire"></i> Awaiting Kitchen</span>'
+            ? '<span style="font-size:10px;color:var(--amber);font-weight:600;margin-right:4px;"><i class="fa-solid fa-fire"></i> Kitchen</span>'
             : '') +
-          '<button type="button" class="ow-act-btn" data-view-coo="' + esc(o.id) + '" style="font-weight:700;">View</button>' +
+          '<button type="button" class="ow-act-btn" data-view-order="' + esc(o.id) + '" style="font-weight:700;">View</button>' +
           '</div></td></tr>';
       }).join('');
       var pag = $('[data-role="ordPagination"]');
@@ -1574,6 +1651,148 @@
         var btn2 = $('[data-role="submitBtn"]'); if (btn2) { btn2.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes'; btn2.disabled = false; }
       }
       showToast('Editing ' + id + ' — modify items and save.', 'info');
+    }
+
+    /* ── Load order into sale form directly (replaces modal) ── */
+    function loadOrderInView(id) {
+      var o = orders.find(function (x) { return x.id === id; });
+      if (!o) return;
+      _editingOrderId = id;
+      var st = (o.status || 'open').toLowerCase();
+      var isCompleted = st === 'paid' || st === 'cancelled';
+      var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
+
+      // Switch to builder view
+      mode = 'quick';
+      $$('.ow-mode-tab').forEach(function (tab) {
+        tab.classList.toggle('active', tab.dataset.mode === 'quick');
+      });
+      $('[data-view="builder"]').classList.add('active');
+      $('[data-view="active"]').classList.remove('active');
+      var cooView = $('[data-view="coo"]');
+      if (cooView) cooView.classList.remove('active');
+
+      // Set order type from order
+      var oType = o.type === 'coo' ? 'coo' : (o.source === 'tab' || (!o.method && !o.payMethod)) ? 'tab' : 'quick';
+      setOrderType(oType);
+
+      // Disable toggle buttons if viewing/editing
+      $$('[data-order-type]').forEach(function (btn) {
+        btn.disabled = isCompleted;
+        if (isCompleted) btn.style.opacity = '0.5';
+        else btn.style.opacity = '';
+      });
+
+      // Load items into cart
+      cart = (o.items || []).map(function (it) {
+        return { key: it.name, name: it.name, qty: it.qty || 1, price: it.price || 0 };
+      });
+      renderCart();
+      renderPicker();
+
+      // Fill form fields
+      var ft = $('[data-role="fTable"]'); if (ft) { ft.value = o.table || ''; ft.disabled = isCompleted; }
+      var fn = $('[data-role="fNotes"]'); if (fn) { fn.value = o.notes || ''; fn.disabled = isCompleted; }
+      var fd = $('[data-role="cartDisc"]'); if (fd) { fd.value = o.discount || 0; fd.disabled = isCompleted; }
+
+      // Set payment method
+      var methodSel = $('[data-role="fMethod"]');
+      if (methodSel) {
+        if (o.payMethod || o.method) methodSel.value = o.payMethod || o.method;
+        methodSel.disabled = isCompleted;
+      }
+      toggleRoomChargeUI();
+
+      // Update title
+      var titleEl = $('[data-role="cartTitle"]');
+      if (titleEl) {
+        var typeLabel = oType === 'coo' ? '<i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order' : oType === 'tab' ? 'Open Tab' : 'Quick Sale';
+        titleEl.innerHTML = esc(o.id) + ' — ' + typeLabel;
+      }
+
+      // Show edit bar
+      var editBar = $('[data-role="orderEditBar"]');
+      var editLabel = $('[data-role="orderEditLabel"]');
+      var deleteBtn = $('[data-role="deleteBtn"]');
+      if (editBar) editBar.style.display = '';
+      if (editLabel) {
+        if (isCompleted) editLabel.textContent = st === 'paid' ? '✓ Paid — View Only' : '✕ Cancelled — View Only';
+        else editLabel.textContent = 'Editing ' + o.id;
+      }
+      if (deleteBtn) {
+        deleteBtn.style.display = (isManager && !isCompleted) ? '' : 'none';
+      }
+
+      // Update submit button
+      var submitBtn = $('[data-role="submitBtn"]');
+      if (submitBtn) {
+        if (isCompleted) {
+          submitBtn.disabled = true;
+          submitBtn.style.display = 'none';
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.style.display = '';
+          $('[data-role="submitLabel"]').textContent = 'Save Changes';
+        }
+      }
+
+      // Disable print for completed (keep for all)
+      var printBtn = $('[data-role="printBtn"]');
+      if (printBtn) printBtn.disabled = false;
+    }
+
+    function exitEditMode() {
+      _editingOrderId = null;
+      // Re-enable form fields
+      var ft = $('[data-role="fTable"]'); if (ft) ft.disabled = false;
+      var fn = $('[data-role="fNotes"]'); if (fn) fn.disabled = false;
+      var fd = $('[data-role="cartDisc"]'); if (fd) fd.disabled = false;
+      var methodSel = $('[data-role="fMethod"]'); if (methodSel) methodSel.disabled = false;
+      $$('[data-order-type]').forEach(function (btn) { btn.disabled = false; btn.style.opacity = ''; });
+      // Hide edit bar
+      var editBar = $('[data-role="orderEditBar"]');
+      if (editBar) editBar.style.display = 'none';
+      // Reset submit button
+      var submitBtn = $('[data-role="submitBtn"]');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.style.display = ''; }
+      // Reset title
+      setOrderType(orderType);
+      // Clear cart
+      clearCart();
+    }
+
+    async function deleteOrderInView() {
+      if (!_editingOrderId) return;
+      var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
+      if (!isManager) { showToast('Only managers and admins can delete orders.', 'error'); return; }
+      var o = orders.find(function (x) { return x.id === _editingOrderId; });
+      if (!o) return;
+      var st = (o.status || '').toLowerCase();
+      if (st === 'paid' || st === 'cancelled') { showToast('Cannot delete a ' + st + ' order.', 'error'); return; }
+      var ok = confirm('Delete order ' + _editingOrderId + '? This cannot be undone.');
+      if (!ok) return;
+      try {
+        if (o.type === 'coo') {
+          var res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' }, credentials: 'include'
+          });
+          var j = await res.json();
+          if (!res.ok || !j.success) throw new Error(j.error || 'Delete failed');
+        } else if (service && typeof service.cancelOrder === 'function') {
+          await service.cancelOrder(_editingOrderId);
+          syncFromService();
+        } else {
+          o.status = 'cancelled';
+          await saveShared(keys.orders, orders);
+          apiSave('PATCH', apiPaths.orders + '/' + _editingOrderId, { status: 'cancelled' });
+        }
+        showToast(_editingOrderId + ' deleted.', 'success');
+        if (service && typeof service.loadAll === 'function') { await service.loadAll(); syncFromService(); }
+        exitEditMode();
+        setMode('active');
+      } catch (err) {
+        showToast((err && err.message) || 'Could not delete order.', 'error');
+      }
     }
 
     function renderEditCooModal(o) {
@@ -1955,7 +2174,8 @@
       }
       const cat = e.target.closest('[data-cat]');
       if (cat) {
-        activeCat = cat.dataset.cat;
+        if (orderType === 'coo') cooActiveCat = cat.dataset.cat;
+        else activeCat = cat.dataset.cat;
         renderPicker();
         return;
       }
@@ -1989,6 +2209,9 @@
         else if (a === 'confirmPay') confirmPayOrder();
         else if (a === 'clearRoom') clearSelectedRoom('');
         else if (a === 'clearPayRoom') clearSelectedRoom('pay');
+        else if (a === 'saveEditOrder') { submitOrder(); }
+        else if (a === 'cancelEditOrder') { exitEditMode(); setMode('active'); }
+        else if (a === 'deleteEditOrder') { deleteOrderInView(); }
         return;
       }
       const served = e.target.closest('[data-served]');
@@ -1999,8 +2222,10 @@
       if (cancel) { cancelOrder(cancel.dataset.cancel); return; }
       const pr = e.target.closest('[data-print]');
       if (pr) { printOrderById(pr.dataset.print); return; }
-      const viewCoo = e.target.closest('[data-view-coo]');
-      if (viewCoo) { showCooDetail(viewCoo.dataset.viewCoo); return; }
+      const viewOrder = e.target.closest('[data-view-order]');
+      if (viewOrder) { loadOrderInView(viewOrder.dataset.viewOrder); return; }
+      const orderTypeBtn = e.target.closest('[data-order-type]');
+      if (orderTypeBtn && !orderTypeBtn.disabled) { setOrderType(orderTypeBtn.dataset.orderType); return; }
       const ordPage = e.target.closest('[data-ord-page]');
       if (ordPage) {
         var dir = ordPage.dataset.ordPage;
@@ -2165,11 +2390,13 @@
       renderPicker();
       renderCart();
       renderOrdersTable();
+      fetchCooMenuItems();
       if (isWaiter) {
         const quickTab = root.querySelector('[data-mode="quick"]');
         if (quickTab) quickTab.style.display = 'none';
       }
-      setMode(isWaiter ? 'tab' : 'quick');
+      setMode('quick');
+      if (isWaiter) setOrderType('tab');
       checkPendingCooTransfers();
       setInterval(checkPendingCooTransfers, 30000);
     }
