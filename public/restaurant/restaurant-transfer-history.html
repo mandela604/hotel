@@ -259,6 +259,7 @@
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
   @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes skeletonShimmer{ 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
   .flatpickr-calendar{ background:#ffffff !important; border:1px solid #eef0f6 !important; box-shadow:0 18px 46px rgba(15,34,55,0.16) !important; font-family:'Outfit',sans-serif !important; }
   .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after{ border-bottom-color:#ffffff !important; }
@@ -292,6 +293,18 @@
     <div id="topbarSlot"></div>
     <div class="content">
       <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- Skeleton loader — shown while data loads, hidden once ready -->
+      <div id="skeletonLoader" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+          ${[1,2,3,4].map(()=>'<div style="height:80px;border-radius:14px;background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:skeletonShimmer 1.4s infinite;"></div>').join('')}
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          ${[1,2,3,4,5].map(()=>'<div style="height:52px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:skeletonShimmer 1.4s infinite;"></div>').join('')}
+        </div>
+      </div>
+
+      <div id="mainContent" style="display:none;">
 
       <div class="toolbar no-print">
         <div class="toolbar-row top">
@@ -394,10 +407,11 @@
           <span id="paginLabel">—</span>
           <div class="page-btns" id="pageBtns"></div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
+      </div><!-- /.panel -->
+      </div><!-- /#mainContent -->
+    </div><!-- /.content -->
+  </div><!-- /.main -->
+</div><!-- /.app -->
 
 <!-- NEW REQUISITION MODAL (GraceHotelRequestForm) -->
 <div class="modal-overlay" id="reqModal">
@@ -1373,6 +1387,10 @@ function printPage() {
 
 /* ── Init (call service, then render) ──────────────────── */
 async function init() {
+  // Show skeleton, hide main content until both data sources are loaded
+  document.getElementById('skeletonLoader').style.display = '';
+  document.getElementById('mainContent').style.display = 'none';
+
   session = await waitForSession(800);
   canAccept = canAcceptFromSession(session);
   canReject = canRejectFromSession(session);
@@ -1413,6 +1431,10 @@ async function init() {
   } else {
     console.warn('[TransferHistory] StoreService script not found — New Requisition will be unavailable.');
   }
+
+  // Both loads complete — hide skeleton, reveal content
+  document.getElementById('skeletonLoader').style.display = 'none';
+  document.getElementById('mainContent').style.display = '';
 
   render();
 }

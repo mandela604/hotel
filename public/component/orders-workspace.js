@@ -945,7 +945,7 @@
           '<div class="ow-mi-cat">' + esc(i.category || '') + '</div>' +
           '<div class="ow-mi-name">' + esc(i.name) + '</div>' +
           '<div class="ow-mi-price">' + fmtN(i.price) + '</div>' +
-          (orderType !== 'coo' ? '<div class="ow-mi-stock ' + lvl + '">' + (i.qty || 0) + ' ' + esc(i.unit || '') + ' on hand</div>' : '') +
+          '<div class="ow-mi-stock ' + lvl + '">' + (i.qty || 0) + ' ' + esc(i.unit || '') + ' on hand</div>' +
           '</button>';
       }).join('');
     }
