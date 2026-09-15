@@ -1282,38 +1282,36 @@
 
       // Editing an order from Active Orders (via loadOrderInView)
       if (_editingOrderId) {
-        var editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
-        var editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
-        var isCooEdit = editOrder && editOrder.type === 'coo';
+        const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
+        const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
+        const isCooEdit = editOrder && editOrder.type === 'coo';
         try {
           if (isCooEdit) {
-            var res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
-            var body = null; try { body = await res.json(); } catch (e) {}
+            const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
+            const body = null; try { await res.json(); } catch (e) {}
             if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
           } else if (service && typeof service.openTab === 'function') {
-            // Use PATCH via service for tab edits
-            var discount = parseFloat($('[data-role="cartDisc"]').value) || 0;
-            var subtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
-            var table = ($('[data-role="fTable"]').value || '').trim();
-            var notes = ($('[data-role="fNotes"]').value || '').trim();
+            const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+            const edTable = ($('[data-role="fTable"]').value || '').trim();
+            const edNotes = ($('[data-role="fNotes"]').value || '').trim();
             await apiFetch('PATCH', '/api/' + moduleName + '/orders/' + encodeURIComponent(_editingOrderId), {
-              items: editItems, discount: discount, table: table || '—', notes: notes,
+              items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
             });
           } else {
-            var discount = parseFloat($('[data-role="cartDisc"]').value) || 0;
-            var subtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
-            var table = ($('[data-role="fTable"]').value || '').trim();
-            var notes = ($('[data-role="fNotes"]').value || '').trim();
-            var o2 = orders.find(function (x) { return x.id === _editingOrderId; });
+            const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+            const edSubtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
+            const edTable = ($('[data-role="fTable"]').value || '').trim();
+            const edNotes = ($('[data-role="fNotes"]').value || '').trim();
+            const o2 = orders.find(function (x) { return x.id === _editingOrderId; });
             if (o2) {
               o2.items = editItems;
-              o2.discount = discount;
-              o2.subtotal = subtotal;
-              o2.total = subtotal * (1 - discount / 100);
-              o2.table = table || '—';
-              o2.notes = notes;
+              o2.discount = edDiscount;
+              o2.subtotal = edSubtotal;
+              o2.total = edSubtotal * (1 - edDiscount / 100);
+              o2.table = edTable || '—';
+              o2.notes = edNotes;
               await saveShared(keys.orders, orders);
-              apiSave('PATCH', apiPaths.orders + '/' + _editingOrderId, { items: editItems, discount: discount, table: table, notes: notes });
+              apiSave('PATCH', apiPaths.orders + '/' + _editingOrderId, { items: editItems, discount: edDiscount, table: edTable, notes: edNotes });
             }
           }
           showToast(_editingOrderId + ' updated.', 'success');
