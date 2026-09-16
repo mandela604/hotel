@@ -533,6 +533,8 @@
           '</tr>';
         });
         html += '</tbody></table></div>';
+        // Transfer All button — sends all remaining dishes in one click
+        html += '<button type="button" class="pmx-btn pmx-btn-primary" data-act="sendAllTransfers" style="width:100%;justify-content:center;margin-top:4px;"><i class="fa-solid fa-paper-plane"></i> Transfer All to Restaurant</button>';
         formBody.innerHTML = html;
       } else {
         // Legacy single-dish form
@@ -625,6 +627,61 @@
         sendingTransfer = false;
         if (btn) btn.disabled = false;
       }
+    }
+
+    async function sendAllTransfers() {
+      if (!current || sendingTransfer) return;
+      var p = current;
+      if (!Array.isArray(p.dishes) || !p.dishes.length) return;
+      var list = transfersForCurrent();
+      var completedDishes = p.dishes.filter(function (d) { return d.status === 'completed'; });
+      // Collect all rows that still have remaining qty
+      var toSend = [];
+      completedDishes.forEach(function (d) {
+        var realIdx = p.dishes.indexOf(d);
+        var sent = transferredQty(list, d.dish);
+        var qtyEl = $('[data-role="xferQty_' + realIdx + '"]');
+        var unitEl = $('[data-role="xferUnit_' + realIdx + '"]');
+        var destEl = $('[data-role="xferDest_' + realIdx + '"]');
+        var qty = parseFloat(qtyEl ? qtyEl.value : 0) || 0;
+        var unit = unitEl ? unitEl.value : (d.outputUnit || 'Portions');
+        var dest = destEl ? destEl.value : DESTINATIONS[0];
+        if (qty > 0) toSend.push({ dish: d, idx: realIdx, qty: qty, unit: unit, dest: dest });
+      });
+      if (!toSend.length) { toast('Nothing left to transfer.', 'error'); return; }
+
+      sendingTransfer = true;
+      var btn = $('[data-act="sendAllTransfers"]');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending…'; }
+      var succeeded = 0;
+      var failed = [];
+      var pNo = current.id || current.no;
+      for (var i = 0; i < toSend.length; i++) {
+        var row = toSend[i];
+        try {
+          await service.addTransfer({
+            meal: row.dish.dish,
+            quantity: row.qty,
+            unit: row.unit,
+            sentBy: getStaffName(),
+            remarks: 'Batch transfer',
+            productionNo: pNo,
+            restaurant: row.dest,
+          });
+          succeeded++;
+        } catch (err) {
+          failed.push(row.dish.dish + ': ' + ((err && err.message) || 'error'));
+        }
+      }
+      sendingTransfer = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Transfer All to Restaurant'; }
+      if (failed.length === 0) {
+        toast(succeeded + ' dish' + (succeeded !== 1 ? 'es' : '') + ' transferred.', 'success');
+      } else {
+        toast(succeeded + ' sent, ' + failed.length + ' failed: ' + failed.join('; '), 'error');
+      }
+      onSaved(current);
+      renderTransferSection(current);
     }
 
     /* ── Void ── */
@@ -790,6 +847,7 @@
       if (a === 'saveBatchYield') { saveYield(); return; }
       if (a === 'sendTransfer') { sendTransfer(); return; }
       if (a === 'sendDishTransfer') { sendDishTransfer(Number(act.dataset.dishIdx)); return; }
+      if (a === 'sendAllTransfers') { sendAllTransfers(); return; }
       if (a === 'requestVoid') { requestVoid(); return; }
       if (a === 'requestBatchVoid') { requestVoid(); return; }
       if (a === 'confirmYes') { hideConfirm(true); return; }
