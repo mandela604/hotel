@@ -1320,22 +1320,6 @@
             items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
           });
         }
-          const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
-          const edSubtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
-          const edTable = ($('[data-role="fTable"]').value || '').trim();
-          const edNotes = ($('[data-role="fNotes"]').value || '').trim();
-          const o2 = orders.find(function (x) { return x.id === _editingOrderId; });
-          if (o2) {
-            o2.items = editItems;
-            o2.discount = edDiscount;
-            o2.subtotal = edSubtotal;
-            o2.total = edSubtotal * (1 - edDiscount / 100);
-            o2.table = edTable || '—';
-            o2.notes = edNotes;
-            await saveShared(keys.orders, orders);
-            apiSave('PATCH', apiPaths.orders + '/' + _editingOrderId, { items: editItems, discount: edDiscount, table: edTable, notes: edNotes });
-          }
-        }
         showToast(_editingOrderId + ' updated.', 'success');
         if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
         exitEditMode();
@@ -1367,22 +1351,6 @@
             await apiFetch('PATCH', '/orders/' + encodeURIComponent(_editingOrderId), {
               items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
             });
-          } else {
-            const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
-            const edSubtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
-            const edTable = ($('[data-role="fTable"]').value || '').trim();
-            const edNotes = ($('[data-role="fNotes"]').value || '').trim();
-            const o2 = orders.find(function (x) { return x.id === _editingOrderId; });
-            if (o2) {
-              o2.items = editItems;
-              o2.discount = edDiscount;
-              o2.subtotal = edSubtotal;
-              o2.total = edSubtotal * (1 - edDiscount / 100);
-              o2.table = edTable || '—';
-              o2.notes = edNotes;
-              await saveShared(keys.orders, orders);
-              apiSave('PATCH', apiPaths.orders + '/' + _editingOrderId, { items: editItems, discount: edDiscount, table: edTable, notes: edNotes });
-            }
           }
           showToast(_editingOrderId + ' updated.', 'success');
           if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
