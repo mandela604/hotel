@@ -611,32 +611,34 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: `Cannot mark a '${order.status}' order as served` });
   }
 
-  /* ── Deduct RestaurantStock per item (skip items not yet in stock) ── */
+  /* ── Deduct RestaurantStock per item — skip for COO orders (Kitchen owns the stock) ── */
   const stockIdMap = {};
   const procIdMap2 = {};
-  for (const it of order.items) {
-    const itemName = (it.name || it.key || '').trim();
-    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
-    if (!stockItem) continue;
-    stockIdMap[itemName.toLowerCase()] = stockItem.id;
-    procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
-    const qty = Number(it.qty);
-    if (stockItem.qty < qty) {
-      const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
-      err.statusCode = 400;
-      throw err;
-    }
-    stockItem.qty -= qty;
-    await stockItem.save();
+  if (!order.cooId) {
+    for (const it of order.items) {
+      const itemName = (it.name || it.key || '').trim();
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
+      if (!stockItem) continue;
+      stockIdMap[itemName.toLowerCase()] = stockItem.id;
+      procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
+      const qty = Number(it.qty);
+      if (stockItem.qty < qty) {
+        const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
+        err.statusCode = 400;
+        throw err;
+      }
+      stockItem.qty -= qty;
+      await stockItem.save();
 
-    await RestaurantMovement.create({
-      date: nowStamp(),
-      item: stockItem.name,
-      qtyIn: 0,
-      qtyOut: qty,
-      balance: stockItem.qty,
-      reason: `Tab ${order.id} served`,
-    });
+      await RestaurantMovement.create({
+        date: nowStamp(),
+        item: stockItem.name,
+        qtyIn: 0,
+        qtyOut: qty,
+        balance: stockItem.qty,
+        reason: `Tab ${order.id} served`,
+      });
+    }
   }
 
   /* ── Create pending Sale record ── */
@@ -702,31 +704,34 @@ exports.payOrder = asyncHandler(async (req, res) => {
     }
   } else {
     /* ── Direct pay (skip serve) — deduct stock + create completed Sale ── */
+    /* Skip stock deduction for COO orders — Kitchen owns the stock */
     const stockIdMap = {};
     const procIdMap2 = {};
-    for (const it of order.items) {
-      const itemName = (it.name || it.key || '').trim();
-      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
-      if (!stockItem) continue;
-      stockIdMap[itemName.toLowerCase()] = stockItem.id;
-      procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
-      const qty = Number(it.qty);
-      if (stockItem.qty < qty) {
-        const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
-        err.statusCode = 400;
-        throw err;
-      }
-      stockItem.qty -= qty;
-      await stockItem.save();
+    if (!order.cooId) {
+      for (const it of order.items) {
+        const itemName = (it.name || it.key || '').trim();
+        const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
+        if (!stockItem) continue;
+        stockIdMap[itemName.toLowerCase()] = stockItem.id;
+        procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
+        const qty = Number(it.qty);
+        if (stockItem.qty < qty) {
+          const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
+          err.statusCode = 400;
+          throw err;
+        }
+        stockItem.qty -= qty;
+        await stockItem.save();
 
-      await RestaurantMovement.create({
-        date: nowStamp(),
-        item: stockItem.name,
-        qtyIn: 0,
-        qtyOut: qty,
-        balance: stockItem.qty,
-        reason: `Tab ${order.id} paid`,
-      });
+        await RestaurantMovement.create({
+          date: nowStamp(),
+          item: stockItem.name,
+          qtyIn: 0,
+          qtyOut: qty,
+          balance: stockItem.qty,
+          reason: `Tab ${order.id} paid`,
+        });
+      }
     }
 
     const saleCount = await Sale.countDocuments({ department: DEPT });
