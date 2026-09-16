@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Recipes | Grace Kitchen</title>
+<title>Food Menu | Grace Kitchen</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="color-scheme" content="light">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -116,10 +116,10 @@
       <div class="panel">
         <div class="panel-head">
           <div>
-            <div class="panel-title"><i class="fa-solid fa-book-open" style="color:var(--gold)"></i> Recipes</div>
+            <div class="panel-title"><i class="fa-solid fa-book-open" style="color:var(--gold)"></i> Food Menu</div>
             <div class="panel-sub">Ingredient ratios & expected yield per dish — production scales these automatically</div>
           </div>
-          <button class="btn-primary" id="newRecipeBtn"><i class="fa-solid fa-plus"></i> New Recipe</button>
+          <button class="btn-primary" id="newRecipeBtn"><i class="fa-solid fa-plus"></i> New Food Menu</button>
         </div>
         <div class="toolbar">
           <div class="search-wrap">
@@ -137,7 +137,7 @@
 <!-- ADD/EDIT MODAL -->
 <div class="modal-overlay" id="recipeOverlay">
   <div class="modal">
-    <div class="modal-title" id="recipeModalTitle">New Recipe</div>
+    <div class="modal-title" id="recipeModalTitle">New Food Menu</div>
 
     <div class="fg">
       <div class="label">Dish Name *</div>
@@ -191,7 +191,7 @@
 
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeRecipeModal()">Cancel</button>
-      <button class="btn-primary" id="saveRecipeBtn"><i class="fa-solid fa-check"></i> Save Recipe</button>
+      <button class="btn-primary" id="saveRecipeBtn"><i class="fa-solid fa-check"></i> Save Food Menu</button>
     </div>
   </div>
 </div>
@@ -199,7 +199,7 @@
 <!-- DELETE CONFIRM -->
 <div class="modal-overlay" id="deleteOverlay">
   <div class="modal danger">
-    <div class="modal-title" style="color:var(--red);">Delete Recipe</div>
+    <div class="modal-title" style="color:var(--red);">Delete Food Menu</div>
     <p style="font-size:12.5px;color:var(--text2);line-height:1.5;" id="deleteMsg"></p>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeDeleteModal()">Cancel</button>
@@ -235,12 +235,12 @@ function renderKPIs() {
   var el = document.getElementById('kpiRow');
   el.innerHTML =
     '<div class="kpi-card acc-blue">' +
-      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-book-open"></i></div><div class="kpi-label">Total Recipes</div></div>' +
+      '<div class="kpi-top"><div class="kpi-ic ic-blue"><i class="fa-solid fa-book-open"></i></div><div class="kpi-label">Total Food Menu</div></div>' +
       '<div class="kpi-value" style="color:var(--blue);">' + k.total + '</div>' +
       '<div class="kpi-trend neutral">on file</div>' +
     '</div>' +
     '<div class="kpi-card acc-green">' +
-      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-fire-burner"></i></div><div class="kpi-label">Recipes In Use</div></div>' +
+      '<div class="kpi-top"><div class="kpi-ic ic-green"><i class="fa-solid fa-fire-burner"></i></div><div class="kpi-label">Food Menu In Use</div></div>' +
       '<div class="kpi-value" style="color:var(--green);">' + k.dishesProduced + '</div>' +
       '<div class="kpi-trend up">produced at least once</div>' +
     '</div>' +
@@ -264,7 +264,7 @@ function renderGrid() {
 
   var grid = document.getElementById('recipeGrid');
   if (!rows.length) {
-    grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1;"><i class="fa-solid fa-book" style="font-size:22px;display:block;margin-bottom:8px;color:var(--text3);"></i>No recipes yet. Click "New Recipe" to define how a dish is made.</div>';
+    grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1;"><i class="fa-solid fa-book" style="font-size:22px;display:block;margin-bottom:8px;color:var(--text3);"></i>No food menu yet. Click "New Food Menu" to define how a dish is made.</div>';
     return;
   }
 
@@ -375,7 +375,7 @@ function openRecipeModal(id) {
   renderBaseIngredientOptions();
   var r = id ? KitchenService.findRecipeById(id) : null;
 
-  document.getElementById('recipeModalTitle').textContent = r ? 'Edit Recipe' : 'New Recipe';
+  document.getElementById('recipeModalTitle').textContent = r ? 'Edit Food Menu' : 'New Food Menu';
   document.getElementById('rDish').value = r ? r.dish : '';
   document.getElementById('rDish').disabled = !!r;
   document.getElementById('rBaseQty').value = r ? r.baseQty : 1;

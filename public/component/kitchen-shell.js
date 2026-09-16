@@ -13,7 +13,7 @@
   const NAV = [
     { key: 'dashboard',  label: 'Dashboard',           href: 'kitchen-dashboard.html',          icon: 'fa-solid fa-gauge-high' },
     { key: 'stock',      label: 'Kitchen Stock',       href: 'kitchen-inventory.html',          icon: 'fa-solid fa-box' },
-    { key: 'recipes',    label: 'Recipes',             href: 'kitchen-recipes.html',            icon: 'fa-solid fa-book-open' },
+    { key: 'recipes',    label: 'Food Menu',           href: 'kitchen-recipes.html',            icon: 'fa-solid fa-book-open' },
     { key: 'prodhist',   label: 'Production',          href: 'kitchen-production-history.html', icon: 'fa-solid fa-kitchen-set' },
     { key: 'reqhist',    label: 'Requisitions',        href: 'kitchen-requisition-history.html', icon: 'fa-solid fa-file-lines', badgeKey: 'reqhist' },
   ];
