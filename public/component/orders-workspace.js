@@ -1314,7 +1314,7 @@
           const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
           const edTable = ($('[data-role="fTable"]').value || '').trim();
           const edNotes = ($('[data-role="fNotes"]').value || '').trim();
-          await apiFetch('PATCH', '/api/' + moduleName + '/orders/' + encodeURIComponent(_editingOrderId), {
+          await apiFetch('PATCH', '/orders/' + encodeURIComponent(_editingOrderId), {
             items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
           });
         } else {
@@ -1361,7 +1361,7 @@
             const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
             const edTable = ($('[data-role="fTable"]').value || '').trim();
             const edNotes = ($('[data-role="fNotes"]').value || '').trim();
-            await apiFetch('PATCH', '/api/' + moduleName + '/orders/' + encodeURIComponent(_editingOrderId), {
+            await apiFetch('PATCH', '/orders/' + encodeURIComponent(_editingOrderId), {
               items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
             });
           } else {
