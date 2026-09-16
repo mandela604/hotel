@@ -1301,12 +1301,21 @@
       };
     }
 
+    function setBtnLoading(btn, loading, originalHtml) {
+      if (!btn) return;
+      if (loading) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...'; }
+      else { btn.disabled = false; if (originalHtml) btn.innerHTML = originalHtml; }
+    }
+
     async function saveEditOrderOnly() {
       if (!_editingOrderId) return;
+      const btn = $('[data-role="submitBtn"]');
+      const origHtml = btn ? btn.innerHTML : '';
       const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
       const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
       const isCooEdit = editOrder && editOrder.type === 'coo';
       const cooNeedsPatch = isCooEdit && (editOrder.status || '').toLowerCase() === 'open';
+      setBtnLoading(btn, true);
       try {
         if (cooNeedsPatch) {
           const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
@@ -1325,6 +1334,7 @@
         exitEditMode();
         setMode('active');
       } catch (err) { showToast(err.message || 'Failed to update', 'error'); }
+      finally { setBtnLoading(btn, false, origHtml); }
     }
 
     async function submitOrder() {
@@ -1335,6 +1345,9 @@
 
       // Editing an order from Active Orders (via loadOrderInView)
       if (_editingOrderId) {
+        const btn = $('[data-role="submitBtn"]');
+        const origHtml = btn ? btn.innerHTML : '';
+        setBtnLoading(btn, true);
         const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
         const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
         const isCooEdit = editOrder && editOrder.type === 'coo';
@@ -1374,6 +1387,7 @@
           exitEditMode();
           setMode('active');
         } catch (err) { showToast(err.message || 'Failed', 'error'); }
+        finally { setBtnLoading(btn, false, origHtml); }
         return;
       }
 
@@ -1387,6 +1401,9 @@
       const stamp = nowStamp();
       const items = cart.map(function (c) { return { name: c.key, key: c.key, qty: c.qty, price: c.price }; });
 
+      const btn = $('[data-role="submitBtn"]');
+      const origHtml = btn ? btn.innerHTML : '';
+      setBtnLoading(btn, true);
       try {
         if (orderType === 'quick') {
           // Payment required only for Quick Sale
@@ -1521,6 +1538,8 @@
       } catch (err) {
         showToast((err && err.message) || 'Could not submit order.', 'error');
         return;
+      } finally {
+        setBtnLoading(btn, false, origHtml);
       }
 
       clearCart();
