@@ -1425,8 +1425,6 @@
             if (isRoomCharge) console.log('[RoomCharge] Quick Sale payload →', JSON.stringify(rcPayload, null, 2));
             const sale = await service.recordSale(rcPayload);
             if (isRoomCharge) console.log('[RoomCharge] Quick Sale response ←', JSON.stringify(sale, null, 2));
-              guestId: isRoomCharge ? (room.guestId || null) : null,
-            });
             syncFromService();
             showToast(
               isRoomCharge
