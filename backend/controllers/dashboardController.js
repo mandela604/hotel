@@ -32,11 +32,11 @@ exports.overview = asyncHandler(async (req, res) => {
     Room.countDocuments(),
     Booking.countDocuments({ createdAt: { $gte: today.getTime() } }),
     Sale.aggregate([
-      { $match: { source: 'Restaurant', status: 'completed', createdAt: { $gte: today } } },
+      { $match: { department: 'restaurant', status: 'completed', createdAt: { $gte: today } } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]),
     Sale.aggregate([
-      { $match: { source: 'Poolbar', status: 'completed', createdAt: { $gte: today } } },
+      { $match: { department: 'poolbar', status: 'completed', createdAt: { $gte: today } } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]),
     PurchaseRequest.countDocuments({ status: { $in: ['pending', 'accountant', 'gm'] } }),
