@@ -806,6 +806,28 @@ exports.payOrder = asyncHandler(async (req, res) => {
   res.json({ success: true, data: order, sale });
 });
 
+exports.updateOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findOne({ id: req.params.id, department: DEPT });
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (order.status !== 'open') {
+    return res.status(400).json({ success: false, error: 'Only an open order can be edited' });
+  }
+
+  const { items, notes, table, discount } = req.body;
+  if (items !== undefined) {
+    order.items = items.map(it => ({ name: (it.name || '').trim(), qty: Number(it.qty), price: Number(it.price) }));
+    order.subtotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);
+  }
+  if (discount !== undefined) order.discount = Number(discount);
+  order.total = order.subtotal * (1 - (Number(order.discount) || 0) / 100);
+
+  if (notes !== undefined) order.notes = notes;
+  if (table !== undefined) order.table = table;
+
+  await order.save();
+  res.json({ success: true, data: order });
+});
+
 exports.cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
