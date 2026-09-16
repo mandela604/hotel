@@ -1410,7 +1410,7 @@
             return;
           }
           if (service && typeof service.recordSale === 'function') {
-            const sale = await service.recordSale({
+            const rcPayload = {
               items: items,
               discount: discount,
               method: method,
@@ -1420,6 +1420,11 @@
               roomNumber: isRoomCharge ? (room.room || null) : null,
               guestName: isRoomCharge ? (room.guest || null) : null,
               guestPhone: isRoomCharge ? (room.phone || null) : null,
+              guestId: isRoomCharge ? (room.guestId || null) : null,
+            };
+            if (isRoomCharge) console.log('[RoomCharge] Quick Sale payload →', JSON.stringify(rcPayload, null, 2));
+            const sale = await service.recordSale(rcPayload);
+            if (isRoomCharge) console.log('[RoomCharge] Quick Sale response ←', JSON.stringify(sale, null, 2));
               guestId: isRoomCharge ? (room.guestId || null) : null,
             });
             syncFromService();
@@ -1484,6 +1489,8 @@
           const guestPhone = isRoomCharge ? (room.phone || null) : null;
           const guestId = isRoomCharge ? (room.guestId || null) : null;
 
+          if (isRoomCharge) console.log('[RoomCharge] Open Tab payload →', JSON.stringify({ roomNumber, guestName, guestPhone, guestId, method }, null, 2));
+
           if (service && typeof service.openTab === 'function') {
             const order = await service.openTab({
               items: items,
@@ -1499,6 +1506,7 @@
               guestId: guestId,
               createdBy: staff,
             });
+            if (isRoomCharge) console.log('[RoomCharge] Open Tab response ←', JSON.stringify(order, null, 2));
             syncFromService();
             showToast('Tab ' + ((order && order.id) || '') + ' opened' + (table ? ' for ' + table : '') + '.', 'success');
           } else {
@@ -2066,7 +2074,9 @@
           const payArg = isRoomCharge
             ? { method: method, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
             : method;
+          if (isRoomCharge) console.log('[RoomCharge] Pay Order payload →', JSON.stringify(payArg, null, 2));
           const result = await service.payOrder(payOrderId, payArg);
+          if (isRoomCharge) console.log('[RoomCharge] Pay Order response ←', JSON.stringify(result, null, 2));
           syncFromService();
           const saleId = result && result.sale ? result.sale.id : '';
           $('[data-role="payModal"]').classList.remove('show');

@@ -430,11 +430,15 @@ exports.checkinBooking = asyncHandler(async (req, res) => {
   }
 
   booking.status = 'checkedin';
-  // Record the actual moment of check-in so revenue calculations and
-  // activity logs always reflect when the guest physically arrived,
-  // not when the reservation was originally made.
   booking.checkin = new Date().toISOString().split('T')[0];
   booking.updatedAt = Date.now();
+
+  // Backfill guestId if missing — ensures room charge lookups always work
+  if (!booking.guestId && booking.guest) {
+    const gp = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
+    if (gp && gp.id) booking.guestId = gp.id;
+  }
+
   await booking.save();
 
   await logActivity('Booking', 'green', `${booking.guest} checked in — Room ${booking.room}`, 'booking-rooms.html');

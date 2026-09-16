@@ -283,10 +283,17 @@ exports.createSale = asyncHandler(async (req, res) => {
   });
 
   if (method === 'Room Charge') {
-    const guest = guestId ? (await Guest.findOne({ id: guestId }) || await Guest.findOne({ guestId: guestId })) : await Guest.findOne({ name: guestName });
+    /* Post charge to Guest.folio — room lookup is most reliable path */
+    let guest = null;
+    const activeBookingR = roomNumber ? await Booking.findOne({ room: roomNumber, status: 'checkedin' }) : null;
+    const resolvedGuestIdR = guestId || (activeBookingR && activeBookingR.guestId) || '';
+    if (resolvedGuestIdR) guest = await Guest.findOne({ id: resolvedGuestIdR });
+    if (!guest && resolvedGuestIdR) guest = await Guest.findOne({ guestId: resolvedGuestIdR });
+    if (!guest && req.body.guestPhone) guest = await Guest.findOne({ phone: req.body.guestPhone });
+    if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
+    if (!guest && activeBookingR && activeBookingR.phone) guest = await Guest.findOne({ phone: activeBookingR.phone });
     if (guest) {
-      var bRefR = '';
-      if (roomNumber) { var bkR = await Booking.findOne({ room: roomNumber, status: 'checkedin' }); if (bkR) bRefR = bkR.id; }
+      const bRefR = activeBookingR ? activeBookingR.id : '';
       guest.charges.push({
         bookingRef: bRefR,
         date: todayDDMMYY(),
@@ -763,10 +770,16 @@ exports.payOrder = asyncHandler(async (req, res) => {
 
   /* ── Room Charge → post to guest folio ── */
   if (payMethod === 'Room Charge') {
-    const guest = guestId ? (await Guest.findOne({ id: guestId }) || await Guest.findOne({ guestId: guestId })) : await Guest.findOne({ name: guestName });
+    let guest = null;
+    const activeBookingR2 = roomNumber ? await Booking.findOne({ room: roomNumber, status: 'checkedin' }) : null;
+    const resolvedGuestIdR2 = guestId || (activeBookingR2 && activeBookingR2.guestId) || '';
+    if (resolvedGuestIdR2) guest = await Guest.findOne({ id: resolvedGuestIdR2 });
+    if (!guest && resolvedGuestIdR2) guest = await Guest.findOne({ guestId: resolvedGuestIdR2 });
+    if (!guest && guestPhone) guest = await Guest.findOne({ phone: guestPhone });
+    if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
+    if (!guest && activeBookingR2 && activeBookingR2.phone) guest = await Guest.findOne({ phone: activeBookingR2.phone });
     if (guest) {
-      var bRefR2 = '';
-      if (roomNumber) { var bkR2 = await Booking.findOne({ room: roomNumber, status: 'checkedin' }); if (bkR2) bRefR2 = bkR2.id; }
+      const bRefR2 = activeBookingR2 ? activeBookingR2.id : '';
       guest.charges.push({
         bookingRef: bRefR2,
         date: todayDDMMYY(),

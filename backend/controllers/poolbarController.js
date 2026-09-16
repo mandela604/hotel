@@ -269,14 +269,17 @@ exports.createSale = asyncHandler(async (req, res) => {
 
     /* Post charge to Guest.folio (Guest.charges[]) — uuid primary, name/phone fallback */
     let guest = null;
-    const fid = guestId || (booking && booking.guestId) || '';
-    if (fid) guest = await Guest.findOne({ id: fid });
-    if (!guest && fid) guest = await Guest.findOne({ guestId: fid });
-    if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
+    // Most reliable: look up active booking by room to get guestId
+    const activeBooking = roomNumber ? await Booking.findOne({ room: roomNumber, status: 'checkedin' }) : null;
+    const resolvedGuestId = guestId || (activeBooking && activeBooking.guestId) || '';
+    if (resolvedGuestId) guest = await Guest.findOne({ id: resolvedGuestId });
+    if (!guest && resolvedGuestId) guest = await Guest.findOne({ guestId: resolvedGuestId });
     if (!guest && guestPhone) guest = await Guest.findOne({ phone: guestPhone });
+    if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
+    if (!guest && activeBooking && activeBooking.phone) guest = await Guest.findOne({ phone: activeBooking.phone });
     if (guest) {
       var bRef = '';
-      if (roomNumber) { var bkDoc = await Booking.findOne({ room: roomNumber, status: 'checkedin' }); if (bkDoc) bRef = bkDoc.id; }
+      if (activeBooking) bRef = activeBooking.id;
       guest.charges.push({
         bookingRef: bRef,
         date: todayDDMMYY(),
