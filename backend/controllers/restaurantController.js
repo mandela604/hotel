@@ -229,7 +229,7 @@ exports.listSales = asyncHandler(async (req, res) => {
 // record, e.g. plain menu-only items with nothing tracked in inventory),
 // and posts a room charge onto the guest's folio when paid via Room Charge.
 exports.createSale = asyncHandler(async (req, res) => {
-  const { items, method, table, discount, roomNumber, guestName, guestId } = req.body;
+  const { items, method, table, discount, roomNumber, guestName, guestPhone, guestId } = req.body;
 
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const discountPct = Number(discount) || 0;
