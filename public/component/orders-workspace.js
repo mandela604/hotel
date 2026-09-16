@@ -898,10 +898,10 @@
         '<div class="ow-kpi-trend neutral">Sold this shift (today)</div></div>';
 
       const badge = $('[data-role="activeBadge"]');
-      if (activeTabs > 0) {
+      if (badge && activeTabs > 0) {
         badge.textContent = activeTabs;
         badge.classList.add('show');
-      } else {
+      } else if (badge) {
         badge.classList.remove('show');
       }
     }

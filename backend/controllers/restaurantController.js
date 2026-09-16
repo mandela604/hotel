@@ -280,6 +280,9 @@ exports.createSale = asyncHandler(async (req, res) => {
     table: table || '',
     date: new Date(),
     status: method === 'Room Charge' ? 'pending' : 'completed',
+    roomNumber: roomNumber || null,
+    guestName: guestName || null,
+    guestPhone: guestPhone || null,
   });
 
   if (method === 'Room Charge') {
