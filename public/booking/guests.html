@@ -709,10 +709,8 @@ function openProfile(id, preserveTab){
   document.getElementById('tbHistCount').textContent  = g.stays.length + activeBookingsForGuest(g).length;
   var activeBooking = activeBookingsForGuest(g)[0] || null;
   activeFolioBookingId = activeBooking ? (activeBooking.id || activeBooking._id) : '';
-  var activeRoom = activeBooking && activeBooking.room ? String(activeBooking.room).trim() : '';
   var filteredCharges = activeFolioBookingId ? g.charges.filter(function(c){
     if (c.bookingRef && String(c.bookingRef) === String(activeFolioBookingId)) return true;
-    if (activeRoom && c.room && String(c.room).trim() === activeRoom) return true;
     return false;
   }) : g.charges;
   document.getElementById('tbFolioCount').textContent = filteredCharges.length;
@@ -799,11 +797,8 @@ function renderStayHistory(g){
 function renderCharges(g, filterBookingId){
   var allCharges = [...g.charges];
   if (filterBookingId) {
-    var actBk = (bookingsData || []).find(function(b){ return String(b.id || b._id) === String(filterBookingId); });
-    var actRm = actBk && actBk.room ? String(actBk.room).trim() : '';
     allCharges = allCharges.filter(function(c){
       if (c.bookingRef && String(c.bookingRef) === String(filterBookingId)) return true;
-      if (actRm && c.room && String(c.room).trim() === actRm) return true;
       return false;
     });
   }

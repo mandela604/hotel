@@ -953,10 +953,8 @@
       if (!acc || !list) return;
       var allCharges = (currentGuest && currentGuest.charges) || [];
       var bookingId = (editBooking && (editBooking.id || editBooking._id)) ? String(editBooking.id || editBooking._id) : '';
-      var bookingRoom = editBooking && editBooking.room ? String(editBooking.room).trim() : '';
       var charges = allCharges.filter(function(c) {
         if (bookingId && c.bookingRef && String(c.bookingRef) === bookingId) return true;
-        if (bookingRoom && c.room && String(c.room).trim() === bookingRoom) return true;
         return false;
       });
       var countEl = $('[data-role="chargesCount"]');
