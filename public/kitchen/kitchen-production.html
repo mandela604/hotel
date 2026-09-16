@@ -472,6 +472,8 @@ function renderKPIs() {
   if (cooId) {
     await loadCooIntoProduction(cooId);
   } else {
+    productionType = 'normal';
+    showTypeTag('normal');
     batchRows = [makeRow()];
     renderList();
   }
