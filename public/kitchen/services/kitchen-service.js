@@ -226,8 +226,14 @@
     return state.recipes.find(r => r.dish.toLowerCase().trim() === clean);
   }
   function findRecipeById(id) {
+    if (!id) return null;
     var found = state.recipes.find(r => r.id === id);
-    console.log('[KitchenService] findRecipeById:', id, '→', found ? found.dish : 'NOT FOUND (have ' + state.recipes.length + ' recipes)');
+    if (found) return found;
+    // Fallback: match by dish name if id looks like a dish name
+    var clean = String(id).toLowerCase().trim();
+    found = state.recipes.find(r => r.dish.toLowerCase().trim() === clean);
+    if (found) console.warn('[KitchenService] findRecipeById: id', id, 'not found, matched by dish name →', found.dish);
+    else console.warn('[KitchenService] findRecipeById:', id, '→ NOT FOUND (have ' + state.recipes.length + ' recipes)');
     return found;
   }
 

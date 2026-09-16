@@ -507,14 +507,15 @@ async function loadCooIntoProduction(cooId) {
       if (item.recipeId) {
         row.recipeId = item.recipeId;
         var recipe = KitchenService.findRecipeById(item.recipeId);
+        // Fallback: match by dish name if UUID lookup fails (e.g. recipe was re-created)
+        if (!recipe && item.name) recipe = KitchenService.findRecipe(item.name);
+        if (recipe) row.recipeId = recipe.id; // update to current ID
         if (recipe && recipe.expectedYield > 0 && recipe.baseQty > 0) {
           row.batchQty = String(Math.round((Number(item.qty) / recipe.expectedYield) * recipe.baseQty * 100) / 100);
         } else {
           row.batchQty = item.qty || '';
         }
         if (!recipe) missingRecipes.push(item.name);
-      } else {
-        missingRecipes.push(item.name + ' (no recipe)');
       }
       batchRows.push(row);
     }

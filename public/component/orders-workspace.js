@@ -1188,7 +1188,7 @@
       var guest=$('[data-role="fGuestName"]')?$('[data-role="fGuestName"]').value:'';
       var gid=$('[data-role="fGuestId"]')?$('[data-role="fGuestId"]').value:'';
       var phone=$('[data-role="fGuestPhone"]')?$('[data-role="fGuestPhone"]').value:'';
-      var items=cart.map(function(c){return {name:c.name || c.key, key:c.key, qty:c.qty, price:c.price};});
+      var items=cart.map(function(c){return {name:c.name || c.key, key:c.key, qty:c.qty, price:c.price, recipeId:c.recipeId||''};});
 
       var roomObj = getRoomFields('');
       var method = (($('[data-role="fMethod"]') || {}).value || '').trim() || 'Cash';
@@ -1235,7 +1235,7 @@
         }
         existing.qty++;
       } else {
-        cart.push({ key: key, qty: 1, price: inv.price, unit: inv.unit });
+        cart.push({ key: key, qty: 1, price: inv.price, unit: inv.unit, recipeId: inv.recipeId || '' });
       }
       renderCart();
       renderPicker();
