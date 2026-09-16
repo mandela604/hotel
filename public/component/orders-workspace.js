@@ -1340,6 +1340,7 @@
         const isCooEdit = editOrder && editOrder.type === 'coo';
         const cooNeedsPatch = isCooEdit && (editOrder.status || '').toLowerCase() === 'open';
         try {
+          // 1) Save/patch items
           if (cooNeedsPatch) {
             const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
             const body = null; try { await res.json(); } catch (e) {}
@@ -1352,12 +1353,27 @@
               items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
             });
           }
-          showToast(_editingOrderId + ' updated.', 'success');
+          // 2) Pay directly using form payment fields (no modal)
+          const payMethod = ($('[data-role="fMethod"]') || {}).value || 'Cash';
+          const room = getRoomFields('');
+          const payPayload = payMethod === 'Room Charge'
+            ? { method: payMethod, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
+            : payMethod;
+          if (typeof service !== 'undefined' && service && typeof service.payOrder === 'function') {
+            await service.payOrder(_editingOrderId, payPayload);
+          } else {
+            const payRes = await fetch('/api/' + moduleName + '/orders/' + encodeURIComponent(_editingOrderId) + '/pay', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+              body: JSON.stringify(typeof payPayload === 'string' ? { method: payPayload } : payPayload),
+            });
+            const payBody = await payRes.json().catch(() => ({}));
+            if (!payRes.ok || !payBody.success) throw new Error(payBody.error || 'Payment failed');
+          }
+          showToast(_editingOrderId + ' paid — ' + payMethod + '.', 'success');
           if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
-          var tId = _editingOrderId;
           exitEditMode();
-          openPayModal(tId);
-        } catch (err) { showToast(err.message || 'Failed to update', 'error'); }
+          setMode('active');
+        } catch (err) { showToast(err.message || 'Failed', 'error'); }
         return;
       }
 
