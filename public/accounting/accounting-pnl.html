@@ -471,7 +471,10 @@ async function apiFetch(method, path, body) {
 }
 
 async function getAccountingData() {
-  const data = await apiFetch('GET', '/api/accounting/pnl?mode=' + dateMode);
+  let url = '/api/accounting/pnl?mode=' + dateMode;
+  if (dateFrom) url += '&from=' + dateFrom;
+  if (dateTo) url += '&to=' + dateTo;
+  const data = await apiFetch('GET', url);
   return { income: data.income || [], expenses: data.expenses || [], totalIncome: data.totalIncome || 0, totalExpenses: data.totalExpenses || 0 };
 }
 async function apiAddIncome(entry) {
