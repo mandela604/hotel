@@ -442,6 +442,7 @@
     let mode = 'quick'; // quick | active
     let orderType = 'quick'; // quick | tab | coo — sub-mode inside builder
     let _editingOrderId = null; // when viewing/editing an order from Active Orders
+    let _viewOnly = false; // true when viewing a paid/completed/cancelled order
     let activeCat = 'All';
     let statusFilter = '';
     let ordersPage = 1;
@@ -940,7 +941,7 @@
         const remaining = (i.qty || 0) - (inCart ? inCart.qty : 0);
         const disabled = orderType !== 'coo' && (i.qty || 0) <= 0;
         const isKitchen = String(i.recipeId || '').trim() !== '';
-        return '<button type="button" class="ow-mi-tile" data-add="' + esc(i.name) + '" ' + (disabled ? 'disabled' : '') + '>' +
+        return '<button type="button" class="ow-mi-tile" data-add="' + esc(i.name) + '" ' + (disabled || _viewOnly ? 'disabled' : '') + '>' +
           (orderType !== 'coo' && (i.qty || 0) <= 0 ? '<span class="ow-mi-badge">Out</span>' : '') +
           (isKitchen ? '<span class="ow-mi-badge" style="background:var(--ow-amber-bg);color:var(--ow-amber);position:absolute;top:4px;left:4px;"><i class="fa-solid fa-fire"></i> Kitchen</span>' : '') +
           '<div class="ow-mi-cat">' + esc(i.category || '') + '</div>' +
@@ -962,11 +963,11 @@
         return '<div class="ow-ci">' +
           '<div class="ow-ci-name">' + esc(c.key) + '</div>' +
           '<div class="ow-ci-qty">' +
-          '<button type="button" data-adj="' + esc(c.key) + '" data-delta="-1">−</button>' +
+          '<button type="button" data-adj="' + esc(c.key) + '" data-delta="-1"' + (_viewOnly ? ' disabled' : '') + '>\u2212</button>' +
           '<span>' + c.qty + '</span>' +
-          '<button type="button" data-adj="' + esc(c.key) + '" data-delta="1">+</button></div>' +
+          '<button type="button" data-adj="' + esc(c.key) + '" data-delta="1"' + (_viewOnly ? ' disabled' : '') + '>+</button></div>' +
           '<div class="ow-ci-price">' + fmtN(c.price * c.qty) + '</div>' +
-          '<button type="button" class="ow-ci-del" data-remove="' + esc(c.key) + '"><i class="fa-solid fa-xmark"></i></button></div>';
+          (_viewOnly ? '' : '<button type="button" class="ow-ci-del" data-remove="' + esc(c.key) + '"><i class="fa-solid fa-xmark"></i></button>') + '</div>';
       }).join('');
       updateTotals();
     }
@@ -1743,6 +1744,7 @@
       _editingOrderId = id;
       var st = (o.status || (isSale ? 'completed' : 'open')).toLowerCase();
       var isCompleted = isSale || st === 'paid' || st === 'completed' || st === 'cancelled';
+      _viewOnly = isCompleted;
       var session = getSessionUser(); var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
 
       // Switch to builder view
@@ -1841,6 +1843,7 @@
 
     function exitEditMode() {
       _editingOrderId = null;
+      _viewOnly = false;
       // Re-enable form fields
       var ft = $('[data-role="fTable"]'); if (ft) ft.disabled = false;
       var fn = $('[data-role="fNotes"]'); if (fn) fn.disabled = false;
@@ -2285,16 +2288,19 @@
       }
       const add = e.target.closest('[data-add]');
       if (add) {
+        if (_viewOnly) return;
         addToCart(add.dataset.add);
         return;
       }
       const adj = e.target.closest('[data-adj]');
       if (adj) {
+        if (_viewOnly) return;
         adjustQty(adj.dataset.adj, parseInt(adj.dataset.delta, 10));
         return;
       }
       const rem = e.target.closest('[data-remove]');
       if (rem) {
+        if (_viewOnly) return;
         cart = cart.filter(function (c) { return c.key !== rem.dataset.remove; });
         renderCart();
         renderPicker();
