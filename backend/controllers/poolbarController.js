@@ -263,7 +263,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
     if (!guest && activeBooking && activeBooking.phone) guest = await Guest.findOne({ phone: activeBooking.phone });
     if (guest) {
-      var bRef = activeBooking ? (activeBooking.id || (activeBooking._id ? activeBooking._id.toString() : '')) : '';
+      var bRef = activeBooking ? (activeBooking.stayId || activeBooking.id || (activeBooking._id ? activeBooking._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRef,
         date: todayDDMMYY(),
@@ -450,7 +450,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     if (!guest && effectiveGuest) guest = await Guest.findOne({ name: effectiveGuest });
     if (!guest && effectivePhone) guest = await Guest.findOne({ phone: effectivePhone });
     if (guest) {
-      var bRef2 = bkDoc2 ? (bkDoc2.id || (bkDoc2._id ? bkDoc2._id.toString() : '')) : '';
+      var bRef2 = bkDoc2 ? (bkDoc2.stayId || bkDoc2.id || (bkDoc2._id ? bkDoc2._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRef2,
         date: todayDDMMYY(),

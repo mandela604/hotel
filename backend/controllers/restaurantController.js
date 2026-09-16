@@ -296,7 +296,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
     if (!guest && activeBookingR && activeBookingR.phone) guest = await Guest.findOne({ phone: activeBookingR.phone });
     if (guest) {
-      const bRefR = activeBookingR ? (activeBookingR.id || (activeBookingR._id ? activeBookingR._id.toString() : '')) : '';
+      const bRefR = activeBookingR ? (activeBookingR.stayId || activeBookingR.id || (activeBookingR._id ? activeBookingR._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRefR,
         date: todayDDMMYY(),
@@ -789,7 +789,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     if (!guest && effectiveGuest) guest = await Guest.findOne({ name: effectiveGuest });
     if (!guest && activeBookingR2 && activeBookingR2.phone) guest = await Guest.findOne({ phone: activeBookingR2.phone });
     if (guest) {
-      const bRefR2 = activeBookingR2 ? (activeBookingR2.id || (activeBookingR2._id ? activeBookingR2._id.toString() : '')) : '';
+      const bRefR2 = activeBookingR2 ? (activeBookingR2.stayId || activeBookingR2.id || (activeBookingR2._id ? activeBookingR2._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRefR2,
         date: todayDDMMYY(),

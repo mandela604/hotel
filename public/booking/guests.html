@@ -708,7 +708,7 @@ function openProfile(id, preserveTab){
 
   document.getElementById('tbHistCount').textContent  = g.stays.length + activeBookingsForGuest(g).length;
   var activeBooking = activeBookingsForGuest(g)[0] || null;
-  activeFolioBookingId = activeBooking ? (activeBooking.id || activeBooking._id) : '';
+  activeFolioBookingId = activeBooking ? (activeBooking.stayId || activeBooking.id || activeBooking._id) : '';
   var filteredCharges = activeFolioBookingId ? g.charges.filter(function(c){
     if (c.bookingRef && String(c.bookingRef) === String(activeFolioBookingId)) return true;
     return false;

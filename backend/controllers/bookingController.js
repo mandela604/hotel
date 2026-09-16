@@ -341,6 +341,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
   }
 
   Object.assign(booking, {
+    stayId: uuidv4(),
     type: type || booking.type,
     guest: guest.trim(),
     phone: phone || '',

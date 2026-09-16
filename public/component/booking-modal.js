@@ -952,7 +952,7 @@
       var list = $('[data-role="chargesList"]');
       if (!acc || !list) return;
       var allCharges = (currentGuest && currentGuest.charges) || [];
-      var bookingId = (editBooking && (editBooking.id || editBooking._id)) ? String(editBooking.id || editBooking._id) : '';
+      var bookingId = (editBooking && editBooking.stayId) ? String(editBooking.stayId) : ((editBooking && (editBooking.id || editBooking._id)) ? String(editBooking.id || editBooking._id) : '');
       var charges = allCharges.filter(function(c) {
         if (bookingId && c.bookingRef && String(c.bookingRef) === bookingId) return true;
         return false;

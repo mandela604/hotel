@@ -11,6 +11,7 @@ const paymentEntrySchema = new mongoose.Schema({
 
 const bookingSchema = new mongoose.Schema({
   room:       { type: String, required: true, unique: true },
+  stayId:     { type: String, default: '' },
   type:       { type: String, enum: ['Standard','Deluxe','Suite','Conference'], default: 'Standard' },
   guest:      { type: String, default: '' },
   guestId:    { type: String, default: '' },
