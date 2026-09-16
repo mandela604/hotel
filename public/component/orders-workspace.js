@@ -1306,19 +1306,20 @@
       const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
       const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
       const isCooEdit = editOrder && editOrder.type === 'coo';
+      const cooNeedsPatch = isCooEdit && (editOrder.status || '').toLowerCase() === 'open';
       try {
-        if (isCooEdit) {
+        if (cooNeedsPatch) {
           const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
           const body = null; try { await res.json(); } catch (e) {}
           if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
-        } else if (service && typeof service.openTab === 'function') {
+        } else if (!isCooEdit) {
           const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
           const edTable = ($('[data-role="fTable"]').value || '').trim();
           const edNotes = ($('[data-role="fNotes"]').value || '').trim();
           await apiFetch('PATCH', '/orders/' + encodeURIComponent(_editingOrderId), {
             items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
           });
-        } else {
+        }
           const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
           const edSubtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
           const edTable = ($('[data-role="fTable"]').value || '').trim();
@@ -1353,12 +1354,13 @@
         const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
         const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
         const isCooEdit = editOrder && editOrder.type === 'coo';
+        const cooNeedsPatch = isCooEdit && (editOrder.status || '').toLowerCase() === 'open';
         try {
-          if (isCooEdit) {
+          if (cooNeedsPatch) {
             const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
             const body = null; try { await res.json(); } catch (e) {}
             if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
-          } else if (service && typeof service.openTab === 'function') {
+          } else if (!isCooEdit) {
             const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
             const edTable = ($('[data-role="fTable"]').value || '').trim();
             const edNotes = ($('[data-role="fNotes"]').value || '').trim();

@@ -385,23 +385,38 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
   transfer.dateReceived = nowStamp();
   await transfer.save();
 
-  // Accepting adds the delivered quantity onto matching restaurant stock,
-  // creating the stock record on the fly if this is the first delivery of it.
-  let stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${transfer.meal.trim()}$`, 'i') });
-  if (!stockItem) {
-    stockItem = await RestaurantStock.create({ name: transfer.meal.trim(), unit: transfer.unit || 'portion', qty: 0 });
+  /* ── Stock addition: skip for paid COO transfers (item already sold) ── */
+  const isCooTransfer = !!transfer.cooId;
+  let linkedOrderPaid = false;
+  if (isCooTransfer) {
+    const KitchenCooOrder = require('../models/KitchenCooOrder');
+    const cooCheck = await KitchenCooOrder.findOne({ id: transfer.cooId });
+    if (cooCheck && cooCheck.restaurantOrderId) {
+      const linkedOrderCheck = await Order.findOne({ id: cooCheck.restaurantOrderId });
+      if (linkedOrderCheck && linkedOrderCheck.status === 'paid') linkedOrderPaid = true;
+    }
   }
-  stockItem.qty += Number(transfer.quantity);
-  await stockItem.save();
 
-  await RestaurantMovement.create({
-    date: nowStamp(),
-    item: stockItem.name,
-    qtyIn: Number(transfer.quantity),
-    qtyOut: 0,
-    balance: stockItem.qty,
-    reason: `Transfer Accepted (${transfer.transferNo})`,
-  });
+  if (!linkedOrderPaid) {
+    let stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${transfer.meal.trim()}$`, 'i') });
+    if (!stockItem) {
+      stockItem = await RestaurantStock.create({ name: transfer.meal.trim(), unit: transfer.unit || 'portion', qty: 0 });
+    }
+    stockItem.qty += Number(transfer.quantity);
+    await stockItem.save();
+
+    await RestaurantMovement.create({
+      date: nowStamp(),
+      item: stockItem.name,
+      qtyIn: Number(transfer.quantity),
+      qtyOut: 0,
+      balance: stockItem.qty,
+      reason: `Transfer Accepted (${transfer.transferNo})`,
+    });
+    console.log(`[acceptTransfer] Stock added: ${transfer.quantity} ${transfer.meal} → new qty ${stockItem.qty}`);
+  } else {
+    console.log(`[acceptTransfer] Skipped stock for paid COO transfer ${transfer.transferNo} — order already paid`);
+  }
 
   await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
 
@@ -811,6 +826,13 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
   if (order.status !== 'open') {
     return res.status(400).json({ success: false, error: 'Only an open order can be edited' });
+  }
+  if (order.cooId) {
+    const KitchenCooOrder = require('../models/KitchenCooOrder');
+    const cooOrder = await KitchenCooOrder.findOne({ id: order.cooId });
+    if (cooOrder && cooOrder.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Kitchen has already started — editing is locked' });
+    }
   }
 
   const { items, notes, table, discount } = req.body;
