@@ -788,7 +788,7 @@
       const methodSel = $('[data-role="fMethod"]');
       if (methodSel) {
         const cur = methodSel.value;
-        const useMethods = t === 'quick' ? paymentMethods.filter(function (m) { return m !== 'Room Charge'; }) : paymentMethods;
+        const useMethods = paymentMethods;
         const opts = (t === 'tab' ? [''] : []).concat(useMethods);
         methodSel.innerHTML = opts.map(function (pm) {
           if (!pm) return '<option value="">— Pay later —</option>';
@@ -801,7 +801,8 @@
       toggleRoomChargeUI();
       // Update submit label
       if (!_editingOrderId) {
-        if (t === 'quick') $('[data-role="submitLabel"]').textContent = 'Pay';
+        const curMethod = (methodSel && methodSel.value) ? methodSel.value.trim() : '';
+        if (t === 'quick') $('[data-role="submitLabel"]').textContent = curMethod === 'Room Charge' ? 'Charge to Room' : 'Pay';
         else if (t === 'tab') $('[data-role="submitLabel"]').textContent = 'Open Tab';
         else $('[data-role="submitLabel"]').textContent = 'Send to Kitchen';
       }
@@ -1504,9 +1505,13 @@
               guestId: guestId,
               createdBy: staff,
             });
-            if (isRoomCharge) console.log('[RoomCharge] Open Tab response ←', JSON.stringify(order, null, 2));
             syncFromService();
-            showToast('Tab ' + ((order && order.id) || '') + ' opened' + (table ? ' for ' + table : '') + '.', 'success');
+            showToast(
+              isRoomCharge
+                ? 'Tab ' + ((order && order.id) || '') + ' opened for Room ' + roomNumber + '. Pay tab from Active Orders to bill folio.'
+                : 'Tab ' + ((order && order.id) || '') + ' opened' + (table ? ' for ' + table : '') + '.',
+              'success'
+            );
           } else {
             const order = {
               id: nextOrderId(),
@@ -2023,6 +2028,10 @@
       const show = method === 'Room Charge';
       wrap.style.display = show ? '' : 'none';
       if (!show) clearSelectedRoom('');
+      if (!_editingOrderId && orderType === 'quick') {
+        const lbl = $('[data-role="submitLabel"]');
+        if (lbl) lbl.textContent = show ? 'Charge to Room' : 'Pay';
+      }
     }
 
     function togglePayRoomChargeUI() {

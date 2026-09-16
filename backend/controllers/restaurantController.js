@@ -293,7 +293,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
     if (!guest && activeBookingR && activeBookingR.phone) guest = await Guest.findOne({ phone: activeBookingR.phone });
     if (guest) {
-      const bRefR = activeBookingR ? activeBookingR.id : '';
+      const bRefR = activeBookingR ? (activeBookingR.id || (activeBookingR._id ? activeBookingR._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRefR,
         date: todayDDMMYY(),
@@ -310,23 +310,6 @@ exports.createSale = asyncHandler(async (req, res) => {
       await guest.save();
     } else {
       await logActivity('amber', `Room Charge sale ${id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-sales.html');
-    }
-    /* Also post to Booking.payments[] — same as Pool Bar */
-    if (roomNumber) {
-      const booking = await Booking.findOne({ room: String(roomNumber).trim(), status: 'checkedin' });
-      if (booking) {
-        booking.payments.push({
-          id: uuidv4(),
-          amount: total,
-          mode: 'Room Charge (Restaurant)',
-          date: todayDDMMYY(),
-          by: req.user ? req.user.name : '',
-          ts: Date.now(),
-        });
-        booking.paid = (booking.paid || 0) + total;
-        recomputePayStatus(booking);
-        await booking.save();
-      }
     }
   }
 
@@ -698,7 +681,11 @@ exports.payOrder = asyncHandler(async (req, res) => {
   }
 
   const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
-  const payMethod = method || 'Cash';
+  const payMethod = method || order.payMethod || order.method || 'Cash';
+  const effectiveRoom = roomNumber || order.roomNumber || null;
+  const effectiveGuest = guestName || order.guestName || null;
+  const effectivePhone = guestPhone || order.guestPhone || null;
+  const effectiveGuestId = guestId || order.guestId || null;
 
   let sale;
 
@@ -708,9 +695,9 @@ exports.payOrder = asyncHandler(async (req, res) => {
     if (sale) {
       sale.status = payMethod === 'Room Charge' ? 'pending' : 'completed';
       sale.method = payMethod;
-      if (roomNumber) sale.roomNumber = roomNumber;
-      if (guestName) sale.guestName = guestName;
-      if (guestPhone) sale.guestPhone = guestPhone;
+      if (effectiveRoom) sale.roomNumber = effectiveRoom;
+      if (effectiveGuest) sale.guestName = effectiveGuest;
+      if (effectivePhone) sale.guestPhone = effectivePhone;
       await sale.save();
     }
   } else {
@@ -762,30 +749,30 @@ exports.payOrder = asyncHandler(async (req, res) => {
       notes: order.notes,
       date: new Date(),
       status: payMethod === 'Room Charge' ? 'pending' : 'completed',
-      roomNumber: roomNumber || null,
-      guestName: guestName || null,
-      guestPhone: guestPhone || null,
+      roomNumber: effectiveRoom,
+      guestName: effectiveGuest,
+      guestPhone: effectivePhone,
     });
   }
 
   /* ── Room Charge → post to guest folio ── */
   if (payMethod === 'Room Charge') {
     let guest = null;
-    const activeBookingR2 = roomNumber ? await Booking.findOne({ room: roomNumber, status: 'checkedin' }) : null;
-    const resolvedGuestIdR2 = guestId || (activeBookingR2 && activeBookingR2.guestId) || '';
+    const activeBookingR2 = effectiveRoom ? await Booking.findOne({ room: effectiveRoom, status: 'checkedin' }) : null;
+    const resolvedGuestIdR2 = effectiveGuestId || (activeBookingR2 && activeBookingR2.guestId) || '';
     if (resolvedGuestIdR2) guest = await Guest.findOne({ id: resolvedGuestIdR2 });
     if (!guest && resolvedGuestIdR2) guest = await Guest.findOne({ guestId: resolvedGuestIdR2 });
-    if (!guest && guestPhone) guest = await Guest.findOne({ phone: guestPhone });
-    if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
+    if (!guest && effectivePhone) guest = await Guest.findOne({ phone: effectivePhone });
+    if (!guest && effectiveGuest) guest = await Guest.findOne({ name: effectiveGuest });
     if (!guest && activeBookingR2 && activeBookingR2.phone) guest = await Guest.findOne({ phone: activeBookingR2.phone });
     if (guest) {
-      const bRefR2 = activeBookingR2 ? activeBookingR2.id : '';
+      const bRefR2 = activeBookingR2 ? (activeBookingR2.id || (activeBookingR2._id ? activeBookingR2._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRefR2,
         date: todayDDMMYY(),
         source: 'Restaurant',
         desc: order.items.map((i) => `${i.qty}x ${i.name}`).join(', '),
-        room: roomNumber,
+        room: effectiveRoom,
         amount: order.total,
         paid: 0,
         by: order.staff,
@@ -795,24 +782,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
       });
       await guest.save();
     } else {
-      await logActivity('amber', `Room Charge tab ${order.id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-orders.html');
-    }
-    /* Also post to Booking.payments[] — same as Pool Bar */
-    if (roomNumber) {
-      const booking = await Booking.findOne({ room: String(roomNumber).trim(), status: 'checkedin' });
-      if (booking) {
-        booking.payments.push({
-          id: uuidv4(),
-          amount: order.total,
-          mode: 'Room Charge (Restaurant)',
-          date: todayDDMMYY(),
-          by: order.staff || '',
-          ts: Date.now(),
-        });
-        booking.paid = (booking.paid || 0) + order.total;
-        recomputePayStatus(booking);
-        await booking.save();
-      }
+      await logActivity('amber', `Room Charge tab ${order.id} could not be matched to a guest folio (${effectiveGuest || 'unknown guest'})`, 'restaurant-orders.html');
     }
   }
 
@@ -821,9 +791,9 @@ exports.payOrder = asyncHandler(async (req, res) => {
   order.method = payMethod;
   order.payMethod = payMethod;
   order.processedBy = req.user ? req.user.name : '';
-  if (roomNumber) order.roomNumber = roomNumber;
-  if (guestName) order.guestName = guestName;
-  if (guestPhone) order.guestPhone = guestPhone;
+  if (effectiveRoom) order.roomNumber = effectiveRoom;
+  if (effectiveGuest) order.guestName = effectiveGuest;
+  if (effectivePhone) order.guestPhone = effectivePhone;
   order.paidSaleId = sale ? sale.id : order.pendingSaleId || '';
   await order.save();
 

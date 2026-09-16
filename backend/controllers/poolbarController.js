@@ -252,21 +252,6 @@ exports.createSale = asyncHandler(async (req, res) => {
   /* Room Charge → attach to active booking folio */
   const effectiveMethod = (roomNumber && method === 'Room Charge') ? 'Room Charge' : (method || 'Cash');
   if (effectiveMethod === 'Room Charge' && roomNumber) {
-    const booking = await Booking.findOne({ room: String(roomNumber).trim(), status: 'checkedin' });
-    if (booking) {
-      booking.payments.push({
-        id: uuidv4(),
-        amount: total,
-        mode: 'Room Charge (Pool Bar)',
-        date: todayDDMMYY(),
-        by: staff || (req.user ? req.user.name : 'Barman'),
-        ts: Date.now(),
-      });
-      booking.paid = (booking.paid || 0) + total;
-      recomputePayStatus(booking);
-      await booking.save();
-    }
-
     /* Post charge to Guest.folio (Guest.charges[]) — uuid primary, name/phone fallback */
     let guest = null;
     // Most reliable: look up active booking by room to get guestId
@@ -278,8 +263,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     if (!guest && guestName) guest = await Guest.findOne({ name: guestName });
     if (!guest && activeBooking && activeBooking.phone) guest = await Guest.findOne({ phone: activeBooking.phone });
     if (guest) {
-      var bRef = '';
-      if (activeBooking) bRef = activeBooking.id;
+      var bRef = activeBooking ? (activeBooking.id || (activeBooking._id ? activeBooking._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRef,
         date: todayDDMMYY(),
@@ -457,31 +441,16 @@ exports.payOrder = asyncHandler(async (req, res) => {
   /* Room Charge → attach to active booking folio */
   const effectiveMethod = (effectiveRoom && payMethod === 'Room Charge') ? 'Room Charge' : payMethod;
   if (effectiveMethod === 'Room Charge' && effectiveRoom) {
-    const booking = await Booking.findOne({ room: String(effectiveRoom).trim(), status: 'checkedin' });
-    if (booking) {
-      booking.payments.push({
-        id: uuidv4(),
-        amount: order.total,
-        mode: 'Room Charge (Pool Bar)',
-        date: todayDDMMYY(),
-        by: order.staff || (req.user ? req.user.name : 'Barman'),
-        ts: Date.now(),
-      });
-      booking.paid = (booking.paid || 0) + order.total;
-      recomputePayStatus(booking);
-      await booking.save();
-    }
-
     /* Post charge to Guest.folio (Guest.charges[]) — uuid primary, name/phone fallback */
     let guest = null;
-    const fid = effectiveGuestId || (booking && booking.guestId) || '';
+    const bkDoc2 = await Booking.findOne({ room: effectiveRoom, status: 'checkedin' });
+    const fid = effectiveGuestId || (bkDoc2 && bkDoc2.guestId) || '';
     if (fid) guest = await Guest.findOne({ id: fid });
     if (!guest && fid) guest = await Guest.findOne({ guestId: fid });
     if (!guest && effectiveGuest) guest = await Guest.findOne({ name: effectiveGuest });
     if (!guest && effectivePhone) guest = await Guest.findOne({ phone: effectivePhone });
     if (guest) {
-      var bRef2 = '';
-      if (effectiveRoom) { var bkDoc2 = await Booking.findOne({ room: effectiveRoom, status: 'checkedin' }); if (bkDoc2) bRef2 = bkDoc2.id; }
+      var bRef2 = bkDoc2 ? (bkDoc2.id || (bkDoc2._id ? bkDoc2._id.toString() : '')) : '';
       guest.charges.push({
         bookingRef: bRef2,
         date: todayDDMMYY(),
