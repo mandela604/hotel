@@ -2,6 +2,17 @@ const Staff = require('../models/Staff');
 const User = require('../models/User');
 const asyncHandler = require('../middleware/asyncHandler');
 
+const USER_DEPARTMENTS = [
+  'Management', 'Front Desk', 'Housekeeping', 'Restaurant',
+  'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
+];
+
+function sanitizeDept(raw) {
+  if (!raw) return 'Management';
+  const match = USER_DEPARTMENTS.find(d => d.toLowerCase() === String(raw).toLowerCase());
+  return match || 'Management';
+}
+
 exports.listStaff = asyncHandler(async (req, res) => {
   const { dept, shift, status, search } = req.query;
   const filter = {};
@@ -60,7 +71,7 @@ exports.createStaff = asyncHandler(async (req, res) => {
         password,
         role: role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff',
         privileges: { type: pType, overrides: pOverrides },
-        department: department || dept || 'Management',
+        department: sanitizeDept(department || dept),
         phone: phone || '',
         initials: name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
       });
@@ -98,7 +109,7 @@ exports.updateStaff = asyncHandler(async (req, res) => {
       if (name) user.name = name.trim();
       if (role) user.role = role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff';
       if (privileges !== undefined) user.privileges = privileges;
-      if (department || dept) user.department = department || dept || 'Management';
+      if (department || dept) user.department = sanitizeDept(department || dept);
       await user.save();
     }
   } else if (name || role || privileges !== undefined || department || dept) {
@@ -107,7 +118,7 @@ exports.updateStaff = asyncHandler(async (req, res) => {
       if (name) user.name = name.trim();
       if (role) user.role = role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff';
       if (privileges !== undefined) user.privileges = privileges;
-      if (department || dept) user.department = department || dept || 'Management';
+      if (department || dept) user.department = sanitizeDept(department || dept);
       await user.save();
     }
   }
