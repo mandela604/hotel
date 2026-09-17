@@ -178,7 +178,7 @@ exports.createUser = asyncHandler(async (req, res) => {
     password,
     role,
     privileges: priv,
-    department: department || 'Management',
+    department: department || 'Front Desk',
     phone: phone || '',
     initials: initialsFrom(name),
   });

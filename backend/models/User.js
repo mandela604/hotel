@@ -3,8 +3,9 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 const DEPARTMENTS = [
-  'Management', 'Front Desk', 'Housekeeping', 'Restaurant',
+  'Management', 'Front Desk', 'Booking', 'Housekeeping', 'Restaurant',
   'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
+  'Spa', 'Laundry', 'Security', 'Sales',
 ];
 
 const userSchema = new mongoose.Schema({
@@ -17,7 +18,7 @@ const userSchema = new mongoose.Schema({
     type:      { type: String, enum: ['front_desk','accountant','procurement_manager','sales_rep','store_keeper','chef','gym_attendant','pool_bar_staff','restaurant_staff','waiter', null], default: null },
     overrides: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
-  department: { type: String, enum: DEPARTMENTS, default: 'Management', trim: true },
+  department: { type: String, enum: DEPARTMENTS, default: 'Front Desk', trim: true },
   phone:      { type: String, default: '' },
   initials:   { type: String, default: '' },
   avatar:     { type: String, default: '' },

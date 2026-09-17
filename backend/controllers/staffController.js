@@ -3,14 +3,15 @@ const User = require('../models/User');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const USER_DEPARTMENTS = [
-  'Management', 'Front Desk', 'Housekeeping', 'Restaurant',
+  'Management', 'Front Desk', 'Booking', 'Housekeeping', 'Restaurant',
   'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
+  'Spa', 'Laundry', 'Security', 'Sales',
 ];
 
 function sanitizeDept(raw) {
-  if (!raw) return 'Management';
+  if (!raw) return 'Front Desk';
   const match = USER_DEPARTMENTS.find(d => d.toLowerCase() === String(raw).toLowerCase());
-  return match || 'Management';
+  return match || 'Front Desk';
 }
 
 exports.listStaff = asyncHandler(async (req, res) => {
