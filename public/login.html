@@ -242,8 +242,8 @@ body {
         else if (dept === 'procurement' || priv === 'procurement_manager') target = 'procurement/procurement-dashboard.html';
         else if (dept === 'accounts' || priv === 'accountant') target = 'accounting/accounting-dashboard.html';
         else if (dept === 'gym' || priv === 'gym_attendant') target = 'gym/gym-dashboard.html';
-        else if (dept === 'front desk' || priv === 'front_desk') target = 'booking/booking-dashboard.html';
-        else if (dept === 'housekeeping') target = 'booking/booking-dashboard.html';
+        else if (dept === 'front desk' || priv === 'front_desk') target = 'booking/booking-rooms.html';
+        else if (dept === 'housekeeping') target = 'booking/booking-rooms.html';
       }
       setTimeout(() => { window.location.href = target; }, 400);
     } catch (err) {
