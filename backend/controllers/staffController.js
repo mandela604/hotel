@@ -3,9 +3,8 @@ const User = require('../models/User');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const USER_DEPARTMENTS = [
-  'Management', 'Front Desk', 'Booking', 'Housekeeping', 'Restaurant',
+  'Management', 'Front Desk', 'Housekeeping', 'Restaurant',
   'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
-  'Spa', 'Laundry', 'Security', 'Sales',
 ];
 
 function sanitizeDept(raw) {

@@ -3,9 +3,8 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 const DEPARTMENTS = [
-  'Management', 'Front Desk', 'Booking', 'Housekeeping', 'Restaurant',
+  'Management', 'Front Desk', 'Housekeeping', 'Restaurant',
   'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
-  'Spa', 'Laundry', 'Security', 'Sales',
 ];
 
 const userSchema = new mongoose.Schema({
