@@ -26,7 +26,7 @@ exports.getStaffById = asyncHandler(async (req, res) => {
 });
 
 exports.createStaff = asyncHandler(async (req, res) => {
-  const { name, email, phone, role, dept, department, shift, status, salary, hireDate, privileges } = req.body;
+  const { name, email, phone, role, dept, department, shift, status, salary, hireDate, privileges, password } = req.body;
   if (!name || !role) {
     return res.status(400).json({ success: false, error: 'Name and role are required' });
   }
@@ -49,6 +49,24 @@ exports.createStaff = asyncHandler(async (req, res) => {
     privileges: privileges || {},
   });
 
+  if (password && email) {
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!existingUser) {
+      const pType = (privileges && privileges.type) || null;
+      const pOverrides = (privileges && privileges.overrides) || {};
+      await User.create({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password,
+        role: role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff',
+        privileges: { type: pType, overrides: pOverrides },
+        department: department || dept || 'Management',
+        phone: phone || '',
+        initials: name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
+      });
+    }
+  }
+
   res.status(201).json({ success: true, data: staff });
 });
 
@@ -56,7 +74,7 @@ exports.updateStaff = asyncHandler(async (req, res) => {
   const staff = await Staff.findById(req.params.id);
   if (!staff) return res.status(404).json({ success: false, error: 'Staff member not found' });
 
-  const { name, email, phone, role, dept, department, shift, status, salary, hireDate, privileges } = req.body;
+  const { name, email, phone, role, dept, department, shift, status, salary, hireDate, privileges, password } = req.body;
   if (name) staff.name = name.trim();
   if (email !== undefined) staff.email = email.toLowerCase().trim();
   if (phone !== undefined) staff.phone = phone;
@@ -72,6 +90,28 @@ exports.updateStaff = asyncHandler(async (req, res) => {
   if (privileges !== undefined) staff.privileges = privileges;
 
   await staff.save();
+
+  if (password && staff.email) {
+    const user = await User.findOne({ email: staff.email.toLowerCase() });
+    if (user) {
+      user.password = password;
+      if (name) user.name = name.trim();
+      if (role) user.role = role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff';
+      if (privileges !== undefined) user.privileges = privileges;
+      if (department || dept) user.department = department || dept || 'Management';
+      await user.save();
+    }
+  } else if (name || role || privileges !== undefined || department || dept) {
+    const user = await User.findOne({ email: staff.email.toLowerCase() });
+    if (user) {
+      if (name) user.name = name.trim();
+      if (role) user.role = role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff';
+      if (privileges !== undefined) user.privileges = privileges;
+      if (department || dept) user.department = department || dept || 'Management';
+      await user.save();
+    }
+  }
+
   res.json({ success: true, data: staff });
 });
 
