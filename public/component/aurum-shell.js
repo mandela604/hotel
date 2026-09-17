@@ -147,6 +147,8 @@
     @media (min-width:640px){ .aur-topbar-date{ display:block; } }
     .aur-notif-btn{ width:36px; height:36px; background:var(--aur-surface2); border:1px solid var(--aur-border); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; position:relative; color:var(--aur-text2); }
     .aur-notif-dot{ position:absolute; top:6px; right:6px; width:7px; height:7px; background:var(--aur-gold); border-radius:50%; border:1.5px solid var(--aur-bg); }
+    .aur-logout-btn{ width:36px; height:36px; background:var(--aur-surface2); border:1px solid var(--aur-border); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; color:var(--aur-text2); transition:all .2s; }
+    .aur-logout-btn:hover{ background:var(--red-bg,#feecec); color:var(--red,#f04438); border-color:rgba(240,68,56,.3); }
     .aur-avatar{ width:36px; height:36px; background:var(--aur-gold-dim); border:2px solid var(--aur-gold-border); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; color:var(--aur-gold); cursor:pointer; background-size:cover; background-position:center; flex-shrink:0; }
     .aur-api-badge{ display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:3px 8px; border-radius:20px; background:rgba(247,144,9,0.12); color:#f79009; border:1px solid rgba(247,144,9,.2); }
     .aur-api-badge.aur-live{ background:rgba(18,183,106,0.12); color:#12b76a; border-color:rgba(18,183,106,.3); }
@@ -267,6 +269,7 @@
             <div class="aur-topbar-date" id="${instId}-date"></div>
             <div class="aur-api-badge${apiMode === 'Live' ? ' aur-live' : ''}" id="${instId}-apiBadge"><span class="aur-dot"></span><span id="${instId}-apiText">${_esc(apiMode)}</span></div>
             <div class="aur-notif-btn" id="${instId}-notif"><i class="fa-regular fa-bell"></i><div class="aur-notif-dot"></div></div>
+            <button class="aur-logout-btn" id="${instId}-logout" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></button>
             <div class="aur-avatar" id="${instId}-avatar"${avatarStyle}>${avatarText}</div>
           </div>
         </div>`;
@@ -301,6 +304,12 @@
 
       const avatar = document.getElementById(instId + '-avatar');
       if (avatar && typeof options.onUserClick === 'function') avatar.addEventListener('click', options.onUserClick);
+
+      const logoutBtn = document.getElementById(instId + '-logout');
+      if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+        try { await fetch(CONFIG.API_BASE + '/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+        window.location.href = '/login.html';
+      });
     }
 
     function toggleCollapse() {
