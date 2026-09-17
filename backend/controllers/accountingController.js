@@ -13,6 +13,13 @@ function fmtDate(d) {
   try { return new Date(d).toISOString().split('T')[0]; } catch (e) { return String(d); }
 }
 
+function lagosDate(d) {
+  if (!d) d = new Date();
+  try {
+    return new Date(d).toLocaleDateString('sv-SE', { timeZone: 'Africa/Lagos' });
+  } catch (e) { return fmtDate(d); }
+}
+
 function parsePaymentDate(str) {
   if (!str) return '';
   // Already YYYY-MM-DD
@@ -43,8 +50,8 @@ async function aggregateRoomRevenue(from, to) {
     // Use the LAST payment date as the revenue date
     const lastPayment = payments.length ? payments[payments.length - 1] : null;
     const method = lastPayment ? lastPayment.mode : (b.payMethod || '');
-    const rawDate = (lastPayment && lastPayment.date) || b.checkin || fmtDate(b.createdAt || Date.now());
-    const payDate = parsePaymentDate(rawDate) || fmtDate(b.createdAt || Date.now());
+    const rawDate = (lastPayment && lastPayment.date) || b.checkin || lagosDate(b.createdAt || Date.now());
+    const payDate = parsePaymentDate(rawDate) || lagosDate(b.createdAt || Date.now());
 
     // Apply date filter on the payment date (not checkin)
     if (from && payDate < from) return null;
@@ -78,7 +85,7 @@ async function aggregateOutletRevenue(from, to, deptFilter, deptLabel) {
     }, 0);
     return {
       id: 'auto-' + deptFilter + '-' + s._id,
-      date: fmtDate(s.createdAt),
+      date: lagosDate(s.createdAt),
       department: deptLabel,
       description: (s.items || []).map(i => i.name + ' ×' + i.qty).join(', ') || deptLabel + ' sale',
       amount: s.total || 0,
@@ -105,7 +112,7 @@ async function aggregateGymRevenue(from, to) {
     const method = (m.payments && m.payments.length) ? m.payments[m.payments.length - 1].mode : 'Cash';
     return {
       id: 'auto-gym-' + (m._id || '').toString().slice(-8),
-      date: fmtDate(m.startDate || Date.now()),
+      date: lagosDate(m.startDate || Date.now()),
       department: 'Gym',
       description: 'Membership — ' + m.name + (m.planName ? ' (' + m.planName + ')' : ''),
       amount: paid,
@@ -133,11 +140,10 @@ exports.pnl = asyncHandler(async (req, res) => {
 
   function shiftKey(dateStr) {
     if (!isShift) return dateStr;
-    // Clean YYYY-MM-DD — parse at noon to avoid UTC midnight causing -1 day in West Africa
     const d = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? new Date(dateStr + 'T12:00:00') : new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
     if (d.getHours() < shiftStart) d.setDate(d.getDate() - 1);
-    return fmtDate(d);
+    return lagosDate(d);
   }
 
   const safeAgg = (fn, label) => fn().catch(err => { console.error(`[Accounting] ${label} aggregation failed:`, err.message); return []; });
@@ -187,7 +193,7 @@ exports.pnl = asyncHandler(async (req, res) => {
   // ── Expenses: one row per type per shift/calendar day ──
   const procByDate = {};
   for (const pr of prs) {
-    const key = shiftKey(fmtDate(pr.createdAt));
+    const key = shiftKey(lagosDate(pr.createdAt));
     if (!procByDate[key]) procByDate[key] = 0;
     procByDate[key] += Number(pr.totalAmount) || 0;
   }
