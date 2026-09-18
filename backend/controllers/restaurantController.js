@@ -395,12 +395,15 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
 
   /* ── Stock addition: skip for paid COO transfers (item already sold) ── */
   const isCooTransfer = !!transfer.cooId;
+  console.log(`[acceptTransfer] Transfer ${transfer.transferNo} | cooId: "${transfer.cooId}" | isCooTransfer: ${isCooTransfer}`);
   let linkedOrderPaid = false;
   if (isCooTransfer) {
     const KitchenCooOrder = require('../models/KitchenCooOrder');
     const cooCheck = await KitchenCooOrder.findOne({ id: transfer.cooId });
+    console.log(`[acceptTransfer] COO lookup: ${cooCheck ? `found id=${cooCheck.id}, paid=${cooCheck.paid}, status=${cooCheck.status}` : 'NOT FOUND'}`);
     if (cooCheck && cooCheck.paid) linkedOrderPaid = true;
   }
+  console.log(`[acceptTransfer] linkedOrderPaid: ${linkedOrderPaid} → ${linkedOrderPaid ? 'SKIP stock' : 'ADD stock'}`);
 
   if (!linkedOrderPaid) {
     let stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${transfer.meal.trim()}$`, 'i') });
@@ -823,14 +826,23 @@ exports.payOrder = asyncHandler(async (req, res) => {
   await order.save();
 
   /* ── Sync COO paid flag so acceptTransfer skips stock ── */
+  console.log(`[payOrder] Order ${order.id} paid | cooId: "${order.cooId || ''}"`);
   if (order.cooId) {
     const KitchenCooOrder = require('../models/KitchenCooOrder');
     const cooSync = await KitchenCooOrder.findOne({ id: order.cooId });
-    if (cooSync && !cooSync.paid) {
-      cooSync.paid = true;
-      cooSync.paymentMethod = payMethod;
-      cooSync.paymentAmount = order.total;
-      await cooSync.save();
+    if (cooSync) {
+      console.log(`[payOrder] COO found: id=${cooSync.id}, paid was=${cooSync.paid}, status=${cooSync.status}`);
+      if (!cooSync.paid) {
+        cooSync.paid = true;
+        cooSync.paymentMethod = payMethod;
+        cooSync.paymentAmount = order.total;
+        await cooSync.save();
+        console.log(`[payOrder] COO ${cooSync.id} marked as paid ✓`);
+      } else {
+        console.log(`[payOrder] COO ${cooSync.id} already paid — skipping`);
+      }
+    } else {
+      console.log(`[payOrder] COO ${order.cooId} NOT FOUND in KitchenCooOrder`);
     }
   }
 
