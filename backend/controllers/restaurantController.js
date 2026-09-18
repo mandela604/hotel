@@ -399,10 +399,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
   if (isCooTransfer) {
     const KitchenCooOrder = require('../models/KitchenCooOrder');
     const cooCheck = await KitchenCooOrder.findOne({ id: transfer.cooId });
-    if (cooCheck && cooCheck.restaurantOrderId) {
-      const linkedOrderCheck = await Order.findOne({ id: cooCheck.restaurantOrderId });
-      if (linkedOrderCheck && linkedOrderCheck.status === 'paid') linkedOrderPaid = true;
-    }
+    if (cooCheck && cooCheck.paid) linkedOrderPaid = true;
   }
 
   if (!linkedOrderPaid) {
