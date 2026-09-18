@@ -34,6 +34,15 @@ body {
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }
 
+/* ── Tabs ── */
+.ri-tab-bar{ display:flex; gap:0; background:var(--surface,#fff); border:1px solid var(--border,#eef0f6); border-radius:12px; padding:3px; width:fit-content; margin-bottom:4px; }
+.ri-tab-btn{ padding:8px 20px; border-radius:9px; font-size:12.5px; font-weight:700; border:none; background:transparent; color:var(--text3,#9aa1b3); cursor:pointer; font-family:inherit; transition:all .2s; display:flex; align-items:center; gap:6px; }
+.ri-tab-btn.active{ background:var(--gold-dim,rgba(47,111,237,.1)); color:var(--gold,#2f6fed); }
+.ri-tab-btn:hover:not(.active){ color:var(--text2,#6b7280); }
+.ri-tab-btn i{ font-size:12px; }
+#tabBookingReport, #tabRoomIncome{ display:none; }
+#tabBookingReport.active, #tabRoomIncome.active{ display:block; }
+
 /* ── KPIs ── */
 .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 14px; }
 @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
@@ -155,6 +164,14 @@ body {
   <div class="main">
     <div id="topbarSlot"></div>
     <div class="content">
+      <!-- Tabs -->
+      <div class="ri-tab-bar">
+        <button class="ri-tab-btn active" data-tab="booking" onclick="switchReportTab('booking')"><i class="fa-solid fa-clipboard-list"></i> Booking Report</button>
+        <button class="ri-tab-btn" data-tab="income" onclick="switchReportTab('income')"><i class="fa-solid fa-sack-dollar"></i> Room Income</button>
+      </div>
+
+      <!-- Booking Report Tab -->
+      <div id="tabBookingReport" class="active">
       <!-- KPI Row -->
       <div class="kpi-row" id="kpiRow">
         <div class="kpi-card"><div class="kpi-top"><div class="kpi-ic ic-gold"><i class="fa-solid fa-sack-dollar"></i></div><div class="kpi-label">Total Revenue</div></div><div class="kpi-value skeleton" id="kpi-revenue" style="height:22px;"></div><div class="kpi-sub skeleton" id="kpi-revenue-sub" style="height:10px;margin-top:4px;"></div></div>
@@ -238,6 +255,10 @@ body {
 
       <!-- Table -->
       <div id="tableSlot"></div>
+      </div><!-- /tabBookingReport -->
+
+      <!-- Room Income Tab -->
+      <div id="tabRoomIncome"></div>
     </div>
   </div>
 </div>
@@ -249,6 +270,7 @@ body {
 <script src="../component/booking-modal.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../component/front-desk-table.js"></script>
+<script src="../component/grace-room-income.js"></script>
 
 <script>
 'use strict';
@@ -268,6 +290,19 @@ let allRooms = [];
 let bookings = [];
 let currentSession = null;
 let table = null;
+
+function switchReportTab(tab) {
+  document.querySelectorAll('.ri-tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === tab); });
+  document.getElementById('tabBookingReport').classList.toggle('active', tab === 'booking');
+  document.getElementById('tabRoomIncome').classList.toggle('active', tab === 'income');
+  if (tab === 'income') {
+    var el = document.getElementById('tabRoomIncome');
+    if (el && window.RoomIncome && !el.dataset.loaded) {
+      RoomIncome.render(el);
+      el.dataset.loaded = '1';
+    }
+  }
+}
 const TODAY = new Date().toISOString().split('T')[0];
 let dateFrom = '', dateTo = '';
 let rangeStart = null, rangeEnd = null;
