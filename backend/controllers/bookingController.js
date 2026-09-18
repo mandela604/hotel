@@ -809,12 +809,15 @@ exports.getReports = asyncHandler(async (req, res) => {
   let stays = [];
   for (const g of allGuests) {
     for (const s of (g.stays || [])) {
+      const n = nights(s.checkin, s.checkout) || 1;
       stays.push({
         room: s.room, type: s.type, guest: g.name, phone: g.phone || '',
         checkin: s.checkin, checkout: s.checkout,
+        rate: n > 0 ? Math.round((s.total || 0) / n) : 0,
+        discount: 0,
         total: s.total || 0, paid: s.paid || 0, status: s.status || '',
         recordedBy: '', payStatus: (s.paid || 0) >= (s.total || 0) ? 'Fully Paid' : (s.paid || 0) > 0 ? 'Deposit Paid' : 'Pending',
-        discount: 0, refunded: 0, payments: [], notes: '',
+        refunded: 0, payments: [], notes: '',
       });
     }
   }
