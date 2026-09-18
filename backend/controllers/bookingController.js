@@ -919,7 +919,14 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
   for (const g of allGuests) {
     for (const s of (g.stays || [])) {
       const n = nights(s.checkin, s.checkout) || 1;
-      const collected = (s.paid || 0);
+
+      /* collected = sum of room-related charges only (exclude Restaurant/Pool Bar) */
+      const roomCharges = (g.charges || []).filter(c =>
+        c.room === s.room &&
+        c.source !== 'Restaurant' &&
+        c.source !== 'Pool Bar'
+      );
+      const collected = roomCharges.reduce((sum, c) => sum + (Number(c.paid) || 0), 0);
 
       rows.push({
         guest: g.name, phone: g.phone || '', room: s.room, type: s.type,
