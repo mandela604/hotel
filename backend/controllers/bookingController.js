@@ -954,8 +954,7 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
       rows = rows.filter(r => {
         if (!r.checkin) return false;
         const ci = new Date(r.checkin + 'T00:00:00').getTime();
-        const co = r.checkout ? new Date(r.checkout + 'T00:00:00').getTime() : ci;
-        return ci <= eTime && co >= sTime;
+        return ci >= sTime && ci <= eTime;
       });
     }
   }
@@ -967,8 +966,7 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
     rows = rows.filter(r => {
       if (!r.checkin) return false;
       const ci = new Date(r.checkin + 'T00:00:00').getTime();
-      const co = r.checkout ? new Date(r.checkout + 'T00:00:00').getTime() : ci;
-      return ci <= eTime && co >= sTime;
+      return ci >= sTime && ci <= eTime;
     });
   }
 
