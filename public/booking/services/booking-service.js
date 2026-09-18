@@ -276,6 +276,16 @@
     return res.data;
   }
 
+  async function listGuests(page, limit, search) {
+    const params = new URLSearchParams();
+    if (page) params.set('page', page);
+    if (limit) params.set('limit', limit);
+    if (search) params.set('search', search);
+    const qs = params.toString();
+    const res = await get('/guests' + (qs ? '?' + qs : ''));
+    return res;
+  }
+
   global.BookingData = {
     CONFIG,
     getBookingData, getBooking,
@@ -283,6 +293,7 @@
     setRoomStatus, checkinBooking, checkoutBooking,
     saveRoom,
     getGuest, saveGuest, addRoomCharge, addChargePayment, settleCharge, settleAllCharges,
+    listGuests,
     nights, calcTotal, calcPaid, calcBal,
     getSession,
     getStatusConfig: () => JSON.parse(JSON.stringify(STATUS_CONFIG)),

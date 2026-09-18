@@ -799,9 +799,41 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
 exports.getReports = asyncHandler(async (req, res) => {
   const { period, status, payment, staff, dateFrom, dateTo, search } = req.query;
 
-  // Exclude vacant, cancelled, and no-show placeholder records
-  let bookings = await Booking.find({}).sort({ createdAt: -1 });
-  bookings = bookings.filter(b => !['vacant', 'cancelled', 'no-show'].includes(b.status));
+  // Build report from Guest.stays[] (historical) + active Bookings (current)
+  const [allGuests, activeBookings] = await Promise.all([
+    Guest.find({}).select('name phone guestId stays').lean(),
+    Booking.find({ status: { $in: ['checkedin', 'reserved', 'cleaning', 'maintenance'] } }).lean(),
+  ]);
+
+  // Flatten Guest stays into booking-shaped objects
+  let stays = [];
+  for (const g of allGuests) {
+    for (const s of (g.stays || [])) {
+      stays.push({
+        room: s.room, type: s.type, guest: g.name, phone: g.phone || '',
+        checkin: s.checkin, checkout: s.checkout,
+        total: s.total || 0, paid: s.paid || 0, status: s.status || '',
+        recordedBy: '', payStatus: (s.paid || 0) >= (s.total || 0) ? 'Fully Paid' : (s.paid || 0) > 0 ? 'Deposit Paid' : 'Pending',
+        discount: 0, refunded: 0, payments: [], notes: '',
+      });
+    }
+  }
+
+  // Merge active bookings (some may already be in Guest.stays, skip duplicates by room+checkin)
+  const existingKeys = new Set(stays.map(s => s.room + '|' + s.checkin));
+  for (const b of activeBookings) {
+    const key = b.room + '|' + b.checkin;
+    if (!existingKeys.has(key)) {
+      stays.push({
+        room: b.room, type: b.type, guest: b.guest || '', phone: b.phone || '',
+        checkin: b.checkin || '', checkout: b.checkout || '',
+        total: calcTotal(b), paid: calcPaid(b), status: b.status || '',
+        recordedBy: b.recordedBy || '', payStatus: b.payStatus || 'Pending',
+        discount: b.discount || 0, refunded: b.refunded || 0,
+        payments: b.payments || [], notes: b.notes || '',
+      });
+    }
+  }
 
   // Period shortcut
   let start = null, end = null;
@@ -819,22 +851,17 @@ exports.getReports = asyncHandler(async (req, res) => {
   if (dateFrom) { start = new Date(dateFrom); start.setHours(0,0,0,0); }
   if (dateTo) { end = new Date(dateTo); end.setHours(23,59,59,999); }
 
-  const filtered = bookings.filter(b => {
-    // Status filter
+  const filtered = stays.filter(b => {
     if (status && b.status !== status) return false;
-    // Payment status filter
     if (payment && b.payStatus !== payment) return false;
-    // Staff filter
     if (staff && b.recordedBy !== staff) return false;
-    // Search filter
     if (search) {
       const q = search.toLowerCase().trim();
       const hit = (b.room||'').toLowerCase().includes(q) || (b.guest||'').toLowerCase().includes(q) ||
-        (b.email||'').toLowerCase().includes(q) || (b.type||'').toLowerCase().includes(q) ||
-        (b.phone||'').toLowerCase().includes(q) || (b.recordedBy||'').toLowerCase().includes(q);
+        (b.type||'').toLowerCase().includes(q) || (b.phone||'').toLowerCase().includes(q) ||
+        (b.recordedBy||'').toLowerCase().includes(q);
       if (!hit) return false;
     }
-    // Date filter — applies to ALL bookings including cancelled
     if (start && end) {
       const ci = b.checkin ? new Date(b.checkin) : null;
       const co = b.checkout ? new Date(b.checkout) : ci;
@@ -844,12 +871,11 @@ exports.getReports = asyncHandler(async (req, res) => {
     return true;
   });
 
-  // Compute KPIs from filtered results
-  const totRev = filtered.reduce((s, b) => s + calcTotal(b), 0);
+  const totRev = filtered.reduce((s, b) => s + (b.total || 0), 0);
   const totRefunded = filtered.reduce((s, b) => s + (Number(b.refunded) || 0), 0);
   const netRev = totRev - totRefunded;
-  const totPaid = filtered.reduce((s, b) => s + calcPaid(b), 0);
-  const totBal = filtered.reduce((s, b) => s + calcBal(b), 0);
+  const totPaid = filtered.reduce((s, b) => s + (b.paid || 0), 0);
+  const totBal = filtered.reduce((s, b) => s + Math.max(0, (b.total || 0) - (b.paid || 0)), 0);
   const nightsCount = filtered.reduce((s, b) => s + (nights(b.checkin, b.checkout) || 0), 0);
   const fullyPaid = filtered.filter(b => b.payStatus === 'Fully Paid').length;
 

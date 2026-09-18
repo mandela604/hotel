@@ -577,8 +577,9 @@ function renderSummaryBar(rows){
 /* ── Data Loading & Guest list ── */
 async function loadGuestsData() {
   try {
+    const res = await BookingData.listGuests(1, 1000);
+    guestsData = res.data || [];
     const data = await BookingData.getBookingData();
-    guestsData = data.guests || [];
     bookingsData = data.bookings || [];
   } catch (err) {
     console.error('Failed to refresh guest data', err);
