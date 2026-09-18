@@ -908,18 +908,18 @@ exports._calc = { nights, calcTotal, calcPaid, calcBal };
 
 /* ── Room Income — financial view of room revenue ── */
 exports.getRoomIncome = asyncHandler(async (req, res) => {
-  const { period, dateFrom, dateTo, roomType, payment } = req.query;
+  const { period, dateFrom, dateTo, roomType, payment, page: pg, limit: lim } = req.query;
+  const pageNum = Math.max(1, parseInt(pg, 10) || 1);
+  const pageLimit = Math.min(100, Math.max(1, parseInt(lim, 10) || 20));
 
   const allGuests = await Guest.find({}).select('name phone guestId stays charges').lean();
 
+  /* ── Build raw rows from Guest.stays[] ── */
   let rows = [];
   for (const g of allGuests) {
     for (const s of (g.stays || [])) {
       const n = nights(s.checkin, s.checkout) || 1;
-      const stayPayments = (g.charges || [])
-        .filter(c => c.room === s.room && c.date && c.date.includes(s.checkin ? s.checkin.slice(2) : ''));
-      const roomCharges = (g.charges || []).filter(c => c.room === s.room && c.source !== 'Restaurant' && c.source !== 'Pool Bar');
-      const collected = roomCharges.reduce((sum, c) => sum + (Number(c.paid) || 0), 0);
+      const collected = (s.paid || 0);
 
       rows.push({
         guest: g.name, phone: g.phone || '', room: s.room, type: s.type,
@@ -927,47 +927,82 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
         nights: n,
         rate: n > 0 ? Math.round((s.total || 0) / n) : 0,
         total: s.total || 0,
-        collected: collected || (s.paid || 0),
-        balance: Math.max(0, (s.total || 0) - (collected || (s.paid || 0))),
+        collected: collected,
+        balance: Math.max(0, (s.total || 0) - collected),
         status: s.status || '',
       });
     }
   }
 
-  let start = null, end = null;
-  const today = new Date(); today.setHours(0,0,0,0);
-  if (period === 'today') { start = new Date(today); end = new Date(today); end.setHours(23,59,59,999); }
-  else if (period === '7d') { start = new Date(today); start.setDate(start.getDate() - 6); end = new Date(today); end.setHours(23,59,59,999); }
-  else if (period === '30d') { start = new Date(today); start.setDate(start.getDate() - 29); end = new Date(today); end.setHours(23,59,59,999); }
-  if (dateFrom) { start = new Date(dateFrom); start.setHours(0,0,0,0); }
-  if (dateTo) { end = new Date(dateTo); end.setHours(23,59,59,999); }
-
-  const filtered = rows.filter(r => {
-    if (roomType && r.type !== roomType) return false;
-    if (payment) {
-      if (payment === 'paid' && r.balance > 0) return false;
-      if (payment === 'unpaid' && r.balance <= 0) return false;
+  /* ── Period filter ── */
+  if (period && period !== 'all') {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    let start, end;
+    if (period === 'today') {
+      start = todayStart; end = todayEnd;
+    } else if (period === '7d') {
+      start = new Date(todayStart); start.setDate(start.getDate() - 6);
+      end = todayEnd;
+    } else if (period === '30d') {
+      start = new Date(todayStart); start.setDate(start.getDate() - 29);
+      end = todayEnd;
     }
     if (start && end) {
-      const ci = r.checkin ? new Date(r.checkin) : null;
-      const co = r.checkout ? new Date(r.checkout) : ci;
-      if (!ci) return false;
-      if (ci > end || (co ? co < start : ci < start)) return false;
+      const sTime = start.getTime();
+      const eTime = end.getTime();
+      rows = rows.filter(r => {
+        if (!r.checkin) return false;
+        const ci = new Date(r.checkin + 'T00:00:00').getTime();
+        const co = r.checkout ? new Date(r.checkout + 'T00:00:00').getTime() : ci;
+        return ci <= eTime && co >= sTime;
+      });
     }
-    return true;
-  });
+  }
 
-  const totalRevenue = filtered.reduce((s, r) => s + r.total, 0);
-  const totalCollected = filtered.reduce((s, r) => s + r.collected, 0);
-  const totalBalance = filtered.reduce((s, r) => s + r.balance, 0);
-  const totalNights = filtered.reduce((s, r) => s + r.nights, 0);
-  const avgRate = filtered.length > 0 ? Math.round(totalRevenue / Math.max(1, totalNights)) : 0;
+  /* ── Custom date range ── */
+  if (dateFrom || dateTo) {
+    const sTime = dateFrom ? new Date(dateFrom + 'T00:00:00').getTime() : 0;
+    const eTime = dateTo ? new Date(dateTo + 'T23:59:59.999').getTime() : Date.now();
+    rows = rows.filter(r => {
+      if (!r.checkin) return false;
+      const ci = new Date(r.checkin + 'T00:00:00').getTime();
+      const co = r.checkout ? new Date(r.checkout + 'T00:00:00').getTime() : ci;
+      return ci <= eTime && co >= sTime;
+    });
+  }
+
+  /* ── Room type filter ── */
+  if (roomType) rows = rows.filter(r => r.type === roomType);
+
+  /* ── Payment status filter ── */
+  if (payment === 'paid') rows = rows.filter(r => r.balance <= 0);
+  else if (payment === 'unpaid') rows = rows.filter(r => r.balance > 0);
+
+  /* ── Sort by checkin desc ── */
+  rows.sort((a, b) => (b.checkin || '').localeCompare(a.checkin || ''));
+
+  /* ── KPIs (from ALL filtered rows, before pagination) ── */
+  const totalRevenue = rows.reduce((s, r) => s + r.total, 0);
+  const totalCollected = rows.reduce((s, r) => s + r.collected, 0);
+  const totalBalance = rows.reduce((s, r) => s + r.balance, 0);
+  const totalNights = rows.reduce((s, r) => s + r.nights, 0);
+  const avgRate = totalNights > 0 ? Math.round(totalRevenue / totalNights) : 0;
+  const totalCount = rows.length;
+
+  /* ── Paginate ── */
+  const totalPages = Math.ceil(totalCount / pageLimit) || 1;
+  const paged = rows.slice((pageNum - 1) * pageLimit, pageNum * pageLimit);
 
   res.json({
     success: true,
     data: {
-      rows: filtered,
-      kpis: { totalRevenue, totalCollected, totalBalance, totalNights, avgRate, count: filtered.length },
+      rows: paged,
+      kpis: { totalRevenue, totalCollected, totalBalance, totalNights, avgRate, count: totalCount },
+      page: pageNum,
+      pages: totalPages,
+      total: totalCount,
     },
   });
 });

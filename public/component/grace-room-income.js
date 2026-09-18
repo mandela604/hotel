@@ -1,71 +1,55 @@
-/**
- * Room Income Component — financial view of room revenue.
- * Rendered inside a container when the "Room Income" tab is clicked.
- *
- * Usage:
- *   RoomIncome.render(document.getElementById('roomIncomeSlot'));
- */
 ;(function () {
   'use strict';
 
   const CFG = (window.CONFIG && window.CONFIG.API_BASE) ? window.CONFIG.API_BASE : '';
   const fmt = (n) => '₦' + Number(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  let currentData = { rows: [], kpis: {} };
-  let activePeriod = 'all';
-  let activeRoomType = '';
-  let activePayment = '';
+  let state = { rows: [], kpis: {}, page: 1, pages: 1, total: 0 };
+  let filters = { period: 'all', roomType: '', payment: '' };
 
   async function fetchData() {
     const params = new URLSearchParams();
-    if (activePeriod !== 'all') params.set('period', activePeriod);
-    if (activeRoomType) params.set('roomType', activeRoomType);
-    if (activePayment) params.set('payment', activePayment);
-    const qs = params.toString();
-    const res = await fetch(CFG + '/api/booking/room-income' + (qs ? '?' + qs : ''), { credentials: 'include' });
+    params.set('page', state.page);
+    params.set('limit', '20');
+    if (filters.period !== 'all') params.set('period', filters.period);
+    if (filters.roomType) params.set('roomType', filters.roomType);
+    if (filters.payment) params.set('payment', filters.payment);
+    const res = await fetch(CFG + '/api/booking/room-income?' + params.toString(), { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to load');
     const j = await res.json();
-    return j.data || { rows: [], kpis: {} };
+    return j.data || { rows: [], kpis: {}, page: 1, pages: 1, total: 0 };
   }
 
-  function renderKPIs(kpis) {
+  function renderKPIs(k) {
     return '<div class="ri-kpi-row">' +
-      '<div class="ri-kpi ri-kpi-gold"><div class="ri-kpi-ic"><i class="fa-solid fa-sack-dollar"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Total Revenue</div><div class="ri-kpi-val">' + fmt(kpis.totalRevenue) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-green"><div class="ri-kpi-ic"><i class="fa-solid fa-circle-check"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Collected</div><div class="ri-kpi-val">' + fmt(kpis.totalCollected) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-red"><div class="ri-kpi-ic"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Outstanding</div><div class="ri-kpi-val">' + fmt(kpis.totalBalance) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-purple"><div class="ri-kpi-ic"><i class="fa-solid fa-moon"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Room Nights</div><div class="ri-kpi-val">' + (kpis.totalNights || 0) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-teal"><div class="ri-kpi-ic"><i class="fa-solid fa-chart-line"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Avg Rate/Night</div><div class="ri-kpi-val">' + fmt(kpis.avgRate) + '</div></div></div>' +
+      '<div class="ri-kpi ri-kpi-gold"><div class="ri-kpi-ic"><i class="fa-solid fa-sack-dollar"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Total Revenue</div><div class="ri-kpi-val">' + fmt(k.totalRevenue) + '</div></div></div>' +
+      '<div class="ri-kpi ri-kpi-green"><div class="ri-kpi-ic"><i class="fa-solid fa-circle-check"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Collected</div><div class="ri-kpi-val">' + fmt(k.totalCollected) + '</div></div></div>' +
+      '<div class="ri-kpi ri-kpi-red"><div class="ri-kpi-ic"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Outstanding</div><div class="ri-kpi-val">' + fmt(k.totalBalance) + '</div></div></div>' +
+      '<div class="ri-kpi ri-kpi-purple"><div class="ri-kpi-ic"><i class="fa-solid fa-moon"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Room Nights</div><div class="ri-kpi-val">' + (k.totalNights || 0) + '</div></div></div>' +
+      '<div class="ri-kpi ri-kpi-teal"><div class="ri-kpi-ic"><i class="fa-solid fa-chart-line"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Avg Rate/Night</div><div class="ri-kpi-val">' + fmt(k.avgRate) + '</div></div></div>' +
     '</div>';
   }
 
   function renderFilters() {
     return '<div class="ri-filters">' +
-      '<div class="ri-fg">' +
-        '<span class="ri-fl">Period</span>' +
-        '<div class="ri-pills">' +
-          '<button class="ri-pill' + (activePeriod === 'all' ? ' active' : '') + '" data-p="all">All Time</button>' +
-          '<button class="ri-pill' + (activePeriod === 'today' ? ' active' : '') + '" data-p="today">Today</button>' +
-          '<button class="ri-pill' + (activePeriod === '7d' ? ' active' : '') + '" data-p="7d">7 Days</button>' +
-          '<button class="ri-pill' + (activePeriod === '30d' ? ' active' : '') + '" data-p="30d">30 Days</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="ri-fg">' +
-        '<span class="ri-fl">Room Type</span>' +
-        '<select class="ri-select" id="riRoomType">' +
-          '<option value="">All Types</option>' +
-          '<option value="Standard"' + (activeRoomType === 'Standard' ? ' selected' : '') + '>Standard</option>' +
-          '<option value="Deluxe"' + (activeRoomType === 'Deluxe' ? ' selected' : '') + '>Deluxe</option>' +
-          '<option value="Suite"' + (activeRoomType === 'Suite' ? ' selected' : '') + '>Suite</option>' +
-          '<option value="Conference"' + (activeRoomType === 'Conference' ? ' selected' : '') + '>Conference</option>' +
-        '</select>' +
-      '</div>' +
-      '<div class="ri-fg">' +
-        '<span class="ri-fl">Payment</span>' +
-        '<select class="ri-select" id="riPayment">' +
-          '<option value="">All</option>' +
-          '<option value="paid"' + (activePayment === 'paid' ? ' selected' : '') + '>Fully Paid</option>' +
-          '<option value="unpaid"' + (activePayment === 'unpaid' ? ' selected' : '') + '>Outstanding</option>' +
-        '</select>' +
-      '</div>' +
+      '<div class="ri-fg"><span class="ri-fl">Period</span><div class="ri-pills" id="riPeriodPills">' +
+        '<button class="ri-pill' + (filters.period === 'all' ? ' active' : '') + '" data-p="all">All Time</button>' +
+        '<button class="ri-pill' + (filters.period === 'today' ? ' active' : '') + '" data-p="today">Today</button>' +
+        '<button class="ri-pill' + (filters.period === '7d' ? ' active' : '') + '" data-p="7d">7 Days</button>' +
+        '<button class="ri-pill' + (filters.period === '30d' ? ' active' : '') + '" data-p="30d">30 Days</button>' +
+      '</div></div>' +
+      '<div class="ri-fg"><span class="ri-fl">Room Type</span><select class="ri-select" id="riRoomType">' +
+        '<option value="">All Types</option>' +
+        '<option value="Standard"' + (filters.roomType === 'Standard' ? ' selected' : '') + '>Standard</option>' +
+        '<option value="Deluxe"' + (filters.roomType === 'Deluxe' ? ' selected' : '') + '>Deluxe</option>' +
+        '<option value="Suite"' + (filters.roomType === 'Suite' ? ' selected' : '') + '>Suite</option>' +
+        '<option value="Conference"' + (filters.roomType === 'Conference' ? ' selected' : '') + '>Conference</option>' +
+      '</select></div>' +
+      '<div class="ri-fg"><span class="ri-fl">Payment</span><select class="ri-select" id="riPayment">' +
+        '<option value="">All</option>' +
+        '<option value="paid"' + (filters.payment === 'paid' ? ' selected' : '') + '>Fully Paid</option>' +
+        '<option value="unpaid"' + (filters.payment === 'unpaid' ? ' selected' : '') + '>Outstanding</option>' +
+      '</select></div>' +
     '</div>';
   }
 
@@ -93,44 +77,87 @@
     return html;
   }
 
+  function renderPagination() {
+    if (state.pages <= 1) return '';
+    var html = '<div class="ri-pagination">';
+    html += '<button class="ri-page-btn" data-page="1" ' + (state.page <= 1 ? 'disabled' : '') + '><i class="fa-solid fa-angles-left"></i></button>';
+    html += '<button class="ri-page-btn" data-page="' + (state.page - 1) + '" ' + (state.page <= 1 ? 'disabled' : '') + '><i class="fa-solid fa-chevron-left"></i></button>';
+    var start = Math.max(1, state.page - 2);
+    var end = Math.min(state.pages, state.page + 2);
+    for (var i = start; i <= end; i++) {
+      html += '<button class="ri-page-btn' + (i === state.page ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
+    }
+    html += '<button class="ri-page-btn" data-page="' + (state.page + 1) + '" ' + (state.page >= state.pages ? 'disabled' : '') + '><i class="fa-solid fa-chevron-right"></i></button>';
+    html += '<button class="ri-page-btn" data-page="' + state.pages + '" ' + (state.page >= state.pages ? 'disabled' : '') + '><i class="fa-solid fa-angles-right"></i></button>';
+    html += '<span class="ri-page-info">Page ' + state.page + ' of ' + state.pages + ' (' + state.total + ' records)</span>';
+    html += '</div>';
+    return html;
+  }
+
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
   async function render(container) {
     container.innerHTML = '<div class="ri-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading room income…</div>';
     try {
-      currentData = await fetchData();
-      _paint(container);
-      _bindEvents(container);
+      state.page = 1;
+      var data = await fetchData();
+      state.rows = data.rows || [];
+      state.kpis = data.kpis || {};
+      state.page = data.page || 1;
+      state.pages = data.pages || 1;
+      state.total = data.total || 0;
+      paint(container);
+      bindEvents(container);
     } catch (e) {
       container.innerHTML = '<div class="ri-empty"><i class="fa-solid fa-triangle-exclamation"></i><div>Failed to load room income.</div></div>';
       console.error('[RoomIncome]', e);
     }
   }
 
-  function _paint(container) {
-    container.innerHTML =
-      renderKPIs(currentData.kpis) +
-      renderFilters() +
-      renderTable(currentData.rows);
+  function paint(c) {
+    c.innerHTML = renderKPIs(state.kpis) + renderFilters() + renderTable(state.rows) + renderPagination();
   }
 
-  function _bindEvents(container) {
-    container.querySelectorAll('.ri-pill').forEach(function (btn) {
+  async function goPage(container, pg) {
+    state.page = pg;
+    container.innerHTML = '<div class="ri-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>';
+    try {
+      var data = await fetchData();
+      state.rows = data.rows || [];
+      state.kpis = data.kpis || {};
+      state.page = data.page || 1;
+      state.pages = data.pages || 1;
+      state.total = data.total || 0;
+      paint(container);
+      bindEvents(container);
+    } catch (e) {
+      container.innerHTML = '<div class="ri-empty"><i class="fa-solid fa-triangle-exclamation"></i><div>Failed to load.</div></div>';
+    }
+  }
+
+  function bindEvents(c) {
+    c.querySelectorAll('#riPeriodPills .ri-pill').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        activePeriod = btn.dataset.p;
-        render(container);
+        filters.period = btn.dataset.p;
+        render(c);
       });
     });
-    var rtSel = container.querySelector('#riRoomType');
-    if (rtSel) rtSel.addEventListener('change', function () { activeRoomType = rtSel.value; render(container); });
-    var pySel = container.querySelector('#riPayment');
-    if (pySel) pySel.addEventListener('change', function () { activePayment = pySel.value; render(container); });
+    var rtSel = c.querySelector('#riRoomType');
+    if (rtSel) rtSel.addEventListener('change', function () { filters.roomType = rtSel.value; render(c); });
+    var pySel = c.querySelector('#riPayment');
+    if (pySel) pySel.addEventListener('change', function () { filters.payment = pySel.value; render(c); });
+    c.querySelectorAll('.ri-page-btn[data-page]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pg = parseInt(btn.dataset.page, 10);
+        if (pg >= 1 && pg <= state.pages) goPage(c, pg);
+      });
+    });
   }
 
-  /* ── CSS (injected once) ── */
-  var injected = false;
+  /* ── CSS ── */
+  var cssInjected = false;
   function injectCSS() {
-    if (injected) return; injected = true;
+    if (cssInjected) return; cssInjected = true;
     var s = document.createElement('style');
     s.textContent =
       '.ri-kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;}' +
@@ -176,7 +203,13 @@
       '.ri-empty{padding:40px;text-align:center;color:var(--text3,#9aa1b3);font-size:13px;}' +
       '.ri-empty i{font-size:24px;display:block;margin-bottom:10px;}' +
       '.ri-loading{padding:40px;text-align:center;color:var(--text3,#9aa1b3);font-size:13px;}' +
-      '@media print{.ri-filters{display:none!important;}}';
+      '.ri-pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;padding:12px 0;}' +
+      '.ri-page-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border,#eef0f6);background:var(--surface,#fff);color:var(--text2,#6b7280);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}' +
+      '.ri-page-btn:hover:not(:disabled){background:var(--surface2,#f4f6fb);color:var(--text,#1c2440);}' +
+      '.ri-page-btn.active{background:var(--gold-dim,rgba(47,111,237,.1));color:var(--gold,#2f6fed);border-color:var(--gold-border,rgba(47,111,237,.25));}' +
+      '.ri-page-btn:disabled{opacity:.35;cursor:not-allowed;}' +
+      '.ri-page-info{font-size:11px;color:var(--text3,#9aa1b3);margin-left:10px;}' +
+      '@media print{.ri-filters,.ri-pagination{display:none!important;}}';
     document.head.appendChild(s);
   }
 
