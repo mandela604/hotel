@@ -5,7 +5,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
 
 const connectDB = require('./config/db');
 
@@ -36,7 +35,6 @@ app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
 
 app.use(express.static(PUBLIC_DIR));
 
-app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 600, standardHeaders: true, legacyHeaders: false }));
 app.use('/api', sanitize); // strip Mongo operators + trim/sanitize all incoming strings
 
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'aurum-hotel', time: new Date().toISOString() }));
