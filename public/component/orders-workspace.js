@@ -803,9 +803,12 @@
       // Update submit label
       if (!_editingOrderId) {
         const curMethod = (methodSel && methodSel.value) ? methodSel.value.trim() : '';
-        if (t === 'quick') $('[data-role="submitLabel"]').textContent = curMethod === 'Room Charge' ? 'Charge to Room' : 'Pay';
-        else if (t === 'tab') $('[data-role="submitLabel"]').textContent = 'Open Tab';
-        else $('[data-role="submitLabel"]').textContent = 'Send to Kitchen';
+        const lbl = $('[data-role="submitLabel"]');
+        if (lbl) {
+          if (t === 'quick') lbl.textContent = curMethod === 'Room Charge' ? 'Charge to Room' : 'Pay';
+          else if (t === 'tab') lbl.textContent = 'Open Tab';
+          else lbl.textContent = 'Send to Kitchen';
+        }
       }
       // Fetch COO menu items if switching to COO
       if (t === 'coo') {
@@ -1833,11 +1836,11 @@
         if (isCompleted) {
           submitBtn.disabled = true;
           submitBtn.style.display = '';
-          $('[data-role="submitLabel"]').textContent = st === 'paid' || isSale || st === 'completed' ? 'Paid' : 'Cancelled';
+          const lbl1 = $('[data-role="submitLabel"]'); if (lbl1) lbl1.textContent = st === 'paid' || isSale || st === 'completed' ? 'Paid' : 'Cancelled';
         } else {
           submitBtn.disabled = false;
           submitBtn.style.display = '';
-          $('[data-role="submitLabel"]').textContent = 'Pay';
+          const lbl2 = $('[data-role="submitLabel"]'); if (lbl2) lbl2.textContent = 'Pay';
         }
       }
 
