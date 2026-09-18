@@ -822,6 +822,18 @@ exports.payOrder = asyncHandler(async (req, res) => {
   order.paidSaleId = sale ? sale.id : order.pendingSaleId || '';
   await order.save();
 
+  /* ── Sync COO paid flag so acceptTransfer skips stock ── */
+  if (order.cooId) {
+    const KitchenCooOrder = require('../models/KitchenCooOrder');
+    const cooSync = await KitchenCooOrder.findOne({ id: order.cooId });
+    if (cooSync && !cooSync.paid) {
+      cooSync.paid = true;
+      cooSync.paymentMethod = payMethod;
+      cooSync.paymentAmount = order.total;
+      await cooSync.save();
+    }
+  }
+
   await logActivity('green', `Tab ${order.id} paid — ${order.total} (${payMethod})`, 'restaurant-orders.html');
   res.json({ success: true, data: order, sale });
 });
