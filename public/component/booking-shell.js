@@ -368,6 +368,7 @@
         avatar.title = user.name || '';
       }
       handle.setApiMode('Live');
+      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('bks-backBtn'); if (bb) bb.style.display = 'none'; }
       // poll folio badge every 5s (Pool Bar / Restaurant / Gym charges)
       async function pollGuestBadge(){
         try{
