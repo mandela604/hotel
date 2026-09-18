@@ -289,6 +289,11 @@ exports.createSale = asyncHandler(async (req, res) => {
     /* Post charge to Guest.folio — room lookup is most reliable path */
     let guest = null;
     const activeBookingR = roomNumber ? await Booking.findOne({ room: roomNumber, status: 'checkedin' }) : null;
+    if (roomNumber && !activeBookingR) {
+      const err = new Error(`Room ${roomNumber} is not currently checked in`);
+      err.statusCode = 400;
+      throw err;
+    }
     const resolvedGuestIdR = guestId || (activeBookingR && activeBookingR.guestId) || '';
     if (resolvedGuestIdR) guest = await Guest.findOne({ id: resolvedGuestIdR });
     if (!guest && resolvedGuestIdR) guest = await Guest.findOne({ guestId: resolvedGuestIdR });
