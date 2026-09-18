@@ -1314,18 +1314,28 @@
       if (!_editingOrderId) return;
       const btn = $('[data-role="submitBtn"]');
       const origHtml = btn ? btn.innerHTML : '';
-      const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
+      const editItems = cart.map(function (c) { return { name: c.key || c.name, qty: c.qty, price: c.price }; });
       const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
       const isCooEdit = editOrder && editOrder.type === 'coo';
-      const cooNeedsPatch = isCooEdit && (editOrder.status || '').toLowerCase() === 'open';
+
+      const itemsChanged = JSON.stringify(editItems) !== JSON.stringify(
+        (editOrder && editOrder.items || []).map(function (it) { return { name: it.name, qty: it.qty, price: it.price }; })
+      );
+
+      // Determine if Kitchen has already locked the COO (past pending)
+      const cooStatus = editOrder && editOrder._cooStatus; // set by loadRecordInView if available
+      const cooLocked = isCooEdit && cooStatus && cooStatus !== 'pending';
+
       setBtnLoading(btn, true);
       try {
-        if (cooNeedsPatch) {
+        if (isCooEdit && itemsChanged && cooLocked) {
+          // Items changed but Kitchen already started — block and tell user to reload
+          throw new Error('Kitchen has already started — item changes cannot be saved. Reload the order to pay the original amount.');
+        } else if (isCooEdit && itemsChanged && !cooLocked && (editOrder.status || '').toLowerCase() === 'open') {
           const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
           const body = await res.json().catch(() => null);
-          console.log('[saveEditOrderOnly] PATCH coo-order response:', res.status, body);
           if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
-        } else if (!isCooEdit) {
+        } else if (!isCooEdit && itemsChanged) {
           const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
           const edTable = ($('[data-role="fTable"]').value || '').trim();
           const edNotes = ($('[data-role="fNotes"]').value || '').trim();
@@ -1333,6 +1343,7 @@
             items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
           });
         }
+        // Nothing changed — just refresh and exit
         showToast(_editingOrderId + ' updated.', 'success');
         if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
         exitEditMode();
@@ -1352,18 +1363,25 @@
         const btn = $('[data-role="submitBtn"]');
         const origHtml = btn ? btn.innerHTML : '';
         setBtnLoading(btn, true);
-        const editItems = cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; });
+        const editItems = cart.map(function (c) { return { name: c.key || c.name, qty: c.qty, price: c.price }; });
         const editOrder = orders.find(function (x) { return x.id === _editingOrderId; });
         const isCooEdit = editOrder && editOrder.type === 'coo';
-        const cooNeedsPatch = isCooEdit && (editOrder.status || '').toLowerCase() === 'open';
+
+        const itemsChanged = JSON.stringify(editItems) !== JSON.stringify(
+          (editOrder && editOrder.items || []).map(function (it) { return { name: it.name, qty: it.qty, price: it.price }; })
+        );
+        const cooStatus = editOrder && editOrder._cooStatus;
+        const cooLocked = isCooEdit && cooStatus && cooStatus !== 'pending';
+
         try {
-          // 1) Save/patch items
-          if (cooNeedsPatch) {
+          // 1) Save/patch items only if changed and not locked
+          if (isCooEdit && itemsChanged && cooLocked) {
+            throw new Error('Kitchen has already started — item changes cannot be saved. Reload the order to pay the original amount.');
+          } else if (isCooEdit && itemsChanged && !cooLocked && (editOrder.status || '').toLowerCase() === 'open') {
             const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
             const body = await res.json().catch(() => null);
-            console.log('[saveEditOrderAndPay] PATCH coo-order response:', res.status, body);
             if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
-          } else if (!isCooEdit) {
+          } else if (!isCooEdit && itemsChanged) {
             const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
             const edTable = ($('[data-role="fTable"]').value || '').trim();
             const edNotes = ($('[data-role="fNotes"]').value || '').trim();
@@ -1755,6 +1773,16 @@
       var st = (o.status || (isSale ? 'completed' : 'open')).toLowerCase();
       var isCompleted = isSale || st === 'paid' || st === 'completed' || st === 'cancelled';
       _viewOnly = isCompleted;
+
+      // For COO orders, fetch the Kitchen COO status so we know if items are locked
+      if (o.type === 'coo' && o.cooId && !o._cooStatus) {
+        fetch('/api/restaurant/orders/' + encodeURIComponent(o.id), { credentials: 'include' })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (j.success && j.data && j.data.cooStatus) o._cooStatus = j.data.cooStatus;
+          })
+          .catch(function () {});
+      }
       var session = getSessionUser(); var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
 
       // Switch to builder view

@@ -1108,7 +1108,17 @@ exports.getPendingCooTransfers = asyncHandler(async (req, res) => {
 exports.getOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
-  res.json({ success: true, data: order });
+
+  // Include Kitchen COO status so frontend knows if items are locked
+  let cooStatus = null;
+  if (order.cooId) {
+    const cooRecord = await KitchenCooOrder.findOne({ id: order.cooId });
+    if (cooRecord) cooStatus = cooRecord.status;
+  }
+
+  const data = order.toObject();
+  data.cooStatus = cooStatus;
+  res.json({ success: true, data });
 });
 
 exports.updateCooOrder = asyncHandler(async (req, res) => {
