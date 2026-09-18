@@ -631,6 +631,7 @@ exports.addTransfer = asyncHandler(async (req, res) => {
     id: uuidv4(),
     transferNo,
     productionNo: productionNo || '',
+    cooId: cooId || '',
     meal: meal.trim(),
     quantity: Number(quantity),
     unit: unit || 'Portions',

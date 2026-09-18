@@ -838,8 +838,9 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   if (order.cooId) {
     const KitchenCooOrder = require('../models/KitchenCooOrder');
     const cooOrder = await KitchenCooOrder.findOne({ id: order.cooId });
-    if (cooOrder && cooOrder.status !== 'pending') {
-      return res.status(400).json({ success: false, error: 'Kitchen has already started — editing is locked' });
+    // Block only while Kitchen is actively producing — allow edit/pay once transferred or served
+    if (cooOrder && cooOrder.status === 'in-progress') {
+      return res.status(400).json({ success: false, error: 'Kitchen is currently producing — editing is locked' });
     }
   }
 
