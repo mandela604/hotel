@@ -1322,7 +1322,8 @@
       try {
         if (cooNeedsPatch) {
           const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
-          const body = null; try { await res.json(); } catch (e) {}
+          const body = await res.json().catch(() => null);
+          console.log('[saveEditOrderOnly] PATCH coo-order response:', res.status, body);
           if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
         } else if (!isCooEdit) {
           const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
@@ -1359,7 +1360,8 @@
           // 1) Save/patch items
           if (cooNeedsPatch) {
             const res = await fetch('/api/restaurant/coo-orders/' + encodeURIComponent(_editingOrderId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: editItems }) });
-            const body = null; try { await res.json(); } catch (e) {}
+            const body = await res.json().catch(() => null);
+            console.log('[saveEditOrderAndPay] PATCH coo-order response:', res.status, body);
             if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
           } else if (!isCooEdit) {
             const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
