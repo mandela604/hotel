@@ -50,6 +50,7 @@
         '<option value="paid"' + (filters.payment === 'paid' ? ' selected' : '') + '>Fully Paid</option>' +
         '<option value="unpaid"' + (filters.payment === 'unpaid' ? ' selected' : '') + '>Outstanding</option>' +
       '</select></div>' +
+      '<div class="ri-fg ri-fg-print"><span class="ri-fl">&nbsp;</span><button class="ri-print-btn" id="riPrintBtn"><i class="fa-solid fa-print"></i> Print Receipt</button></div>' +
     '</div>';
   }
 
@@ -152,6 +153,78 @@
         if (pg >= 1 && pg <= state.pages) goPage(c, pg);
       });
     });
+    var printBtn = c.querySelector('#riPrintBtn');
+    if (printBtn) printBtn.addEventListener('click', function () { printReceipt(); });
+  }
+
+  function printReceipt() {
+    var k = state.kpis || {};
+    var rows = state.rows || [];
+    var filterLabel = filters.period === 'all' ? 'All Time' : filters.period === 'today' ? 'Today' : filters.period === '7d' ? 'Last 7 Days' : filters.period === '30d' ? 'Last 30 Days' : filters.period;
+    if (filters.roomType) filterLabel += ' · ' + filters.roomType;
+    if (filters.payment) filterLabel += ' · ' + (filters.payment === 'paid' ? 'Fully Paid' : 'Outstanding');
+    var now = new Date();
+    var dateStr = now.toLocaleDateString('en-NG', { year: 'numeric', month: 'long', day: 'numeric' });
+    var timeStr = now.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+
+    var tableRows = '';
+    rows.forEach(function (r, i) {
+      tableRows += '<tr>' +
+        '<td>' + (i + 1) + '</td>' +
+        '<td>' + esc(r.room) + '</td>' +
+        '<td>' + esc(r.guest) + '</td>' +
+        '<td>' + esc(r.checkin) + '</td>' +
+        '<td>' + esc(r.checkout) + '</td>' +
+        '<td style="text-align:center">' + r.nights + '</td>' +
+        '<td style="text-align:right">' + fmt(r.rate) + '</td>' +
+        '<td style="text-align:right;font-weight:700">' + fmt(r.total) + '</td>' +
+        '<td style="text-align:right;color:#16a34a;font-weight:700">' + fmt(r.collected) + '</td>' +
+        '<td style="text-align:right;font-weight:700;color:' + (r.balance > 0 ? '#dc2626' : '#16a34a') + '">' + (r.balance > 0 ? fmt(r.balance) : 'Settled') + '</td>' +
+      '</tr>';
+    });
+
+    var html = '<!DOCTYPE html><html><head><title>Room Income Receipt</title>' +
+      '<style>' +
+      '*{margin:0;padding:0;box-sizing:border-box;}' +
+      'body{font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;padding:30px;color:#1c2440;font-size:12px;}' +
+      '.header{text-align:center;border-bottom:2px solid #1c2440;padding-bottom:12px;margin-bottom:16px;}' +
+      '.header h1{font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}' +
+      '.header p{font-size:11px;color:#6b7280;margin-top:4px;}' +
+      '.meta{display:flex;justify-content:space-between;margin-bottom:14px;font-size:11px;color:#6b7280;}' +
+      '.kpi-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}' +
+      '.kpi{flex:1;min-width:120px;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;text-align:center;}' +
+      '.kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;font-weight:600;}' +
+      '.kpi-val{font-size:16px;font-weight:800;margin-top:4px;}' +
+      '.kpi-gold .kpi-val{color:#2563eb;}' +
+      '.kpi-green .kpi-val{color:#16a34a;}' +
+      '.kpi-red .kpi-val{color:#dc2626;}' +
+      '.kpi-purple .kpi-val{color:#7c3aed;}' +
+      '.kpi-teal .kpi-val{color:#0d9488;}' +
+      'table{width:100%;border-collapse:collapse;margin-top:8px;}' +
+      'th{text-align:left;padding:6px 8px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;border-bottom:2px solid #e5e7eb;font-weight:700;}' +
+      'td{padding:5px 8px;border-bottom:1px solid #f3f4f6;font-size:11px;}' +
+      'tr:last-child td{border-bottom:none;}' +
+      '.footer{margin-top:16px;border-top:1px solid #e5e7eb;padding-top:10px;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between;}' +
+      '</style></head><body>' +
+      '<div class="header"><h1>Room Income Report</h1><p>Aurum Hotel Management System</p></div>' +
+      '<div class="meta"><span>Period: ' + filterLabel + '</span><span>Generated: ' + dateStr + ' ' + timeStr + '</span></div>' +
+      '<div class="kpi-row">' +
+        '<div class="kpi kpi-gold"><div class="kpi-label">Total Revenue</div><div class="kpi-val">' + fmt(k.totalRevenue) + '</div></div>' +
+        '<div class="kpi kpi-green"><div class="kpi-label">Collected</div><div class="kpi-val">' + fmt(k.totalCollected) + '</div></div>' +
+        '<div class="kpi kpi-red"><div class="kpi-label">Outstanding</div><div class="kpi-val">' + fmt(k.totalBalance) + '</div></div>' +
+        '<div class="kpi kpi-purple"><div class="kpi-label">Room Nights</div><div class="kpi-val">' + (k.totalNights || 0) + '</div></div>' +
+        '<div class="kpi kpi-teal"><div class="kpi-label">Avg Rate/Night</div><div class="kpi-val">' + fmt(k.avgRate) + '</div></div>' +
+      '</div>' +
+      '<table><thead><tr><th>#</th><th>Room</th><th>Guest</th><th>Check-in</th><th>Check-out</th><th style="text-align:center">Nights</th><th style="text-align:right">Rate/Night</th><th style="text-align:right">Total</th><th style="text-align:right">Collected</th><th style="text-align:right">Balance</th></tr></thead>' +
+      '<tbody>' + tableRows + '</tbody></table>' +
+      '<div class="footer"><span>Aurum Hotel · Room Income Report</span><span>Page ' + state.page + ' of ' + state.pages + ' · ' + state.total + ' records</span></div>' +
+      '</body></html>';
+
+    var w = window.open('', '_blank', 'width=900,height=700');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    w.print();
   }
 
   /* ── CSS ── */
@@ -209,6 +282,9 @@
       '.ri-page-btn.active{background:var(--gold-dim,rgba(47,111,237,.1));color:var(--gold,#2f6fed);border-color:var(--gold-border,rgba(47,111,237,.25));}' +
       '.ri-page-btn:disabled{opacity:.35;cursor:not-allowed;}' +
       '.ri-page-info{font-size:11px;color:var(--text3,#9aa1b3);margin-left:10px;}' +
+      '.ri-fg-print{margin-left:auto;}' +
+      '.ri-print-btn{padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--border,#eef0f6);background:var(--surface,#fff);color:var(--text2,#6b7280);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}' +
+      '.ri-print-btn:hover{background:var(--gold-dim,rgba(47,111,237,.1));color:var(--gold,#2f6fed);border-color:var(--gold-border,rgba(47,111,237,.25));}' +
       '@media print{.ri-filters,.ri-pagination{display:none!important;}}';
     document.head.appendChild(s);
   }
