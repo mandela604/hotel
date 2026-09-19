@@ -6,7 +6,7 @@ const Sale = require('../models/Sale');
 const asyncHandler = require('../middleware/asyncHandler');
 const { total, balance, nights } = require('../utils/calc');
 
-const ROOM_TYPES = ['Standard', 'Deluxe', 'Super Deluxe', 'Mini Suite', 'Executive Suite', 'Apartment'];
+const ROOM_TYPES = ['Standard', 'Deluxe', 'Super Deluxe', 'Premium Gold', 'Mini Suite', 'Executive Suite', 'Apartment'];
 
 function buildFilter(query) {
   const { from, to, type, status, pay } = query;

@@ -12,7 +12,7 @@ const paymentEntrySchema = new mongoose.Schema({
 const bookingSchema = new mongoose.Schema({
   room:       { type: String, required: true, unique: true },
   stayId:     { type: String, default: '' },
-  type:       { type: String, enum: ['Standard','Deluxe','Super Deluxe','Mini Suite','Executive Suite','Apartment'], default: 'Standard' },
+  type:       { type: String, enum: ['Standard','Deluxe','Super Deluxe','Premium Gold','Mini Suite','Executive Suite','Apartment'], default: 'Standard' },
   guest:      { type: String, default: '' },
   guestId:    { type: String, default: '' },
   phone:      { type: String, default: '' },

@@ -196,7 +196,7 @@
     return n > 0 ? n : 0;
   }
 
-  const DEFAULT_DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', 'Super Deluxe': 'ft-dot-deluxe', 'Mini Suite': 'ft-dot-suite', 'Executive Suite': 'ft-dot-suite', Apartment: 'ft-dot-conf' };
+  const DEFAULT_DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', 'Super Deluxe': 'ft-dot-deluxe', 'Premium Gold': 'ft-dot-suite', 'Mini Suite': 'ft-dot-suite', 'Executive Suite': 'ft-dot-suite', Apartment: 'ft-dot-conf' };
   const DEFAULT_STATUS_MAP = {
     checkedin:   { cls: 'ft-chip-checkedin',   label: 'Checked In' },
     checkout:    { cls: 'ft-chip-checkout',    label: 'Check-out' },

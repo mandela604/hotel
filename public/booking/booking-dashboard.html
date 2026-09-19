@@ -268,7 +268,7 @@ function renderOverview() {
     </a>`;
 
   // Occupancy bars by type
-  const types = ['Standard','Deluxe','Super Deluxe','Mini Suite','Executive Suite','Apartment'];
+  const types = ['Standard','Deluxe','Super Deluxe','Premium Gold','Mini Suite','Executive Suite','Apartment'];
   document.getElementById('ovOccBars').innerHTML = types.map(t => {
     const rooms = allRooms.filter(r => r.type === t);
     const occR  = rooms.filter(r => getRoomStatus(r.num) === 'checkedin').length;

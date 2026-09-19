@@ -43,6 +43,7 @@
         '<option value="Standard"' + (filters.roomType === 'Standard' ? ' selected' : '') + '>Standard</option>' +
         '<option value="Deluxe"' + (filters.roomType === 'Deluxe' ? ' selected' : '') + '>Deluxe</option>' +
         '<option value="Super Deluxe"' + (filters.roomType === 'Super Deluxe' ? ' selected' : '') + '>Super Deluxe</option>' +
+        '<option value="Premium Gold"' + (filters.roomType === 'Premium Gold' ? ' selected' : '') + '>Premium Gold</option>' +
         '<option value="Mini Suite"' + (filters.roomType === 'Mini Suite' ? ' selected' : '') + '>Mini Suite</option>' +
         '<option value="Executive Suite"' + (filters.roomType === 'Executive Suite' ? ' selected' : '') + '>Executive Suite</option>' +
         '<option value="Apartment"' + (filters.roomType === 'Apartment' ? ' selected' : '') + '>Apartment</option>' +

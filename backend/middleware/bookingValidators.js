@@ -9,7 +9,7 @@
  * mirroring the { success:false, error } shape used across controllers.
  */
 
-const ROOM_TYPES   = ['Standard', 'Deluxe', 'Super Deluxe', 'Mini Suite', 'Executive Suite', 'Apartment'];
+const ROOM_TYPES   = ['Standard', 'Deluxe', 'Super Deluxe', 'Premium Gold', 'Mini Suite', 'Executive Suite', 'Apartment'];
 const ROOM_STATUS  = ['vacant', 'reserved', 'checkedin', 'checkout', 'cleaning', 'maintenance'];
 const PAY_STATUS   = ['Pending', 'Deposit Paid', 'Fully Paid'];
 const CHARGE_STATUS = ['Pending', 'Partially Settled', 'Settled'];

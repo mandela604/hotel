@@ -500,7 +500,7 @@ function openReportInModal(b) {
 }
 
 const PAY_CLS = {'Fully Paid':'pay-full','Deposit Paid':'pay-deposit','Pending':'pay-pending','Refunded':'pay-deposit','Partial Refund':'pay-deposit'};
-const DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', 'Super Deluxe': 'ft-dot-deluxe', 'Mini Suite': 'ft-dot-suite', 'Executive Suite': 'ft-dot-suite', Apartment: 'ft-dot-conf' };
+const DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', 'Super Deluxe': 'ft-dot-deluxe', 'Premium Gold': 'ft-dot-suite', 'Mini Suite': 'ft-dot-suite', 'Executive Suite': 'ft-dot-suite', Apartment: 'ft-dot-conf' };
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 const roomColumn = { id: 'room', label: 'Room', cell: (b) => { const dot = DOT_CLASS[b.type] || 'ft-dot-default'; return '<span class="ft-room"><span class="ft-dot ' + dot + '"></span>' + esc(b.room) + ' · ' + esc(b.type || '') + '</span>'; } };
 const guestColumn = { id: 'guest', label: 'Guest', cell: (b) => { return '<div class="ft-guest-name">' + esc(b.guest || '—') + '</div>'; } };
