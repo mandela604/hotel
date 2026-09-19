@@ -339,9 +339,8 @@ async function confirmPay(){
     if(!r.ok) throw new Error(j.error||'Failed');
     showToast('Payment recorded — '+selectedPayMethod,'success');
     closePayModal();
-    detailOrder=j.data;
-    load();
-    openDetail(detailId);
+    await load();
+    closeDetail();
   }catch(e){ showToast(e.message,'error'); }
 }
 

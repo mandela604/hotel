@@ -94,7 +94,7 @@ const PERMISSIONS = {
     restaurant_staff: {
       restaurant: {
         canView: true, canCreate: true, canEdit: false, canDelete: false,
-        canVoid: false, canGiveDiscount: false,
+        canVoid: false, canGiveDiscount: false, canManageOrders: true,
       },
     },
     waiter: {
