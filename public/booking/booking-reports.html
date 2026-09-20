@@ -327,7 +327,7 @@ function switchReportTab(tab) {
     }
   }
 }
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = (function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
 let dateFrom = '', dateTo = '';
 let rangeStart = null, rangeEnd = null;
 let calYear, calMonth;
@@ -388,9 +388,10 @@ function setPeriod(value, btn) {
   document.querySelectorAll('#periodPills .fb-pill').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   const now = new Date();
+  function localISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   if (value === 'today')  { dateFrom=TODAY; dateTo=TODAY; }
-  else if (value === '7d') { const d=new Date(now); d.setDate(d.getDate()-6); dateFrom=d.toISOString().split('T')[0]; dateTo=TODAY; }
-  else if (value === '30d'){ const d=new Date(now); d.setDate(d.getDate()-29); dateFrom=d.toISOString().split('T')[0]; dateTo=TODAY; }
+  else if (value === '7d') { const d=new Date(now); d.setDate(d.getDate()-6); dateFrom=localISO(d); dateTo=TODAY; }
+  else if (value === '30d'){ const d=new Date(now); d.setDate(d.getDate()-29); dateFrom=localISO(d); dateTo=TODAY; }
   else { dateFrom=''; dateTo=''; }
   updateDateFilterLabel();
   applyInlineFilters();

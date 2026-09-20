@@ -811,6 +811,8 @@ exports.getReports = asyncHandler(async (req, res) => {
       ]
     }).lean(),
   ]);
+  console.log(`[Reports] Guests: ${allGuests.length}, ActiveBookings: ${activeBookings.length}, clientDate: ${clientDate}, period: ${period}`);
+  console.log(`[Reports] Active bookings:`, activeBookings.map(b => ({ room: b.room, guest: b.guest, status: b.status, checkin: b.checkin })));
 
   // Flatten Guest stays into booking-shaped objects
   let stays = [];
