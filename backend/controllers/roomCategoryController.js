@@ -1,4 +1,6 @@
 const RoomCategory = require('../models/RoomCategory');
+const Room = require('../models/Room');
+const Booking = require('../models/Booking');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const SEED_TYPES = [
@@ -54,12 +56,16 @@ exports.update = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Category not found' });
   }
   const { name, rate, sortOrder, active } = req.body;
-  if (name !== undefined) {
+  if (name !== undefined && name.trim() !== category.name) {
     const dup = await RoomCategory.findOne({ name: new RegExp(`^${name.trim()}$`, 'i'), id: { $ne: category.id } });
     if (dup) {
       return res.status(400).json({ success: false, error: 'Category name already exists' });
     }
-    category.name = name.trim();
+    const oldName = category.name;
+    const newName = name.trim();
+    category.name = newName;
+    await Room.updateMany({ type: oldName }, { $set: { type: newName } });
+    await Booking.updateMany({ type: oldName }, { $set: { type: newName } });
   }
   if (rate !== undefined) category.rate = Number(rate);
   if (sortOrder !== undefined) category.sortOrder = Number(sortOrder);
@@ -73,6 +79,10 @@ exports.remove = asyncHandler(async (req, res) => {
   if (!category) {
     return res.status(404).json({ success: false, error: 'Category not found' });
   }
+  const fallback = await RoomCategory.findOne({ id: { $ne: category.id } }).sort({ sortOrder: 1 });
+  const fallbackName = fallback ? fallback.name : 'Standard';
+  await Room.updateMany({ type: category.name }, { $set: { type: fallbackName } });
+  await Booking.updateMany({ type: category.name }, { $set: { type: fallbackName } });
   await category.deleteOne();
-  res.json({ success: true, data: { id: req.params.id } });
+  res.json({ success: true, data: { id: req.params.id, reassignedTo: fallbackName } });
 });
