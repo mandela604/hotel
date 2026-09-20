@@ -14,14 +14,21 @@ const SEED_TYPES = [
 async function ensureSeeded() {
   const count = await RoomCategory.countDocuments();
   if (count === 0) {
-    await RoomCategory.insertMany(SEED_TYPES);
+    try { await RoomCategory.insertMany(SEED_TYPES); } catch (e) { /* another request seeded */ }
   }
 }
 
 exports.list = asyncHandler(async (req, res) => {
   await ensureSeeded();
   const categories = await RoomCategory.find().sort({ sortOrder: 1, name: 1 });
-  res.json({ success: true, data: categories });
+  const seen = new Set();
+  const unique = categories.filter(c => {
+    const key = c.name.toLowerCase();
+    if (seen.has(key)) { c.deleteOne(); return false; }
+    seen.add(key);
+    return true;
+  });
+  res.json({ success: true, data: unique });
 });
 
 exports.create = asyncHandler(async (req, res) => {
