@@ -52,18 +52,18 @@
   function paintTable(rows) {
     if (!rows.length) return '<div class="rpr-empty"><i class="fa-solid fa-receipt"></i><div>No payment transactions found.</div></div>';
     var h = '<div class="rpr-table-wrap"><table class="rpr-table"><thead><tr>' +
-      '<th>S/N</th><th>Date</th><th>Receipt No.</th><th>Guest Name</th><th>Booking No.</th><th>Room No.</th><th>Room Type</th><th>Payment Type</th><th>Payment Method</th><th>Reference No.</th><th>Amount (\u20A6)</th><th>Remarks</th><th>Cashier</th>' +
+      '<th>S/N</th><th>Date</th><th>Receipt No.</th><th>Guest Name</th><th>Booking No.</th><th>Room No.</th><th>Room Type</th><th>Payment Type</th><th>Payment Method</th><th>Amount (\u20A6)</th><th>Remarks</th><th>Cashier</th>' +
     '</tr></thead><tbody>';
     var totalAmt = 0;
     rows.forEach(function(r) {
       totalAmt += r.amount;
       h += '<tr>' +
         '<td>' + r.sn + '</td><td>' + esc(r.date) + '</td><td>' + esc(r.receiptNo) + '</td><td>' + esc(r.guest) + '</td><td>' + esc(r.bookingNo) + '</td>' +
-        '<td>' + esc(r.room) + '</td><td>' + esc(r.roomType) + '</td><td><span class="rpr-ptag rpr-pt-' + r.paymentType.replace(/\s/g,'').toLowerCase() + '">' + esc(r.paymentType) + '</span></td><td>' + esc(r.paymentMethod) + '</td><td>' + esc(r.referenceNo) + '</td>' +
+        '<td>' + esc(r.room) + '</td><td>' + esc(r.roomType) + '</td><td><span class="rpr-ptag rpr-pt-' + r.paymentType.replace(/\s/g,'').toLowerCase() + '">' + esc(r.paymentType) + '</span></td><td>' + esc(r.paymentMethod) + '</td>' +
         '<td class="rpr-bold">' + fmt(r.amount) + '</td><td>' + esc(r.remarks) + '</td><td>' + esc(r.cashier) + '</td>' +
       '</tr>';
     });
-    h += '<tr class="rpr-total-row"><td colspan="10" style="text-align:right;font-weight:700;border-right:none">TOTAL</td><td class="rpr-bold" style="border-left:none">' + fmt(totalAmt) + '</td><td colspan="2"></td></tr>';
+    h += '<tr class="rpr-total-row"><td colspan="9" style="text-align:right;font-weight:700;border-right:none">TOTAL</td><td class="rpr-bold" style="border-left:none">' + fmt(totalAmt) + '</td><td colspan="2"></td></tr>';
     h += '</tbody></table></div>';
     return h;
   }
@@ -162,7 +162,7 @@
     var timeStr = now.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
     var rows = state.rows || [];
     var tRows = '', tAmt = 0;
-    rows.forEach(function(r) { tAmt += r.amount; tRows += '<tr><td>' + r.sn + '</td><td>' + esc(r.date) + '</td><td>' + esc(r.receiptNo) + '</td><td>' + esc(r.guest) + '</td><td>' + esc(r.bookingNo) + '</td><td>' + esc(r.room) + '</td><td>' + esc(r.roomType) + '</td><td>' + esc(r.paymentType) + '</td><td>' + esc(r.paymentMethod) + '</td><td>' + esc(r.referenceNo) + '</td><td style="text-align:right;font-weight:700">' + fmt(r.amount) + '</td><td>' + esc(r.remarks) + '</td><td>' + esc(r.cashier) + '</td></tr>'; });
+    rows.forEach(function(r) { tAmt += r.amount; tRows += '<tr><td>' + r.sn + '</td><td>' + esc(r.date) + '</td><td>' + esc(r.receiptNo) + '</td><td>' + esc(r.guest) + '</td><td>' + esc(r.bookingNo) + '</td><td>' + esc(r.room) + '</td><td>' + esc(r.roomType) + '</td><td>' + esc(r.paymentType) + '</td><td>' + esc(r.paymentMethod) + '</td><td style="text-align:right;font-weight:700">' + fmt(r.amount) + '</td><td>' + esc(r.remarks) + '</td><td>' + esc(r.cashier) + '</td></tr>'; });
     var mRows = '';
     (s.methodSummary || []).forEach(function(r) { mRows += '<tr><td>' + esc(r.method) + '</td><td style="text-align:center">' + r.count + '</td><td style="text-align:right">' + fmt(r.amount) + '</td><td style="text-align:right">' + (tAmt > 0 ? ((r.amount / tAmt) * 100).toFixed(1) + '%' : '0%') + '</td></tr>'; });
     var tpRows = '';
@@ -172,13 +172,13 @@
 
     var html = '<!DOCTYPE html><html><head><title>Room Payment Report</title><style>' +
       '*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Segoe UI",Tahoma,sans-serif;padding:30px;color:#1c2440;font-size:11px;}' +
-      '.hdr{text-align:center;border-bottom:3px solid #1e3a5f;padding-bottom:12px;margin-bottom:14px;}.hdr h1{font-size:18px;color:#1e3a5f;}.hdr p{font-size:10px;color:#6b7280;margin-top:2px;}' +
-      '.kpi-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}.kpi{flex:1;min-width:100px;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;text-align:center;}.kpi-lbl{font-size:8px;text-transform:uppercase;color:#9ca3af;font-weight:600;}.kpi-val{font-size:15px;font-weight:800;margin-top:2px;color:#1e3a5f;}.kpi-sub{font-size:8px;color:#9ca3af;}' +
-      'table{width:100%;border-collapse:collapse;font-size:10px;}th{text-align:left;padding:5px 6px;font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:#fff;background:#1e3a5f;font-weight:700;}' +
+      '.hdr{text-align:center;border-bottom:3px solid #2563eb;padding-bottom:12px;margin-bottom:14px;}.hdr h1{font-size:18px;color:#2563eb;}.hdr p{font-size:10px;color:#6b7280;margin-top:2px;}' +
+      '.kpi-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}.kpi{flex:1;min-width:100px;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;text-align:center;}.kpi-lbl{font-size:8px;text-transform:uppercase;color:#9ca3af;font-weight:600;}.kpi-val{font-size:15px;font-weight:800;margin-top:2px;color:#2563eb;}.kpi-sub{font-size:8px;color:#9ca3af;}' +
+      'table{width:100%;border-collapse:collapse;font-size:10px;}th{text-align:left;padding:5px 6px;font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:#fff;background:#2563eb;font-weight:700;}' +
       'td{padding:4px 6px;border-bottom:1px solid #f3f4f6;}tr:last-child td{border-bottom:none;}' +
-      '.total-row td{border-top:2px solid #1e3a5f;font-weight:800;background:#f8fafc;}' +
-      '.sum-section{margin-top:16px;}.sum-title{font-size:11px;font-weight:800;color:#1e3a5f;text-transform:uppercase;margin-bottom:6px;padding:4px 8px;background:#e8eef6;border-radius:4px;}' +
-      '.sum-row{display:flex;gap:12px;flex-wrap:wrap;}.sum-card{flex:1;min-width:200px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;}.sum-card th{font-size:7px;}.sum-card .stotal td{font-weight:700;background:#f8fafc;border-top:2px solid #1e3a5f;}' +
+      '.total-row td{border-top:2px solid #2563eb;font-weight:800;background:#f8fafc;}' +
+      '.sum-section{margin-top:16px;}.sum-title{font-size:11px;font-weight:800;color:#2563eb;text-transform:uppercase;margin-bottom:6px;padding:4px 8px;background:#e8eef6;border-radius:4px;}' +
+      '.sum-row{display:flex;gap:12px;flex-wrap:wrap;}.sum-card{flex:1;min-width:200px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;}.sum-card th{font-size:7px;}.sum-card .stotal td{font-weight:700;background:#f8fafc;border-top:2px solid #2563eb;}' +
       '.notes{margin-top:16px;font-size:9px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:10px;}.notes p{margin-bottom:3px;}' +
       '.footer{text-align:center;margin-top:16px;border-top:1px solid #e5e7eb;padding-top:10px;font-size:9px;color:#6b7280;}' +
       '@media print{body{padding:15px;}}' +
@@ -193,9 +193,9 @@
         '<div class="kpi"><div class="kpi-lbl">Refunds</div><div class="kpi-val">' + fmt(k.totalRefunds) + '</div><div class="kpi-sub">(' + (k.refundCount || 0) + ' transactions)</div></div>' +
         '<div class="kpi"><div class="kpi-lbl">Net Collections</div><div class="kpi-val" style="color:#16a34a">' + fmt(k.netCollections) + '</div></div>' +
       '</div>' +
-      '<div style="font-weight:800;font-size:11px;color:#1e3a5f;margin-bottom:6px;text-transform:uppercase;padding:4px 8px;background:#1e3a5f;color:#fff;border-radius:4px;">ROOM PAYMENT TRANSACTIONS</div>' +
-      '<table><thead><tr><th>S/N</th><th>Date</th><th>Receipt No.</th><th>Guest Name</th><th>Booking No.</th><th>Room No.</th><th>Room Type</th><th>Payment Type</th><th>Payment Method</th><th>Reference No.</th><th>Amount (\u20A6)</th><th>Remarks</th><th>Cashier</th></tr></thead><tbody>' +
-      tRows + '<tr class="total-row"><td colspan="10" style="text-align:right;border-right:none">TOTAL</td><td style="text-align:left;border-left:none;font-weight:800">' + fmt(tAmt) + '</td><td colspan="2"></td></tr>' +
+      '<div style="font-weight:800;font-size:11px;color:#2563eb;margin-bottom:6px;text-transform:uppercase;padding:4px 8px;background:#2563eb;color:#fff;border-radius:4px;">ROOM PAYMENT TRANSACTIONS</div>' +
+      '<table><thead><tr><th>S/N</th><th>Date</th><th>Receipt No.</th><th>Guest Name</th><th>Booking No.</th><th>Room No.</th><th>Room Type</th><th>Payment Type</th><th>Payment Method</th><th>Amount (\u20A6)</th><th>Remarks</th><th>Cashier</th></tr></thead><tbody>' +
+      tRows + '<tr class="total-row"><td colspan="9" style="text-align:right;border-right:none">TOTAL</td><td style="text-align:left;border-left:none;font-weight:800">' + fmt(tAmt) + '</td><td colspan="2"></td></tr>' +
       '</tbody></table>' +
       '<div class="sum-section"><div class="sum-row">' +
         '<div class="sum-card"><div class="sum-title">PAYMENT METHOD SUMMARY</div><table><thead><tr><th>Payment Method</th><th>Transactions</th><th>Amount (\u20A6)</th><th>Percentage</th></tr></thead><tbody>' + mRows + '</tbody></table></div>' +
@@ -224,7 +224,7 @@
       '@media(max-width:768px){.rpr-kpis{grid-template-columns:repeat(2,1fr);}}' +
       '.rpr-kpi{background:#fff;border:1px solid #eef0f6;border-radius:12px;padding:12px;display:flex;align-items:flex-start;gap:8px;box-shadow:0 2px 12px rgba(15,34,55,.06);position:relative;overflow:hidden;}' +
       '.rpr-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;}' +
-      '.rpr-kpi-blue::before{background:linear-gradient(90deg,#1e3a5f,transparent);}' +
+      '.rpr-kpi-blue::before{background:linear-gradient(90deg,#2563eb,transparent);}' +
       '.rpr-kpi-slate::before{background:linear-gradient(90deg,#64748b,transparent);}' +
       '.rpr-kpi-teal::before{background:linear-gradient(90deg,#0d9488,transparent);}' +
       '.rpr-kpi-indigo::before{background:linear-gradient(90deg,#4f46e5,transparent);}' +
@@ -232,7 +232,7 @@
       '.rpr-kpi-red::before{background:linear-gradient(90deg,#dc2626,transparent);}' +
       '.rpr-kpi-green::before{background:linear-gradient(90deg,#16a34a,transparent);}' +
       '.rpr-kpi-ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}' +
-      '.rpr-kpi-blue .rpr-kpi-ic{background:rgba(30,58,95,.1);color:#1e3a5f;}' +
+      '.rpr-kpi-blue .rpr-kpi-ic{background:rgba(30,58,95,.1);color:#2563eb;}' +
       '.rpr-kpi-slate .rpr-kpi-ic{background:rgba(100,116,139,.1);color:#64748b;}' +
       '.rpr-kpi-teal .rpr-kpi-ic{background:rgba(13,148,136,.1);color:#0d9488;}' +
       '.rpr-kpi-indigo .rpr-kpi-ic{background:rgba(79,70,229,.1);color:#4f46e5;}' +
@@ -249,17 +249,17 @@
       '.rpr-date{padding:5px 8px;border-radius:8px;font-size:12px;border:1px solid #eef0f6;font-family:inherit;outline:none;}' +
       '.rpr-date-sep{font-size:11px;color:#6b7280;}' +
       '.rpr-select{padding:5px 10px;border-radius:8px;font-size:12px;border:1px solid #eef0f6;background:#fff;color:#1c2440;font-family:inherit;outline:none;}' +
-      '.rpr-gen-btn{padding:6px 16px;border-radius:8px;font-size:12px;font-weight:600;border:none;background:#1e3a5f;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}' +
+      '.rpr-gen-btn{padding:6px 16px;border-radius:8px;font-size:12px;font-weight:600;border:none;background:#2563eb;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}' +
       '.rpr-gen-btn:hover{background:#2a4f7a;}' +
-      '.rpr-section-title{font-size:12px;font-weight:800;color:#fff;background:#1e3a5f;padding:8px 14px;border-radius:8px;margin-bottom:0;display:flex;align-items:center;gap:6px;}' +
+      '.rpr-section-title{font-size:12px;font-weight:800;color:#fff;background:#2563eb;padding:8px 14px;border-radius:8px;margin-bottom:0;display:flex;align-items:center;gap:6px;}' +
       '.rpr-table-wrap{background:#fff;border:1px solid #eef0f6;border-radius:0 0 12px 12px;overflow-x:auto;box-shadow:0 2px 12px rgba(15,34,55,.06);}' +
       '.rpr-table{width:100%;border-collapse:collapse;font-size:11.5px;}' +
-      '.rpr-table th{text-align:left;padding:8px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#fff;background:#334155;font-weight:700;white-space:nowrap;}' +
+      '.rpr-table th{text-align:left;padding:8px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#fff;background:#1d4ed8;font-weight:700;white-space:nowrap;}' +
       '.rpr-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#1c2440;white-space:nowrap;}' +
       '.rpr-table tr:last-child td{border-bottom:none;}' +
       '.rpr-table tr:hover td{background:#f8fafc;}' +
       '.rpr-bold{font-weight:700;}' +
-      '.rpr-total-row td{background:#f1f5f9 !important;border-top:2px solid #1e3a5f !important;font-weight:800;}' +
+      '.rpr-total-row td{background:#f1f5f9 !important;border-top:2px solid #2563eb !important;font-weight:800;}' +
       '.rpr-ptag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;white-space:nowrap;}' +
       '.rpr-pt-fullpayment{background:rgba(22,163,74,.1);color:#16a34a;}' +
       '.rpr-pt-deposit{background:rgba(245,158,11,.1);color:#d97706;}' +
@@ -268,17 +268,17 @@
       '.rpr-summaries{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}' +
       '@media(max-width:1000px){.rpr-summaries{grid-template-columns:1fr;}}' +
       '.rpr-sum-card{background:#fff;border:1px solid #eef0f6;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(15,34,55,.06);}' +
-      '.rpr-sum-title{font-size:10px;font-weight:800;color:#fff;background:#1e3a5f;padding:8px 12px;text-transform:uppercase;letter-spacing:.5px;}' +
+      '.rpr-sum-title{font-size:10px;font-weight:800;color:#fff;background:#2563eb;padding:8px 12px;text-transform:uppercase;letter-spacing:.5px;}' +
       '.rpr-sum-table{width:100%;border-collapse:collapse;font-size:11px;}' +
       '.rpr-sum-table th{text-align:left;padding:6px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;background:#f8fafc;font-weight:700;border-bottom:1px solid #eef0f6;}' +
       '.rpr-sum-table td{padding:6px 10px;border-bottom:1px solid #f1f5f9;}' +
-      '.rpr-sum-total td{font-weight:800;background:#f8fafc;border-top:2px solid #1e3a5f;}' +
+      '.rpr-sum-total td{font-weight:800;background:#f8fafc;border-top:2px solid #2563eb;}' +
       '.rpr-empty{padding:40px;text-align:center;color:#9aa1b3;font-size:13px;}.rpr-empty i{font-size:24px;display:block;margin-bottom:10px;}' +
       '.rpr-loading{padding:40px;text-align:center;color:#9aa1b3;font-size:13px;}' +
       '.rpr-pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;padding:12px 0;}' +
       '.rpr-page-btn{width:32px;height:32px;border-radius:8px;border:1px solid #eef0f6;background:#fff;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}' +
       '.rpr-page-btn:hover:not(:disabled){background:#f4f6fb;color:#1c2440;}' +
-      '.rpr-page-btn.active{background:rgba(30,58,95,.1);color:#1e3a5f;border-color:rgba(30,58,95,.25);}' +
+      '.rpr-page-btn.active{background:rgba(30,58,95,.1);color:#2563eb;border-color:rgba(30,58,95,.25);}' +
       '.rpr-page-btn:disabled{opacity:.35;cursor:not-allowed;}' +
       '.rpr-page-info{font-size:11px;color:#9aa1b3;margin-left:10px;}' +
       '@media print{.rpr-filters,.rpr-pagination{display:none!important;}}';
