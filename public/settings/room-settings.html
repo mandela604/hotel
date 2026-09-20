@@ -140,7 +140,7 @@ function render() {
     '<div class="rc-row" data-id="' + c.id + '">' +
       '<div class="rc-info">' +
         '<div class="rc-name">' + esc(c.name) + '</div>' +
-        '<div class="rc-meta">₦' + Number(c.rate||0).toLocaleString() + ' · Order ' + (c.sortOrder||0) + (c.active === false ? ' · <span style="color:var(--red)">Inactive</span>' : '') + '</div>' +
+        '<div class="rc-meta">₦' + Number(c.rate||0).toLocaleString() + (c.active === false ? ' · <span style="color:var(--red)">Inactive</span>' : '') + '</div>' +
       '</div>' +
       '<div class="rc-actions">' +
         '<button onclick="editCat(\'' + c.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
