@@ -450,6 +450,7 @@ async function applyInlineFilters() {
     var j = await r.json();
     var data = j.data || {};
     var rows = data.bookings || [];
+    console.log('[Reports] Filtered fetch:', params.toString(), '→', rows.length, 'rows. First 3:', rows.slice(0,3).map(b => ({room:b.room,guest:b.guest,status:b.status,checkin:b.checkin,createdAt:b.createdAt})));
     var kpis = data.kpis || { totalRevenue: 0, collected: 0, balanceDue: 0, totalNights: 0, fullyPaidCount: 0, totalCount: 0, refundedTotal: 0 };
 
     // Update title

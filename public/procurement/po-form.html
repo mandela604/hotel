@@ -53,6 +53,7 @@
   .entry-row{ background:var(--gold-dim); border:1px solid var(--gold-border); border-radius:10px; padding:8px; transition:border-color .2s, background .2s; }
   .entry-row.editing{ background:var(--blue-bg); border-color:rgba(47,111,237,.45); }
   .entry-subtotal{ font-weight:700; color:var(--text3); font-size:13px; text-align:right; padding-right:4px; }
+  .entry-total-qty{ font-weight:700; color:var(--text); font-size:13px; text-align:center; }
   .item-add{ width:28px; height:28px; border-radius:8px; border:1px solid var(--gold-border); background:var(--gold); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .15s; flex-shrink:0; }
   .item-add:hover{ background:var(--gold-light); transform:translateY(-1px); }
 
@@ -230,7 +231,7 @@
             <input class="form-input" type="number" min="1" value="1" id="entryQty" title="Number of packages (e.g. 10 Cartons)">
             <input class="form-input" type="number" min="0" step="1" placeholder="—" id="entryPackSize" title="Units per package (e.g. 12 Bottles per Carton)">
             <input type="hidden" id="entryBaseUnit" value="">
-            <div class="entry-subtotal" id="entryTotalQty" style="font-weight:700;color:var(--text);font-size:13px;text-align:center;">0</div>
+            <div class="entry-total-qty" id="entryTotalQty">0</div>
             <input class="form-input" type="number" min="0" step="0.01" placeholder="0" id="entryPrice">
             <div class="entry-subtotal" id="entrySubtotal">₦0</div>
             <button class="item-add" type="button" id="addEntryBtn" title="Add item to list"><i class="fa-solid fa-plus" id="addEntryIcon"></i></button>
@@ -407,9 +408,11 @@ let items = [];
 let editingIndex = null; // index into items[] currently loaded into the entry line, or null when adding new
 
 function updateEntryPreview(){
-  const qty = parseFloat(document.getElementById('entryQty').value) || 0;
+  const packQty = parseFloat(document.getElementById('entryQty').value) || 0;
+  const unitQty = parseFloat(document.getElementById('entryPackSize').value) || 0;
   const price = parseFloat(document.getElementById('entryPrice').value) || 0;
-  document.getElementById('entrySubtotal').textContent = fmtN(qty * price);
+  document.getElementById('entryTotalQty').textContent = packQty * unitQty;
+  document.getElementById('entrySubtotal').textContent = fmtN(price * packQty);
 }
 
 function setEntryEditingState(idx){
@@ -477,14 +480,15 @@ function addItemFromEntry(){
   const unit = unitEl.value || nameEl.dataset.unit || '';
   const packSize = parseFloat(packSizeEl.value) || 0;
   const baseUnit = baseUnitEl.value || '';
-  const qty = parseFloat(qtyEl.value) || 0;
+  const packQty = parseFloat(qtyEl.value) || 0;
   const price = parseFloat(priceEl.value) || 0;
 
   if (!name){ showToast('Enter an item name.', 'error'); nameEl.focus(); return; }
-  if (qty <= 0){ showToast('Quantity must be at least 1.', 'error'); qtyEl.focus(); return; }
+  if (packQty <= 0){ showToast('Package Qty must be at least 1.', 'error'); qtyEl.focus(); return; }
   if (price <= 0){ showToast('Enter a unit price.', 'error'); priceEl.focus(); return; }
 
-  const entry = { name, qty, price, subtotal: qty * price, stockId: nameEl.dataset.stockId || '', unit, packSize, baseUnit };
+  const totalQty = packQty * packSize;
+  const entry = { name, qty: packQty, price, subtotal: price * packQty, stockId: nameEl.dataset.stockId || '', unit, packSize, baseUnit, totalQty };
 
   if (editingIndex != null) {
     items[editingIndex] = entry;
@@ -537,8 +541,9 @@ function renderItemsList(){
     <tr class="${i === editingIndex ? 'editing-row' : ''}" data-idx="${i}">
       <td>${escapeHtml(it.name)}</td>
       <td class="center">${escapeHtml(it.unit || '—')}</td>
-      <td class="center">${it.packSize ? (it.baseUnit ? it.packSize + ' ' + it.baseUnit + '/1 ' + (it.unit || 'pack') : it.packSize) : '—'}</td>
       <td class="center">${it.qty}</td>
+      <td class="center">${it.packSize || '—'}</td>
+      <td class="center">${it.totalQty || (it.qty * (it.packSize || 0))}</td>
       <td class="right">${fmtN(it.price)}</td>
       <td class="right item-subtotal">${fmtN(it.subtotal)}</td>
       <td class="center"><button class="item-remove" type="button" data-idx="${i}" title="Remove item"><i class="fa-solid fa-trash"></i></button></td>
@@ -628,7 +633,8 @@ async function populateFromPR(pr){
   items = (pr.items || []).map(it => {
     const qty = Number(it.qty) || 0;
     const price = it.price != null ? Number(it.price) : Number(it.cost) || 0;
-    return { name: it.name, qty, price, subtotal: qty * price, stockId: it.stockId || '', unit: it.unit || '', packSize: it.packSize || 0, baseUnit: it.baseUnit || '' };
+    const packSize = it.packSize || 0;
+    return { name: it.name, qty, price, subtotal: qty * price, stockId: it.stockId || '', unit: it.unit || '', packSize, baseUnit: it.baseUnit || '', totalQty: qty * packSize };
   });
   setEntryEditingState(null);
   recalcTotals();

@@ -826,7 +826,7 @@ exports.getReports = asyncHandler(async (req, res) => {
         discount: 0,
         total: s.total || 0, paid: s.paid || 0, status: s.status || '',
         recordedBy: '', payStatus: (s.paid || 0) >= (s.total || 0) ? 'Fully Paid' : (s.paid || 0) > 0 ? 'Deposit Paid' : 'Pending',
-        refunded: 0, payments: [], notes: '',
+        refunded: 0, payments: [], notes: '', createdAt: 0,
       });
     }
   }
@@ -843,9 +843,11 @@ exports.getReports = asyncHandler(async (req, res) => {
         recordedBy: b.recordedBy || '', payStatus: b.payStatus || 'Pending',
         discount: b.discount || 0, refunded: b.refunded || 0,
         payments: b.payments || [], notes: b.notes || '',
+        createdAt: b.createdAt || 0,
       });
     }
   }
+  console.log(`[Reports] Total stays after merge: ${stays.length}`);
 
   // Period shortcut
   let start = null, end = null;
@@ -883,6 +885,9 @@ exports.getReports = asyncHandler(async (req, res) => {
     }
     return true;
   });
+
+  filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  console.log(`[Reports] Filtered: ${filtered.length} records (first 3:`, filtered.slice(0,3).map(b => ({room:b.room,guest:b.guest,createdAt:b.createdAt})), ')');
 
   const totRev = filtered.reduce((s, b) => s + (b.total || 0), 0);
   const totRefunded = filtered.reduce((s, b) => s + (Number(b.refunded) || 0), 0);
