@@ -219,7 +219,7 @@
         <div class="bks-head">
           <div class="bks-logo">G</div>
           <div class="bks-brand">
-            <div class="name">Grace Hotel</div>
+            <div class="name">Boston Leisure</div>
             <div class="sub">Front Desk</div>
           </div>
           <button class="bks-collapse" id="bks-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
@@ -241,7 +241,7 @@
             <div class="bks-toggle-track" id="bks-toggleTrack"><div class="bks-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="bks-copyright">© 2026 Grace Hotel</div>
+        <div class="bks-copyright">© 2026 Boston Leisure</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

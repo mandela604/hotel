@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Aurum Hotel — Reports & Revenue</title>
+<title>Boston Leisure — Reports & Revenue</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
@@ -574,6 +574,16 @@ const statusColumn = {
   }
 };
 
+const createdAtColumn = {
+  id: 'createdAt',
+  label: 'Created',
+  cell: (b) => {
+    if (!b.createdAt) return '<span style="color:var(--text3)">—</span>';
+    var d = new Date(b.createdAt);
+    return '<span style="font-size:11px;color:var(--text2)">' + d.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + '</span>';
+  }
+};
+
 /* ═══════════════════════════════════════════════
    Init — single call into BookingData. No local demo arrays, no direct
    storage access: this page only calls BookingData.* and renders.
@@ -596,6 +606,7 @@ async function init() {
     const j = await r.json();
     const data = j.data || {};
     bookings = data.bookings || [];
+    console.log('[Reports] Backend returned', bookings.length, 'bookings. First 3:', bookings.slice(0,3).map(b => ({room:b.room,guest:b.guest,status:b.status,checkin:b.checkin,createdAt:b.createdAt})));
     allRooms = [];
 
     const staffNames = [...new Set(bookings.map(b => b.recordedBy).filter(Boolean))].sort();
@@ -637,7 +648,9 @@ async function init() {
     table = FrontDeskTable.create({
       target: '#tableSlot',
       title: 'Full Report',
-      columns: [roomColumn, guestColumn, 'checkin', 'checkout', 'nights', 'total', 'paid', 'balance', 'payment', statusColumn, 'actions'],
+      columns: [roomColumn, guestColumn, 'checkin', 'checkout', 'nights', 'total', 'paid', 'balance', 'payment', statusColumn, createdAtColumn, 'actions'],
+      sortKey: 'createdAt',
+      sortDir: 'desc',
       summaryLabels: { count:'Records', total:'Total Revenue', paid:'Collected', balance:'Balance Due' },
       calc: { nights, total: calcTotal, paid: function(b) { return Math.max(0, (Array.isArray(b.payments)?b.payments.reduce(function(s,p){return s+(Number(p.amount)||0);},0):Number(b.paid)||0) - (Number(b.refunded)||0)); }, balance: function(b) { var tot=calcTotal(b); var pd=Math.max(0,(Array.isArray(b.payments)?b.payments.reduce(function(s,p){return s+(Number(p.amount)||0);},0):Number(b.paid)||0)-(Number(b.refunded)||0)); return Math.max(0,tot-pd); } },
       statusMap: BookingData.getStatusConfig().reduce((map, s) => { map[s.value] = { label: s.label, cls: 'ft-chip-' + s.tone }; return map; }, {}),
