@@ -185,7 +185,9 @@
 
   function defaultDate(d) {
     if (!d) return '—';
-    const dt = new Date(d);
+    const p = String(d).split(/[/\-]/);
+    if (p.length < 3) { const dt = new Date(d); return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+    const dt = new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
     if (isNaN(dt.getTime())) return '—';
     return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }

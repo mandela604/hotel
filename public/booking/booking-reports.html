@@ -334,7 +334,7 @@ let calYear, calMonth;
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function pad2(n){ return String(n).padStart(2,'0'); }
 function ymd(y,m,d){ return y + '-' + pad2(m+1) + '-' + pad2(d); }
-function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+function fmtDateShort(d){ if(!d) return ''; var p=String(d).split(/[/\-]/); var y=parseInt(p[0],10), m=parseInt(p[1],10)-1, dd=parseInt(p[2],10); return new Date(y,m,dd).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
 
 /* ═══════════════════════════════════════════════
    Booking Modal — clicking a report row opens the same
@@ -353,7 +353,7 @@ const bookingModal = BookingModal.create({
    redefines the nights/total/paid/balance rules itself.
 ═══════════════════════════════════════════════ */
 function nights(ci, co) { return BookingData.nights(ci, co); }
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDate(d) { if (!d) return '—'; var p=String(d).split(/[/\-]/); var y=parseInt(p[0],10), m=parseInt(p[1],10)-1, dd=parseInt(p[2],10); return new Date(y,m,dd).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
 function calcTotal(b) { return BookingData.calcTotal(b); }
 function calcPaid(b) { return BookingData.calcPaid(b); }

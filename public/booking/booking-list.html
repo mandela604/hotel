@@ -251,7 +251,7 @@ var MONTH_NAMES=['January','February','March','April','May','June','July','Augus
 
 function pad2(n){return String(n).padStart(2,'0');}
 function ymd(y,m,d){return y+'-'+pad2(m+1)+'-'+pad2(d);}
-function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+function fmtDateShort(d){ if(!d) return ''; var p=String(d).split(/[/\-]/); if(p.length<3){return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});} return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10)).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
 
 async function loadRoomCategories() {
   try {

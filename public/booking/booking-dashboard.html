@@ -207,7 +207,7 @@ const TODAY = new Date().toISOString().split('T')[0];
    never drift from what booking-rooms/list/reports show.
 ═══════════════════════════════════════════════ */
 function nights(ci, co) { return BookingData.nights(ci, co); }
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDate(d) { if (!d) return '—'; var p=String(d).split(/[/\-]/); if(p.length<3){var dt=new Date(d);return isNaN(dt.getTime())?'—':dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});} return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10)).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
 function calcTotal(b) { return BookingData.calcTotal(b); }
 function calcBal(b) { return BookingData.calcBal(b); }
