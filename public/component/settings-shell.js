@@ -8,6 +8,7 @@
 
   const NAV = [
     { key: 'general', label: 'General Settings', href: 'platform-settings.html', icon: 'fa-solid fa-gear' },
+    { key: 'rooms', label: 'Room Settings', href: 'room-settings.html', icon: 'fa-solid fa-bed' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";

@@ -256,10 +256,6 @@ body {
           </div>
           <select class="filter-sel" id="roomTypeFilter" onchange="roomsPage=1;renderRoomGrid(roomFilter)">
             <option value="">All Types</option>
-            <option value="Standard">Standard</option>
-            <option value="Deluxe">Deluxe</option>
-            <option value="Suite">Suite</option>
-            <option value="Conference">Conference</option>
           </select>
         </div>
         <div class="toolbar-right">
@@ -300,7 +296,7 @@ body {
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Room Number</label><input class="form-input" type="text" id="rmNum" placeholder="e.g. 205"></div>
         <div class="form-group"><label class="form-label">Room Type</label>
-          <select class="form-select" id="rmType"><option>Standard</option><option>Deluxe</option><option>Super Deluxe</option><option>Premium Gold</option><option>Mini Suite</option><option>Executive Suite</option><option>Apartment</option></select>
+          <select class="form-select" id="rmType"></select>
         </div>
         <div class="form-group"><label class="form-label">Rate / Night (₦)</label><input class="form-input" type="number" id="rmRate" placeholder="0"></div>
         <div class="form-group" id="rmStatusWrap"><label class="form-label">Initial Status</label>
@@ -419,12 +415,39 @@ function btnLoad(id, on){ const b=document.getElementById(id); if(!b) return; if
 let allRooms = [];
 let bookings = [];
 let guests   = [];
+let roomCategories = [];
 let roomFilter = 'all';
 let roomsPage  = 1;
 let roomModalMode = 'add';
 let roomEditNum   = null;
 let statusRoom    = null;
 const PAGE_ROOMS  = 24;
+
+async function loadRoomCategories() {
+  try {
+    const res = await fetch('/api/room-categories', { credentials: 'include' });
+    const j = await res.json();
+    roomCategories = (j.data || []).filter(function(c){ return c.active !== false; });
+    populateRoomTypeSelects();
+  } catch (e) { roomCategories = []; }
+}
+
+function populateRoomTypeSelects() {
+  var filter = document.getElementById('roomTypeFilter');
+  var rmType = document.getElementById('rmType');
+  if (filter) {
+    var cur = filter.value;
+    filter.innerHTML = '<option value="">All Types</option>' + roomCategories.map(function(c){ return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>'; }).join('');
+    filter.value = cur;
+  }
+  if (rmType) {
+    var cur2 = rmType.value;
+    rmType.innerHTML = roomCategories.map(function(c){ return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>'; }).join('');
+    if (cur2) rmType.value = cur2;
+  }
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
 /* ═══════════════════════════════════════════════
    BookingModal instance
@@ -705,6 +728,11 @@ function openRoomModal(mode, num) {
   document.getElementById('roomModal').classList.add('show');
 }
 
+document.getElementById('rmType').addEventListener('change', function() {
+  var cat = roomCategories.find(function(c){ return c.name === document.getElementById('rmType').value; });
+  if (cat && cat.rate) document.getElementById('rmRate').value = cat.rate;
+});
+
 async function saveRoomModal() {
   if (!perms().canEditRoom) {
     showToast("You don't have permission to manage rooms.", 'error');
@@ -831,6 +859,7 @@ async function init() {
   }
   try {
     if (shell && shell.ready) await shell.ready();
+    await loadRoomCategories();
     const data = await BookingData.getBookingData();
     allRooms = data.rooms;
     bookings = data.bookings;

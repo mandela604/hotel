@@ -196,7 +196,15 @@
     return n > 0 ? n : 0;
   }
 
-  const DEFAULT_DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', 'Super Deluxe': 'ft-dot-deluxe', 'Premium Gold': 'ft-dot-suite', 'Mini Suite': 'ft-dot-suite', 'Executive Suite': 'ft-dot-suite', Apartment: 'ft-dot-conf' };
+  function getDotClass(type, categories) {
+    var map = { Standard: 'ft-dot-standard', Apartment: 'ft-dot-conf' };
+    if (map[type]) return map[type];
+    if (categories && categories.length) {
+      var idx = categories.findIndex(function(c){ return c.name === type; });
+      if (idx >= 0) return idx < 2 ? 'ft-dot-deluxe' : 'ft-dot-suite';
+    }
+    return 'ft-dot-default';
+  }
   const DEFAULT_STATUS_MAP = {
     checkedin:   { cls: 'ft-chip-checkedin',   label: 'Checked In' },
     checkout:    { cls: 'ft-chip-checkout',    label: 'Check-out' },
@@ -227,7 +235,8 @@
     const fmt = typeof options.formatMoney === 'function' ? options.formatMoney : defaultMoney;
     const fmtDate = typeof options.formatDate === 'function' ? options.formatDate : defaultDate;
     const sortable = options.sortable !== false;
-    const dotClass = Object.assign({}, DEFAULT_DOT_CLASS, options.dotClass || {});
+    const dotClass = options.dotClass || {};
+    const categories = options.categories || [];
     const statusMap = Object.assign({}, DEFAULT_STATUS_MAP, options.statusMap || {});
     const payMap = Object.assign({}, DEFAULT_PAY_MAP, options.payMap || {});
     const summaryLabels = Object.assign(
@@ -267,7 +276,7 @@
         label: 'Room',
         headExtra: 'ft-mcard-head',
         cell: (b) => {
-          const dot = dotClass[b.type] || 'ft-dot-default';
+          const dot = dotClass[b.type] || getDotClass(b.type, categories);
           const st = statusMap[b.status] || { cls: 'ft-chip-default', label: b.status || '—' };
           return '<span class="ft-room"><span class="ft-dot ' + dot + '"></span>' + esc(b.room) + ' · ' + esc(b.type || '') + '</span>' +
             '<span class="ft-chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + esc(st.label) + '</span>';

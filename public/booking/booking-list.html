@@ -184,10 +184,6 @@ body {
           </div>
           <select class="filter-sel" id="bkType" onchange="filterBookings()">
             <option value="">All Types</option>
-            <option value="Standard">Standard</option>
-            <option value="Deluxe">Deluxe</option>
-            <option value="Suite">Suite</option>
-            <option value="Conference">Conference</option>
           </select>
           <div style="position:relative;" id="dateFilterWrap">
             <button type="button" class="date-filter-btn" id="dateFilterBtn" onclick="toggleDatePanel(event)"><i class="fa-solid fa-calendar-days"></i><span id="dateFilterLabel">All Dates</span></button>
@@ -246,14 +242,28 @@ var shell = BookingShell.attach({
 /* ═══ Globals ═══ */
 var allRooms = [];
 var bookings = [];
+var roomCategories = [];
 var currentSession = null;
 var filteredBk = [];
 var deleteIdx = null;
 var dateFrom='', dateTo='', rangeStart=null, rangeEnd=null, calYear, calMonth;
 var MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 function pad2(n){return String(n).padStart(2,'0');}
 function ymd(y,m,d){return y+'-'+pad2(m+1)+'-'+pad2(d);}
 function fmtDateShort(d){ if(!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+
+async function loadRoomCategories() {
+  try {
+    var res = await fetch('/api/room-categories', { credentials: 'include' });
+    var j = await res.json();
+    roomCategories = (j.data || []).filter(function(c){ return c.active !== false; });
+    var sel = document.getElementById('bkType');
+    if (sel) {
+      sel.innerHTML = '<option value="">All Types</option>' + roomCategories.map(function(c){ return '<option value="' + c.name + '">' + c.name + '</option>'; }).join('');
+    }
+  } catch (e) {}
+}
 
 /* ═══ BookingModal instance ═══ */
 var bookingModal = BookingModal.create({
@@ -291,14 +301,22 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-var DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', 'Super Deluxe': 'ft-dot-deluxe', 'Premium Gold': 'ft-dot-suite', 'Mini Suite': 'ft-dot-suite', 'Executive Suite': 'ft-dot-suite', Apartment: 'ft-dot-conf' };
+function getDotClass(type) {
+  var map = { Standard: 'ft-dot-standard', Apartment: 'ft-dot-conf' };
+  if (map[type]) return map[type];
+  if (roomCategories.length) {
+    var idx = roomCategories.findIndex(function(c){ return c.name === type; });
+    if (idx >= 0) return idx < 2 ? 'ft-dot-deluxe' : 'ft-dot-suite';
+  }
+  return 'ft-dot-default';
+}
 
 // Room column: no status chip, just room · type with dot
 var roomColumn = {
   id: 'room',
   label: 'Room',
   cell: function (b) {
-    var dot = DOT_CLASS[b.type] || 'ft-dot-default';
+    var dot = getDotClass(b.type);
     return '<span class="ft-room"><span class="ft-dot ' + dot + '"></span>' + esc(b.room) + ' · ' + esc(b.type || '') + '</span>';
   }
 };
@@ -505,6 +523,7 @@ async function init() {
 
   try {
     if (shell && shell.ready) await shell.ready();
+    await loadRoomCategories();
     var data = await BookingData.getBookingData();
     allRooms = data.rooms || [];
     bookings = data.bookings || [];    bookingModal.setSession(getSession());

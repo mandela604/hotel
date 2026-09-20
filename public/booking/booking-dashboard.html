@@ -190,6 +190,15 @@ const shell = BookingShell.attach({
 ═══════════════════════════════════════════════ */
 let allRooms = [];
 let bookings = [];
+let roomCategories = [];
+
+async function loadRoomCategories() {
+  try {
+    const res = await fetch('/api/room-categories', { credentials: 'include' });
+    const j = await res.json();
+    roomCategories = (j.data || []).filter(function(c){ return c.active !== false; });
+  } catch (e) { roomCategories = []; }
+}
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -268,7 +277,7 @@ function renderOverview() {
     </a>`;
 
   // Occupancy bars by type
-  const types = ['Standard','Deluxe','Super Deluxe','Premium Gold','Mini Suite','Executive Suite','Apartment'];
+  const types = roomCategories.length ? roomCategories.map(function(c){ return c.name; }) : ['Standard','Deluxe','Super Deluxe','Premium Gold','Mini Suite','Executive Suite','Apartment'];
   document.getElementById('ovOccBars').innerHTML = types.map(t => {
     const rooms = allRooms.filter(r => r.type === t);
     const occR  = rooms.filter(r => getRoomStatus(r.num) === 'checkedin').length;
@@ -324,6 +333,7 @@ async function init() {
     return;
   }
   if (shell && shell.ready) await shell.ready();
+  await loadRoomCategories();
   const data = await BookingData.getBookingData();
   allRooms = data.rooms || [];
   bookings = data.bookings || [];

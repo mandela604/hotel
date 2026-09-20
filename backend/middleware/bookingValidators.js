@@ -9,7 +9,6 @@
  * mirroring the { success:false, error } shape used across controllers.
  */
 
-const ROOM_TYPES   = ['Standard', 'Deluxe', 'Super Deluxe', 'Premium Gold', 'Mini Suite', 'Executive Suite', 'Apartment'];
 const ROOM_STATUS  = ['vacant', 'reserved', 'checkedin', 'checkout', 'cleaning', 'maintenance'];
 const PAY_STATUS   = ['Pending', 'Deposit Paid', 'Fully Paid'];
 const CHARGE_STATUS = ['Pending', 'Partially Settled', 'Settled'];
@@ -61,9 +60,7 @@ exports.validateAddRoom = (req, res, next) => {
   if (!isNonEmptyString(num)) return fail(res, 'Room number is required', 'num');
   if (num.trim().length > 20) return fail(res, 'Room number is too long (max 20 chars)', 'num');
 
-  if (type !== undefined && !ROOM_TYPES.includes(type)) {
-    return fail(res, `type must be one of: ${ROOM_TYPES.join(', ')}`, 'type');
-  }
+  if (type !== undefined && !isNonEmptyString(type)) return fail(res, 'type must be a non-empty string', 'type');
   if (rate !== undefined && !isNonNegativeNumber(rate)) return fail(res, 'rate must be a number >= 0', 'rate');
   if (notes !== undefined && typeof notes !== 'string') return fail(res, 'notes must be a string', 'notes');
 
@@ -73,9 +70,7 @@ exports.validateAddRoom = (req, res, next) => {
 exports.validateUpdateRoom = (req, res, next) => {
   const { type, rate, notes } = req.body;
 
-  if (type !== undefined && !ROOM_TYPES.includes(type)) {
-    return fail(res, `type must be one of: ${ROOM_TYPES.join(', ')}`, 'type');
-  }
+  if (type !== undefined && !isNonEmptyString(type)) return fail(res, 'type must be a non-empty string', 'type');
   if (rate !== undefined && !isNonNegativeNumber(rate)) return fail(res, 'rate must be a number >= 0', 'rate');
   if (notes !== undefined && typeof notes !== 'string') return fail(res, 'notes must be a string', 'notes');
 
@@ -101,9 +96,7 @@ exports.validateCreateBooking = (req, res, next) => {
   if (!isNonEmptyString(room)) return fail(res, 'Room number is required', 'room');
   if (!isNonEmptyString(guest)) return fail(res, 'Guest name is required', 'guest');
 
-  if (type !== undefined && !ROOM_TYPES.includes(type)) {
-    return fail(res, `type must be one of: ${ROOM_TYPES.join(', ')}`, 'type');
-  }
+  if (type !== undefined && !isNonEmptyString(type)) return fail(res, 'type must be a non-empty string', 'type');
   if (checkin !== undefined && checkin !== '' && !isValidDateStr(checkin)) {
     return fail(res, 'checkin must be a valid date', 'checkin');
   }
@@ -131,9 +124,7 @@ exports.validateCreateBooking = (req, res, next) => {
 exports.validateUpdateBooking = (req, res, next) => {
   const { type, checkin, checkout, rate, discount, adults, children, payStatus } = req.body;
 
-  if (type !== undefined && !ROOM_TYPES.includes(type)) {
-    return fail(res, `type must be one of: ${ROOM_TYPES.join(', ')}`, 'type');
-  }
+  if (type !== undefined && !isNonEmptyString(type)) return fail(res, 'type must be a non-empty string', 'type');
   if (checkin !== undefined && checkin !== '' && !isValidDateStr(checkin)) {
     return fail(res, 'checkin must be a valid date', 'checkin');
   }
@@ -219,6 +210,6 @@ exports.validateParam = (paramName) => (req, res, next) => {
 
 exports.STATUS_TRANSITIONS = STATUS_TRANSITIONS;
 exports.ROOM_STATUS = ROOM_STATUS;
-exports.ROOM_TYPES = ROOM_TYPES;
+exports.ROOM_TYPES = [];
 exports.PAY_STATUS = PAY_STATUS;
 exports.CHARGE_STATUS = CHARGE_STATUS;

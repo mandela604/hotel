@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Room Settings | Grace Hotel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ height:auto; }
+  body{ font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-size:13px; min-height:100vh; transition:background .3s,color .3s; }
+  .app{ display:block; }
+  .main{ margin-left:250px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left .3s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:768px){ .main{ margin-left:0 !important; } }
+  .content{
+    --bg:#f4f6fb; --surface:#ffffff; --surface2:#f4f6fb; --surface3:#eef0f6;
+    --border:#eef0f6; --border2:#dfe3ec;
+    --text:#1c2440; --text2:#6b7280; --text3:#9aa1b3;
+    --shadow:0 4px 20px rgba(15,34,55,0.07); --shadow-lg:0 8px 40px rgba(15,34,55,0.10);
+    --input-bg:#f4f6fb;
+    --gold:#2f6fed; --gold-light:#5b8ff9; --gold-dim:rgba(47,111,237,0.10); --gold-border:rgba(47,111,237,0.25);
+    --green:#12b76a; --green-bg:#e9f9f0;
+    --red:#f04438; --red-bg:#feecec;
+    --amber:#f79009; --amber-bg:#fff4e5;
+    padding:20px 24px 28px; display:flex; flex-direction:column; gap:16px; background:var(--bg); color:var(--text);
+  }
+  @keyframes fadeUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .page-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .page-head h1{ font-size:18px; font-weight:800; }
+  .page-head p{ font-size:12px; color:var(--text2); margin-top:2px; }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; animation:fadeUp .4s ease both; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px; }
+  .panel-title{ font-size:13.5px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .panel-title i{ color:var(--gold); font-size:13px; }
+  .panel-sub{ font-size:11px; color:var(--text3); margin-top:2px; }
+  .panel-body{ padding:16px 20px 20px; }
+
+  .add-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .add-row input{ flex:1; background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; font-size:13px; font-family:inherit; color:var(--text); outline:none; }
+  .add-row input:focus{ border-color:var(--gold-border); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid transparent; font-family:inherit; white-space:nowrap; transition:all .15s; }
+  .btn-primary{ background:var(--gold); color:#fff; }
+  .btn-primary:hover{ background:var(--gold-light); }
+  .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+
+  .rc-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); gap:12px; }
+  .rc-row:last-child{ border-bottom:none; }
+  .rc-info{ flex:1; min-width:0; }
+  .rc-name{ font-size:13.5px; font-weight:700; color:var(--text); }
+  .rc-meta{ font-size:11px; color:var(--text3); margin-top:2px; }
+  .rc-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .rc-actions button{ width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .rc-actions button:hover{ border-color:var(--gold); color:var(--gold); }
+  .rc-actions button.del:hover{ border-color:var(--red); color:var(--red); background:var(--red-bg); }
+
+  .toast{ position:fixed; bottom:20px; right:20px; background:#fff; border:1px solid #eef0f6; border-radius:10px; padding:11px 16px; font-size:13px; color:#1c2440; box-shadow:0 8px 28px rgba(15,34,55,.18); z-index:999; display:flex; align-items:center; gap:8px; animation:toastIn .3s ease; font-weight:600; }
+  .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
+  .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+
+      <div class="page-head">
+        <div>
+          <h1>Room Settings</h1>
+          <p>Manage room categories used across booking, rooms, and reports.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-bed"></i> Room Categories</div>
+            <div class="panel-sub">Add, edit or remove room types. Each category can have a default rate.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="rcTable"></div>
+          <div class="add-row" style="margin-top:16px;">
+            <input type="text" id="rcName" placeholder="Category name (e.g. Deluxe)" maxlength="60">
+            <input type="number" id="rcRate" placeholder="Rate (₦)" min="0" style="max-width:140px;">
+            <input type="number" id="rcSort" placeholder="Order" min="0" style="max-width:90px;">
+            <button class="btn btn-primary" id="rcAddBtn"><i class="fa-solid fa-plus"></i> Add</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../component/settings-shell.js"></script>
+<script>
+const shell = SettingsShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'room-settings.html',
+  pageTitle:     'Room Settings',
+  pageSubtitle:  'Manage room categories',
+  user:          { initials: 'AD' },
+});
+
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || 'success');
+  t.innerHTML = '<i class="fa-solid ' + (type === 'error' ? 'fa-circle-xmark' : 'fa-circle-check') + '"></i> ' + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+const API = '/api/room-categories';
+let categories = [];
+
+async function loadCategories() {
+  try {
+    const res = await fetch(API, { credentials: 'include' });
+    const j = await res.json();
+    categories = j.data || [];
+    render();
+  } catch (e) { console.error(e); }
+}
+
+function render() {
+  const el = document.getElementById('rcTable');
+  if (!el) return;
+  if (!categories.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-style:italic;font-size:12px;padding:8px 0;">No categories yet. Add one above.</div>';
+    return;
+  }
+  el.innerHTML = categories.map(c =>
+    '<div class="rc-row" data-id="' + c.id + '">' +
+      '<div class="rc-info">' +
+        '<div class="rc-name">' + esc(c.name) + '</div>' +
+        '<div class="rc-meta">₦' + Number(c.rate||0).toLocaleString() + ' · Order ' + (c.sortOrder||0) + (c.active === false ? ' · <span style="color:var(--red)">Inactive</span>' : '') + '</div>' +
+      '</div>' +
+      '<div class="rc-actions">' +
+        '<button onclick="editCat(\'' + c.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
+        '<button class="del" onclick="deleteCat(\'' + c.id + '\')"><i class="fa-solid fa-trash"></i></button>' +
+      '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+document.getElementById('rcAddBtn').addEventListener('click', async () => {
+  const name = document.getElementById('rcName').value.trim();
+  const rate = document.getElementById('rcRate').value;
+  const sort = document.getElementById('rcSort').value;
+  if (!name) { showToast('Enter a category name.', 'error'); return; }
+  try {
+    const res = await fetch(API, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rate: Number(rate)||0, sortOrder: Number(sort)||0 }) });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || 'Failed');
+    document.getElementById('rcName').value = '';
+    document.getElementById('rcRate').value = '';
+    document.getElementById('rcSort').value = '';
+    showToast('Category added.', 'success');
+    loadCategories();
+  } catch (e) { showToast(e.message, 'error'); }
+});
+
+async function editCat(id) {
+  const c = categories.find(x => x.id === id);
+  if (!c) return;
+  const name = prompt('Category name:', c.name); if (name === null) return;
+  const rate = prompt('Rate (₦):', c.rate || 0); if (rate === null) return;
+  const sort = prompt('Sort order:', c.sortOrder || 0); if (sort === null) return;
+  try {
+    const res = await fetch(API + '/' + encodeURIComponent(id), { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), rate: Number(rate), sortOrder: Number(sort) }) });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || 'Failed');
+    showToast('Category updated.', 'success');
+    loadCategories();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteCat(id) {
+  if (!confirm('Delete this category? Rooms using it will keep their type.')) return;
+  try {
+    const res = await fetch(API + '/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || 'Failed');
+    showToast('Category deleted.', 'success');
+    loadCategories();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+loadCategories();
+</script>
+</body>
+</html>

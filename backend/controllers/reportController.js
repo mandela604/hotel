@@ -6,8 +6,6 @@ const Sale = require('../models/Sale');
 const asyncHandler = require('../middleware/asyncHandler');
 const { total, balance, nights } = require('../utils/calc');
 
-const ROOM_TYPES = ['Standard', 'Deluxe', 'Super Deluxe', 'Premium Gold', 'Mini Suite', 'Executive Suite', 'Apartment'];
-
 function buildFilter(query) {
   const { from, to, type, status, pay } = query;
   const filter = { guest: { $ne: '' }, status: { $ne: 'cancelled' } };
@@ -31,7 +29,8 @@ exports.summary = asyncHandler(async (req, res) => {
   const totPaid = rows.reduce((s, b) => s + (b.paid || 0), 0);
   const totBal = rows.reduce((s, b) => s + balance(b), 0);
 
-  const byType = ROOM_TYPES.map((t) => {
+  const typeSet = [...new Set(rows.map((b) => b.roomType).filter(Boolean))].sort();
+  const byType = typeSet.map((t) => {
     const trows = rows.filter((b) => b.roomType === t);
     return { type: t, count: trows.length, revenue: trows.reduce((s, b) => s + total(b), 0) };
   });

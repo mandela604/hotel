@@ -59,6 +59,7 @@ app.use('/api/procurement', auth, require('./routes/procurement'));
 app.use('/api/accounting', auth, require('./routes/accounting'));
 app.use('/api/activity', auth, require('./routes/activity'));
 app.use('/api/settings', auth, require('./routes/settings'));
+app.use('/api/room-categories', auth, require('./routes/roomCategories'));
 
 app.use(notFound);
 app.use(errorHandler);
