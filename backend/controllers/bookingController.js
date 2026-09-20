@@ -961,6 +961,14 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
   console.log(`[RoomIncome] Built ${rows.length} transaction rows`);
 
   /* ── Date filter (on payment date) ── */
+  function parseDDMMYY(s) {
+    if (!s) return null;
+    var parts = s.split(/[/\-.]/);
+    if (parts.length < 3) return null;
+    var d = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, y = parseInt(parts[2], 10);
+    if (y < 100) y += 2000;
+    return new Date(y, m, d);
+  }
   if (period && period !== 'all') {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
@@ -971,13 +979,13 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
     else if (period === '30d') { start = new Date(todayStart); start.setDate(start.getDate() - 29); end = todayEnd; }
     if (start && end) {
       const sTime = start.getTime(), eTime = end.getTime();
-      rows = rows.filter(r => { if (!r.date) return false; return new Date(r.date).getTime() >= sTime && new Date(r.date).getTime() <= eTime; });
+      rows = rows.filter(r => { if (!r.date) return false; var d = parseDDMMYY(r.date); return d && d.getTime() >= sTime && d.getTime() <= eTime; });
     }
   }
   if (dateFrom || dateTo) {
     const sTime = dateFrom ? new Date(dateFrom + 'T00:00:00').getTime() : 0;
     const eTime = dateTo ? new Date(dateTo + 'T23:59:59.999').getTime() : Date.now();
-    rows = rows.filter(r => { if (!r.date) return false; const d = new Date(r.date).getTime(); return d >= sTime && d <= eTime; });
+    rows = rows.filter(r => { if (!r.date) return false; var d = parseDDMMYY(r.date); return d && d.getTime() >= sTime && d.getTime() <= eTime; });
   }
   if (roomType) rows = rows.filter(r => r.roomType === roomType);
   if (paymentMethod) rows = rows.filter(r => r.paymentMethod === paymentMethod);
