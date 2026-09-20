@@ -11,6 +11,15 @@ async function connectDB() {
 
   console.log(`[db] MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
 
+  // Drop stale collection-level validator on bookings (enum on 'type' was
+  // removed from the Mongoose schema but persists in MongoDB).
+  try {
+    await conn.connection.db.command({ collMod: 'bookings', validationLevel: 'off' });
+    console.log('[db] Set validationLevel=off on bookings');
+  } catch (err) {
+    console.log('[db] collMod skip:', err.message);
+  }
+
   mongoose.connection.on('error', (err) => {
     console.error('[db] MongoDB error:', err.message);
   });

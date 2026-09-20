@@ -37,6 +37,7 @@ const bookingSchema = new mongoose.Schema({
   refundDate:     { type: String, default: '' },
   refundBy:       { type: String, default: '' },
   refundReason:   { type: String, default: '' },
+  _guestName:     { type: String, default: '' },
   createdAt:  { type: Number, default: 0 },
   updatedAt:  { type: Number, default: 0 },
 }, { timestamps: false, toJSON: { virtuals: true }, toObject: { virtuals: true } });

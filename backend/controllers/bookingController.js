@@ -486,6 +486,7 @@ exports.markNoShow = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: `Cannot mark no-show from status '${booking.status}'` });
   }
   const guestName = booking.guest;
+  booking._guestName = guestName;
   booking.status = 'no-show';
   Object.assign(booking, NO_SHOW_FIELDS);
   booking.updatedAt = Date.now();
@@ -513,6 +514,7 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
 
   const guestName = booking.guest;
   const roomNum = booking.room;
+  booking._guestName = guestName;
 
   // Record refund before clearing
   booking.refunded = refund;
@@ -802,7 +804,12 @@ exports.getReports = asyncHandler(async (req, res) => {
   // Build report from Guest.stays[] (historical) + active Bookings (current)
   const [allGuests, activeBookings] = await Promise.all([
     Guest.find({}).select('name phone guestId stays').lean(),
-    Booking.find({ status: { $in: ['checkedin', 'reserved', 'cleaning', 'maintenance'] } }).lean(),
+    Booking.find({
+      $or: [
+        { status: { $in: ['checkedin', 'reserved', 'cleaning', 'maintenance'] } },
+        { 'payments.0': { $exists: true } },
+      ]
+    }).lean(),
   ]);
 
   // Flatten Guest stays into booking-shaped objects
@@ -828,7 +835,7 @@ exports.getReports = asyncHandler(async (req, res) => {
     const key = b.room + '|' + b.checkin;
     if (!existingKeys.has(key)) {
       stays.push({
-        room: b.room, type: b.type, guest: b.guest || '', phone: b.phone || '',
+        room: b.room, type: b.type, guest: b._guestName || b.guest || '', phone: b.phone || '',
         checkin: b.checkin || '', checkout: b.checkout || '',
         total: calcTotal(b), paid: calcPaid(b), status: b.status || '',
         recordedBy: b.recordedBy || '', payStatus: b.payStatus || 'Pending',
@@ -924,6 +931,10 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
     const payments = b.payments || [];
     let cumulative = 0;
 
+    const isRefunded = Number(b.refunded) > 0;
+    const isFullRefund = isRefunded && Number(b.refunded) >= total && total > 0;
+    const guestLabel = b._guestName || b.guest || '';
+
     for (const p of payments) {
       const amtBefore = cumulative;
       cumulative += (p.amount || 0);
@@ -933,24 +944,33 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
       } else if (amtBefore > 0) {
         pType = 'Balance Payment';
       }
+
+      if (isRefunded) {
+        pType = isFullRefund ? 'Refunded' : 'Partial Refund';
+      }
+
       seq++;
       rows.push({
         sn: seq, date: p.date || '',
         receiptNo: 'RCP-' + String(seq).padStart(5, '0'),
-        guest: b.guest || '', bookingNo: b.stayId || b.room || '',
+        guest: guestLabel, bookingNo: b.stayId || b.room || '',
         room: b.room || '', roomType: b.type || '',
         paymentType: pType, paymentMethod: p.mode || 'Cash',
         referenceNo: p.id || '', amount: p.amount || 0,
-        remarks: pType === 'Full Payment' ? 'Full payment' : pType === 'Deposit' ? 'Advance payment' : 'Balance payment',
+        remarks: isFullRefund
+          ? 'Refunded in full'
+          : isRefunded
+            ? `Refunded: ₦${Number(b.refunded).toLocaleString()}`
+            : pType === 'Full Payment' ? 'Full payment' : pType === 'Deposit' ? 'Advance payment' : 'Balance payment',
         cashier: p.by || '',
       });
     }
-    if (Number(b.refunded) > 0) {
+    if (isRefunded) {
       seq++;
       rows.push({
         sn: seq, date: b.refundDate || '',
         receiptNo: 'RCP-' + String(seq).padStart(5, '0'),
-        guest: b.guest || '', bookingNo: b.stayId || b.room || '',
+        guest: guestLabel, bookingNo: b.stayId || b.room || '',
         room: b.room || '', roomType: b.type || '',
         paymentType: 'Refund', paymentMethod: 'Refund',
         referenceNo: '', amount: -(Number(b.refunded)),

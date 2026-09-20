@@ -43,7 +43,7 @@
         ['Cash','POS','Transfer'].map(function(m) { return '<option value="' + m + '"' + (filters.paymentMethod === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') +
       '</select></div>' +
       '<div class="rpr-fg"><span class="rpr-fl">Payment Type</span><select class="rpr-select" id="rprPayType"><option value="">All</option>' +
-        ['Full Payment','Deposit','Balance Payment','Refund'].map(function(t) { return '<option value="' + t + '"' + (filters.paymentType === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') +
+        ['Full Payment','Deposit','Balance Payment','Refund','Partial Refund','Refunded'].map(function(t) { return '<option value="' + t + '"' + (filters.paymentType === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') +
       '</select></div>' +
       '<div class="rpr-fg"><span class="rpr-fl">&nbsp;</span><button class="rpr-gen-btn" id="rprGenerate"><i class="fa-solid fa-filter"></i> Generate Report</button></div>' +
     '</div>';
@@ -265,6 +265,8 @@
       '.rpr-pt-deposit{background:rgba(245,158,11,.1);color:#d97706;}' +
       '.rpr-pt-balancepayment{background:rgba(79,70,229,.1);color:#4f46e5;}' +
       '.rpr-pt-refund{background:rgba(220,38,38,.1);color:#dc2626;}' +
+      '.rpr-pt-refunded{background:rgba(220,38,38,.1);color:#dc2626;}' +
+      '.rpr-pt-partialrefund{background:rgba(220,38,38,.1);color:#dc2626;}' +
       '.rpr-summaries{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}' +
       '@media(max-width:1000px){.rpr-summaries{grid-template-columns:1fr;}}' +
       '.rpr-sum-card{background:#fff;border:1px solid #eef0f6;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(15,34,55,.06);}' +
