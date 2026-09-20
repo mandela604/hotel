@@ -259,6 +259,9 @@ body {
 
       <!-- Room Income Tab -->
       <div id="tabRoomIncome"></div>
+      <div id="tabRoomIncomePrint" style="display:none;text-align:right;margin-top:10px;">
+        <button class="fb-btn-primary" onclick="RoomIncome.print()"><i class="fa-solid fa-print"></i> Print Receipt</button>
+      </div>
     </div>
   </div>
 </div>
@@ -288,13 +291,34 @@ const shell = BookingShell.attach({
 
 let allRooms = [];
 let bookings = [];
+let roomCategories = [];
 let currentSession = null;
 let table = null;
+
+async function loadRoomCategories() {
+  try {
+    const res = await fetch('/api/room-categories', { credentials: 'include' });
+    const j = await res.json();
+    roomCategories = (j.data || []).filter(function(c){ return c.active !== false; });
+  } catch (e) { roomCategories = []; }
+}
+
+function getDotClass(type) {
+  var map = { Standard: 'ft-dot-standard', Apartment: 'ft-dot-conf' };
+  if (map[type]) return map[type];
+  if (roomCategories.length) {
+    var idx = roomCategories.findIndex(function(c){ return c.name === type; });
+    if (idx >= 0) return idx < 2 ? 'ft-dot-deluxe' : 'ft-dot-suite';
+  }
+  return 'ft-dot-default';
+}
 
 function switchReportTab(tab) {
   document.querySelectorAll('.ri-tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === tab); });
   document.getElementById('tabBookingReport').classList.toggle('active', tab === 'booking');
   document.getElementById('tabRoomIncome').classList.toggle('active', tab === 'income');
+  var printBtn = document.getElementById('tabRoomIncomePrint');
+  if (printBtn) printBtn.style.display = tab === 'income' ? 'block' : 'none';
   if (tab === 'income') {
     var el = document.getElementById('tabRoomIncome');
     if (el && window.RoomIncome && !el.dataset.loaded) {
@@ -500,9 +524,8 @@ function openReportInModal(b) {
 }
 
 const PAY_CLS = {'Fully Paid':'pay-full','Deposit Paid':'pay-deposit','Pending':'pay-pending','Refunded':'pay-deposit','Partial Refund':'pay-deposit'};
-const DOT_CLASS = { Standard: 'ft-dot-standard', Deluxe: 'ft-dot-deluxe', 'Super Deluxe': 'ft-dot-deluxe', 'Premium Gold': 'ft-dot-suite', 'Mini Suite': 'ft-dot-suite', 'Executive Suite': 'ft-dot-suite', Apartment: 'ft-dot-conf' };
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-const roomColumn = { id: 'room', label: 'Room', cell: (b) => { const dot = DOT_CLASS[b.type] || 'ft-dot-default'; return '<span class="ft-room"><span class="ft-dot ' + dot + '"></span>' + esc(b.room) + ' · ' + esc(b.type || '') + '</span>'; } };
+const roomColumn = { id: 'room', label: 'Room', cell: (b) => { const dot = getDotClass(b.type); return '<span class="ft-room"><span class="ft-dot ' + dot + '"></span>' + esc(b.room) + ' · ' + esc(b.type || '') + '</span>'; } };
 const guestColumn = { id: 'guest', label: 'Guest', cell: (b) => { return '<div class="ft-guest-name">' + esc(b.guest || '—') + '</div>'; } };
 
 /* ── Status colors — same source of truth used for the status filter
@@ -559,6 +582,7 @@ async function init() {
   }
   try {
     if (shell && shell.ready) await shell.ready();
+    await loadRoomCategories();
     currentSession = shell.getUser();
     bookingModal.setSession(currentSession);
 

@@ -1,229 +1,212 @@
 ;(function () {
   'use strict';
-
   const CFG = (window.CONFIG && window.CONFIG.API_BASE) ? window.CONFIG.API_BASE : '';
-  const fmt = (n) => '₦' + Number(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const fmt = function(n) { return '\u20A6' + Number(n || 0).toLocaleString('en-NG'); };
+  var esc = function(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
 
-  let state = { rows: [], kpis: {}, page: 1, pages: 1, total: 0 };
-  let filters = { period: 'all', roomType: '', payment: '' };
+  var state = { rows: [], kpis: {}, summary: {}, page: 1, pages: 1, total: 0, _dateFrom: '', _dateTo: '' };
+  var filters = { period: 'all', roomType: '', paymentMethod: '', paymentType: '' };
 
-  async function fetchData() {
-    const params = new URLSearchParams();
-    params.set('page', state.page);
-    params.set('limit', '20');
-    if (filters.period !== 'all') params.set('period', filters.period);
-    if (filters.roomType) params.set('roomType', filters.roomType);
-    if (filters.payment) params.set('payment', filters.payment);
-    const res = await fetch(CFG + '/api/booking/room-income?' + params.toString(), { credentials: 'include' });
-    if (!res.ok) throw new Error('Failed to load');
-    const j = await res.json();
-    return j.data || { rows: [], kpis: {}, page: 1, pages: 1, total: 0 };
+  function fetchData() {
+    var p = new URLSearchParams();
+    p.set('page', state.page); p.set('limit', '50');
+    if (filters.period !== 'all') p.set('period', filters.period);
+    if (state._dateFrom) p.set('dateFrom', state._dateFrom);
+    if (state._dateTo) p.set('dateTo', state._dateTo);
+    if (filters.roomType) p.set('roomType', filters.roomType);
+    if (filters.paymentMethod) p.set('paymentMethod', filters.paymentMethod);
+    if (filters.paymentType) p.set('paymentType', filters.paymentType);
+    return fetch(CFG + '/api/booking/room-income?' + p.toString(), { credentials: 'include' })
+      .then(function(r) { if (!r.ok) throw new Error('Failed'); return r.json(); })
+      .then(function(j) { return j.data || { rows: [], kpis: {}, summary: {}, page: 1, pages: 1, total: 0 }; });
   }
 
-  function renderKPIs(k) {
-    return '<div class="ri-kpi-row">' +
-      '<div class="ri-kpi ri-kpi-gold"><div class="ri-kpi-ic"><i class="fa-solid fa-sack-dollar"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Total Revenue</div><div class="ri-kpi-val">' + fmt(k.totalRevenue) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-green"><div class="ri-kpi-ic"><i class="fa-solid fa-circle-check"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Collected</div><div class="ri-kpi-val">' + fmt(k.totalCollected) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-red"><div class="ri-kpi-ic"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Outstanding</div><div class="ri-kpi-val">' + fmt(k.totalBalance) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-purple"><div class="ri-kpi-ic"><i class="fa-solid fa-moon"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Room Nights</div><div class="ri-kpi-val">' + (k.totalNights || 0) + '</div></div></div>' +
-      '<div class="ri-kpi ri-kpi-teal"><div class="ri-kpi-ic"><i class="fa-solid fa-chart-line"></i></div><div class="ri-kpi-body"><div class="ri-kpi-label">Avg Rate/Night</div><div class="ri-kpi-val">' + fmt(k.avgRate) + '</div></div></div>' +
+  function paintKPIs(k) {
+    return '<div class="rpr-kpis">' +
+      '<div class="rpr-kpi rpr-kpi-blue"><div class="rpr-kpi-ic"><i class="fa-solid fa-building-columns"></i></div><div class="rpr-kpi-body"><div class="rpr-kpi-label">Total Payments Received</div><div class="rpr-kpi-val">' + fmt(k.totalPayments) + '</div></div></div>' +
+      '<div class="rpr-kpi rpr-kpi-slate"><div class="rpr-kpi-ic"><i class="fa-solid fa-receipt"></i></div><div class="rpr-kpi-body"><div class="rpr-kpi-label">Number of Transactions</div><div class="rpr-kpi-val">' + (k.txCount || 0) + '</div></div></div>' +
+      '<div class="rpr-kpi rpr-kpi-teal"><div class="rpr-kpi-ic"><i class="fa-solid fa-money-bill-wave"></i></div><div class="rpr-kpi-body"><div class="rpr-kpi-label">Cash</div><div class="rpr-kpi-val">' + fmt(k.cashTotal) + '</div><div class="rpr-kpi-sub">(' + (k.cashCount || 0) + ' transactions)</div></div></div>' +
+      '<div class="rpr-kpi rpr-kpi-indigo"><div class="rpr-kpi-ic"><i class="fa-solid fa-credit-card"></i></div><div class="rpr-kpi-body"><div class="rpr-kpi-label">POS</div><div class="rpr-kpi-val">' + fmt(k.posTotal) + '</div><div class="rpr-kpi-sub">(' + (k.posCount || 0) + ' transactions)</div></div></div>' +
+      '<div class="rpr-kpi rpr-kpi-purple"><div class="rpr-kpi-ic"><i class="fa-solid fa-university"></i></div><div class="rpr-kpi-body"><div class="rpr-kpi-label">Bank Transfer</div><div class="rpr-kpi-val">' + fmt(k.transferTotal) + '</div><div class="rpr-kpi-sub">(' + (k.transferCount || 0) + ' transactions)</div></div></div>' +
+      '<div class="rpr-kpi rpr-kpi-red"><div class="rpr-kpi-ic"><i class="fa-solid fa-rotate-left"></i></div><div class="rpr-kpi-body"><div class="rpr-kpi-label">Refunds</div><div class="rpr-kpi-val">' + fmt(k.totalRefunds) + '</div><div class="rpr-kpi-sub">(' + (k.refundCount || 0) + ' transactions)</div></div></div>' +
+      '<div class="rpr-kpi rpr-kpi-green"><div class="rpr-kpi-ic"><i class="fa-solid fa-sack-dollar"></i></div><div class="rpr-kpi-body"><div class="rpr-kpi-label">Net Collections</div><div class="rpr-kpi-val">' + fmt(k.netCollections) + '</div></div></div>' +
     '</div>';
   }
 
-  function renderFilters() {
-    return '<div class="ri-filters">' +
-      '<div class="ri-fg"><span class="ri-fl">Period</span><div class="ri-pills" id="riPeriodPills">' +
-        '<button class="ri-pill' + (filters.period === 'all' ? ' active' : '') + '" data-p="all">All Time</button>' +
-        '<button class="ri-pill' + (filters.period === 'today' ? ' active' : '') + '" data-p="today">Today</button>' +
-        '<button class="ri-pill' + (filters.period === '7d' ? ' active' : '') + '" data-p="7d">7 Days</button>' +
-        '<button class="ri-pill' + (filters.period === '30d' ? ' active' : '') + '" data-p="30d">30 Days</button>' +
-      '</div></div>' +
-      '<div class="ri-fg"><span class="ri-fl">Room Type</span><select class="ri-select" id="riRoomType">' +
-        '<option value="">All Types</option>' +
-        '<option value="Standard"' + (filters.roomType === 'Standard' ? ' selected' : '') + '>Standard</option>' +
-        '<option value="Deluxe"' + (filters.roomType === 'Deluxe' ? ' selected' : '') + '>Deluxe</option>' +
-        '<option value="Super Deluxe"' + (filters.roomType === 'Super Deluxe' ? ' selected' : '') + '>Super Deluxe</option>' +
-        '<option value="Premium Gold"' + (filters.roomType === 'Premium Gold' ? ' selected' : '') + '>Premium Gold</option>' +
-        '<option value="Mini Suite"' + (filters.roomType === 'Mini Suite' ? ' selected' : '') + '>Mini Suite</option>' +
-        '<option value="Executive Suite"' + (filters.roomType === 'Executive Suite' ? ' selected' : '') + '>Executive Suite</option>' +
-        '<option value="Apartment"' + (filters.roomType === 'Apartment' ? ' selected' : '') + '>Apartment</option>' +
+  function paintFilters() {
+    return '<div class="rpr-filters">' +
+      '<div class="rpr-fg"><span class="rpr-fl">Business Date Range</span><div class="rpr-date-group"><input type="date" class="rpr-date" id="rprDateFrom" value="' + (state._dateFrom || '') + '"><span class="rpr-date-sep">to</span><input type="date" class="rpr-date" id="rprDateTo" value="' + (state._dateTo || '') + '"></div></div>' +
+      '<div class="rpr-fg"><span class="rpr-fl">Room Type</span><select class="rpr-select" id="rprRoomType"><option value="">All</option>' +
+        ['Standard','Deluxe','Super Deluxe','Premium Gold','Mini Suite','Executive Suite','Apartment'].map(function(t) { return '<option value="' + t + '"' + (filters.roomType === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') +
       '</select></div>' +
-      '<div class="ri-fg"><span class="ri-fl">Payment</span><select class="ri-select" id="riPayment">' +
-        '<option value="">All</option>' +
-        '<option value="paid"' + (filters.payment === 'paid' ? ' selected' : '') + '>Fully Paid</option>' +
-        '<option value="unpaid"' + (filters.payment === 'unpaid' ? ' selected' : '') + '>Outstanding</option>' +
+      '<div class="rpr-fg"><span class="rpr-fl">Payment Method</span><select class="rpr-select" id="rprPayMethod"><option value="">All</option>' +
+        ['Cash','POS','Transfer'].map(function(m) { return '<option value="' + m + '"' + (filters.paymentMethod === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') +
       '</select></div>' +
-      '<div class="ri-fg ri-fg-print"><span class="ri-fl">&nbsp;</span><button class="ri-print-btn" id="riPrintBtn"><i class="fa-solid fa-print"></i> Print Receipt</button></div>' +
+      '<div class="rpr-fg"><span class="rpr-fl">Payment Type</span><select class="rpr-select" id="rprPayType"><option value="">All</option>' +
+        ['Full Payment','Deposit','Balance Payment','Refund'].map(function(t) { return '<option value="' + t + '"' + (filters.paymentType === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') +
+      '</select></div>' +
+      '<div class="rpr-fg"><span class="rpr-fl">&nbsp;</span><button class="rpr-gen-btn" id="rprGenerate"><i class="fa-solid fa-filter"></i> Generate Report</button></div>' +
     '</div>';
   }
 
-  function renderTable(rows) {
-    if (!rows.length) return '<div class="ri-empty"><i class="fa-solid fa-bed"></i><div>No room income data found.</div></div>';
-    var html = '<div class="ri-table-wrap"><table class="ri-table"><thead><tr>' +
-      '<th>Room</th><th>Guest</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Rate/Night</th><th>Total</th><th>Collected</th><th>Balance</th><th>Status</th>' +
+  function paintTable(rows) {
+    if (!rows.length) return '<div class="rpr-empty"><i class="fa-solid fa-receipt"></i><div>No payment transactions found.</div></div>';
+    var h = '<div class="rpr-table-wrap"><table class="rpr-table"><thead><tr>' +
+      '<th>S/N</th><th>Date</th><th>Receipt No.</th><th>Guest Name</th><th>Booking No.</th><th>Room No.</th><th>Room Type</th><th>Payment Type</th><th>Payment Method</th><th>Reference No.</th><th>Amount (\u20A6)</th><th>Remarks</th><th>Cashier</th>' +
     '</tr></thead><tbody>';
-    rows.forEach(function (r) {
-      var statusCls = r.status === 'checkout' ? 'ri-st-checkout' : r.status === 'checkedin' ? 'ri-st-checkedin' : r.status === 'reserved' ? 'ri-st-reserved' : 'ri-st-other';
-      html += '<tr>' +
-        '<td><strong>' + esc(r.room) + '</strong> · ' + esc(r.type) + '</td>' +
-        '<td>' + esc(r.guest) + '</td>' +
-        '<td>' + esc(r.checkin) + '</td>' +
-        '<td>' + esc(r.checkout) + '</td>' +
-        '<td>' + r.nights + '</td>' +
-        '<td>' + fmt(r.rate) + '</td>' +
-        '<td class="ri-bold">' + fmt(r.total) + '</td>' +
-        '<td class="ri-green">' + fmt(r.collected) + '</td>' +
-        '<td class="' + (r.balance > 0 ? 'ri-red' : 'ri-green') + '">' + (r.balance > 0 ? fmt(r.balance) : 'Settled') + '</td>' +
-        '<td><span class="ri-status ' + statusCls + '">' + esc(r.status || '—') + '</span></td>' +
+    var totalAmt = 0;
+    rows.forEach(function(r) {
+      totalAmt += r.amount;
+      h += '<tr>' +
+        '<td>' + r.sn + '</td><td>' + esc(r.date) + '</td><td>' + esc(r.receiptNo) + '</td><td>' + esc(r.guest) + '</td><td>' + esc(r.bookingNo) + '</td>' +
+        '<td>' + esc(r.room) + '</td><td>' + esc(r.roomType) + '</td><td><span class="rpr-ptag rpr-pt-' + r.paymentType.replace(/\s/g,'').toLowerCase() + '">' + esc(r.paymentType) + '</span></td><td>' + esc(r.paymentMethod) + '</td><td>' + esc(r.referenceNo) + '</td>' +
+        '<td class="rpr-bold">' + fmt(r.amount) + '</td><td>' + esc(r.remarks) + '</td><td>' + esc(r.cashier) + '</td>' +
       '</tr>';
     });
-    html += '</tbody></table></div>';
-    return html;
+    h += '<tr class="rpr-total-row"><td colspan="10" style="text-align:right;font-weight:700;border-right:none">TOTAL</td><td class="rpr-bold" style="border-left:none">' + fmt(totalAmt) + '</td><td colspan="2"></td></tr>';
+    h += '</tbody></table></div>';
+    return h;
   }
 
-  function renderPagination() {
+  function paintSummaries(s) {
+    var method = s.methodSummary || [], type = s.typeSummary || [], room = s.roomTypeSummary || [];
+    function sumTable(headers, data, key, showPct) {
+      var h = '<table class="rpr-sum-table"><thead><tr>';
+      headers.forEach(function(hdr) { h += '<th>' + hdr + '</th>'; });
+      h += '</tr></thead><tbody>';
+      var totCount = 0, totAmt = 0;
+      data.forEach(function(r) { totCount += r.count; totAmt += r.amount; });
+      data.forEach(function(r) {
+        h += '<tr><td>' + esc(r[key]) + '</td><td style="text-align:center">' + r.count + '</td><td style="text-align:right">' + fmt(r.amount) + '</td>';
+        if (showPct) h += '<td style="text-align:right">' + (totAmt > 0 ? ((r.amount / totAmt) * 100).toFixed(1) + '%' : '0%') + '</td>';
+        h += '</tr>';
+      });
+      h += '<tr class="rpr-sum-total"><td>Total</td><td style="text-align:center">' + totCount + '</td><td style="text-align:right">' + fmt(totAmt) + '</td>';
+      if (showPct) h += '<td style="text-align:right">100.0%</td>';
+      h += '</tr></tbody></table>';
+      return h;
+    }
+    return '<div class="rpr-summaries">' +
+      '<div class="rpr-sum-card"><div class="rpr-sum-title">PAYMENT METHOD SUMMARY</div>' + sumTable(['Payment Method','Transactions','Amount (\u20A6)','Percentage'], method, 'method', true) + '</div>' +
+      '<div class="rpr-sum-card"><div class="rpr-sum-title">PAYMENT TYPE SUMMARY</div>' + sumTable(['Payment Type','Transactions','Amount (\u20A6)'], type, 'type', false) + '</div>' +
+      '<div class="rpr-sum-card"><div class="rpr-sum-title">ROOM TYPE PAYMENT SUMMARY</div>' + sumTable(['Room Type','Transactions','Amount (\u20A6)'], room, 'type', false) + '</div>' +
+    '</div>';
+  }
+
+  function paintPagination() {
     if (state.pages <= 1) return '';
-    var html = '<div class="ri-pagination">';
-    html += '<button class="ri-page-btn" data-page="1" ' + (state.page <= 1 ? 'disabled' : '') + '><i class="fa-solid fa-angles-left"></i></button>';
-    html += '<button class="ri-page-btn" data-page="' + (state.page - 1) + '" ' + (state.page <= 1 ? 'disabled' : '') + '><i class="fa-solid fa-chevron-left"></i></button>';
-    var start = Math.max(1, state.page - 2);
-    var end = Math.min(state.pages, state.page + 2);
-    for (var i = start; i <= end; i++) {
-      html += '<button class="ri-page-btn' + (i === state.page ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
+    var h = '<div class="rpr-pagination">';
+    h += '<button class="rpr-page-btn" data-page="1"' + (state.page <= 1 ? ' disabled' : '') + '><i class="fa-solid fa-angles-left"></i></button>';
+    h += '<button class="rpr-page-btn" data-page="' + (state.page - 1) + '"' + (state.page <= 1 ? ' disabled' : '') + '><i class="fa-solid fa-chevron-left"></i></button>';
+    for (var i = Math.max(1, state.page - 2); i <= Math.min(state.pages, state.page + 2); i++) {
+      h += '<button class="rpr-page-btn' + (i === state.page ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
     }
-    html += '<button class="ri-page-btn" data-page="' + (state.page + 1) + '" ' + (state.page >= state.pages ? 'disabled' : '') + '><i class="fa-solid fa-chevron-right"></i></button>';
-    html += '<button class="ri-page-btn" data-page="' + state.pages + '" ' + (state.page >= state.pages ? 'disabled' : '') + '><i class="fa-solid fa-angles-right"></i></button>';
-    html += '<span class="ri-page-info">Page ' + state.page + ' of ' + state.pages + ' (' + state.total + ' records)</span>';
-    html += '</div>';
-    return html;
-  }
-
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-  async function render(container) {
-    container.innerHTML = '<div class="ri-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading room income…</div>';
-    try {
-      state.page = 1;
-      var data = await fetchData();
-      state.rows = data.rows || [];
-      state.kpis = data.kpis || {};
-      state.page = data.page || 1;
-      state.pages = data.pages || 1;
-      state.total = data.total || 0;
-      paint(container);
-      bindEvents(container);
-    } catch (e) {
-      container.innerHTML = '<div class="ri-empty"><i class="fa-solid fa-triangle-exclamation"></i><div>Failed to load room income.</div></div>';
-      console.error('[RoomIncome]', e);
-    }
+    h += '<button class="rpr-page-btn" data-page="' + (state.page + 1) + '"' + (state.page >= state.pages ? ' disabled' : '') + '><i class="fa-solid fa-chevron-right"></i></button>';
+    h += '<button class="rpr-page-btn" data-page="' + state.pages + '"' + (state.page >= state.pages ? ' disabled' : '') + '><i class="fa-solid fa-angles-right"></i></button>';
+    h += '<span class="rpr-page-info">Page ' + state.page + ' of ' + state.pages + ' (' + state.total + ' records)</span></div>';
+    return h;
   }
 
   function paint(c) {
-    c.innerHTML = renderKPIs(state.kpis) + renderFilters() + renderTable(state.rows) + renderPagination();
+    c.innerHTML = paintKPIs(state.kpis) + paintFilters() +
+      '<div class="rpr-section-title"><i class="fa-solid fa-table-list"></i> ROOM PAYMENT TRANSACTIONS</div>' +
+      paintTable(state.rows) + paintSummaries(state.summary) + paintPagination();
   }
 
-  async function goPage(container, pg) {
+  function render(container) {
+    container.innerHTML = '<div class="rpr-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading room payment report\u2026</div>';
+    state.page = 1;
+    return fetchData().then(function(data) {
+      state.rows = data.rows || []; state.kpis = data.kpis || {}; state.summary = data.summary || {};
+      state.page = data.page || 1; state.pages = data.pages || 1; state.total = data.total || 0;
+      paint(container); bindEvents(container);
+    }).catch(function(e) {
+      container.innerHTML = '<div class="rpr-empty"><i class="fa-solid fa-triangle-exclamation"></i><div>Failed to load report.</div></div>';
+      console.error('[RoomIncome]', e);
+    });
+  }
+
+  function goPage(c, pg) {
     state.page = pg;
-    container.innerHTML = '<div class="ri-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>';
-    try {
-      var data = await fetchData();
-      state.rows = data.rows || [];
-      state.kpis = data.kpis || {};
-      state.page = data.page || 1;
-      state.pages = data.pages || 1;
-      state.total = data.total || 0;
-      paint(container);
-      bindEvents(container);
-    } catch (e) {
-      container.innerHTML = '<div class="ri-empty"><i class="fa-solid fa-triangle-exclamation"></i><div>Failed to load.</div></div>';
-    }
+    c.innerHTML = '<div class="rpr-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading\u2026</div>';
+    return fetchData().then(function(data) {
+      state.rows = data.rows || []; state.kpis = data.kpis || {}; state.summary = data.summary || {};
+      state.page = data.page || 1; state.pages = data.pages || 1; state.total = data.total || 0;
+      paint(c); bindEvents(c);
+    }).catch(function() { c.innerHTML = '<div class="rpr-empty">Failed to load.</div>'; });
   }
 
   function bindEvents(c) {
-    c.querySelectorAll('#riPeriodPills .ri-pill').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        filters.period = btn.dataset.p;
-        render(c);
-      });
+    var genBtn = c.querySelector('#rprGenerate');
+    if (genBtn) genBtn.addEventListener('click', function() {
+      filters.roomType = c.querySelector('#rprRoomType').value;
+      filters.paymentMethod = c.querySelector('#rprPayMethod').value;
+      filters.paymentType = c.querySelector('#rprPayType').value;
+      state._dateFrom = c.querySelector('#rprDateFrom').value;
+      state._dateTo = c.querySelector('#rprDateTo').value;
+      filters.period = (state._dateFrom || state._dateTo) ? 'custom' : 'all';
+      render(c);
     });
-    var rtSel = c.querySelector('#riRoomType');
-    if (rtSel) rtSel.addEventListener('change', function () { filters.roomType = rtSel.value; render(c); });
-    var pySel = c.querySelector('#riPayment');
-    if (pySel) pySel.addEventListener('change', function () { filters.payment = pySel.value; render(c); });
-    c.querySelectorAll('.ri-page-btn[data-page]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+    c.querySelectorAll('.rpr-page-btn[data-page]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
         var pg = parseInt(btn.dataset.page, 10);
         if (pg >= 1 && pg <= state.pages) goPage(c, pg);
       });
     });
-    var printBtn = c.querySelector('#riPrintBtn');
-    if (printBtn) printBtn.addEventListener('click', function () { printReceipt(); });
   }
 
   function printReceipt() {
-    var k = state.kpis || {};
-    var rows = state.rows || [];
-    var filterLabel = filters.period === 'all' ? 'All Time' : filters.period === 'today' ? 'Today' : filters.period === '7d' ? 'Last 7 Days' : filters.period === '30d' ? 'Last 30 Days' : filters.period;
-    if (filters.roomType) filterLabel += ' · ' + filters.roomType;
-    if (filters.payment) filterLabel += ' · ' + (filters.payment === 'paid' ? 'Fully Paid' : 'Outstanding');
+    var k = state.kpis || {}, s = state.summary || {};
     var now = new Date();
     var dateStr = now.toLocaleDateString('en-NG', { year: 'numeric', month: 'long', day: 'numeric' });
     var timeStr = now.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+    var rows = state.rows || [];
+    var tRows = '', tAmt = 0;
+    rows.forEach(function(r) { tAmt += r.amount; tRows += '<tr><td>' + r.sn + '</td><td>' + esc(r.date) + '</td><td>' + esc(r.receiptNo) + '</td><td>' + esc(r.guest) + '</td><td>' + esc(r.bookingNo) + '</td><td>' + esc(r.room) + '</td><td>' + esc(r.roomType) + '</td><td>' + esc(r.paymentType) + '</td><td>' + esc(r.paymentMethod) + '</td><td>' + esc(r.referenceNo) + '</td><td style="text-align:right;font-weight:700">' + fmt(r.amount) + '</td><td>' + esc(r.remarks) + '</td><td>' + esc(r.cashier) + '</td></tr>'; });
+    var mRows = '';
+    (s.methodSummary || []).forEach(function(r) { mRows += '<tr><td>' + esc(r.method) + '</td><td style="text-align:center">' + r.count + '</td><td style="text-align:right">' + fmt(r.amount) + '</td><td style="text-align:right">' + (tAmt > 0 ? ((r.amount / tAmt) * 100).toFixed(1) + '%' : '0%') + '</td></tr>'; });
+    var tpRows = '';
+    (s.typeSummary || []).forEach(function(r) { tpRows += '<tr><td>' + esc(r.type) + '</td><td style="text-align:center">' + r.count + '</td><td style="text-align:right">' + fmt(r.amount) + '</td></tr>'; });
+    var rtRows = '';
+    (s.roomTypeSummary || []).forEach(function(r) { rtRows += '<tr><td>' + esc(r.type) + '</td><td style="text-align:center">' + r.count + '</td><td style="text-align:right">' + fmt(r.amount) + '</td></tr>'; });
 
-    var tableRows = '';
-    rows.forEach(function (r, i) {
-      tableRows += '<tr>' +
-        '<td>' + (i + 1) + '</td>' +
-        '<td>' + esc(r.room) + '</td>' +
-        '<td>' + esc(r.guest) + '</td>' +
-        '<td>' + esc(r.checkin) + '</td>' +
-        '<td>' + esc(r.checkout) + '</td>' +
-        '<td style="text-align:center">' + r.nights + '</td>' +
-        '<td style="text-align:right">' + fmt(r.rate) + '</td>' +
-        '<td style="text-align:right;font-weight:700">' + fmt(r.total) + '</td>' +
-        '<td style="text-align:right;color:#16a34a;font-weight:700">' + fmt(r.collected) + '</td>' +
-        '<td style="text-align:right;font-weight:700;color:' + (r.balance > 0 ? '#dc2626' : '#16a34a') + '">' + (r.balance > 0 ? fmt(r.balance) : 'Settled') + '</td>' +
-      '</tr>';
-    });
-
-    var html = '<!DOCTYPE html><html><head><title>Room Income Receipt</title>' +
-      '<style>' +
-      '*{margin:0;padding:0;box-sizing:border-box;}' +
-      'body{font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;padding:30px;color:#1c2440;font-size:12px;}' +
-      '.header{text-align:center;border-bottom:2px solid #1c2440;padding-bottom:12px;margin-bottom:16px;}' +
-      '.header h1{font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}' +
-      '.header p{font-size:11px;color:#6b7280;margin-top:4px;}' +
-      '.meta{display:flex;justify-content:space-between;margin-bottom:14px;font-size:11px;color:#6b7280;}' +
-      '.kpi-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}' +
-      '.kpi{flex:1;min-width:120px;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;text-align:center;}' +
-      '.kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;font-weight:600;}' +
-      '.kpi-val{font-size:16px;font-weight:800;margin-top:4px;}' +
-      '.kpi-gold .kpi-val{color:#2563eb;}' +
-      '.kpi-green .kpi-val{color:#16a34a;}' +
-      '.kpi-red .kpi-val{color:#dc2626;}' +
-      '.kpi-purple .kpi-val{color:#7c3aed;}' +
-      '.kpi-teal .kpi-val{color:#0d9488;}' +
-      'table{width:100%;border-collapse:collapse;margin-top:8px;}' +
-      'th{text-align:left;padding:6px 8px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;border-bottom:2px solid #e5e7eb;font-weight:700;}' +
-      'td{padding:5px 8px;border-bottom:1px solid #f3f4f6;font-size:11px;}' +
-      'tr:last-child td{border-bottom:none;}' +
-      '.footer{margin-top:16px;border-top:1px solid #e5e7eb;padding-top:10px;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between;}' +
+    var html = '<!DOCTYPE html><html><head><title>Room Payment Report</title><style>' +
+      '*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Segoe UI",Tahoma,sans-serif;padding:30px;color:#1c2440;font-size:11px;}' +
+      '.hdr{text-align:center;border-bottom:3px solid #1e3a5f;padding-bottom:12px;margin-bottom:14px;}.hdr h1{font-size:18px;color:#1e3a5f;}.hdr p{font-size:10px;color:#6b7280;margin-top:2px;}' +
+      '.kpi-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}.kpi{flex:1;min-width:100px;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;text-align:center;}.kpi-lbl{font-size:8px;text-transform:uppercase;color:#9ca3af;font-weight:600;}.kpi-val{font-size:15px;font-weight:800;margin-top:2px;color:#1e3a5f;}.kpi-sub{font-size:8px;color:#9ca3af;}' +
+      'table{width:100%;border-collapse:collapse;font-size:10px;}th{text-align:left;padding:5px 6px;font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:#fff;background:#1e3a5f;font-weight:700;}' +
+      'td{padding:4px 6px;border-bottom:1px solid #f3f4f6;}tr:last-child td{border-bottom:none;}' +
+      '.total-row td{border-top:2px solid #1e3a5f;font-weight:800;background:#f8fafc;}' +
+      '.sum-section{margin-top:16px;}.sum-title{font-size:11px;font-weight:800;color:#1e3a5f;text-transform:uppercase;margin-bottom:6px;padding:4px 8px;background:#e8eef6;border-radius:4px;}' +
+      '.sum-row{display:flex;gap:12px;flex-wrap:wrap;}.sum-card{flex:1;min-width:200px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;}.sum-card th{font-size:7px;}.sum-card .stotal td{font-weight:700;background:#f8fafc;border-top:2px solid #1e3a5f;}' +
+      '.notes{margin-top:16px;font-size:9px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:10px;}.notes p{margin-bottom:3px;}' +
+      '.footer{text-align:center;margin-top:16px;border-top:1px solid #e5e7eb;padding-top:10px;font-size:9px;color:#6b7280;}' +
+      '@media print{body{padding:15px;}}' +
       '</style></head><body>' +
-      '<div class="header"><h1>Room Income Report</h1><p>Aurum Hotel Management System</p></div>' +
-      '<div class="meta"><span>Period: ' + filterLabel + '</span><span>Generated: ' + dateStr + ' ' + timeStr + '</span></div>' +
+      '<div class="hdr"><h1>Room Payment Report</h1><p>Payments Received for Room Bookings</p><p style="font-style:italic;font-size:9px">Accurate Collections. Transparent Records.</p></div>' +
       '<div class="kpi-row">' +
-        '<div class="kpi kpi-gold"><div class="kpi-label">Total Revenue</div><div class="kpi-val">' + fmt(k.totalRevenue) + '</div></div>' +
-        '<div class="kpi kpi-green"><div class="kpi-label">Collected</div><div class="kpi-val">' + fmt(k.totalCollected) + '</div></div>' +
-        '<div class="kpi kpi-red"><div class="kpi-label">Outstanding</div><div class="kpi-val">' + fmt(k.totalBalance) + '</div></div>' +
-        '<div class="kpi kpi-purple"><div class="kpi-label">Room Nights</div><div class="kpi-val">' + (k.totalNights || 0) + '</div></div>' +
-        '<div class="kpi kpi-teal"><div class="kpi-label">Avg Rate/Night</div><div class="kpi-val">' + fmt(k.avgRate) + '</div></div>' +
+        '<div class="kpi"><div class="kpi-lbl">Total Payments Received</div><div class="kpi-val">' + fmt(k.totalPayments) + '</div></div>' +
+        '<div class="kpi"><div class="kpi-lbl">Number of Transactions</div><div class="kpi-val">' + (k.txCount || 0) + '</div></div>' +
+        '<div class="kpi"><div class="kpi-lbl">Cash</div><div class="kpi-val">' + fmt(k.cashTotal) + '</div><div class="kpi-sub">(' + (k.cashCount || 0) + ' transactions)</div></div>' +
+        '<div class="kpi"><div class="kpi-lbl">POS</div><div class="kpi-val">' + fmt(k.posTotal) + '</div><div class="kpi-sub">(' + (k.posCount || 0) + ' transactions)</div></div>' +
+        '<div class="kpi"><div class="kpi-lbl">Bank Transfer</div><div class="kpi-val">' + fmt(k.transferTotal) + '</div><div class="kpi-sub">(' + (k.transferCount || 0) + ' transactions)</div></div>' +
+        '<div class="kpi"><div class="kpi-lbl">Refunds</div><div class="kpi-val">' + fmt(k.totalRefunds) + '</div><div class="kpi-sub">(' + (k.refundCount || 0) + ' transactions)</div></div>' +
+        '<div class="kpi"><div class="kpi-lbl">Net Collections</div><div class="kpi-val" style="color:#16a34a">' + fmt(k.netCollections) + '</div></div>' +
       '</div>' +
-      '<table><thead><tr><th>#</th><th>Room</th><th>Guest</th><th>Check-in</th><th>Check-out</th><th style="text-align:center">Nights</th><th style="text-align:right">Rate/Night</th><th style="text-align:right">Total</th><th style="text-align:right">Collected</th><th style="text-align:right">Balance</th></tr></thead>' +
-      '<tbody>' + tableRows + '</tbody></table>' +
-      '<div class="footer"><span>Aurum Hotel · Room Income Report</span><span>Page ' + state.page + ' of ' + state.pages + ' · ' + state.total + ' records</span></div>' +
+      '<div style="font-weight:800;font-size:11px;color:#1e3a5f;margin-bottom:6px;text-transform:uppercase;padding:4px 8px;background:#1e3a5f;color:#fff;border-radius:4px;">ROOM PAYMENT TRANSACTIONS</div>' +
+      '<table><thead><tr><th>S/N</th><th>Date</th><th>Receipt No.</th><th>Guest Name</th><th>Booking No.</th><th>Room No.</th><th>Room Type</th><th>Payment Type</th><th>Payment Method</th><th>Reference No.</th><th>Amount (\u20A6)</th><th>Remarks</th><th>Cashier</th></tr></thead><tbody>' +
+      tRows + '<tr class="total-row"><td colspan="10" style="text-align:right;border-right:none">TOTAL</td><td style="text-align:left;border-left:none;font-weight:800">' + fmt(tAmt) + '</td><td colspan="2"></td></tr>' +
+      '</tbody></table>' +
+      '<div class="sum-section"><div class="sum-row">' +
+        '<div class="sum-card"><div class="sum-title">PAYMENT METHOD SUMMARY</div><table><thead><tr><th>Payment Method</th><th>Transactions</th><th>Amount (\u20A6)</th><th>Percentage</th></tr></thead><tbody>' + mRows + '</tbody></table></div>' +
+        '<div class="sum-card"><div class="sum-title">PAYMENT TYPE SUMMARY</div><table><thead><tr><th>Payment Type</th><th>Transactions</th><th>Amount (\u20A6)</th></tr></thead><tbody>' + tpRows + '</tbody></table></div>' +
+        '<div class="sum-card"><div class="sum-title">ROOM TYPE PAYMENT SUMMARY</div><table><thead><tr><th>Room Type</th><th>Transactions</th><th>Amount (\u20A6)</th></tr></thead><tbody>' + rtRows + '</tbody></table></div>' +
+      '</div></div>' +
+      '<div class="notes"><p>1. This report shows actual payments received for room bookings within the selected business date range.</p><p>2. Payments may include deposits, full payments or balance payments.</p><p>3. Refunds (if any) are shown separately and deducted in the net collection.</p></div>' +
+      '<div class="footer"><p>Generated on: ' + dateStr + ' ' + timeStr + '</p><p>Generated by: Front Desk System</p></div>' +
       '</body></html>';
 
-    var w = window.open('', '_blank', 'width=900,height=700');
+    var w = window.open('', '_blank', 'width=1100,height=800');
     w.document.write(html);
     w.document.close();
     w.focus();
@@ -231,66 +214,76 @@
   }
 
   /* ── CSS ── */
-  var cssInjected = false;
+  var cssLoaded = false;
   function injectCSS() {
-    if (cssInjected) return; cssInjected = true;
+    if (cssLoaded) return; cssLoaded = true;
     var s = document.createElement('style');
     s.textContent =
-      '.ri-kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;}' +
-      '@media(max-width:1100px){.ri-kpi-row{grid-template-columns:repeat(2,1fr);}}' +
-      '@media(max-width:420px){.ri-kpi-row{grid-template-columns:1fr 1fr;gap:10px;}}' +
-      '.ri-kpi{background:var(--surface,#fff);border:1px solid var(--border,#eef0f6);border-radius:14px;padding:14px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 4px 20px rgba(15,34,55,.07);position:relative;overflow:hidden;}' +
-      '.ri-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;}' +
-      '.ri-kpi-gold::before{background:linear-gradient(90deg,var(--gold,#2f6fed),transparent);}' +
-      '.ri-kpi-green::before{background:linear-gradient(90deg,var(--green,#12b76a),transparent);}' +
-      '.ri-kpi-red::before{background:linear-gradient(90deg,var(--red,#f04438),transparent);}' +
-      '.ri-kpi-purple::before{background:linear-gradient(90deg,var(--purple,#8b5cf6),transparent);}' +
-      '.ri-kpi-teal::before{background:linear-gradient(90deg,#14b8a6,transparent);}' +
-      '.ri-kpi-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
-      '.ri-kpi-gold .ri-kpi-ic{background:rgba(47,111,237,.1);color:var(--gold,#2f6fed);}' +
-      '.ri-kpi-green .ri-kpi-ic{background:rgba(18,183,106,.1);color:var(--green,#12b76a);}' +
-      '.ri-kpi-red .ri-kpi-ic{background:rgba(240,68,56,.1);color:var(--red,#f04438);}' +
-      '.ri-kpi-purple .ri-kpi-ic{background:rgba(139,92,246,.1);color:var(--purple,#8b5cf6);}' +
-      '.ri-kpi-teal .ri-kpi-ic{background:rgba(20,184,166,.1);color:#14b8a6;}' +
-      '.ri-kpi-label{font-size:11px;color:var(--text2,#6b7280);font-weight:600;}' +
-      '.ri-kpi-val{font-size:20px;font-weight:800;color:var(--text,#1c2440);margin-top:2px;}' +
-      '.ri-filters{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px;background:var(--surface,#fff);border:1px solid var(--border,#eef0f6);border-radius:14px;padding:14px 18px;box-shadow:0 4px 20px rgba(15,34,55,.07);}' +
-      '.ri-fg{display:flex;flex-direction:column;gap:4px;}' +
-      '.ri-fl{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3,#9aa1b3);font-weight:600;}' +
-      '.ri-pills{display:flex;gap:4px;}' +
-      '.ri-pill{padding:5px 12px;border-radius:8px;font-size:11.5px;font-weight:600;border:1px solid var(--border,#eef0f6);background:var(--surface,#fff);color:var(--text2,#6b7280);cursor:pointer;transition:all .2s;}' +
-      '.ri-pill.active{background:var(--gold-dim,rgba(47,111,237,.1));color:var(--gold,#2f6fed);border-color:var(--gold-border,rgba(47,111,237,.25));}' +
-      '.ri-pill:hover:not(.active){background:var(--surface2,#f4f6fb);}' +
-      '.ri-select{padding:5px 10px;border-radius:8px;font-size:12px;border:1px solid var(--border,#eef0f6);background:var(--surface,#fff);color:var(--text,#1c2440);font-family:inherit;outline:none;}' +
-      '.ri-table-wrap{background:var(--surface,#fff);border:1px solid var(--border,#eef0f6);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(15,34,55,.07);}' +
-      '.ri-table{width:100%;border-collapse:collapse;font-size:12.5px;}' +
-      '.ri-table th{text-align:left;padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3,#9aa1b3);font-weight:700;border-bottom:1px solid var(--border,#eef0f6);background:var(--surface2,#f4f6fb);white-space:nowrap;}' +
-      '.ri-table td{padding:10px 14px;border-bottom:1px solid var(--border,#eef0f6);color:var(--text,#1c2440);white-space:nowrap;}' +
-      '.ri-table tr:last-child td{border-bottom:none;}' +
-      '.ri-table tr:hover td{background:var(--surface2,#f4f6fb);}' +
-      '.ri-bold{font-weight:700;}' +
-      '.ri-green{color:var(--green,#12b76a);font-weight:700;}' +
-      '.ri-red{color:var(--red,#f04438);font-weight:700;}' +
-      '.ri-status{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap;}' +
-      '.ri-st-checkout{background:rgba(240,68,56,.08);color:var(--red,#f04438);}' +
-      '.ri-st-checkedin{background:rgba(47,111,237,.1);color:var(--gold,#2f6fed);}' +
-      '.ri-st-reserved{background:rgba(139,92,246,.1);color:var(--purple,#8b5cf6);}' +
-      '.ri-st-other{background:var(--surface2,#f4f6fb);color:var(--text3,#9aa1b3);}' +
-      '.ri-empty{padding:40px;text-align:center;color:var(--text3,#9aa1b3);font-size:13px;}' +
-      '.ri-empty i{font-size:24px;display:block;margin-bottom:10px;}' +
-      '.ri-loading{padding:40px;text-align:center;color:var(--text3,#9aa1b3);font-size:13px;}' +
-      '.ri-pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;padding:12px 0;}' +
-      '.ri-page-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border,#eef0f6);background:var(--surface,#fff);color:var(--text2,#6b7280);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}' +
-      '.ri-page-btn:hover:not(:disabled){background:var(--surface2,#f4f6fb);color:var(--text,#1c2440);}' +
-      '.ri-page-btn.active{background:var(--gold-dim,rgba(47,111,237,.1));color:var(--gold,#2f6fed);border-color:var(--gold-border,rgba(47,111,237,.25));}' +
-      '.ri-page-btn:disabled{opacity:.35;cursor:not-allowed;}' +
-      '.ri-page-info{font-size:11px;color:var(--text3,#9aa1b3);margin-left:10px;}' +
-      '.ri-fg-print{margin-left:auto;}' +
-      '.ri-print-btn{padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--border,#eef0f6);background:var(--surface,#fff);color:var(--text2,#6b7280);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}' +
-      '.ri-print-btn:hover{background:var(--gold-dim,rgba(47,111,237,.1));color:var(--gold,#2f6fed);border-color:var(--gold-border,rgba(47,111,237,.25));}' +
-      '@media print{.ri-filters,.ri-pagination{display:none!important;}}';
+      '.rpr-kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:14px;}' +
+      '@media(max-width:1200px){.rpr-kpis{grid-template-columns:repeat(4,1fr);}}' +
+      '@media(max-width:768px){.rpr-kpis{grid-template-columns:repeat(2,1fr);}}' +
+      '.rpr-kpi{background:#fff;border:1px solid #eef0f6;border-radius:12px;padding:12px;display:flex;align-items:flex-start;gap:8px;box-shadow:0 2px 12px rgba(15,34,55,.06);position:relative;overflow:hidden;}' +
+      '.rpr-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;}' +
+      '.rpr-kpi-blue::before{background:linear-gradient(90deg,#1e3a5f,transparent);}' +
+      '.rpr-kpi-slate::before{background:linear-gradient(90deg,#64748b,transparent);}' +
+      '.rpr-kpi-teal::before{background:linear-gradient(90deg,#0d9488,transparent);}' +
+      '.rpr-kpi-indigo::before{background:linear-gradient(90deg,#4f46e5,transparent);}' +
+      '.rpr-kpi-purple::before{background:linear-gradient(90deg,#7c3aed,transparent);}' +
+      '.rpr-kpi-red::before{background:linear-gradient(90deg,#dc2626,transparent);}' +
+      '.rpr-kpi-green::before{background:linear-gradient(90deg,#16a34a,transparent);}' +
+      '.rpr-kpi-ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}' +
+      '.rpr-kpi-blue .rpr-kpi-ic{background:rgba(30,58,95,.1);color:#1e3a5f;}' +
+      '.rpr-kpi-slate .rpr-kpi-ic{background:rgba(100,116,139,.1);color:#64748b;}' +
+      '.rpr-kpi-teal .rpr-kpi-ic{background:rgba(13,148,136,.1);color:#0d9488;}' +
+      '.rpr-kpi-indigo .rpr-kpi-ic{background:rgba(79,70,229,.1);color:#4f46e5;}' +
+      '.rpr-kpi-purple .rpr-kpi-ic{background:rgba(124,58,237,.1);color:#7c3aed;}' +
+      '.rpr-kpi-red .rpr-kpi-ic{background:rgba(220,38,38,.1);color:#dc2626;}' +
+      '.rpr-kpi-green .rpr-kpi-ic{background:rgba(22,163,74,.1);color:#16a34a;}' +
+      '.rpr-kpi-label{font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}' +
+      '.rpr-kpi-val{font-size:18px;font-weight:800;color:#1c2440;margin-top:2px;}' +
+      '.rpr-kpi-sub{font-size:9px;color:#9ca3af;margin-top:1px;}' +
+      '.rpr-filters{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;background:#fff;border:1px solid #eef0f6;border-radius:12px;padding:14px 18px;box-shadow:0 2px 12px rgba(15,34,55,.06);}' +
+      '.rpr-fg{display:flex;flex-direction:column;gap:4px;}' +
+      '.rpr-fl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9aa1b3;font-weight:600;}' +
+      '.rpr-date-group{display:flex;align-items:center;gap:6px;}' +
+      '.rpr-date{padding:5px 8px;border-radius:8px;font-size:12px;border:1px solid #eef0f6;font-family:inherit;outline:none;}' +
+      '.rpr-date-sep{font-size:11px;color:#6b7280;}' +
+      '.rpr-select{padding:5px 10px;border-radius:8px;font-size:12px;border:1px solid #eef0f6;background:#fff;color:#1c2440;font-family:inherit;outline:none;}' +
+      '.rpr-gen-btn{padding:6px 16px;border-radius:8px;font-size:12px;font-weight:600;border:none;background:#1e3a5f;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}' +
+      '.rpr-gen-btn:hover{background:#2a4f7a;}' +
+      '.rpr-section-title{font-size:12px;font-weight:800;color:#fff;background:#1e3a5f;padding:8px 14px;border-radius:8px;margin-bottom:0;display:flex;align-items:center;gap:6px;}' +
+      '.rpr-table-wrap{background:#fff;border:1px solid #eef0f6;border-radius:0 0 12px 12px;overflow-x:auto;box-shadow:0 2px 12px rgba(15,34,55,.06);}' +
+      '.rpr-table{width:100%;border-collapse:collapse;font-size:11.5px;}' +
+      '.rpr-table th{text-align:left;padding:8px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#fff;background:#334155;font-weight:700;white-space:nowrap;}' +
+      '.rpr-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#1c2440;white-space:nowrap;}' +
+      '.rpr-table tr:last-child td{border-bottom:none;}' +
+      '.rpr-table tr:hover td{background:#f8fafc;}' +
+      '.rpr-bold{font-weight:700;}' +
+      '.rpr-total-row td{background:#f1f5f9 !important;border-top:2px solid #1e3a5f !important;font-weight:800;}' +
+      '.rpr-ptag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;white-space:nowrap;}' +
+      '.rpr-pt-fullpayment{background:rgba(22,163,74,.1);color:#16a34a;}' +
+      '.rpr-pt-deposit{background:rgba(245,158,11,.1);color:#d97706;}' +
+      '.rpr-pt-balancepayment{background:rgba(79,70,229,.1);color:#4f46e5;}' +
+      '.rpr-pt-refund{background:rgba(220,38,38,.1);color:#dc2626;}' +
+      '.rpr-summaries{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}' +
+      '@media(max-width:1000px){.rpr-summaries{grid-template-columns:1fr;}}' +
+      '.rpr-sum-card{background:#fff;border:1px solid #eef0f6;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(15,34,55,.06);}' +
+      '.rpr-sum-title{font-size:10px;font-weight:800;color:#fff;background:#1e3a5f;padding:8px 12px;text-transform:uppercase;letter-spacing:.5px;}' +
+      '.rpr-sum-table{width:100%;border-collapse:collapse;font-size:11px;}' +
+      '.rpr-sum-table th{text-align:left;padding:6px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;background:#f8fafc;font-weight:700;border-bottom:1px solid #eef0f6;}' +
+      '.rpr-sum-table td{padding:6px 10px;border-bottom:1px solid #f1f5f9;}' +
+      '.rpr-sum-total td{font-weight:800;background:#f8fafc;border-top:2px solid #1e3a5f;}' +
+      '.rpr-empty{padding:40px;text-align:center;color:#9aa1b3;font-size:13px;}.rpr-empty i{font-size:24px;display:block;margin-bottom:10px;}' +
+      '.rpr-loading{padding:40px;text-align:center;color:#9aa1b3;font-size:13px;}' +
+      '.rpr-pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;padding:12px 0;}' +
+      '.rpr-page-btn{width:32px;height:32px;border-radius:8px;border:1px solid #eef0f6;background:#fff;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}' +
+      '.rpr-page-btn:hover:not(:disabled){background:#f4f6fb;color:#1c2440;}' +
+      '.rpr-page-btn.active{background:rgba(30,58,95,.1);color:#1e3a5f;border-color:rgba(30,58,95,.25);}' +
+      '.rpr-page-btn:disabled{opacity:.35;cursor:not-allowed;}' +
+      '.rpr-page-info{font-size:11px;color:#9aa1b3;margin-left:10px;}' +
+      '@media print{.rpr-filters,.rpr-pagination{display:none!important;}}';
     document.head.appendChild(s);
   }
 
-  window.RoomIncome = { render: function (c) { injectCSS(); render(c); } };
+  window.RoomIncome = { render: function(c) { injectCSS(); render(c); }, print: printReceipt };
 })();

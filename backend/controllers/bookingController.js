@@ -906,100 +906,130 @@ exports.getReports = asyncHandler(async (req, res) => {
 ═══════════════════════════════════════════════ */
 exports._calc = { nights, calcTotal, calcPaid, calcBal };
 
-/* ── Room Income — financial view of room revenue ── */
+/* ── Room Payment Report — payment-level transaction rows ── */
 exports.getRoomIncome = asyncHandler(async (req, res) => {
-  const { period, dateFrom, dateTo, roomType, payment, page: pg, limit: lim } = req.query;
+  const { period, dateFrom, dateTo, roomType, paymentMethod, paymentType, guestType, page: pg, limit: lim } = req.query;
   const pageNum = Math.max(1, parseInt(pg, 10) || 1);
   const pageLimit = Math.min(100, Math.max(1, parseInt(lim, 10) || 20));
+  console.log(`[RoomIncome] Query: period=${period} dateFrom=${dateFrom} dateTo=${dateTo} roomType=${roomType} method=${paymentMethod} type=${paymentType}`);
 
-  const allGuests = await Guest.find({}).select('name phone guestId stays charges').lean();
+  const allBookings = await Booking.find({}).lean();
+  console.log(`[RoomIncome] Found ${allBookings.length} bookings`);
 
-  /* ── Build raw rows from Guest.stays[] ── */
+  /* ── Flatten each Booking.payments[] into individual transaction rows ── */
   let rows = [];
-  for (const g of allGuests) {
-    for (const s of (g.stays || [])) {
-      const n = nights(s.checkin, s.checkout) || 1;
+  let seq = 0;
+  for (const b of allBookings) {
+    const total = calcTotal(b);
+    const payments = b.payments || [];
+    let cumulative = 0;
 
+    for (const p of payments) {
+      const amtBefore = cumulative;
+      cumulative += (p.amount || 0);
+      let pType = 'Deposit';
+      if (cumulative >= total && total > 0) {
+        pType = amtBefore > 0 ? 'Balance Payment' : 'Full Payment';
+      } else if (amtBefore > 0) {
+        pType = 'Balance Payment';
+      }
+      seq++;
       rows.push({
-        guest: g.name, phone: g.phone || '', room: s.room, type: s.type,
-        checkin: s.checkin || '', checkout: s.checkout || '',
-        nights: n,
-        rate: n > 0 ? Math.round((s.total || 0) / n) : 0,
-        total: s.total || 0,
-        collected: s.paid || 0,
-        balance: Math.max(0, (s.total || 0) - (s.paid || 0)),
-        status: s.status || '',
+        sn: seq, date: p.date || '',
+        receiptNo: 'RCP-' + String(seq).padStart(5, '0'),
+        guest: b.guest || '', bookingNo: b.stayId || b.room || '',
+        room: b.room || '', roomType: b.type || '',
+        paymentType: pType, paymentMethod: p.mode || 'Cash',
+        referenceNo: p.id || '', amount: p.amount || 0,
+        remarks: pType === 'Full Payment' ? 'Full payment' : pType === 'Deposit' ? 'Advance payment' : 'Balance payment',
+        cashier: p.by || '',
+      });
+    }
+    if (Number(b.refunded) > 0) {
+      seq++;
+      rows.push({
+        sn: seq, date: b.refundDate || '',
+        receiptNo: 'RCP-' + String(seq).padStart(5, '0'),
+        guest: b.guest || '', bookingNo: b.stayId || b.room || '',
+        room: b.room || '', roomType: b.type || '',
+        paymentType: 'Refund', paymentMethod: 'Refund',
+        referenceNo: '', amount: -(Number(b.refunded)),
+        remarks: b.refundReason || 'Refund', cashier: b.refundBy || '',
       });
     }
   }
+  console.log(`[RoomIncome] Built ${rows.length} transaction rows`);
 
-  /* ── Period filter ── */
+  /* ── Date filter (on payment date) ── */
   if (period && period !== 'all') {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     let start, end;
-    if (period === 'today') {
-      start = todayStart; end = todayEnd;
-    } else if (period === '7d') {
-      start = new Date(todayStart); start.setDate(start.getDate() - 6);
-      end = todayEnd;
-    } else if (period === '30d') {
-      start = new Date(todayStart); start.setDate(start.getDate() - 29);
-      end = todayEnd;
-    }
+    if (period === 'today') { start = todayStart; end = todayEnd; }
+    else if (period === '7d') { start = new Date(todayStart); start.setDate(start.getDate() - 6); end = todayEnd; }
+    else if (period === '30d') { start = new Date(todayStart); start.setDate(start.getDate() - 29); end = todayEnd; }
     if (start && end) {
-      const sTime = start.getTime();
-      const eTime = end.getTime();
-      rows = rows.filter(r => {
-        if (!r.checkin) return false;
-        const ci = new Date(r.checkin + 'T00:00:00').getTime();
-        return ci >= sTime && ci <= eTime;
-      });
+      const sTime = start.getTime(), eTime = end.getTime();
+      rows = rows.filter(r => { if (!r.date) return false; return new Date(r.date).getTime() >= sTime && new Date(r.date).getTime() <= eTime; });
     }
   }
-
-  /* ── Custom date range ── */
   if (dateFrom || dateTo) {
     const sTime = dateFrom ? new Date(dateFrom + 'T00:00:00').getTime() : 0;
     const eTime = dateTo ? new Date(dateTo + 'T23:59:59.999').getTime() : Date.now();
-    rows = rows.filter(r => {
-      if (!r.checkin) return false;
-      const ci = new Date(r.checkin + 'T00:00:00').getTime();
-      return ci >= sTime && ci <= eTime;
-    });
+    rows = rows.filter(r => { if (!r.date) return false; const d = new Date(r.date).getTime(); return d >= sTime && d <= eTime; });
+  }
+  if (roomType) rows = rows.filter(r => r.roomType === roomType);
+  if (paymentMethod) rows = rows.filter(r => r.paymentMethod === paymentMethod);
+  if (paymentType) rows = rows.filter(r => r.paymentType === paymentType);
+  rows.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  /* ── KPIs ── */
+  const nonRefund = rows.filter(r => r.paymentType !== 'Refund');
+  const refundRows = rows.filter(r => r.paymentType === 'Refund');
+  const totalPayments = nonRefund.reduce((s, r) => s + r.amount, 0);
+  const totalRefunds = Math.abs(refundRows.reduce((s, r) => s + r.amount, 0));
+  const netCollections = totalPayments - totalRefunds;
+  const txCount = nonRefund.length;
+  const cashRows = nonRefund.filter(r => r.paymentMethod === 'Cash');
+  const posRows = nonRefund.filter(r => r.paymentMethod === 'POS');
+  const transferRows = nonRefund.filter(r => r.paymentMethod === 'Transfer');
+
+  /* ── Summary tables ── */
+  const byMethod = {};
+  for (const r of nonRefund) {
+    if (!byMethod[r.paymentMethod]) byMethod[r.paymentMethod] = { method: r.paymentMethod, count: 0, amount: 0 };
+    byMethod[r.paymentMethod].count++; byMethod[r.paymentMethod].amount += r.amount;
+  }
+  const byType = {};
+  for (const r of rows) {
+    if (!byType[r.paymentType]) byType[r.paymentType] = { type: r.paymentType, count: 0, amount: 0 };
+    byType[r.paymentType].count++; byType[r.paymentType].amount += Math.abs(r.amount);
+  }
+  const byRoomType = {};
+  for (const r of nonRefund) {
+    if (!byRoomType[r.roomType]) byRoomType[r.roomType] = { type: r.roomType, count: 0, amount: 0 };
+    byRoomType[r.roomType].count++; byRoomType[r.roomType].amount += r.amount;
   }
 
-  /* ── Room type filter ── */
-  if (roomType) rows = rows.filter(r => r.type === roomType);
-
-  /* ── Payment status filter ── */
-  if (payment === 'paid') rows = rows.filter(r => r.balance <= 0);
-  else if (payment === 'unpaid') rows = rows.filter(r => r.balance > 0);
-
-  /* ── Sort by checkin desc ── */
-  rows.sort((a, b) => (b.checkin || '').localeCompare(a.checkin || ''));
-
-  /* ── KPIs (from ALL filtered rows, before pagination) ── */
-  const totalRevenue = rows.reduce((s, r) => s + r.total, 0);
-  const totalCollected = rows.reduce((s, r) => s + r.collected, 0);
-  const totalBalance = rows.reduce((s, r) => s + r.balance, 0);
-  const totalNights = rows.reduce((s, r) => s + r.nights, 0);
-  const avgRate = totalNights > 0 ? Math.round(totalRevenue / totalNights) : 0;
   const totalCount = rows.length;
-
-  /* ── Paginate ── */
   const totalPages = Math.ceil(totalCount / pageLimit) || 1;
   const paged = rows.slice((pageNum - 1) * pageLimit, pageNum * pageLimit);
+  console.log(`[RoomIncome] Result: ${totalCount} rows, net=${netCollections}, tx=${txCount}`);
 
   res.json({
     success: true,
     data: {
       rows: paged,
-      kpis: { totalRevenue, totalCollected, totalBalance, totalNights, avgRate, count: totalCount },
-      page: pageNum,
-      pages: totalPages,
-      total: totalCount,
+      kpis: {
+        totalPayments, totalRefunds, netCollections, txCount,
+        cashTotal: cashRows.reduce((s,r)=>s+r.amount,0), cashCount: cashRows.length,
+        posTotal: posRows.reduce((s,r)=>s+r.amount,0), posCount: posRows.length,
+        transferTotal: transferRows.reduce((s,r)=>s+r.amount,0), transferCount: transferRows.length,
+        refundCount: refundRows.length,
+      },
+      summary: { methodSummary: Object.values(byMethod).sort((a,b)=>b.amount-a.amount), typeSummary: Object.values(byType).sort((a,b)=>b.amount-a.amount), roomTypeSummary: Object.values(byRoomType).sort((a,b)=>b.amount-a.amount) },
+      page: pageNum, pages: totalPages, total: totalCount,
     },
   });
 });
