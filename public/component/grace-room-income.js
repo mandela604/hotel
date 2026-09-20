@@ -7,9 +7,16 @@
   var state = { rows: [], kpis: {}, summary: {}, page: 1, pages: 1, total: 0, _dateFrom: '', _dateTo: '' };
   var filters = { period: 'all', roomType: '', paymentMethod: '', paymentType: '' };
 
+  function clientDateStr() {
+    var now = new Date();
+    var y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+
   function fetchData() {
     var p = new URLSearchParams();
     p.set('page', state.page); p.set('limit', '50');
+    p.set('clientDate', clientDateStr());
     if (filters.period !== 'all') p.set('period', filters.period);
     if (state._dateFrom) p.set('dateFrom', state._dateFrom);
     if (state._dateTo) p.set('dateTo', state._dateTo);

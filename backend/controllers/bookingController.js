@@ -799,7 +799,7 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
    so figures always match between cards and table.
 ═══════════════════════════════════════════════ */
 exports.getReports = asyncHandler(async (req, res) => {
-  const { period, status, payment, staff, dateFrom, dateTo, search } = req.query;
+  const { period, status, payment, staff, dateFrom, dateTo, search, clientDate } = req.query;
 
   // Build report from Guest.stays[] (historical) + active Bookings (current)
   const [allGuests, activeBookings] = await Promise.all([
@@ -847,7 +847,8 @@ exports.getReports = asyncHandler(async (req, res) => {
 
   // Period shortcut
   let start = null, end = null;
-  const today = new Date(); today.setHours(0,0,0,0);
+  const baseDay = clientDate ? new Date(clientDate + 'T12:00:00') : new Date();
+  const today = new Date(baseDay.getFullYear(), baseDay.getMonth(), baseDay.getDate(), 0, 0, 0, 0);
   if (period === 'today') {
     start = new Date(today); end = new Date(today);
     end.setHours(23,59,59,999);
@@ -915,10 +916,10 @@ exports._calc = { nights, calcTotal, calcPaid, calcBal };
 
 /* ── Room Payment Report — payment-level transaction rows ── */
 exports.getRoomIncome = asyncHandler(async (req, res) => {
-  const { period, dateFrom, dateTo, roomType, paymentMethod, paymentType, guestType, page: pg, limit: lim } = req.query;
+  const { period, dateFrom, dateTo, roomType, paymentMethod, paymentType, guestType, clientDate, page: pg, limit: lim } = req.query;
   const pageNum = Math.max(1, parseInt(pg, 10) || 1);
   const pageLimit = Math.min(100, Math.max(1, parseInt(lim, 10) || 20));
-  console.log(`[RoomIncome] Query: period=${period} dateFrom=${dateFrom} dateTo=${dateTo} roomType=${roomType} method=${paymentMethod} type=${paymentType}`);
+  console.log(`[RoomIncome] Query: period=${period} dateFrom=${dateFrom} dateTo=${dateTo} roomType=${roomType} method=${paymentMethod} type=${paymentType} clientDate=${clientDate}`);
 
   const allBookings = await Booking.find({}).lean();
   console.log(`[RoomIncome] Found ${allBookings.length} bookings`);
@@ -990,13 +991,14 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
     return new Date(y, m, d);
   }
   if (period && period !== 'all') {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const base = clientDate ? new Date(clientDate + 'T12:00:00') : new Date();
+    const baseDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 23, 59, 59, 999);
     let start, end;
-    if (period === 'today') { start = todayStart; end = todayEnd; }
-    else if (period === '7d') { start = new Date(todayStart); start.setDate(start.getDate() - 6); end = todayEnd; }
-    else if (period === '30d') { start = new Date(todayStart); start.setDate(start.getDate() - 29); end = todayEnd; }
+    if (period === 'today') { start = baseDate; end = todayEnd; }
+    else if (period === '7d') { start = new Date(baseDate); start.setDate(start.getDate() - 6); end = todayEnd; }
+    else if (period === '30d') { start = new Date(baseDate); start.setDate(start.getDate() - 29); end = todayEnd; }
+    console.log(`[RoomIncome] Period filter: period=${period} clientDate=${clientDate} start=${start.toISOString()} end=${end.toISOString()}`);
     if (start && end) {
       const sTime = start.getTime(), eTime = end.getTime();
       rows = rows.filter(r => { if (!r.date) return false; var d = parseDDMMYY(r.date); return d && d.getTime() >= sTime && d.getTime() <= eTime; });

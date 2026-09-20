@@ -14,10 +14,27 @@ async function connectDB() {
   // Drop stale collection-level validator on bookings (enum on 'type' was
   // removed from the Mongoose schema but persists in MongoDB).
   try {
-    await conn.connection.db.command({ collMod: 'bookings', validationLevel: 'off' });
-    console.log('[db] Set validationLevel=off on bookings');
+    const db = conn.connection.db;
+    // Check if a validator exists first
+    const collInfo = await db.listCollections({ name: 'bookings' }).toArray();
+    const opts = collInfo[0] && collInfo[0].options;
+    const hasValidator = opts && opts.validator && Object.keys(opts.validator).length > 0;
+    if (hasValidator) {
+      console.log('[db] Found bookings collection validator — removing...');
+      await db.command({
+        collMod: 'bookings',
+        validator: { $jsonSchema: { bsonType: 'object' } },
+        validationLevel: 'off',
+        validationAction: 'warn',
+      });
+      console.log('[db] Bookings collection validator cleared');
+    } else {
+      console.log('[db] No bookings collection validator found');
+    }
   } catch (err) {
-    console.log('[db] collMod skip:', err.message);
+    console.error('[db] collMod error:', err.message);
+    console.log('[db] TIP: Run this in MongoDB Atlas shell to fix manually:');
+    console.log('[db]   db.runCommand({ collMod: "bookings", validationLevel: "off" })');
   }
 
   mongoose.connection.on('error', (err) => {

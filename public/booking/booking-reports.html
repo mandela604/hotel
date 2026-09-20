@@ -426,6 +426,8 @@ async function applyInlineFilters() {
 
   // Build query params
   const params = new URLSearchParams();
+  var now = new Date();
+  params.set('clientDate', now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0'));
   if (period && period !== 'all') {
     params.set('period', period);
   } else {
@@ -587,7 +589,9 @@ async function init() {
     bookingModal.setSession(currentSession);
 
     // Fetch reports from backend (filter-aware KPIs)
-    const r = await fetch('/api/booking/reports', { credentials: 'include' });
+    var initNow = new Date();
+    var initCd = initNow.getFullYear() + '-' + String(initNow.getMonth()+1).padStart(2,'0') + '-' + String(initNow.getDate()).padStart(2,'0');
+    const r = await fetch('/api/booking/reports?clientDate=' + initCd, { credentials: 'include' });
     const j = await r.json();
     const data = j.data || {};
     bookings = data.bookings || [];
