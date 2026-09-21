@@ -330,6 +330,16 @@ var guestColumn = {
   }
 };
 
+var createdAtColumn = {
+  id: 'createdAt',
+  label: 'Created',
+  cell: function (b) {
+    if (!b.createdAt) return '<span style="color:var(--text3)">—</span>';
+    var d = new Date(b.createdAt);
+    return '<span style="font-size:11px;color:var(--text2)">' + d.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + '</span>';
+  }
+};
+
 /* ═══ Table instance ═══ */
 var table = null;
 
@@ -341,7 +351,7 @@ function mountTable() {
     title: 'All Bookings',
     pageSize: 10,
     // Use custom room and guest, others built-in
-    columns: [roomColumn, guestColumn, 'checkin', 'checkout', 'nights', 'total', 'paid', 'balance', 'payment', 'status', 'actions'],
+    columns: [roomColumn, guestColumn, 'checkin', 'checkout', 'nights', 'total', 'paid', 'balance', 'payment', 'status', createdAtColumn, 'actions'],
     summaryLabels: {
       count: 'Bookings',
       total: 'Total Revenue',
