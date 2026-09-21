@@ -8,7 +8,7 @@ const gymCheckinSchema = new mongoose.Schema(
     memberName: { type: String, required: true },
     time: { type: String, required: true },
   },
-  { timestamps: true, _id: false }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model('GymCheckin', gymCheckinSchema);

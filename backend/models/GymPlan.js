@@ -10,7 +10,7 @@ const gymPlanSchema = new mongoose.Schema(
     notes: { type: String, default: '', trim: true },
     color: { type: String, enum: ['gold', 'blue', 'purple', 'green', 'amber'], default: 'blue' },
   },
-  { timestamps: true, _id: false }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model('GymPlan', gymPlanSchema);

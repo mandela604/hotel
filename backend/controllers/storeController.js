@@ -123,8 +123,39 @@ exports.updateStock = asyncHandler(async (req, res) => {
 });
 
 exports.deleteStock = asyncHandler(async (req, res) => {
-  const item = await StoreStock.findOneAndDelete({ id: req.params.id });
+  const item = await StoreStock.findOne({ id: req.params.id });
   if (!item) throw new ApiError(404, 'Stock item not found.');
+
+  if (item.qty > 0) {
+    throw new ApiError(400, `Cannot delete "${item.name}" — ${item.qty} ${item.unit || ''} still in store stock. Sell or adjust to 0 first.`);
+  }
+
+  const RestaurantStock = require('../models/RestaurantStock');
+  const PoolbarStock = require('../models/PoolbarStock');
+  const KitchenStock = require('../models/KitchenStock');
+
+  const refs = await Promise.all([
+    RestaurantStock.findOne({ storeId: item.id }),
+    PoolbarStock.findOne({ storeId: item.id }),
+    KitchenStock.findOne({ storeId: item.id }),
+  ]);
+
+  const hasStock = refs.some(r => r && r.qty > 0);
+  if (hasStock) {
+    const depts = [];
+    if (refs[0] && refs[0].qty > 0) depts.push('Restaurant (' + refs[0].qty + ')');
+    if (refs[1] && refs[1].qty > 0) depts.push('Pool Bar (' + refs[1].qty + ')');
+    if (refs[2] && refs[2].qty > 0) depts.push('Kitchen (' + refs[2].qty + ')');
+    throw new ApiError(400, `Cannot delete "${item.name}" — still has stock in: ${depts.join(', ')}. Sell or use it up first.`);
+  }
+
+  await Promise.all([
+    RestaurantStock.deleteOne({ storeId: item.id }),
+    PoolbarStock.deleteOne({ storeId: item.id }),
+    KitchenStock.deleteOne({ storeId: item.id }),
+  ]);
+
+  await item.deleteOne();
   res.json({ success: true, data: { deleted: true } });
 });
 

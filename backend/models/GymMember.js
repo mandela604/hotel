@@ -31,7 +31,7 @@ const gymMemberSchema = new mongoose.Schema(
     totalDue: { type: Number, default: 0, min: 0 },
     payments: { type: [paymentSchema], default: [] },
   },
-  { timestamps: true, _id: false }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model('GymMember', gymMemberSchema);

@@ -9,7 +9,7 @@ const gymGuestSchema = new mongoose.Schema(
     room: { type: String, default: '', trim: true },
     phone: { type: String, default: '', trim: true },
   },
-  { timestamps: true, _id: false }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model('GymGuest', gymGuestSchema);
