@@ -112,7 +112,7 @@
       .then(function(d) {
         var u = d && d.data ? d.data : d;
         if (u && u.role) {
-          _sessionCache = { name: u.name, role: u.role, privilege: u.privilege || null, initials: u.initials || '' };
+          _sessionCache = { name: u.name, role: u.role, privilege: (u.privileges && u.privileges.type) || u.privilege || null, initials: u.initials || '' };
         }
         return _sessionCache;
       })

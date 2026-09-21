@@ -184,7 +184,7 @@
         name: data.name,
         initials: data.initials,
         role: data.role,
-        privilege: data.privilege,
+        privilege: (data.privileges && data.privileges.type) || data.privilege || null,
         department: data.department,
       };
     } catch (err) {

@@ -183,7 +183,7 @@
         name: data.name,
         initials: data.initials,
         role: data.role,
-        privilege: data.privilege || null,
+        privilege: (data.privileges && data.privileges.type) || data.privilege || null,
       };
     } catch (err) {
       goLogin(err && err.message);
