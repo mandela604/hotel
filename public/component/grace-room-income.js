@@ -52,7 +52,7 @@
       '<div class="rpr-fg"><span class="rpr-fl">Payment Type</span><select class="rpr-select" id="rprPayType"><option value="">All</option>' +
         ['Full Payment','Deposit','Balance Payment','Refund','Partial Refund','Refunded'].map(function(t) { return '<option value="' + t + '"' + (filters.paymentType === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') +
       '</select></div>' +
-      '<div class="rpr-fg"><span class="rpr-fl">&nbsp;</span><button class="rpr-gen-btn" id="rprGenerate"><i class="fa-solid fa-filter"></i> Generate Report</button></div>' +
+      '<div class="rpr-fg"><span class="rpr-fl">&nbsp;</span><button class="rpr-gen-btn" id="rprPrint" onclick="RoomIncome.print()"><i class="fa-solid fa-print"></i> Print Report</button></div>' +
     '</div>';
   }
 
@@ -144,15 +144,19 @@
   }
 
   function bindEvents(c) {
-    var genBtn = c.querySelector('#rprGenerate');
-    if (genBtn) genBtn.addEventListener('click', function() {
+    function applyFilters() {
       filters.roomType = c.querySelector('#rprRoomType').value;
       filters.paymentMethod = c.querySelector('#rprPayMethod').value;
       filters.paymentType = c.querySelector('#rprPayType').value;
       state._dateFrom = c.querySelector('#rprDateFrom').value;
       state._dateTo = c.querySelector('#rprDateTo').value;
       filters.period = (state._dateFrom || state._dateTo) ? 'custom' : 'all';
-      render(c);
+    }
+    c.querySelectorAll('#rprRoomType, #rprPayMethod, #rprPayType').forEach(function(sel) {
+      sel.addEventListener('change', function() { applyFilters(); render(c); });
+    });
+    c.querySelectorAll('#rprDateFrom, #rprDateTo').forEach(function(inp) {
+      inp.addEventListener('change', function() { applyFilters(); render(c); });
     });
     c.querySelectorAll('.rpr-page-btn[data-page]').forEach(function(btn) {
       btn.addEventListener('click', function() {

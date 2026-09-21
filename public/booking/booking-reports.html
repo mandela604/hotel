@@ -259,9 +259,6 @@ body {
 
       <!-- Room Income Tab -->
       <div id="tabRoomIncome"></div>
-      <div id="tabRoomIncomePrint" style="display:none;text-align:right;margin-top:10px;">
-        <button class="fb-btn-primary" onclick="RoomIncome.print()"><i class="fa-solid fa-print"></i> Print Receipt</button>
-      </div>
     </div>
   </div>
 </div>
@@ -317,8 +314,6 @@ function switchReportTab(tab) {
   document.querySelectorAll('.ri-tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === tab); });
   document.getElementById('tabBookingReport').classList.toggle('active', tab === 'booking');
   document.getElementById('tabRoomIncome').classList.toggle('active', tab === 'income');
-  var printBtn = document.getElementById('tabRoomIncomePrint');
-  if (printBtn) printBtn.style.display = tab === 'income' ? 'block' : 'none';
   if (tab === 'income') {
     var el = document.getElementById('tabRoomIncome');
     if (el && window.RoomIncome && !el.dataset.loaded) {
