@@ -55,4 +55,7 @@ router.post('/guests/:id/charges', inDept, privilegeGuard('booking', 'canCreate'
 router.patch('/guests/:id/charges/:chargeId/settle', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('id'), v.validateParam('chargeId'), v.validateSettleCharge, bookingController.settleCharge);
 router.post('/guests/:id/charges/settle-all', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('id'), v.validateSettleCharge, bookingController.settleAllCharges);
 
+// One-time migration: clear Guest.stays[]
+router.post('/migrate/clear-guest-stays', bookingController.clearGuestStays);
+
 module.exports = router;

@@ -462,18 +462,8 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
   booking.updatedAt = Date.now();
   await booking.save();
 
-  // Archive this stay onto the guest's profile.
-  const guest = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
-  guest.stays.push({
-    room: booking.room,
-    type: booking.type,
-    checkin: booking.checkin,
-    checkout: booking.checkout,
-    total: calcTotal(booking),
-    paid: calcPaid(booking),
-    status: 'checkout',
-  });
-  await guest.save();
+  // Ensure guest profile exists (no more stays[] archival — Booking is single source of truth)
+  await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
 
   await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html');
   res.json({ success: true, data: booking });
@@ -801,53 +791,20 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
 exports.getReports = asyncHandler(async (req, res) => {
   const { period, status, payment, staff, dateFrom, dateTo, search, clientDate } = req.query;
 
-  // Build report from Guest.stays[] (historical) + active Bookings (current)
-  const [allGuests, activeBookings] = await Promise.all([
-    Guest.find({}).select('name phone guestId stays').lean(),
-    Booking.find({
-      $or: [
-        { status: { $in: ['checkedin', 'reserved', 'cleaning', 'maintenance'] } },
-        { 'payments.0': { $exists: true } },
-      ]
-    }).lean(),
-  ]);
-  console.log(`[Reports] Guests: ${allGuests.length}, ActiveBookings: ${activeBookings.length}, clientDate: ${clientDate}, period: ${period}`);
-  console.log(`[Reports] Active bookings:`, activeBookings.map(b => ({ room: b.room, guest: b.guest, status: b.status, checkin: b.checkin })));
+  // Single source: Booking collection only
+  const allBookings = await Booking.find({}).lean();
+  console.log(`[Reports] Bookings: ${allBookings.length}, clientDate: ${clientDate}, period: ${period}`);
 
-  // Flatten Guest stays into booking-shaped objects
-  let stays = [];
-  for (const g of allGuests) {
-    for (const s of (g.stays || [])) {
-      const n = nights(s.checkin, s.checkout) || 1;
-      stays.push({
-        room: s.room, type: s.type, guest: g.name, phone: g.phone || '',
-        checkin: s.checkin, checkout: s.checkout,
-        rate: n > 0 ? Math.round((s.total || 0) / n) : 0,
-        discount: 0,
-        total: s.total || 0, paid: s.paid || 0, status: s.status || '',
-        recordedBy: '', payStatus: (s.paid || 0) >= (s.total || 0) ? 'Fully Paid' : (s.paid || 0) > 0 ? 'Deposit Paid' : 'Pending',
-        refunded: 0, payments: [], notes: '', createdAt: 0,
-      });
-    }
-  }
-
-  // Merge active bookings (some may already be in Guest.stays, skip duplicates by room+checkin)
-  const existingKeys = new Set(stays.map(s => s.room + '|' + s.checkin));
-  for (const b of activeBookings) {
-    const key = b.room + '|' + b.checkin;
-    if (!existingKeys.has(key)) {
-      stays.push({
-        room: b.room, type: b.type, guest: b._guestName || b.guest || '', phone: b.phone || '',
-        checkin: b.checkin || '', checkout: b.checkout || '',
-        total: calcTotal(b), paid: calcPaid(b), status: b.status || '',
-        recordedBy: b.recordedBy || '', payStatus: b.payStatus || 'Pending',
-        discount: b.discount || 0, refunded: b.refunded || 0,
-        payments: b.payments || [], notes: b.notes || '',
-        createdAt: b.createdAt || 0,
-      });
-    }
-  }
-  console.log(`[Reports] Total stays after merge: ${stays.length}`);
+  // Map Booking docs to report-shaped objects
+  let stays = allBookings.map(b => ({
+    room: b.room, type: b.type, guest: b._guestName || b.guest || '', phone: b.phone || '',
+    checkin: b.checkin || '', checkout: b.checkout || '',
+    total: calcTotal(b), paid: calcPaid(b), status: b.status || '',
+    recordedBy: b.recordedBy || '', payStatus: b.payStatus || 'Pending',
+    discount: b.discount || 0, refunded: b.refunded || 0,
+    payments: b.payments || [], notes: b.notes || '',
+    createdAt: b.createdAt || 0,
+  }));
 
   // Period shortcut
   let start = null, end = null;
@@ -1069,4 +1026,11 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
       page: pageNum, pages: totalPages, total: totalCount,
     },
   });
+});
+
+/* ── One-time migration: clear Guest.stays[] (Booking is now single source) ── */
+exports.clearGuestStays = asyncHandler(async (req, res) => {
+  const result = await Guest.updateMany({}, { $set: { stays: [] } });
+  console.log(`[Migration] Cleared stays from ${result.modifiedCount} guests`);
+  res.json({ success: true, message: `Cleared stays from ${result.modifiedCount} guest documents` });
 });
