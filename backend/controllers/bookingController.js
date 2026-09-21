@@ -808,8 +808,8 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
 exports.getReports = asyncHandler(async (req, res) => {
   const { period, status, payment, staff, dateFrom, dateTo, search, clientDate } = req.query;
 
-  // Single source: Booking collection only
-  const allBookings = await Booking.find({}).lean();
+  // Single source: Booking collection only — exclude vacant (empty room slots)
+  const allBookings = await Booking.find({ status: { $ne: 'vacant' } }).lean();
   console.log(`[Reports] Bookings: ${allBookings.length}, clientDate: ${clientDate}, period: ${period}`);
 
   // Map Booking docs to report-shaped objects
