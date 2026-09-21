@@ -119,7 +119,24 @@ exports.getBookingData = asyncHandler(async (req, res) => {
     Booking.find().sort({ room: 1 }),
     Guest.find().sort({ updatedAt: -1 }).limit(200),
   ]);
-  res.json({ success: true, data: { rooms, bookings, guests } });
+
+  // Find overdue and due-today checkouts for toast notifications
+  const now = new Date();
+  const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  const overdueBookings = bookings
+    .filter(b => b.status === 'checkedin' && b.checkout && b.checkout <= todayStr)
+    .map(b => ({
+      room: b.room,
+      guest: b.guest || '',
+      checkout: b.checkout,
+      overdue: b.checkout < todayStr,
+    }));
+
+  if (overdueBookings.length > 0) {
+    console.log(`[BookingData] ${overdueBookings.length} overdue/due-today checkout(s):`, overdueBookings.map(b => b.room + ' (' + b.guest + ')'));
+  }
+
+  res.json({ success: true, data: { rooms, bookings, guests, overdueBookings } });
 });
 
 /* ═══════════════════════════════════════════════

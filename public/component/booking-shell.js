@@ -369,6 +369,47 @@
       }
       handle.setApiMode('Live');
       if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('bks-backBtn'); if (bb) bb.style.display = 'none'; }
+
+      // ── Overdue checkout toasts ──
+      function showToast(msg, type) {
+        var c = document.createElement('div');
+        c.style.cssText = 'position:fixed;top:70px;right:20px;z-index:9999;padding:12px 18px;border-radius:10px;font-size:12px;font-weight:600;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;max-width:420px;animation:bksSlideIn .3s ease;cursor:pointer;';
+        c.style.background = type === 'overdue' ? '#dc2626' : '#f59e0b';
+        c.innerHTML = '<i class="fa-solid ' + (type === 'overdue' ? 'fa-triangle-exclamation' : 'fa-clock') + '" style="font-size:14px;"></i><span>' + msg + '</span>';
+        c.onclick = function() { c.remove(); };
+        document.body.appendChild(c);
+        setTimeout(function() { if (c.parentNode) c.remove(); }, 10000);
+      }
+      // Inject animation
+      if (!document.getElementById('bks-toast-style')) {
+        var s = document.createElement('style');
+        s.id = 'bks-toast-style';
+        s.textContent = '@keyframes bksSlideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}';
+        document.head.appendChild(s);
+      }
+      var overdueShown = false;
+      async function checkOverdue() {
+        if (overdueShown) return;
+        try {
+          var r = await fetch('/api/booking/data', {credentials:'include'});
+          if (!r.ok) return;
+          var j = await r.json();
+          var overdue = (j.data && j.data.overdueBookings) || [];
+          overdueShown = true;
+          overdue.forEach(function(b) {
+            var msg = '<b>Room ' + b.room + '</b> (' + b.guest + ') — ';
+            if (b.overdue) {
+              msg += 'checkout date <b>' + b.checkout + '</b> has passed. Please check out.';
+              showToast(msg, 'overdue');
+            } else {
+              msg += 'guest checks out <b>today</b>.';
+              showToast(msg, 'today');
+            }
+          });
+        } catch(e) {}
+      }
+      checkOverdue();
+
       // poll folio badge every 5s (Pool Bar / Restaurant / Gym charges)
       async function pollGuestBadge(){
         try{
