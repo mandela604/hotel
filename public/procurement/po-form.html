@@ -195,7 +195,7 @@
           </div>
 
           <div class="items-head-row">
-            <span>Item to Purchase</span><span>Unit</span><span>Package Qty</span><span>Qty</span><span>Total Qty</span><span>Unit Price (₦)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
+            <span>Item to Purchase</span><span>Unit</span><span>Package Qty</span><span>Qty</span><span>Total Qty</span><span>Package Price (₦)</span><span style="text-align:right">Subtotal (₦)</span><span></span>
           </div>
 
           <div class="entry-edit-banner" id="entryEditBanner">
@@ -249,7 +249,7 @@
                   <th class="center">Package Qty</th>
                   <th class="center">Qty</th>
                   <th class="center">Total Qty</th>
-                  <th class="right">Unit Price (₦)</th>
+                  <th class="right">Package Price (₦)</th>
                   <th class="right">Subtotal (₦)</th>
                   <th class="center"></th>
                 </tr>
@@ -485,7 +485,7 @@ function addItemFromEntry(){
 
   if (!name){ showToast('Enter an item name.', 'error'); nameEl.focus(); return; }
   if (packQty <= 0){ showToast('Package Qty must be at least 1.', 'error'); qtyEl.focus(); return; }
-  if (price <= 0){ showToast('Enter a unit price.', 'error'); priceEl.focus(); return; }
+  if (price <= 0){ showToast('Enter a package price.', 'error'); priceEl.focus(); return; }
 
   const totalQty = packQty * packSize;
   const entry = { name, qty: packQty, price, subtotal: price * packQty, stockId: nameEl.dataset.stockId || '', unit, packSize, baseUnit, totalQty };
