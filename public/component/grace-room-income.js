@@ -230,10 +230,9 @@
     if (cssLoaded) return; cssLoaded = true;
     var s = document.createElement('style');
     s.textContent =
-      '.rpr-kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:14px;}' +
-      '@media(max-width:1200px){.rpr-kpis{grid-template-columns:repeat(4,1fr);}}' +
-      '@media(max-width:768px){.rpr-kpis{grid-template-columns:repeat(2,1fr);}}' +
-      '.rpr-kpi{background:#fff;border:1px solid #eef0f6;border-radius:12px;padding:12px;display:flex;align-items:flex-start;gap:8px;box-shadow:0 2px 12px rgba(15,34,55,.06);position:relative;overflow:hidden;}' +
+      '.rpr-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}' +
+      '@media(max-width:1000px){.rpr-kpis{grid-template-columns:repeat(2,1fr);}}' +
+      '.rpr-kpi{background:#fff;border:1px solid #eef0f6;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 2px 12px rgba(15,34,55,.06);position:relative;overflow:hidden;min-width:0;}' +
       '.rpr-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;}' +
       '.rpr-kpi-blue::before{background:linear-gradient(90deg,#2563eb,transparent);}' +
       '.rpr-kpi-slate::before{background:linear-gradient(90deg,#64748b,transparent);}' +
@@ -281,11 +280,11 @@
       '.rpr-summaries{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}' +
       '@media(max-width:1000px){.rpr-summaries{grid-template-columns:1fr;}}' +
       '.rpr-sum-card{background:#fff;border:1px solid #eef0f6;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(15,34,55,.06);}' +
-      '.rpr-sum-title{font-size:10px;font-weight:800;color:#fff;background:#2563eb;padding:8px 12px;text-transform:uppercase;letter-spacing:.5px;}' +
+      '.rpr-sum-title{font-size:10px;font-weight:800;color:#9aa1b3;background:#f4f6fb;padding:8px 12px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #eef0f6;}' +
       '.rpr-sum-table{width:100%;border-collapse:collapse;font-size:11px;}' +
       '.rpr-sum-table th{text-align:left;padding:6px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;background:#f8fafc;font-weight:700;border-bottom:1px solid #eef0f6;}' +
       '.rpr-sum-table td{padding:6px 10px;border-bottom:1px solid #f1f5f9;}' +
-      '.rpr-sum-total td{font-weight:800;background:#f8fafc;border-top:2px solid #2563eb;}' +
+      '.rpr-sum-total td{font-weight:800;background:#f8fafc;border-top:2px solid #eef0f6;}' +
       '.rpr-empty{padding:40px;text-align:center;color:#9aa1b3;font-size:13px;}.rpr-empty i{font-size:24px;display:block;margin-bottom:10px;}' +
       '.rpr-loading{padding:40px;text-align:center;color:#9aa1b3;font-size:13px;}' +
       '.rpr-pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;padding:12px 0;}' +
