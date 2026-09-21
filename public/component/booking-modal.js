@@ -1094,56 +1094,59 @@
       var tot = calcTotal(b), pd = calcPaid(b), bal = calcBal(b);
       var payRows = '';
       (b.payments || []).forEach(function(p) {
-        payRows += '<tr><td>' + esc(p.id || '') + '</td><td style="text-align:right;font-weight:700">₦' + Number(p.amount || 0).toLocaleString('en-NG') + '</td><td>' + esc(p.mode || '') + '</td><td>' + esc(p.date || '') + '</td><td>' + esc(p.by || '') + '</td></tr>';
+        payRows += '<div class="row"><span>' + esc(p.mode || '') + '</span><span class="r">₦' + Number(p.amount || 0).toLocaleString('en-NG') + '</span></div>' +
+          '<div class="row sub"><span>' + esc(p.date || '') + '</span><span class="r">' + esc(p.by || '') + '</span></div>';
       });
-      if (!payRows) payRows = '<tr><td colspan="5" style="text-align:center;color:#999">No payments recorded</td></tr>';
 
       var now = new Date();
-      var dateStr = now.toLocaleDateString('en-NG', { year: 'numeric', month: 'long', day: 'numeric' });
+      var dateStr = now.toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' });
       var timeStr = now.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
 
-      var html = '<!DOCTYPE html><html><head><title>Booking Receipt - Room ' + esc(b.room) + '</title><style>' +
-        '*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Segoe UI",Tahoma,sans-serif;padding:30px;color:#1c2440;font-size:12px;}' +
-        '.hdr{text-align:center;border-bottom:3px solid #1d4ed8;padding-bottom:12px;margin-bottom:16px;}.hdr h1{font-size:20px;color:#1d4ed8;}.hdr p{font-size:10px;color:#6b7280;margin-top:2px;}' +
-        '.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin-bottom:16px;}' +
-        '.info-item .lbl{font-size:9px;text-transform:uppercase;color:#9aa1b3;font-weight:600;letter-spacing:.5px;}' +
-        '.info-item .val{font-size:13px;font-weight:700;color:#1c2440;margin-top:1px;}' +
-        '.info-item .val.red{color:#dc2626;}' +
-        '.info-item .val.green{color:#16a34a;}' +
-        'table{width:100%;border-collapse:collapse;font-size:11px;margin-top:12px;}' +
-        'th{text-align:left;padding:6px 8px;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#fff;background:#1d4ed8;font-weight:700;}' +
-        'td{padding:5px 8px;border-bottom:1px solid #f3f4f6;}' +
-        '.total-row td{border-top:2px solid #1d4ed8;font-weight:800;background:#f8fafc;}' +
-        '.footer{text-align:center;margin-top:20px;border-top:1px solid #e5e7eb;padding-top:10px;font-size:9px;color:#6b7280;}' +
-        '@media print{body{padding:15px;}}' +
+      var html = '<!DOCTYPE html><html><head><title>Receipt - Room ' + esc(b.room) + '</title><style>' +
+        '*{margin:0;padding:0;box-sizing:border-box;}' +
+        'body{font-family:"Courier New",Courier,monospace;width:80mm;padding:5mm 4mm;color:#000;font-size:11px;line-height:1.4;}' +
+        '.c{text-align:center;}' +
+        '.hdr{border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;}' +
+        '.hdr h1{font-size:14px;font-weight:900;letter-spacing:1px;}' +
+        '.hdr p{font-size:9px;margin-top:1px;}' +
+        '.divider{border-top:1px dashed #000;margin:6px 0;}' +
+        '.row{display:flex;justify-content:space-between;margin:2px 0;}' +
+        '.r{text-align:right;}' +
+        '.lbl{font-size:9px;text-transform:uppercase;color:#555;}' +
+        '.val{font-weight:700;font-size:11px;}' +
+        '.total .val{font-size:13px;}' +
+        '.total{border-top:2px solid #000;margin-top:4px;padding-top:4px;}' +
+        '.pay-title{font-weight:700;font-size:10px;margin:6px 0 3px;border-top:1px dashed #000;padding-top:6px;}' +
+        '.sub{font-size:9px;color:#555;}' +
+        '.footer{border-top:1px dashed #000;margin-top:8px;padding-top:6px;font-size:9px;color:#555;}' +
+        '@media print{body{padding:3mm 2mm;width:80mm;}}' +
         '</style></head><body>' +
-        '<div class="hdr"><h1>BOSTON LEISURE</h1><p>Booking Receipt</p><p style="font-style:italic;font-size:9px">Accurate Records. Transparent Service.</p></div>' +
-        '<div class="info-grid">' +
-          '<div class="info-item"><div class="lbl">Room</div><div class="val">' + esc(b.room) + ' · ' + esc(b.type || '') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Guest</div><div class="val">' + esc(b.guest || '—') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Phone</div><div class="val">' + esc(b.phone || '—') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Status</div><div class="val">' + esc(b.status || '') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Check-in</div><div class="val">' + esc(b.checkin || '—') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Check-out</div><div class="val">' + esc(b.checkout || '—') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Rate / Night</div><div class="val">₦' + Number(b.rate || 0).toLocaleString('en-NG') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Total</div><div class="val">₦' + Number(tot).toLocaleString('en-NG') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Paid</div><div class="val green">₦' + Number(pd).toLocaleString('en-NG') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Balance</div><div class="val ' + (bal > 0 ? 'red' : 'green') + '">₦' + Number(bal).toLocaleString('en-NG') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Payment Status</div><div class="val">' + esc(b.payStatus || 'Pending') + '</div></div>' +
-          '<div class="info-item"><div class="lbl">Recorded By</div><div class="val">' + esc(b.recordedBy || '—') + '</div></div>' +
+        '<div class="hdr c"><h1>BOSTON LEISURE</h1><p>Booking Receipt</p></div>' +
+        '<div class="divider"></div>' +
+        '<div class="row"><span class="lbl">Room</span><span class="val">' + esc(b.room) + ' · ' + esc(b.type || '') + '</span></div>' +
+        '<div class="row"><span class="lbl">Guest</span><span class="val">' + esc(b.guest || '—') + '</span></div>' +
+        '<div class="row"><span class="lbl">Phone</span><span class="val">' + esc(b.phone || '—') + '</span></div>' +
+        '<div class="row"><span class="lbl">Check-in</span><span class="val">' + esc(b.checkin || '—') + '</span></div>' +
+        '<div class="row"><span class="lbl">Check-out</span><span class="val">' + esc(b.checkout || '—') + '</span></div>' +
+        '<div class="row"><span class="lbl">Rate/Night</span><span class="val">₦' + Number(b.rate || 0).toLocaleString('en-NG') + '</span></div>' +
+        '<div class="divider"></div>' +
+        '<div class="row"><span class="lbl">Total</span><span class="val">₦' + Number(tot).toLocaleString('en-NG') + '</span></div>' +
+        '<div class="row"><span class="lbl">Paid</span><span class="val">₦' + Number(pd).toLocaleString('en-NG') + '</span></div>' +
+        '<div class="row"><span class="lbl">Balance</span><span class="val">₦' + Number(bal).toLocaleString('en-NG') + '</span></div>' +
+        '<div class="row"><span class="lbl">Status</span><span class="val">' + esc(b.payStatus || 'Pending') + '</span></div>' +
+        (payRows ? '<div class="pay-title">PAYMENTS</div><div class="divider"></div>' + payRows : '') +
+        '<div class="divider"></div>' +
+        '<div class="footer c">' +
+          '<p>' + dateStr + ' ' + timeStr + '</p>' +
+          '<p>Boston Leisure Hotel</p>' +
         '</div>' +
-        '<div style="font-weight:700;font-size:11px;color:#1d4ed8;margin-bottom:6px;">PAYMENT HISTORY</div>' +
-        '<table><thead><tr><th>Reference</th><th style="text-align:right">Amount</th><th>Mode</th><th>Date</th><th>By</th></tr></thead><tbody>' +
-        payRows +
-        '</tbody></table>' +
-        '<div class="footer"><p>Generated on: ' + dateStr + ' ' + timeStr + '</p><p>Boston Leisure Hotel Management System</p></div>' +
         '</body></html>';
 
-      var w = window.open('', '_blank', 'width=800,height=600');
+      var w = window.open('', '_blank', 'width=320,height=600');
       w.document.write(html);
       w.document.close();
       w.focus();
-      w.print();
+      setTimeout(function() { w.print(); }, 300);
     }
 
     /* ── Check out → cleaning ── */

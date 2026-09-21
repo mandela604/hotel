@@ -592,9 +592,6 @@
                 <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:10px;" data-act="submit" disabled data-role="submitBtn">
                   <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>
                 </button>
-                <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:10px;" data-act="printReceipt" disabled data-role="printBtn">
-                  <i class="fa-solid fa-print"></i> Print Receipt
-                </button>
               </div>
             </div>
           </div>
@@ -661,7 +658,7 @@
             </div>` : ''}
             <div class="ow-modal-footer">
               <button type="button" class="ow-btn ow-btn-outline ow-btn-sm" data-act="closePay">Cancel</button>
-              <button type="button" class="ow-btn ow-btn-primary ow-btn-sm" data-act="confirmPay"><i class="fa-solid fa-check"></i> Confirm Payment</button>
+              <button type="button" class="ow-btn ow-btn-primary ow-btn-sm" data-act="confirmPay"><i class="fa-solid fa-check"></i> Pay & Print Receipt</button>
             </div>
           </div>
         </div>
@@ -805,7 +802,7 @@
         const curMethod = (methodSel && methodSel.value) ? methodSel.value.trim() : '';
         const lbl = $('[data-role="submitLabel"]');
         if (lbl) {
-          if (t === 'quick') lbl.textContent = curMethod === 'Room Charge' ? 'Charge to Room' : 'Pay';
+          if (t === 'quick') lbl.textContent = curMethod === 'Room Charge' ? 'Charge to Room' : 'Pay & Print Receipt';
           else if (t === 'tab') lbl.textContent = 'Open Tab';
           else lbl.textContent = 'Send to Kitchen';
         }
@@ -981,7 +978,6 @@
       $('[data-role="cartSub"]').textContent = fmtN(sub);
       $('[data-role="cartTotal"]').textContent = fmtN(sub * (1 - disc / 100));
       $('[data-role="submitBtn"]').disabled = cart.length === 0;
-      $('[data-role="printBtn"]').disabled = cart.length === 0;
     }
 
     function generateReceipt(orderData, isSale) {
@@ -1405,6 +1401,14 @@
             const payBody = await payRes.json().catch(() => ({}));
             if (!payRes.ok || !payBody.success) throw new Error(payBody.error || 'Payment failed');
           }
+          if (payMethod !== 'Room Charge') {
+            openPrintWindow(generateReceipt({
+              id: _editingOrderId, items: editItems, subtotal: editOrder.subtotal || 0, discount: editOrder.discount || 0, total: editOrder.total || 0,
+              staff: editOrder.staff || '', table: editOrder.table || '—', notes: editOrder.notes || '',
+              roomNumber: null, guestName: null, guestPhone: null,
+              date: editOrder.date || nowStamp(), method: payMethod,
+            }, true));
+          }
           showToast(_editingOrderId + ' paid — ' + payMethod + '.', 'success');
           if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
           exitEditMode();
@@ -1454,6 +1458,15 @@
             const sale = await service.recordSale(rcPayload);
             if (isRoomCharge) console.log('[RoomCharge] Quick Sale response ←', JSON.stringify(sale, null, 2));
             syncFromService();
+            if (!isRoomCharge) {
+              var saleId = sale && sale.id ? sale.id : nextSaleId();
+              openPrintWindow(generateReceipt({
+                id: saleId, items: items, subtotal: subtotal, discount: discount, total: total,
+                staff: staff, table: table || '—', notes: notes,
+                roomNumber: null, guestName: null, guestPhone: null,
+                date: stamp, method: method,
+              }, true));
+            }
             showToast(
               isRoomCharge
                 ? (sale && sale.id ? sale.id + ' ' : '') + 'charged to Room ' + room.room + ' — ' + fmtN(total) + '.'
@@ -1488,6 +1501,14 @@
               saveShared(keys.movements, movements),
             ]);
             apiSave('POST', apiPaths.sales, sale);
+            if (!isRoomCharge) {
+              openPrintWindow(generateReceipt({
+                id: sale.id, items: items, subtotal: subtotal, discount: discount, total: total,
+                staff: staff, table: table || '—', notes: notes,
+                roomNumber: null, guestName: null, guestPhone: null,
+                date: stamp, method: method,
+              }, true));
+            }
             showToast(
               isRoomCharge
                 ? sale.id + ' charged to Room ' + room.room + ' — ' + fmtN(total) + '.'
@@ -1870,13 +1891,9 @@
         } else {
           submitBtn.disabled = false;
           submitBtn.style.display = '';
-          const lbl2 = $('[data-role="submitLabel"]'); if (lbl2) lbl2.textContent = 'Pay';
+          const lbl2 = $('[data-role="submitLabel"]'); if (lbl2) lbl2.textContent = 'Pay & Print Receipt';
         }
       }
-
-      // Disable print for completed (keep for all)
-      var printBtn = $('[data-role="printBtn"]');
-      if (printBtn) printBtn.disabled = false;
     }
 
     function exitEditMode() {
@@ -2128,6 +2145,14 @@
           syncFromService();
           const saleId = result && result.sale ? result.sale.id : '';
           $('[data-role="payModal"]').classList.remove('show');
+          if (!isRoomCharge) {
+            openPrintWindow(generateReceipt({
+              id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
+              staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
+              roomNumber: null, guestName: null, guestPhone: null,
+              date: o.date || nowStamp(), method: method,
+            }, true));
+          }
           showToast(
             isRoomCharge
               ? o.id + ' charged to Room ' + room.room + ' — ' + fmtN(o.total) + '.'
@@ -2183,6 +2208,14 @@
             status: 'paid', method: method, roomNumber: o.roomNumber, guestName: o.guestName, guestPhone: o.guestPhone,
           });
           $('[data-role="payModal"]').classList.remove('show');
+          if (!isRoomCharge) {
+            openPrintWindow(generateReceipt({
+              id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
+              staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
+              roomNumber: null, guestName: null, guestPhone: null,
+              date: o.date || nowStamp(), method: method,
+            }, true));
+          }
           showToast(
             isRoomCharge
               ? o.id + ' charged to Room ' + room.room + ' — ' + fmtN(o.total) + '.'
@@ -2349,7 +2382,6 @@
         const a = act.dataset.act;
         if (a === 'clearCart') clearCart();
         else if (a === 'submit') submitOrder();
-        else if (a === 'printReceipt') printCurrentCart();
         else if (a === 'submitCoo') submitCooOrder();
         else if (a === 'clearCooCart') clearCooCart();
         else if (a === 'clearCooRoom'){ var b=$('[data-role="cooSelectedRoomBox"]'); if(b) b.style.display='none'; var r=$('[data-role="cooRoomNumber"]'); if(r) r.value=''; var g=$('[data-role="cooGuestName"]'); if(g) g.value=''; var gi=$('[data-role="cooGuestId"]'); if(gi) gi.value=''; var s=$('[data-role="cooRoomSearch"]'); if(s) s.value=''; var res=$('[data-role="cooRoomResults"]'); if(res){ res.style.display='none'; res.innerHTML=''; } }
