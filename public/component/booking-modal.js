@@ -347,6 +347,7 @@
     var rooms = [];
     var bookings = [];
     var guests = [];
+    var originalCreatedAt = null;
     var session = externalSession;
     var saving = false;
     var addingPayment = false;
@@ -418,6 +419,10 @@
             '<div class="bkm-row2">' +
               '<div class="bkm-fg"><label class="bkm-label">Check-in</label><input class="bkm-input" data-role="checkin" type="date"></div>' +
               '<div class="bkm-fg"><label class="bkm-label">Check-out</label><input class="bkm-input" data-role="checkout" type="date"></div>' +
+            '</div>' +
+            '<div class="bkm-row2" data-role="createdAtWrap" hidden>' +
+              '<div class="bkm-fg"><label class="bkm-label">Created Date</label><input class="bkm-input" data-role="createdAt" type="date"></div>' +
+              '<div class="bkm-fg"></div>' +
             '</div>' +
             '<div class="bkm-row3">' +
               '<div class="bkm-fg"><label class="bkm-label">Nights</label><input class="bkm-input" data-role="nightsDisp" type="text" readonly value="0"></div>' +
@@ -708,6 +713,12 @@
         if (role === 'newPayAmount' || role === 'newPayMode') return;
         if (role === 'settleAmount' || role === 'settleMode') return;
         if (role === 'paid' && mode !== 'new') { el.disabled = true; return; }
+        // Admin-only: createdAt — only admin can toggle
+        if (role === 'createdAt') {
+          var isAdm = session && session.role === 'admin';
+          el.disabled = !isAdm || !editable;
+          return;
+        }
         el.disabled = !editable;
       });
 
@@ -828,6 +839,7 @@
         children: parseInt(val('children'), 10) || 0,
         notes: val('notes').trim(),
         status: getStatusRadio() === 'checkedin' ? 'checkedin' : 'reserved',
+        createdAt: val('createdAt') || null,
       };
     }
 
@@ -1185,6 +1197,11 @@
         toast("You don't have permission to edit this booking.", 'error');
         return;
       }
+      // Admin-only: confirm createdAt change
+      if (mode === 'edit' && session && session.role === 'admin' && entry.createdAt && originalCreatedAt && entry.createdAt !== originalCreatedAt) {
+        var ok = await showConfirm('Change created date?', 'You are about to change the booking created date from ' + originalCreatedAt + ' to ' + entry.createdAt + '. Proceed?');
+        if (!ok) return;
+      }
       if ((entry.discount || 0) > 0 && !canDiscount(session)) {
         toast("You don't have permission to apply discounts.", 'error');
         return;
@@ -1264,6 +1281,26 @@
       setStatusRadio(booking.status === 'checkedin' ? 'checkedin' : 'reserved');
       populateRooms(booking.room);
       setVal('type', booking.type || '');
+
+      // Admin-only: Created Date
+      var createdAtWrap = $('[data-role="createdAtWrap"]');
+      var isAdmin = session && session.role === 'admin';
+      if (createdAtWrap) {
+        createdAtWrap.hidden = !isAdmin || mode === 'new';
+      }
+      if (booking.createdAt) {
+        var cd = new Date(booking.createdAt);
+        if (!isNaN(cd.getTime())) {
+          var yyyy = cd.getFullYear();
+          var mm = String(cd.getMonth() + 1).padStart(2, '0');
+          var dd = String(cd.getDate()).padStart(2, '0');
+          setVal('createdAt', yyyy + '-' + mm + '-' + dd);
+          originalCreatedAt = yyyy + '-' + mm + '-' + dd;
+        }
+      } else {
+        setVal('createdAt', '');
+        originalCreatedAt = null;
+      }
 
       var meta = $('[data-role="metaFoot"]');
       if (meta) {

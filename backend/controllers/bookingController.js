@@ -409,6 +409,13 @@ exports.updateBooking = asyncHandler(async (req, res) => {
       booking[f] = ['rate', 'discount', 'adults', 'children'].includes(f) ? Number(req.body[f]) : req.body[f];
     }
   }
+  // Admin-only: allow backdating createdAt
+  if (req.body.createdAt && req.user && req.user.role === 'admin') {
+    const d = new Date(req.body.createdAt);
+    if (!isNaN(d.getTime())) {
+      booking.createdAt = d;
+    }
+  }
   booking.payStatus = payStatusFor(booking);
   booking.updatedAt = Date.now();
   await booking.save();
