@@ -504,7 +504,7 @@
     }
 
     function findRow(id) {
-      return rows.find((r) => String(r.room) === String(id)) || null;
+      return rows.find((r) => String(r.stayId || r._id || r.id || r.room) === String(id)) || rows.find((r) => String(r.room) === String(id)) || null;
     }
 
     function renderBody() {
@@ -526,7 +526,7 @@
       }
 
       body.innerHTML = pageRows.map((b) => {
-        let html = '<tr class="' + (clickable ? 'ft-clickable' : '') + '" data-id="' + esc(b.room) + '">';
+        let html = '<tr class="' + (clickable ? 'ft-clickable' : '') + '" data-id="' + esc(b.stayId || b._id || b.id || b.room) + '">';
         columns.forEach((c) => {
           const alignCls = c.align === 'center' ? ' ft-center' : '';
           const extraCls = c.headExtra ? ' ' + c.headExtra : '';
