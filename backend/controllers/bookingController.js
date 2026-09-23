@@ -822,6 +822,7 @@ exports.getReports = asyncHandler(async (req, res) => {
   // Map Booking docs to report-shaped objects
   let stays = allBookings.map(b => ({
     room: b.room, type: b.type, guest: b._guestName || b.guest || '', phone: b.phone || '',
+    rate: b.rate || 0, discount: b.discount || 0,
     checkin: b.checkin || '', checkout: b.checkout || '',
     total: calcTotal(b), paid: calcPaid(b), status: b.status || '',
     recordedBy: b.recordedBy || '', payStatus: b.payStatus || 'Pending',
