@@ -660,9 +660,13 @@ exports.addPayment = asyncHandler(async (req, res) => {
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
 
   const { amount, mode } = req.body;
+  const numAmt = Number(amount);
+  if (!numAmt || numAmt <= 0) return res.status(400).json({ success: false, error: 'Invalid payment amount' });
+  const bal = calcBal(booking);
+  if (numAmt > bal) return res.status(400).json({ success: false, error: `Payment ₦${numAmt.toLocaleString()} exceeds balance ₦${bal.toLocaleString()} (total ₦${calcTotal(booking).toLocaleString()} - paid ₦${calcPaid(booking).toLocaleString()})` });
   const entry = {
     id: `PMT-${uuidv4()}`,
-    amount: Number(amount),
+    amount: numAmt,
     mode: mode || 'Cash',
     date: todayDDMMYY(),
     by: req.user ? req.user.name : booking.recordedBy || '',

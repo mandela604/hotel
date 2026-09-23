@@ -939,6 +939,8 @@
       if (addingPayment || !editBooking) return;
       var amt = parseFloat(val('newPayAmount')) || 0;
       if (amt <= 0) { toast('Enter a payment amount greater than zero.', 'error'); return; }
+      var bal = calcBal(editBooking);
+      if (amt > bal) { toast('Payment ₦' + amt.toLocaleString() + ' exceeds balance ₦' + bal.toLocaleString() + ' (total ₦' + calcTotal(editBooking).toLocaleString() + ').', 'error'); return; }
       var payMode = val('newPayMode');
       addingPayment = true;
       applyEditability();
