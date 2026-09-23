@@ -58,10 +58,13 @@ async function resolveBooking(req) {
     try { const byId = await Booking.findById(stay); if (byId) return byId; } catch(e){}
   }
   if (param) {
-    // param could be a stayId / _id
+    // param could be a stayId / _id — must not fall through to room search if it looks like an id
     let byStay = await Booking.findOne({ stayId: param });
     if (byStay) return byStay;
     try { const byId = await Booking.findById(param); if (byId) return byId; } catch(e){}
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
+    const isObjectId = /^[0-9a-f]{24}$/i.test(param);
+    if (isUuid || isObjectId) return null; // don't treat a stayId as a room number
     // fallback: room number — prefer currently checked-in, then nearest reserved, else most recent
     const cands = await Booking.find({ room: param }).sort({ updatedAt: -1 });
     if (cands.length === 1) return cands[0];
