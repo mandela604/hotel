@@ -610,7 +610,7 @@ exports.listTransfers = asyncHandler(async (req, res) => {
 });
 
 exports.addTransfer = asyncHandler(async (req, res) => {
-  const { productionNo, meal, quantity, unit, sentBy, remarks, restaurant, cooId } = req.body;
+  const { productionNo, meal, quantity, unit, sentBy, remarks, restaurant, cooId, batchTransferNo } = req.body;
   if (!meal || !quantity || Number(quantity) <= 0) {
     return res.status(400).json({ success: false, error: 'Meal name and valid quantity required' });
   }
@@ -630,6 +630,7 @@ exports.addTransfer = asyncHandler(async (req, res) => {
   const transfer = await Transfer.create({
     id: uuidv4(),
     transferNo,
+    batchTransferNo: batchTransferNo || '',
     productionNo: productionNo || '',
     cooId: cooId || '',
     meal: meal.trim(),

@@ -530,7 +530,7 @@
             <div class="ow-cart">
               <div class="ow-cart-head">
                 <div class="ow-cart-title" data-role="cartTitle">Cart</div>
-                <button type="button" class="ow-btn-ghost" data-act="clearCart"><i class="fa-solid fa-trash"></i> Clear</button>
+                <button type="button" class="ow-btn-ghost" data-act="clearCart" data-role="clearCartBtn"><i class="fa-solid fa-trash"></i> Clear</button>
               </div>
               <div class="ow-cart-body" data-role="cartBody"><div class="ow-cart-empty">Tap an item to add it</div></div>
               <div class="ow-cart-footer">
@@ -970,6 +970,9 @@
           (_viewOnly ? '' : '<button type="button" class="ow-ci-del" data-remove="' + esc(c.key) + '"><i class="fa-solid fa-xmark"></i></button>') + '</div>';
       }).join('');
       updateTotals();
+      // Hide Clear button when viewing a completed/paid/cancelled order
+      var clearBtn = $('[data-role="clearCartBtn"]');
+      if (clearBtn) clearBtn.style.display = _viewOnly ? 'none' : '';
     }
 
     function updateTotals() {

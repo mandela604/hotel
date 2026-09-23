@@ -456,10 +456,10 @@
      that only worked because everything shared one localStorage/demo
      store. In production, Restaurant reads its own incoming-transfers
      list from its own API, backed by the same Transfer collection. */
-  async function addTransfer({ meal, quantity, unit, sentBy, remarks = '', productionNo = '', restaurant = 'Main Restaurant / POS', cooId = '' }) {
+  async function addTransfer({ meal, quantity, unit, sentBy, remarks = '', productionNo = '', restaurant = 'Main Restaurant / POS', cooId = '', batchTransferNo = '' }) {
     const transfer = await request('/transfers', {
       method: 'POST',
-      body: { meal, quantity, unit, sentBy, remarks, productionNo, restaurant, cooId },
+      body: { meal, quantity, unit, sentBy, remarks, productionNo, restaurant, cooId, batchTransferNo },
     });
     state.transfers.unshift(transfer);
     emitChange('transfer:add');

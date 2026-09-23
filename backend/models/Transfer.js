@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const transferSchema = new mongoose.Schema({
   id:            { type: String, required: true, unique: true },
   transferNo:    { type: String, required: true, unique: true },
+  batchTransferNo: { type: String, default: '' },
   productionNo:  { type: String, default: '' },
   cooId:         { type: String, default: '' },
   meal:          { type: String, required: true },

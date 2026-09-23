@@ -400,8 +400,12 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
   if (isCooTransfer) {
     const KitchenCooOrder = require('../models/KitchenCooOrder');
     const cooCheck = await KitchenCooOrder.findOne({ id: transfer.cooId });
-    console.log(`[acceptTransfer] COO lookup: ${cooCheck ? `found id=${cooCheck.id}, paid=${cooCheck.paid}, status=${cooCheck.status}` : 'NOT FOUND'}`);
-    if (cooCheck && cooCheck.paid) linkedOrderPaid = true;
+    console.log(`[acceptTransfer] COO lookup: ${cooCheck ? `found id=${cooCheck.id}, status=${cooCheck.status}, restaurantOrderId=${cooCheck.restaurantOrderId}` : 'NOT FOUND'}`);
+    if (cooCheck && cooCheck.restaurantOrderId) {
+      const linkedOrderCheck = await Order.findOne({ id: cooCheck.restaurantOrderId });
+      console.log(`[acceptTransfer] Linked order: ${linkedOrderCheck ? `id=${linkedOrderCheck.id}, status=${linkedOrderCheck.status}` : 'NOT FOUND'}`);
+      if (linkedOrderCheck && linkedOrderCheck.status === 'paid') linkedOrderPaid = true;
+    }
   }
   console.log(`[acceptTransfer] linkedOrderPaid: ${linkedOrderPaid} → ${linkedOrderPaid ? 'SKIP stock' : 'ADD stock'}`);
 

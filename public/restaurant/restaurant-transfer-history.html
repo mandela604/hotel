@@ -713,10 +713,11 @@ function getAllRecords() {
       actionDate: '',
       source: normalizeSource(t),
       _kind: 'transfer',
+      batchTransferNo: t.batchTransferNo || '',
     }))
   );
   const history = (RS.state.history || []).map((h) =>
-    normalizeItems(Object.assign({}, h, { source: normalizeSource(h), _kind: 'transfer' }))
+    normalizeItems(Object.assign({}, h, { source: normalizeSource(h), _kind: 'transfer', batchTransferNo: h.batchTransferNo || '' }))
   );
 
   let requisitions = [];
@@ -1057,31 +1058,45 @@ function renderTable() {
   const start = (page - 1) * CFG.PAGE_SIZE;
   const pageRows = rows.slice(start, start + CFG.PAGE_SIZE);
 
-  document.getElementById('tblBody').innerHTML =
-    pageRows.length === 0
-      ? '<tr class="empty-row"><td colspan="9">No history matches your filters.</td></tr>'
-      : pageRows.map(function (r) {
-          const src = displaySource(r);
-          const st = displayStatus(r);
-          const isReq = isRequisition(r);
-          const showTransferActions = !isReq && r.status === 'pending' && (canAccept || canReject);
-          var actionsHtml = '<button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i> View</button>';
-          if (showTransferActions) {
-            actionsHtml = '<button class="act-btn" style="background:var(--green-bg);color:var(--green);border-color:rgba(18,183,106,.3);margin-right:4px;" onclick="openAccept(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-check"></i> Accept</button>' +
-              '<button class="act-btn" style="background:var(--red-bg);color:var(--red);border-color:rgba(240,68,56,.3);margin-right:4px;" onclick="openReject(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-ban"></i> Reject</button>' +
-              '<button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i></button>';
-          }
-          return '<tr data-no="' + escapeHtml(r.no) + '" style="cursor:pointer;" onclick="openDetail(\'' + escapeHtml(r.no) + '\')">' +
-            '<td style="font-weight:700;">' + escapeHtml(r.no) + '</td>' +
-            '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></td>' +
-            '<td>' + escapeHtml(rowByLine(r)) + '</td>' +
-            '<td class="items-summary">' + itemsSummary(r) + '</td>' +
-            '<td>' + escapeHtml(rowDate(r)) + '</td>' +
-            '<td>' + priorityChip(rowPriority(r)) + '</td>' +
-            '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
-            '<td class="no-print" onclick="event.stopPropagation();">' + actionsHtml + '</td>' +
-          '</tr>';
-        }).join('');
+  if (pageRows.length === 0) {
+    document.getElementById('tblBody').innerHTML = '<tr class="empty-row"><td colspan="9">No history matches your filters.</td></tr>';
+  } else {
+    var html = '';
+    var lastBatch = null;
+    pageRows.forEach(function (r) {
+      const src = displaySource(r);
+      const st = displayStatus(r);
+      const isReq = isRequisition(r);
+      const showTransferActions = !isReq && r.status === 'pending' && (canAccept || canReject);
+
+      // Inject batch group header when batchTransferNo changes
+      if (!isReq && r.batchTransferNo && r.batchTransferNo !== lastBatch) {
+        lastBatch = r.batchTransferNo;
+        html += '<tr style="background:var(--blue-bg);"><td colspan="9" style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.5px;">' +
+          '<i class="fa-solid fa-layer-group"></i> Batch Transfer — ' + escapeHtml(r.batchTransferNo) + '</td></tr>';
+      } else if (isReq || !r.batchTransferNo) {
+        lastBatch = null;
+      }
+
+      var actionsHtml = '<button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i> View</button>';
+      if (showTransferActions) {
+        actionsHtml = '<button class="act-btn" style="background:var(--green-bg);color:var(--green);border-color:rgba(18,183,106,.3);margin-right:4px;" onclick="openAccept(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-check"></i> Accept</button>' +
+          '<button class="act-btn" style="background:var(--red-bg);color:var(--red);border-color:rgba(240,68,56,.3);margin-right:4px;" onclick="openReject(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-ban"></i> Reject</button>' +
+          '<button class="act-btn" data-view="' + escapeHtml(r.no) + '" onclick="openDetail(\'' + escapeHtml(r.no) + '\')"><i class="fa-solid fa-eye"></i></button>';
+      }
+      html += '<tr data-no="' + escapeHtml(r.no) + '" style="cursor:pointer;" onclick="openDetail(\'' + escapeHtml(r.no) + '\')">' +
+        '<td style="font-weight:700;">' + escapeHtml(r.no) + '</td>' +
+        '<td><span class="chip ' + src.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(src.label) + '</span></td>' +
+        '<td>' + escapeHtml(rowByLine(r)) + '</td>' +
+        '<td class="items-summary">' + itemsSummary(r) + '</td>' +
+        '<td>' + escapeHtml(rowDate(r)) + '</td>' +
+        '<td>' + priorityChip(rowPriority(r)) + '</td>' +
+        '<td><span class="chip ' + st.cls + '"><i class="fa-solid fa-circle"></i>' + escapeHtml(st.label) + '</span></td>' +
+        '<td class="no-print" onclick="event.stopPropagation();">' + actionsHtml + '</td>' +
+        '</tr>';
+    });
+    document.getElementById('tblBody').innerHTML = html;
+  }
   renderPagination(rows.length);
 }
 

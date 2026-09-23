@@ -635,7 +635,6 @@
       if (!Array.isArray(p.dishes) || !p.dishes.length) return;
       var list = transfersForCurrent();
       var completedDishes = p.dishes.filter(function (d) { return d.status === 'completed'; });
-      // Collect all rows that still have remaining qty
       var toSend = [];
       completedDishes.forEach(function (d) {
         var realIdx = p.dishes.indexOf(d);
@@ -649,6 +648,9 @@
         if (qty > 0) toSend.push({ dish: d, idx: realIdx, qty: qty, unit: unit, dest: dest });
       });
       if (!toSend.length) { toast('Nothing left to transfer.', 'error'); return; }
+
+      // All dishes in this batch share one batchTransferNo so restaurant can group them
+      var batchTransferNo = 'BTN-' + Date.now();
 
       sendingTransfer = true;
       var btn = $('[data-act="sendAllTransfers"]');
@@ -667,6 +669,7 @@
             remarks: 'Batch transfer',
             productionNo: pNo,
             restaurant: row.dest,
+            batchTransferNo: batchTransferNo,
           });
           succeeded++;
         } catch (err) {
@@ -676,7 +679,7 @@
       sendingTransfer = false;
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Transfer All to Restaurant'; }
       if (failed.length === 0) {
-        toast(succeeded + ' dish' + (succeeded !== 1 ? 'es' : '') + ' transferred.', 'success');
+        toast(succeeded + ' dish' + (succeeded !== 1 ? 'es' : '') + ' transferred as batch ' + batchTransferNo + '.', 'success');
       } else {
         toast(succeeded + ' sent, ' + failed.length + ' failed: ' + failed.join('; '), 'error');
       }
