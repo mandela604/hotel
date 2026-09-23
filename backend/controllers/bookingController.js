@@ -43,46 +43,17 @@ function payStatusFor(b) {
   return 'Deposit Paid';
 }
 
-/* Resolve a booking for per-stay endpoints.
-   New flow: client sends stayId (preferred). Old flow: client only sends room number.
-   We try stayId first (body/query/param), then _id, then room fallback. */
+/* Resolve a booking strictly by booking id (stayId / _id).
+   No room fallback — caller must supply stayId. */
 async function resolveBooking(req) {
   const param = req.params.room || req.params.num || req.params.id || '';
   const bodyStay = (req.body && (req.body.stayId || req.body.bookingId)) || '';
   const queryStay = req.query.stayId || req.query.bookingId || '';
-  const stay = bodyStay || queryStay;
+  const stay = bodyStay || queryStay || param;
   if (stay) {
     const byStay = await Booking.findOne({ stayId: stay });
     if (byStay) return byStay;
-    // also try _id
     try { const byId = await Booking.findById(stay); if (byId) return byId; } catch(e){}
-  }
-  if (param) {
-    // param could be a stayId / _id — must not fall through to room search if it looks like an id
-    let byStay = await Booking.findOne({ stayId: param });
-    if (byStay) return byStay;
-    try { const byId = await Booking.findById(param); if (byId) return byId; } catch(e){}
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
-    const isObjectId = /^[0-9a-f]{24}$/i.test(param);
-    if (isUuid || isObjectId) return null; // don't treat a stayId as a room number
-    // fallback: room number — prefer currently checked-in, then nearest reserved, else most recent
-    const cands = await Booking.find({ room: param }).sort({ updatedAt: -1 });
-    if (cands.length === 1) return cands[0];
-    const checked = cands.find(c => c.status === 'checkedin');
-    if (checked) return checked;
-    // among reserved, prefer the one whose checkin is closest to today (or already started)
-    const reserved = cands.filter(c => c.status === 'reserved' && c.checkin);
-    if (reserved.length) {
-      reserved.sort((a,b) => new Date(a.checkin) - new Date(b.checkin));
-      const today = new Date(); today.setHours(0,0,0,0);
-      // first reserved that hasn't ended yet is most relevant
-      const upcoming = reserved.find(r => new Date(r.checkout) >= today);
-      if (upcoming) return upcoming;
-      return reserved[reserved.length - 1];
-    }
-    const active = cands.find(c => ['reserved','checkedin'].includes(c.status));
-    if (active) return active;
-    if (cands.length) return cands[0];
   }
   return null;
 }
