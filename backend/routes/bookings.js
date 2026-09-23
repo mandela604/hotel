@@ -58,5 +58,6 @@ router.post('/guests/:id/charges/settle-all', inDept, privilegeGuard('booking', 
 // One-time migration: clear Guest.stays[]
 router.post('/migrate/clear-guest-stays', bookingController.clearGuestStays);
 router.post('/migrate/backfill-rates', bookingController.backfillBookingRates);
+router.post('/migrate/fix-room-index', bookingController.fixBookingRoomIndex);
 
 module.exports = router;

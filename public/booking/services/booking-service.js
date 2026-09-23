@@ -170,21 +170,18 @@
   }
 
   async function saveBooking(entry) {
-    // Decide create vs edit: a room is only a "new stay" if it's
-    // currently vacant / guest-less.
-    let existing = null;
-    try { existing = await getBooking(entry.room); } catch (e) { existing = null; }
-    const isNewStay = !existing || !existing.guest;
-
-    if (isNewStay) {
-      const res = await post('/bookings', Object.assign({ status: entry.status || 'reserved' }, entry));
+    // Per-stay model: stayId present => edit that exact stay.
+    // No stayId => always create new stay (backend checks date overlap and returns 409 if clash).
+    if (entry.stayId) {
+      const res = await put('/bookings/' + encodeURIComponent(entry.stayId), entry);
       return res.data;
     }
-    const res = await put('/bookings/' + encodeURIComponent(entry.room), entry);
+    const res = await post('/bookings', Object.assign({ status: entry.status || 'reserved' }, entry));
     return res.data;
   }
 
   async function addBookingPayment(roomNum, payment) {
+    // roomNum may be a room number or a stayId — backend resolveBooking handles both
     const res = await post('/bookings/' + encodeURIComponent(roomNum) + '/payments', payment);
     return res.data;
   }

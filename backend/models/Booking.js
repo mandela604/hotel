@@ -10,8 +10,8 @@ const paymentEntrySchema = new mongoose.Schema({
 }, { _id: false });
 
 const bookingSchema = new mongoose.Schema({
-  room:       { type: String, required: true, unique: true },
-  stayId:     { type: String, default: '' },
+  room:       { type: String, required: true, index: true },
+  stayId:     { type: String, default: '', unique: true, sparse: true },
   type:       { type: String, default: 'Standard' },
   guest:      { type: String, default: '' },
   guestId:    { type: String, default: '' },

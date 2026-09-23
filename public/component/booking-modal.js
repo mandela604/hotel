@@ -821,6 +821,7 @@
         : (roomVal ? roomVal.split('|')[0] : '');
       return {
         room: roomNum,
+        stayId: mode === 'edit' && editBooking ? (editBooking.stayId || editBooking._id || '') : '',
         type: val('type'),
         guest: val('name').trim(),
         phone: val('phone').trim(),
@@ -942,7 +943,9 @@
       addingPayment = true;
       applyEditability();
       try {
-        var row = await service.addBookingPayment(editBooking.room, { amount: amt, mode: payMode });
+        var payStay = (editBooking.stayId || editBooking._id || editBooking.room);
+        var payPayload = { amount: amt, mode: payMode, stayId: editBooking.stayId || '' };
+        var row = await service.addBookingPayment(payStay, payPayload);
         editBooking = row;
         var payAcc = $('[data-role="payAcc"]');
         if (payAcc) { payAcc.hidden = true; payAcc.classList.remove('open'); }
@@ -1170,7 +1173,8 @@
       if (!ok) return;
 
       try {
-        var row = await service.checkoutBooking(editBooking.room);
+        var coStay = editBooking.stayId || editBooking._id || editBooking.room;
+        var row = await service.checkoutBooking(coStay);
         toast('Guest checked out. Room is now Cleaning.', 'success');
         close();
         onSaved(row);
@@ -1241,7 +1245,8 @@
       );
       if (!ok) return;
       try {
-        await service.deleteBooking(editBooking.room);
+        var delStay = editBooking.stayId || editBooking._id || editBooking.room;
+        await service.deleteBooking(delStay);
         toast('Booking deleted. Room marked available.', 'info');
         close();
         onDeleted(editBooking.room);

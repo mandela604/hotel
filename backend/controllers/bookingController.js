@@ -43,6 +43,36 @@ function payStatusFor(b) {
   return 'Deposit Paid';
 }
 
+/* Resolve a booking for per-stay endpoints.
+   New flow: client sends stayId (preferred). Old flow: client only sends room number.
+   We try stayId first (body/query/param), then _id, then room fallback. */
+async function resolveBooking(req) {
+  const param = req.params.room || req.params.num || req.params.id || '';
+  const bodyStay = (req.body && (req.body.stayId || req.body.bookingId)) || '';
+  const queryStay = req.query.stayId || req.query.bookingId || '';
+  const stay = bodyStay || queryStay;
+  if (stay) {
+    const byStay = await Booking.findOne({ stayId: stay });
+    if (byStay) return byStay;
+    // also try _id
+    try { const byId = await Booking.findById(stay); if (byId) return byId; } catch(e){}
+  }
+  if (param) {
+    // param could be a stayId / _id
+    let byStay = await Booking.findOne({ stayId: param });
+    if (byStay) return byStay;
+    try { const byId = await Booking.findById(param); if (byId) return byId; } catch(e){}
+    // fallback: room number — pick most relevant active stay
+    const cands = await Booking.find({ room: param }).sort({ updatedAt: -1 });
+    if (cands.length === 1) return cands[0];
+    // prefer reserved/checkedin, else most recent
+    const active = cands.find(c => ['reserved','checkedin'].includes(c.status));
+    if (active) return active;
+    if (cands.length) return cands[0];
+  }
+  return null;
+}
+
 function todayDDMMYY() {
   const d = new Date();
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
@@ -316,7 +346,7 @@ exports.listBookings = asyncHandler(async (req, res) => {
 });
 
 exports.getBooking = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
   res.json({ success: true, data: booking });
 });
@@ -334,6 +364,14 @@ exports.getActiveBookingForRoom = asyncHandler(async (req, res) => {
 // take a vacant room and assign a guest to it — same action whether it's
 // triggered from booking-list.html "New Booking" or booking-rooms.html
 // "Book" on a room card.
+/* helper: true if [a,b) overlaps [c,d) */
+function datesOverlap(aStart, aEnd, bStart, bEnd) {
+  if (!aStart || !aEnd || !bStart || !bEnd) return false;
+  const aS = new Date(aStart), aE = new Date(aEnd), bS = new Date(bStart), bE = new Date(bEnd);
+  if (isNaN(aS) || isNaN(aE) || isNaN(bS) || isNaN(bE)) return false;
+  return aS < bE && aE > bS;
+}
+
 exports.createBooking = asyncHandler(async (req, res) => {
   const {
     room, type, guest, phone, email, address, idType, idNum,
@@ -341,48 +379,75 @@ exports.createBooking = asyncHandler(async (req, res) => {
     notes, status,
   } = req.body;
 
-  const booking = await Booking.findOne({ room });
-  if (!booking) return res.status(404).json({ success: false, error: `Room ${room} not found — add the room first` });
-  if (booking.status !== 'vacant') {
-    if (booking.status === 'reserved' && booking.checkin && checkin) {
-      var today = new Date(); today.setHours(0,0,0,0);
-      var resStart = new Date(booking.checkin); resStart.setHours(0,0,0,0);
-      if (today < resStart) {
-        // Room reserved for future — allow booking that ends before reservation starts
-      } else {
-        return res.status(409).json({ success: false, error: `Room ${room} is not available (currently '${booking.status}')` });
-      }
-    } else {
-      return res.status(409).json({ success: false, error: `Room ${room} is not available (currently '${booking.status}')` });
+  const roomDoc = await Room.findOne({ num: room });
+  if (!roomDoc) return res.status(404).json({ success: false, error: `Room ${room} not found — add the room first` });
+
+  // Check for overlapping ACTIVE stays (reserved/checkedin) for same room
+  const activeStays = await Booking.find({ room, status: { $in: ['reserved', 'checkedin'] } });
+  for (const s of activeStays) {
+    if (datesOverlap(checkin, checkout, s.checkin, s.checkout)) {
+      return res.status(409).json({ success: false, error: `Room ${room} already booked ${s.checkin} → ${s.checkout} (${s.guest})` });
     }
   }
 
-  Object.assign(booking, {
-    stayId: uuidv4(),
-    type: type || booking.type,
-    guest: guest.trim(),
-    phone: phone || '',
-    email: email || '',
-    address: address || '',
-    idType: idType || 'NIN',
-    idNum: idNum || '',
-    checkin: checkin || '',
-    checkout: checkout || '',
-    rate: rate !== undefined ? Number(rate) : booking.rate,
-    discount: discount !== undefined ? Number(discount) : 0,
-    payments: [],
-    paid: 0,
-    payMethod: payMethod || 'Cash',
-    payStatus: 'Pending',
-    recordedBy: req.user ? req.user.name : booking.recordedBy,
-    adults: adults !== undefined ? Number(adults) : 1,
-    children: children !== undefined ? Number(children) : 0,
-    status: status || 'reserved',
-    notes: notes || '',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  });
-  await booking.save();
+  // Reuse a vacant placeholder if one exists, otherwise create a new stay doc
+  let booking = await Booking.findOne({ room, status: 'vacant' });
+  const isReuse = !!booking;
+  if (isReuse) {
+    Object.assign(booking, {
+      stayId: uuidv4(),
+      type: type || booking.type,
+      guest: guest.trim(),
+      phone: phone || '',
+      email: email || '',
+      address: address || '',
+      idType: idType || 'NIN',
+      idNum: idNum || '',
+      checkin: checkin || '',
+      checkout: checkout || '',
+      rate: rate !== undefined ? Number(rate) : booking.rate,
+      discount: discount !== undefined ? Number(discount) : 0,
+      payments: [],
+      paid: 0,
+      payMethod: payMethod || 'Cash',
+      payStatus: 'Pending',
+      recordedBy: req.user ? req.user.name : booking.recordedBy,
+      adults: adults !== undefined ? Number(adults) : 1,
+      children: children !== undefined ? Number(children) : 0,
+      status: status || 'reserved',
+      notes: notes || '',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await booking.save();
+  } else {
+    booking = await Booking.create({
+      room,
+      stayId: uuidv4(),
+      type: type || roomDoc.type || 'Standard',
+      guest: (guest || '').trim(),
+      phone: phone || '',
+      email: email || '',
+      address: address || '',
+      idType: idType || 'NIN',
+      idNum: idNum || '',
+      checkin: checkin || '',
+      checkout: checkout || '',
+      rate: rate !== undefined ? Number(rate) : roomDoc.rate || 0,
+      discount: discount !== undefined ? Number(discount) : 0,
+      payments: [],
+      paid: 0,
+      payMethod: payMethod || 'Cash',
+      payStatus: 'Pending',
+      recordedBy: req.user ? req.user.name : '',
+      adults: adults !== undefined ? Number(adults) : 1,
+      children: children !== undefined ? Number(children) : 0,
+      status: status || 'reserved',
+      notes: notes || '',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
 
   // Attach this stay to (or create) the guest's profile.
   const guestProfile = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
@@ -399,8 +464,20 @@ exports.createBooking = asyncHandler(async (req, res) => {
 // notes changes. Does not touch payments (use addPayment for that) or
 // status (use checkin/checkout/setRoomStatus for that).
 exports.updateBooking = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+
+  // If dates are being changed, ensure no overlap with other active stays for same room
+  const newCheckin = req.body.checkin !== undefined ? req.body.checkin : booking.checkin;
+  const newCheckout = req.body.checkout !== undefined ? req.body.checkout : booking.checkout;
+  if ((req.body.checkin !== undefined || req.body.checkout !== undefined) && newCheckin && newCheckout) {
+    const otherStays = await Booking.find({ room: booking.room, _id: { $ne: booking._id }, status: { $in: ['reserved', 'checkedin'] } });
+    for (const s of otherStays) {
+      if (datesOverlap(newCheckin, newCheckout, s.checkin, s.checkout)) {
+        return res.status(409).json({ success: false, error: `Room ${booking.room} already booked ${s.checkin} → ${s.checkout} (${s.guest})` });
+      }
+    }
+  }
 
   const fields = ['type', 'guest', 'phone', 'email', 'address', 'idType', 'idNum',
     'checkin', 'checkout', 'rate', 'discount', 'payMethod', 'adults', 'children', 'notes'];
@@ -431,24 +508,30 @@ exports.updateBooking = asyncHandler(async (req, res) => {
 // booking-list.html's confirmDelete() toast: "Booking deleted. Room
 // marked as Available."
 exports.deleteBooking = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
 
   const guestName = booking.guest;
-  Object.assign(booking, {
-    guest: '', phone: '', email: '', address: '', idNum: '',
-    checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
-    payStatus: 'Pending', adults: 1, children: 0, notes: '', status: 'vacant',
-  });
-  booking.updatedAt = Date.now();
-  await booking.save();
+  const roomNum = booking.room;
+  const countForRoom = await Booking.countDocuments({ room: roomNum });
+  if (countForRoom > 1) {
+    await Booking.deleteOne({ _id: booking._id });
+  } else {
+    Object.assign(booking, {
+      guest: '', phone: '', email: '', address: '', idNum: '',
+      checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
+      payStatus: 'Pending', adults: 1, children: 0, notes: '', status: 'vacant',
+    });
+    booking.updatedAt = Date.now();
+    await booking.save();
+  }
 
-  await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + req.params.room} deleted — room marked available`, 'booking-list.html');
+  await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + roomNum} deleted — room marked available`, 'booking-list.html');
   res.json({ success: true, message: 'Booking deleted. Room marked as Available.', data: booking });
 });
 
 exports.checkinBooking = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
   if (!['reserved'].includes(booking.status)) {
     return res.status(400).json({ success: false, error: `Cannot check in from status '${booking.status}'` });
@@ -471,7 +554,7 @@ exports.checkinBooking = asyncHandler(async (req, res) => {
 });
 
 exports.checkoutBooking = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
   if (booking.status !== 'checkedin') {
     return res.status(400).json({ success: false, error: `Cannot check out from status '${booking.status}'` });
@@ -494,7 +577,7 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
 });
 
 exports.markNoShow = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
   if (booking.status !== 'reserved') {
     return res.status(400).json({ success: false, error: `Cannot mark no-show from status '${booking.status}'` });
@@ -510,7 +593,7 @@ exports.markNoShow = asyncHandler(async (req, res) => {
 });
 
 exports.cancelRefund = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
   if (!['reserved', 'checkedin', 'no-show'].includes(booking.status)) {
     return res.status(400).json({ success: false, error: `Cannot cancel from status '${booking.status}'` });
@@ -579,7 +662,7 @@ exports.getBookingData = asyncHandler(async (req, res) => {
 // Adds a payment entry to a booking's payments[] and recomputes paid/
 // payStatus — same shape as paymentEntrySchema (id, amount, mode, date, by, ts).
 exports.addPayment = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.room });
+  const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
 
   const { amount, mode } = req.body;
@@ -1081,4 +1164,23 @@ exports.backfillBookingRates = asyncHandler(async (req, res) => {
   }
   console.log(`[Migration] Backfilled rate on ${updated} bookings from room rates`);
   res.json({ success: true, message: `Backfilled rate on ${updated} of ${bookings.length} bookings` });
+});
+
+/* ── One-time migration: drop unique index on Booking.room (per-stay model) ── */
+exports.fixBookingRoomIndex = asyncHandler(async (req, res) => {
+  try {
+    await Booking.collection.dropIndex('room_1');
+    console.log('[Migration] Dropped unique index room_1');
+  } catch (e) {
+    console.log('[Migration] dropIndex room_1:', e.message);
+  }
+  try {
+    await Booking.collection.createIndex({ room: 1 });
+    console.log('[Migration] Created non-unique index on room');
+  } catch (e) { console.log('[Migration] createIndex room:', e.message); }
+  try {
+    await Booking.collection.createIndex({ stayId: 1 }, { unique: true, sparse: true });
+    console.log('[Migration] Ensured unique sparse index on stayId');
+  } catch (e) { console.log('[Migration] createIndex stayId:', e.message); }
+  res.json({ success: true, message: 'Booking room index fixed to per-stay model' });
 });
