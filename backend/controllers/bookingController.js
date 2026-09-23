@@ -26,7 +26,7 @@ const NO_SHOW_FIELDS = {
 };
 function calcTotal(b) {
   const n = nights(b.checkin, b.checkout) || 1;
-  return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
+  return Math.max(0, (b.rate || 0) * n);
 }
 function calcPaid(b) {
   const raw = (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
@@ -1057,4 +1057,24 @@ exports.clearGuestStays = asyncHandler(async (req, res) => {
   const result = await Guest.updateMany({}, { $set: { stays: [] } });
   console.log(`[Migration] Cleared stays from ${result.modifiedCount} guests`);
   res.json({ success: true, message: `Cleared stays from ${result.modifiedCount} guest documents` });
+});
+
+/* ── One-time migration: backfill rate on bookings from Room rate ── */
+exports.backfillBookingRates = asyncHandler(async (req, res) => {
+  const rooms = await Room.find().lean();
+  const roomRateMap = {};
+  for (const r of rooms) { roomRateMap[r.num] = r.rate || 0; }
+
+  const bookings = await Booking.find({ status: { $ne: 'vacant' } });
+  let updated = 0;
+  for (const b of bookings) {
+    const roomRate = roomRateMap[b.room];
+    if (roomRate && (!b.rate || b.rate === 0)) {
+      b.rate = roomRate;
+      await b.save();
+      updated++;
+    }
+  }
+  console.log(`[Migration] Backfilled rate on ${updated} bookings from room rates`);
+  res.json({ success: true, message: `Backfilled rate on ${updated} of ${bookings.length} bookings` });
 });

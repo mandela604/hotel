@@ -279,8 +279,7 @@
     }
     function calcTotal(bk) {
       var n = nights(bk.checkin, bk.checkout) || 1;
-      var discAmt = (Number(bk.discount) || 0) * n;
-      return Math.max(0, (bk.rate || 0) * n - discAmt);
+      return Math.max(0, (bk.rate || 0) * n);
     }
     function calcPaid(bk) {
       if (service && service.calcPaid) return service.calcPaid(bk);
