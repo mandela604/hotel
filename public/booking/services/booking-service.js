@@ -164,8 +164,14 @@
     return Object.assign({}, res.data, { session: getSession() });
   }
 
-  async function getBooking(roomNum) {
-    const res = await get('/bookings/' + encodeURIComponent(roomNum));
+  async function getBooking(roomOrStayId) {
+    // If it looks like a UUID (stayId), use the stayId endpoint
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(roomOrStayId);
+    if (isUUID) {
+      const res = await get('/stay/' + encodeURIComponent(roomOrStayId));
+      return res.data;
+    }
+    const res = await get('/bookings/' + encodeURIComponent(roomOrStayId));
     return res.data;
   }
 

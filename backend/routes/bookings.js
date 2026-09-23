@@ -37,6 +37,7 @@ router.patch('/rooms/:num/status', roleGuard('admin', 'manager', 'front_desk', '
 /* Bookings */
 router.get('/bookings', bookingController.listBookings);
 router.get('/bookings/active-for-room', bookingController.getActiveBookingForRoom);
+router.get('/stay/:stayId', bookingController.getBookingByStayId);
 router.get('/bookings/:room', v.validateParam('room'), bookingController.getBooking);
 router.post('/bookings', bookingWriteLimiter, inDept, privilegeGuard('booking', 'canCreate'), v.validateCreateBooking, bookingController.createBooking);
 router.put('/bookings/:room', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('room'), v.validateUpdateBooking, bookingController.updateBooking);
