@@ -679,7 +679,12 @@ function openBookingForRoom(num) {
 
 function openBookingFromCard(num) {
   const session = getSession();
-  const bk = bookings.find(function(b){ return b.room === num; });
+  const cands = bookings.filter(function(b){ return b.room === num; });
+  let bk = null;
+  if (cands.length === 1) bk = cands[0];
+  else if (cands.length > 1) {
+    bk = cands.find(function(x){ return x.status === 'checkedin'; }) || cands.find(function(x){ return x.status === 'reserved'; }) || cands[0];
+  }
   const st = bk ? (bk.status || 'vacant') : 'vacant';
   bookingModal.setSession(session);
   if (st === 'checkout' || st === 'cleaning') {

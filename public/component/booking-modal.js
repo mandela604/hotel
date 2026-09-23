@@ -279,7 +279,7 @@
     }
     function calcTotal(bk) {
       var n = nights(bk.checkin, bk.checkout) || 1;
-      return Math.max(0, (bk.rate || 0) * n);
+      return Math.max(0, ((bk.rate || 0) - (bk.discount || 0)) * n);
     }
     function calcPaid(bk) {
       if (service && service.calcPaid) return service.calcPaid(bk);
@@ -1348,8 +1348,9 @@
       if (!booking) return;
       mode = 'edit';
       await loadContext();
+      var key = booking.stayId || booking._id || booking.id || booking.room;
       editBooking = (service && service.getBooking)
-        ? (await service.getBooking(booking.room)) || booking
+        ? (await service.getBooking(key)) || booking
         : booking;
       currentGuest = findGuestForBooking(editBooking);
       clearForm();
@@ -1366,8 +1367,9 @@
       if (!booking) return;
       mode = 'view';
       await loadContext();
+      var vkey = booking.stayId || booking._id || booking.id || booking.room;
       editBooking = (service && service.getBooking)
-        ? (await service.getBooking(booking.room)) || booking
+        ? (await service.getBooking(vkey)) || booking
         : booking;
       currentGuest = findGuestForBooking(editBooking);
       clearForm();

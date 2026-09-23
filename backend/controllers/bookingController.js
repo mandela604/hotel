@@ -26,7 +26,7 @@ const NO_SHOW_FIELDS = {
 };
 function calcTotal(b) {
   const n = nights(b.checkin, b.checkout) || 1;
-  return Math.max(0, (b.rate || 0) * n);
+  return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
 }
 function calcPaid(b) {
   const raw = (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
@@ -62,10 +62,21 @@ async function resolveBooking(req) {
     let byStay = await Booking.findOne({ stayId: param });
     if (byStay) return byStay;
     try { const byId = await Booking.findById(param); if (byId) return byId; } catch(e){}
-    // fallback: room number — pick most relevant active stay
+    // fallback: room number — prefer currently checked-in, then nearest reserved, else most recent
     const cands = await Booking.find({ room: param }).sort({ updatedAt: -1 });
     if (cands.length === 1) return cands[0];
-    // prefer reserved/checkedin, else most recent
+    const checked = cands.find(c => c.status === 'checkedin');
+    if (checked) return checked;
+    // among reserved, prefer the one whose checkin is closest to today (or already started)
+    const reserved = cands.filter(c => c.status === 'reserved' && c.checkin);
+    if (reserved.length) {
+      reserved.sort((a,b) => new Date(a.checkin) - new Date(b.checkin));
+      const today = new Date(); today.setHours(0,0,0,0);
+      // first reserved that hasn't ended yet is most relevant
+      const upcoming = reserved.find(r => new Date(r.checkout) >= today);
+      if (upcoming) return upcoming;
+      return reserved[reserved.length - 1];
+    }
     const active = cands.find(c => ['reserved','checkedin'].includes(c.status));
     if (active) return active;
     if (cands.length) return cands[0];

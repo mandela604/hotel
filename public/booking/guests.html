@@ -481,7 +481,7 @@ function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtDate(d){ if(!d) return '—'; var p=String(d).split(/[/\-]/); if(p.length<3){var dt=new Date(d);return isNaN(dt.getTime())?'—':dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});} return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10)).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function initials(name){ return name.replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Chief)\s*/i,'').split(/[\s,]+/).filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 function parseLocalDate(s){var p=String(s).split(/[/\-]/);if(p.length>=3)return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10));var d=new Date(s);return d;}
-function bookingTotal(b){ const n=(parseLocalDate(b.checkout)-parseLocalDate(b.checkin))/86400000; const nights=Math.max(1,n||1); return Math.max(0,(b.rate||0)*nights); }
+function bookingTotal(b){ const n=(parseLocalDate(b.checkout)-parseLocalDate(b.checkin))/86400000; const nights=Math.max(1,n||1); return Math.max(0,((b.rate||0)-(b.discount||0))*nights); }
 function bookingPaid(b){ return (b.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0) || Number(b.paid)||0; }
 function activeBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return b.guest===g.name && (b.status==='reserved'||b.status==='checkedin'); }); }
 function allBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return b.guest===g.name; }); }
