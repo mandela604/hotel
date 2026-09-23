@@ -879,6 +879,9 @@ exports.getReports = asyncHandler(async (req, res) => {
   const nightsCount = filtered.reduce((s, b) => s + (nights(b.checkin, b.checkout) || 0), 0);
   const fullyPaid = filtered.filter(b => b.payStatus === 'Fully Paid').length;
 
+  console.log(`[Reports] KPIs — totRev: ${totRev}, totRefunded: ${totRefunded}, netRev: ${netRev}, totPaid: ${totPaid}, totBal: ${totBal}`);
+  console.log(`[Reports] Sample rates:`, filtered.slice(0, 5).map(b => ({ room: b.room, rate: b.rate, total: b.total, paid: b.paid })));
+
   res.json({
     success: true,
     data: {
