@@ -179,6 +179,7 @@
     const showDeduct = !!options.showDeduct;
     const showEdit = options.showEdit !== false;
     const showDelete = options.showDelete !== false;
+    const showAdjust = !!options.showAdjust;
     const rowClickable = options.rowClickable !== false;
     const emptyText = options.emptyText || 'No items match your filters.';
     let panelTitle = options.title || 'Inventory';
@@ -318,6 +319,9 @@
           if (showDeduct) {
             html += '<button type="button" class="it-act" data-it-deduct="' + esc(key) + '"><i class="fa-solid fa-minus"></i> Deduct</button>';
           }
+          if (showAdjust) {
+            html += '<button type="button" class="it-act" data-it-adjust="' + esc(key) + '" title="Stock adjustment"><i class="fa-solid fa-sliders"></i> Adjust</button>';
+          }
           if (showEdit) {
             html += '<button type="button" class="it-act" data-it-edit="' + esc(key) + '"><i class="fa-solid fa-pen"></i>' +
               (showDeduct ? '' : ' Edit') + '</button>';
@@ -344,6 +348,13 @@
           e.stopPropagation();
           const item = findRow(btn.getAttribute('data-it-deduct'));
           if (item && typeof options.onDeduct === 'function') options.onDeduct(item);
+        });
+      });
+      body.querySelectorAll('[data-it-adjust]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const item = findRow(btn.getAttribute('data-it-adjust'));
+          if (item && typeof options.onAdjust === 'function') options.onAdjust(item);
         });
       });
       body.querySelectorAll('[data-it-edit]').forEach(function (btn) {

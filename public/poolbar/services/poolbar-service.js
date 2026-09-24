@@ -514,6 +514,16 @@
     return item || res.data;
   }
 
+  async function adjustStock(id, delta, reason, notes) {
+    if (!delta || isNaN(delta)) throw new Error('Enter adjustment quantity.');
+    if (!reason) throw new Error('Reason required.');
+    const res = await apiPost('/stock/' + encodeURIComponent(id) + '/adjust', { delta: Number(delta), reason, notes });
+    const item = state.stock.find(i => (i.id || i._id) === id || i.name === id);
+    if (item) Object.assign(item, res.data);
+    emitChange('stock:adjust');
+    return item || res.data;
+  }
+
   /* ── Requisitions (Pool Bar → Store) ─────────────────────────────── */
   async function submitRequisition(opts) {
     opts = opts || {};
@@ -953,7 +963,7 @@
     onChange,
     loadAll,
     findStock,
-    addStockItem, editStockItem, deleteStockItem, deductStock,
+    addStockItem, editStockItem, deleteStockItem, deductStock, adjustStock,
     submitRequisition, receiveRequisition,
     recordSale, openTab, markServed, updateOrder, payOrder, cancelOrder, voidSale,
     cartTotals,

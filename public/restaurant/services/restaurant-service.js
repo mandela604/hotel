@@ -372,6 +372,16 @@ function dashboardKPIs() {
     emitChange('stock:delete');
   }
 
+  async function adjustStock(id, delta, reason, notes) {
+    if (!delta || isNaN(delta)) throw new Error('Enter adjustment quantity.');
+    if (!reason) throw new Error('Reason required.');
+    const res = await post('/stock/' + encodeURIComponent(id) + '/adjust', { delta: Number(delta), reason, notes });
+    var idx = state.stock.findIndex(function(i){ return (i.id || i._id) === id || i.name === id; });
+    if (idx > -1) state.stock[idx] = res.data;
+    emitChange('stock:adjust');
+    return res.data;
+  }
+
   async function listKitchenRecipes() {
     const res = await get('/recipes');
     return res.data || [];
@@ -572,7 +582,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     stockLevel, LEVEL_CHIP, LEVEL_LABEL, getLevelLabelsShort,
     getEmptyValuePlaceholder, getCurrencyConfig, getCategories,
     addCategory, renameCategory, deleteCategory,
-    findStock, addStockItem, editStockItem, deleteStockItem, listKitchenRecipes, addRecipeToStock,
+    findStock, addStockItem, editStockItem, deleteStockItem, adjustStock, listKitchenRecipes, addRecipeToStock,
     listMenu, addMenuItem, updateMenuItem, patchMenuItem, deleteMenuItem,
     recordSale, voidSale,
     openTab, markServed, payOrder, cancelOrder,

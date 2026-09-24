@@ -130,6 +130,20 @@ body {
 ::-webkit-scrollbar{ width:6px; height:6px; }
 ::-webkit-scrollbar-track{ background:transparent; }
 ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:6px; }
+/* ── Procurement Finance Review ── */
+.proc-wrap{ overflow-x:auto; }
+.proc-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:640px; }
+.proc-table th{ text-align:left; font-size:10.5px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+.proc-table td{ padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:top; color:var(--text); }
+.proc-table tr:last-child td{ border-bottom:none; }
+.proc-badge{ display:inline-flex; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; }
+.badge-pending{ background:var(--amber-bg); color:var(--amber); }
+.badge-urgent{ background:var(--red-bg); color:var(--red); }
+.proc-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+.btn-approve{ background:var(--green); color:#fff; border:none; border-radius:7px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+.btn-approve:hover{ background:#0e9355; }
+.btn-reject{ background:var(--surface2); color:var(--red); border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+.btn-reject:hover{ background:var(--red-bg); border-color:var(--red); }
 @media print{ #sidebarSlot,#topbarSlot,.no-print{ display:none !important; } .main{ margin-left:0 !important; } body{ background:#fff !important; color:#000 !important; } .panel{ box-shadow:none !important; border:1px solid #ccc !important; } }
 </style>
 </head>
@@ -146,6 +160,15 @@ body {
       </div>
 
       <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- Procurement — Awaiting Finance Review (accountant approves without entering procurement) -->
+      <div class="panel" id="procPanel" style="display:none;">
+        <div class="panel-head">
+          <div class="panel-title"><i class="fa-solid fa-file-invoice-dollar"></i>Procurement — Awaiting Finance Review</div>
+          <button class="panel-action" onclick="loadProcurementPending()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+        <div id="procBody"><div class="empty-note"><i class="fa-solid fa-spinner fa-spin"></i>Loading…</div></div>
+      </div>
 
       <div class="row">
         <div class="panel">
@@ -278,7 +301,7 @@ function applyPermissionsUI(){
    computeShiftTotals) now live in services/accounting-service.js —
    this page just asks AccountingData for numbers and renders them.
 ═══════════════════════════════════════════ */
-const SHIFT_START_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftStartHour) ? AccountingData.getShiftStartHour() : 9;
+let SHIFT_START_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftStartHour) ? AccountingData.getShiftStartHour() : 9;
 function shiftRangeLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
@@ -413,6 +436,52 @@ function renderRecentTx(allTx){
 }
 
 /* ═══════════════════════════════════════════
+   PROCUREMENT — Finance Review (accountant approves pending PRs here)
+   ═══════════════════════════════════════════ */
+function fmtN(n){ return AccountingData ? AccountingData.fmtN(n) : '\u20A6'+Number(n||0).toLocaleString(); }
+function escH(s){ const d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+async function loadProcurementPending(){
+  const panel=document.getElementById('procPanel');
+  const body=document.getElementById('procBody');
+  if(!panel||!body) return;
+  const can = canApprove(currentSession,'accounting');
+  panel.style.display = can ? '' : 'none';
+  if(!can) return;
+  body.innerHTML='<div class="empty-note"><i class="fa-solid fa-spinner fa-spin"></i>Loading…</div>';
+  try{
+    const list = await AccountingData.getPendingProcurement();
+    if(!list.length){
+      body.innerHTML='<div class="empty-note"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i>Nothing awaiting finance review.</div>';
+      return;
+    }
+    body.innerHTML='<div class="proc-wrap"><table class="proc-table"><thead><tr><th>PR No</th><th>Date</th><th>Dept</th><th>Items</th><th>Amount</th><th>Priority</th><th>Action</th></tr></thead><tbody>'
+      + list.map(r=>{
+        const items=(r.items||[]).map(i=>escH(i.name)+' \u00D7'+(i.qty||0)).join(', ') || escH(r.item||'');
+        const amt=fmtN(r.totalAmount||0);
+        const prId=escH(r.id||'');
+        const prNo=escH(r.prNo||r.id||'');
+        const dept=escH(r.dept||'');
+        const prio=escH(r.priority||'Normal');
+        const dateStr= r.date ? new Date(r.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : (r.createdAt? new Date(r.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'');
+        return '<tr><td><b>'+prNo+'</b><div style="font-size:10.5px;color:var(--text3)">'+escH(r.by||'')+'</div></td><td>'+dateStr+'</td><td>'+dept+'</td><td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+items+'">'+items+'</td><td><b>'+amt+'</b></td><td><span class="proc-badge '+(prio==='Urgent'?'badge-urgent':'badge-pending')+'">'+prio+'</span></td>'
+          +'<td><div class="proc-actions"><button class="btn-approve" onclick="approvePR(\''+prId+'\')"><i class="fa-solid fa-check"></i> Approve</button><button class="btn-reject" onclick="rejectPR(\''+prId+'\')"><i class="fa-solid fa-xmark"></i> Reject</button></div></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }catch(err){
+    body.innerHTML='<div class="empty-note" style="color:var(--red)"><i class="fa-solid fa-triangle-exclamation"></i>'+escH(err.message||'Failed to load')+'</div>';
+  }
+}
+async function approvePR(id){
+  if(!confirm('Approve this procurement request and forward to GM?')) return;
+  try{ await AccountingData.approveProcurement(id,''); AccountingData.showToast('Approved — forwarded to GM','success'); loadProcurementPending(); }catch(e){ AccountingData.showToast(e.message||'Approve failed','error'); }
+}
+async function rejectPR(id){
+  const reason=prompt('Rejection reason (required):');
+  if(reason===null) return;
+  if(!String(reason).trim()){ AccountingData.showToast('Reason is required','error'); return; }
+  try{ await AccountingData.rejectProcurement(id,String(reason).trim()); AccountingData.showToast('Rejected','info'); loadProcurementPending(); }catch(e){ AccountingData.showToast(e.message||'Reject failed','error'); }
+}
+
+/* ═══════════════════════════════════════════
    INIT — everything comes from AccountingData.getAccountingData(),
    which fetches from the backend API. Business logic lives in
    services/accounting-service.js now, same as BookingData owns that
@@ -441,6 +510,7 @@ async function init(){
     renderGrossBreakdown(shiftTotals);
     renderNetRevenue(shiftTotals);
     renderRecentTx(allTx);
+    loadProcurementPending();
   } catch (err) {
     console.error('[Accounting Dashboard] Failed to load:', err);
     document.getElementById('recentTx').innerHTML = `<div class="empty-note"><i class="fa-solid fa-triangle-exclamation"></i>${err.message || "Couldn't load accounting data."}</div>`;

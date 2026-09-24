@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Procurement Review | Accounting — Grace Hotel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--radius:14px;--radius-sm:10px}
+html{height:auto}
+body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;font-size:13px;min-height:100vh}
+.app{display:block}
+.main{margin-left:250px;min-height:100vh;display:flex;flex-direction:column;transition:margin-left .3s cubic-bezier(.4,0,.2,1)}
+@media(max-width:768px){.main{margin-left:0!important}}
+.content{
+  --bg:#f4f6fb;--surface:#fff;--surface2:#f4f6fb;--surface3:#eef0f6;
+  --border:#eef0f6;--border2:#dfe3ec;--text:#1c2440;--text2:#6b7280;--text3:#9aa1b3;
+  --shadow:0 4px 20px rgba(15,34,55,.07);--shadow-lg:0 8px 40px rgba(15,34,55,.10);
+  --gold:#2f6fed;--gold-light:#5b8ff9;--gold-dim:rgba(47,111,237,.10);--gold-border:rgba(47,111,237,.25);
+  --green:#12b76a;--green-bg:#e9f9f0;--red:#f04438;--red-bg:#feecec;--amber:#f79009;--amber-bg:#fff4e5;
+  --blue:#2f6fed;--blue-bg:#eaf1ff;--purple:#8b5cf6;--purple-bg:#f4efff;
+  flex:1;padding:20px 24px 28px;display:flex;flex-direction:column;gap:16px;background:var(--bg);color:var(--text)
+}
+@media(max-width:640px){.content{padding:16px 14px 22px}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.panel-title{font-size:12px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--text)}
+.panel-title i{color:var(--gold);margin-right:6px}
+.panel-action{font-size:11.5px;color:var(--gold);background:none;border:none;font-weight:700;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:700px){.kpi-row{grid-template-columns:1fr}}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.kpi-label{font-size:11px;color:var(--text2);font-weight:600}
+.kpi-value{font-size:22px;font-weight:800;margin:4px 0 2px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:720px;font-size:12.5px}
+th{text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.badge{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase}
+.badge-pending{background:var(--amber-bg);color:var(--amber)}
+.badge-urgent{background:var(--red-bg);color:var(--red)}
+.btn{border:none;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.btn-approve{background:var(--green);color:#fff}
+.btn-approve:hover{background:#0e9355}
+.btn-reject{background:var(--surface2);color:var(--red);border:1px solid var(--border)}
+.btn-reject:hover{background:var(--red-bg)}
+.btn-view{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.empty{padding:26px;text-align:center;color:var(--text3);font-size:13px}
+.empty i{font-size:22px;display:block;margin-bottom:8px;color:var(--border2)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:999;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:14px;max-width:560px;width:100%;padding:18px;box-shadow:0 16px 48px rgba(0,0,0,.3)}
+.modal h3{font-size:13px;font-weight:800;margin-bottom:10px}
+.modal p{font-size:12.5px;color:var(--text2);margin-bottom:10px;line-height:1.5}
+.modal textarea{width:100%;min-height:80px;border:1px solid var(--border2);border-radius:8px;padding:9px;font-family:inherit;font-size:12.5px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebarSlot"></div>
+  <div class="main">
+    <div id="topbarSlot"></div>
+    <div class="content">
+      <div class="kpi-row" id="kpiRow">
+        <div class="kpi-card"><div class="kpi-label">Awaiting Finance Review</div><div class="kpi-value" id="kpiPending">—</div><div style="font-size:11px;color:var(--text3)">Pending PRs needing accountant approval</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total Value Pending</div><div class="kpi-value" id="kpiValue">—</div><div style="font-size:11px;color:var(--text3)">Sum of pending procurement requests</div></div>
+        <div class="kpi-card"><div class="kpi-label">Urgent</div><div class="kpi-value" style="color:var(--red)" id="kpiUrgent">—</div><div style="font-size:11px;color:var(--text3)">Marked urgent</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><i class="fa-solid fa-file-invoice-dollar"></i>Procurement — Awaiting Finance Review</div>
+          <button class="panel-action" onclick="loadData()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+        <div id="tblWrap"><div class="empty"><i class="fa-solid fa-spinner fa-spin"></i>Loading…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <h3>Reject procurement request</h3>
+    <p id="rejectInfo"></p>
+    <textarea id="rejectReason" placeholder="Reason is required…"></textarea>
+    <div class="modal-foot">
+      <button class="btn btn-view" onclick="closeReject()">Cancel</button>
+      <button class="btn btn-reject" onclick="confirmReject()"><i class="fa-solid fa-xmark"></i> Reject</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="viewModal">
+  <div class="modal" style="max-width:640px">
+    <h3 id="viewTitle">Request</h3>
+    <div id="viewBody" style="font-size:12.5px;line-height:1.6;max-height:60vh;overflow:auto"></div>
+    <div class="modal-foot"><button class="btn btn-view" onclick="closeView()">Close</button></div>
+  </div>
+</div>
+
+<script src="../services/permissions.js"></script>
+<script src="services/accounting-service.js"></script>
+<script src="../component/accounting-shell.js"></script>
+<script>
+'use strict';
+const shell = AccountingShell.attach({
+  sidebarTarget:'#sidebarSlot',
+  topbarTarget:'#topbarSlot',
+  activeFile:'accounting-procurement.html',
+  pageTitle:'Procurement Review',
+  pageSubtitle:'Finance review of procurement requests — approve to forward to GM',
+  apiMode:'Live',
+  user:{name:'Finance',initials:'FI'}
+});
+function P(){return window.Permissions||null}
+function canApprove(s,m){
+  const x=P(); if(x&&x.canApprove) return x.canApprove(s,m);
+  return !!(s&&String(s.role).toLowerCase()==='admin');
+}
+let currentSession=null;
+let CACHE=[];
+let rejectId=null;
+
+function esc(s){const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+function fmtN(n){return AccountingData?AccountingData.fmtN(n):'₦'+Number(n||0).toLocaleString()}
+
+async function loadData(){
+  const wrap=document.getElementById('tblWrap');
+  wrap.innerHTML='<div class="empty"><i class="fa-solid fa-spinner fa-spin"></i>Loading…</div>';
+  try{
+    const list = await AccountingData.getPendingProcurement();
+    CACHE=list;
+    document.getElementById('kpiPending').textContent=list.length;
+    const total=list.reduce((s,r)=>s+(Number(r.totalAmount)||0),0);
+    document.getElementById('kpiValue').textContent=fmtN(total);
+    document.getElementById('kpiUrgent').textContent=list.filter(r=>r.priority==='Urgent').length;
+    const n=list.length;
+    const badgeEl=document.getElementById('acc-badge-proc');
+    // also update shell badge via API if available
+    if(shell&&shell.setPendingBadge) shell.setPendingBadge(n);
+    const procBadge=document.querySelector('#acc-badge-proc');
+    if(procBadge){ procBadge.textContent=n>0?n:''; procBadge.classList.toggle('show',n>0); }
+
+    if(!list.length){
+      wrap.innerHTML='<div class="empty"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i>Nothing awaiting finance review.</div>';
+      return;
+    }
+    wrap.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>PR No</th><th>Date</th><th>Dept</th><th>Items</th><th>Amount</th><th>Priority</th><th>Actions</th></tr></thead><tbody>'
+      + list.map(r=>{
+        const prId=esc(r.id||'');
+        const prNo=esc(r.prNo||r.id||'');
+        const dept=esc(r.dept||'');
+        const prio=esc(r.priority||'Normal');
+        const dateStr= r.date? new Date(r.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}): (r.createdAt? new Date(r.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'');
+        const items=(r.items||[]).map(i=>esc(i.name)+' ×'+(i.qty||0)).join(', ') || esc(r.item||'');
+        const amt=fmtN(r.totalAmount||0);
+        return '<tr><td><b>'+prNo+'</b><div style="font-size:10.5px;color:var(--text3)">'+esc(r.by||'')+'</div></td><td>'+dateStr+'</td><td>'+dept+'</td><td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+items+'">'+items+'</td><td><b>'+amt+'</b></td><td><span class="badge '+(prio==='Urgent'?'badge-urgent':'badge-pending')+'">'+prio+'</span></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-view" onclick="viewPR(\''+prId+'\')"><i class="fa-solid fa-eye"></i></button><button class="btn btn-approve" onclick="approvePR(\''+prId+'\')"><i class="fa-solid fa-check"></i> Approve</button><button class="btn btn-reject" onclick="openReject(\''+prId+'\')"><i class="fa-solid fa-xmark"></i></button></div></td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }catch(err){
+    wrap.innerHTML='<div class="empty" style="color:var(--red)"><i class="fa-solid fa-triangle-exclamation"></i>'+esc(err.message||'Failed to load')+'<div style="margin-top:8px;font-size:11px">Check /api/accounting/procurement-pending returns 200. Requires Accounts dept + accounting canApprove.</div></div>';
+  }
+}
+async function approvePR(id){
+  if(!confirm('Approve this request and forward to GM?')) return;
+  try{ await AccountingData.approveProcurement(id,''); AccountingData.showToast('Approved — forwarded to GM','success'); loadData(); }catch(e){ AccountingData.showToast(e.message||'Approve failed','error'); }
+}
+function openReject(id){
+  rejectId=id;
+  const r=CACHE.find(x=>x.id===id);
+  document.getElementById('rejectInfo').textContent = r ? (r.prNo+' — '+ (r.dept||'') +' — '+ fmtN(r.totalAmount)) : id;
+  document.getElementById('rejectReason').value='';
+  document.getElementById('rejectModal').classList.add('show');
+}
+function closeReject(){ document.getElementById('rejectModal').classList.remove('show'); rejectId=null; }
+async function confirmReject(){
+  const reason=document.getElementById('rejectReason').value.trim();
+  if(!reason){ AccountingData.showToast('Reason is required','error'); return; }
+  try{ await AccountingData.rejectProcurement(rejectId,reason); AccountingData.showToast('Rejected','info'); closeReject(); loadData(); }catch(e){ AccountingData.showToast(e.message||'Reject failed','error'); }
+}
+function viewPR(id){
+  const r=CACHE.find(x=>x.id===id);
+  if(!r) return;
+  document.getElementById('viewTitle').textContent = (r.prNo||r.id) + ' — ' + (r.dept||'');
+  const items=(r.items||[]).map(i=>'<tr><td style="padding:6px 8px;border-bottom:1px solid #eef0f6">'+esc(i.name)+'</td><td style="padding:6px 8px;border-bottom:1px solid #eef0f6;text-align:center">'+esc(i.qty)+'</td><td style="padding:6px 8px;border-bottom:1px solid #eef0f6">'+esc(i.unit||'')+'</td><td style="padding:6px 8px;border-bottom:1px solid #eef0f6;text-align:right">'+fmtN(i.price||i.cost||0)+'</td></tr>').join('');
+  document.getElementById('viewBody').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"><div><div style="font-size:10px;color:#9aa1b3;letter-spacing:.6px;text-transform:uppercase">Requested by</div><div style="font-weight:700">'+esc(r.by||'')+'</div></div><div><div style="font-size:10px;color:#9aa1b3;letter-spacing:.6px;text-transform:uppercase">Needed</div><div>'+esc(r.needed||'')+'</div></div><div><div style="font-size:10px;color:#9aa1b3;letter-spacing:.6px;text-transform:uppercase">Priority</div><div>'+esc(r.priority||'')+'</div></div><div><div style="font-size:10px;color:#9aa1b3;letter-spacing:.6px;text-transform:uppercase">Total</div><div style="font-weight:800">'+fmtN(r.totalAmount||0)+'</div></div></div>'
+    + (r.notes?'<div style="background:#f4f6fb;border-radius:8px;padding:9px;margin-bottom:10px"><b>Notes:</b> '+esc(r.notes)+'</div>':'')
+    + '<table style="width:100%;border-collapse:collapse"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Price</th></tr></thead><tbody>'+items+'</tbody></table>';
+  document.getElementById('viewModal').classList.add('show');
+}
+function closeView(){ document.getElementById('viewModal').classList.remove('show'); }
+document.getElementById('rejectModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeReject(); });
+document.getElementById('viewModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeView(); });
+
+async function init(){
+  try{
+    // ensure service has session if needed — shell fetches it separately
+    await new Promise(r=>setTimeout(r,600));
+    loadData();
+  }catch(e){ console.error(e); }
+}
+init();
+</script>
+</body>
+</html>

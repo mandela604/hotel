@@ -196,6 +196,23 @@ exports.listMovements = asyncHandler(async (req, res) => {
   res.json({ success: true, count: list.length, data: list });
 });
 
+exports.adjustStockById = asyncHandler(async (req, res) => {
+  const { delta, reason, notes } = req.body;
+  const d = Number(delta);
+  if (!d || isNaN(d)) return res.status(400).json({ success: false, error: 'Adjustment quantity required (non-zero)' });
+  if (!reason || !String(reason).trim()) return res.status(400).json({ success: false, error: 'Reason required' });
+  const item = await RestaurantStock.findOne({ id: req.params.id });
+  if (!item) return res.status(404).json({ success: false, error: 'Stock item not found' });
+  const nextQty = (Number(item.qty) || 0) + d;
+  if (nextQty < 0) return res.status(400).json({ success: false, error: `Adjustment would make stock negative (have ${item.qty}, delta ${d})` });
+  const before = item.qty;
+  item.qty = nextQty;
+  await item.save();
+  const fullReason = `Adjustment ${d > 0 ? '+' + d : d} — ${reason}${notes ? ' — ' + notes : ''} (by ${req.user ? req.user.name : 'Admin'})`;
+  await RestaurantMovement.create({ item: item.name, qtyIn: d > 0 ? d : 0, qtyOut: d < 0 ? Math.abs(d) : 0, balance: item.qty, reason: fullReason });
+  res.json({ success: true, data: item, before, delta: d });
+});
+
 /* ═══════════════════════════════════════════════
    Sales (Quick Sale / Open Tab checkout, POS)
 ═══════════════════════════════════════════════ */

@@ -330,6 +330,8 @@
         const desc = e.description || '';
         const m = desc.match(/(.+)\s*\u00D7\s*(\d+)/);
         poolSales.push({ id: e.id, time: e.date, item: m ? m[1].trim() : desc, qty: m ? Number(m[2]) : 1, total: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+      } else if (e.source === 'gym') {
+        roomTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
       }
     });
     return { roomTx, restSales, poolSales };
@@ -671,6 +673,20 @@
     return res;
   }
 
+  /* ── Procurement Finance Review (accountant approves pending PRs) ── */
+  async function getPendingProcurement() {
+    const res = await apiFetch('/procurement-pending?_=' + Date.now());
+    return (res.data || res) && Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+  }
+  async function approveProcurement(id, note) {
+    const res = await apiFetch('/procurement/' + encodeURIComponent(id) + '/approve', { method: 'POST', body: JSON.stringify({ note: note || '' }) });
+    return res.data || res;
+  }
+  async function rejectProcurement(id, reason) {
+    const res = await apiFetch('/procurement/' + encodeURIComponent(id) + '/reject', { method: 'POST', body: JSON.stringify({ note: reason, reason: reason }) });
+    return res.data || res;
+  }
+
   global.AccountingData = {
     KEYS, CONFIG, configure,
     getSession, setSession, showToast,
@@ -703,5 +719,6 @@
     PAY_METHODS,
     getShiftStartHour: function () { return SHIFT_START_HOUR; },
     getProcurementPnl,
+    getPendingProcurement, approveProcurement, rejectProcurement,
   };
 })(window);

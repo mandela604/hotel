@@ -936,6 +936,7 @@ async function init() {
     title: 'Pool Bar Stock',
     emptyText: 'No stock items match your filters.',
     showDeduct: false,
+    showAdjust: (function(){ try{var u=shell.getUser();return u&&String(u.role).toLowerCase()==='admin';}catch(e){return false;}})(),
     showEdit: true,
     showDelete: true,
     rowClickable: true,
@@ -944,6 +945,7 @@ async function init() {
     onRowClick: (item) => openDetail(item),
     onEdit: (item) => openItemModal(item.name),
     onDelete: (item) => openDeleteModal(item),
+    onAdjust: (item) => openAdjustModal(item.name || item.id),
   });
 
   bindUI();

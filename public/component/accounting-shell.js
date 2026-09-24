@@ -10,6 +10,7 @@
 
   const NAV = [
     { key: 'dashboard', label: 'Dashboard',            href: 'accounting-dashboard.html',      icon: 'fa-solid fa-gauge-high' },
+    { key: 'proc',      label: 'Procurement Review',   href: 'accounting-procurement.html',   icon: 'fa-solid fa-file-invoice-dollar', badgeKey: 'proc' },
     { key: 'recon',     label: 'Shift Reconciliation',  href: 'accounting-reconciliation.html', icon: 'fa-solid fa-clock-rotate-left', badgeKey: 'pending' },
     { key: 'pnl',       label: 'Profit & Loss',         href: 'accounting-pnl.html',             icon: 'fa-solid fa-scale-balanced' },
     { key: 'tx',        label: 'Transactions',          href: 'accounting-transactions.html',   icon: 'fa-solid fa-receipt' },

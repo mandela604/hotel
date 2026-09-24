@@ -24,4 +24,9 @@ router.delete('/pnl/expense/:id',   inDept, privilegeGuard('accounting', 'canDel
 router.post('/shifts',              inDept, privilegeGuard('accounting', 'canCreate'), ctrl.openShift);
 router.put('/shifts/:id/reconcile', inDept, privilegeGuard('accounting', 'canEdit'),   ctrl.reconcileShift);
 
+/* ── Procurement Finance Review — accountant approves pending PRs without entering procurement ── */
+router.get('/procurement-pending',            inDept, privilegeGuard('accounting', 'canView'),    ctrl.listProcurementPending);
+router.post('/procurement/:id/approve',       inDept, privilegeGuard('accounting', 'canApprove'), ctrl.approveProcurement);
+router.post('/procurement/:id/reject',        inDept, privilegeGuard('accounting', 'canApprove'), ctrl.rejectProcurement);
+
 module.exports = router;

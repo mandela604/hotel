@@ -26,6 +26,7 @@ router.get('/stock', restaurantController.listStock);
 router.post('/stock', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateAddStock, restaurantController.addStockItem);
 router.put('/stock/:name', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateParam('name'), v.validateUpdateStock, restaurantController.editStockItem);
 router.delete('/stock/:name', isAdmin, v.validateParam('name'), restaurantController.deleteStockItem);
+router.post('/stock/:id/adjust', isAdmin, v.validateParam('id'), restaurantController.adjustStockById);
 router.get('/movements', restaurantController.listMovements);
 
 /* Sales */
