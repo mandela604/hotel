@@ -50,14 +50,11 @@ async function resolveBooking(req) {
   const bodyStay = (req.body && (req.body.stayId || req.body.bookingId)) || '';
   const queryStay = req.query.stayId || req.query.bookingId || '';
   const stay = bodyStay || queryStay || param;
-  console.log(`[resolveBooking] param=${param} bodyStay=${bodyStay} queryStay=${queryStay} → stay=${stay}`);
   if (stay) {
     const byStay = await Booking.findOne({ stayId: stay });
-    console.log(`[resolveBooking] findOne stayId=${stay} →`, byStay ? byStay.guest + ' ' + byStay.room : 'null');
     if (byStay) return byStay;
-    try { const byId = await Booking.findById(stay); console.log(`[resolveBooking] findById=${stay} →`, byId ? byId.guest : 'null'); if (byId) return byId; } catch(e){ console.log(`[resolveBooking] findById error`, e.message); }
+    try { const byId = await Booking.findById(stay); if (byId) return byId; } catch(e){}
   }
-  console.log(`[resolveBooking] → null (not found)`);
   return null;
 }
 

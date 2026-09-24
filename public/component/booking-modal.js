@@ -1221,8 +1221,9 @@
       applyEditability();
       try {
         var row = await service.saveBooking(entry);
-        if (mode === 'new' && initialDeposit > 0 && row && row.room) {
-          row = await service.addBookingPayment(row.room, { amount: initialDeposit, mode: entry.payMethod });
+        if (mode === 'new' && initialDeposit > 0 && row && (row.stayId || row._id || row.room)) {
+          var depStay = row.stayId || row._id || row.id || row.room;
+          row = await service.addBookingPayment(depStay, { amount: initialDeposit, mode: entry.payMethod, stayId: row.stayId || '' });
         }
         toast(mode === 'edit' ? 'Booking updated.' : 'Booking saved.', 'success');
         close();
@@ -1351,11 +1352,9 @@
       mode = 'edit';
       await loadContext();
       var key = booking.stayId || booking._id || booking.id || booking.room;
-      console.log('[BookingModal openEdit] clicked:', booking.guest, booking.room, 'stayId:', booking.stayId, '→ key:', key);
       editBooking = (service && service.getBooking)
         ? (await service.getBooking(key)) || booking
         : booking;
-      console.log('[BookingModal openEdit] fetched:', editBooking.guest, editBooking.room, 'stayId:', editBooking.stayId);
       currentGuest = findGuestForBooking(editBooking);
       clearForm();
       $('[data-role="title"]').innerHTML = 'Edit Booking — Room ' + esc(editBooking.room);
@@ -1372,12 +1371,10 @@
       mode = 'view';
       await loadContext();
       var vkey = booking.stayId || booking._id || booking.id || booking.room;
-      console.log('[BookingModal openView] clicked:', booking.guest, booking.room, 'stayId:', booking.stayId, '→ vkey:', vkey, 'historical:', booking.status);
       var vIsHistorical = booking.status === 'checkout' || booking.status === 'cancelled' || booking.status === 'no-show';
       editBooking = (!vIsHistorical && service && service.getBooking)
         ? (await service.getBooking(vkey)) || booking
         : booking;
-      console.log('[BookingModal openView] fetched:', editBooking.guest, editBooking.room, 'stayId:', editBooking.stayId);
       currentGuest = findGuestForBooking(editBooking);
       clearForm();
       $('[data-role="title"]').innerHTML = 'Booking — Room ' + esc(editBooking.room) + ' <span class="bkm-view-pill">View</span>';

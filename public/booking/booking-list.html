@@ -482,8 +482,8 @@ function openDelete(b) {
 async function confirmDelete() {
   if (!deleteIdx) return;
   try {
-    var roomNum = deleteIdx.room;
-    await BookingData.deleteBooking(roomNum);
+    var delKey = deleteIdx.stayId || deleteIdx._id || deleteIdx.id || deleteIdx.room;
+    await BookingData.deleteBooking(delKey);
     closeModal('deleteModal');
     deleteIdx = null;
     showToast('Booking deleted. Room marked as Available.', 'info');
