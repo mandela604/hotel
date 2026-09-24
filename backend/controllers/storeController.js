@@ -392,4 +392,10 @@ exports.receiveStock = asyncHandler(async (req, res) => {
   res.json({ success: true, data: item });
 });
 
+exports.resetAllStock = asyncHandler(async (req, res) => {
+  const result = await StoreStock.updateMany({}, { $set: { qty: 0, cost: 0 } });
+  console.log(`[Store] Reset all stock qty/cost to 0 — ${result.modifiedCount} items`);
+  res.json({ success: true, message: `Reset ${result.modifiedCount} store stock items to qty 0, cost 0` });
+});
+
 exports._internal = { peekNumber, nextNumber, findStockFuzzy, actorName };
