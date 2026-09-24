@@ -155,7 +155,13 @@ body {
 /* ── Table guest column truncation ── */
 .ft-guest-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; display: inline-block; }
 
-@media print { #sidebarSlot, #topbarSlot, .fb-container, .role-note, .no-print, .modal-overlay { display: none !important; } .main { margin-left: 0 !important; } .content { padding: 0 !important; overflow: visible !important; background: #fff !important; } .kpi-row { grid-template-columns: repeat(5, 1fr); } }
+.print-header{ display:none; text-align:center; border-bottom:2px solid #1c2440; padding-bottom:12px; margin-bottom:16px; }
+.print-header h1{ font-size:18px; font-weight:800; color:#1c2440; letter-spacing:1px; margin:0; }
+.print-header .ph-phone{ font-size:11px; color:#374151; margin:2px 0; font-weight:600; }
+.print-header .ph-addr{ font-size:10px; color:#6b7280; margin:0; }
+.print-header h2{ font-size:13px; font-weight:700; color:#1c2440; margin:8px 0 2px; text-transform:uppercase; letter-spacing:1px; }
+.print-header .ph-date{ font-size:9px; color:#6b7280; }
+@media print { #sidebarSlot, #topbarSlot, .fb-container, .role-note, .no-print, .modal-overlay { display: none !important; } .main { margin-left: 0 !important; } .content { padding: 0 !important; overflow: visible !important; background: #fff !important; } .kpi-row { grid-template-columns: repeat(5, 1fr); } .print-header{ display:block !important; } }
 </style>
 </head>
 <body>
@@ -164,6 +170,14 @@ body {
   <div class="main">
     <div id="topbarSlot"></div>
     <div class="content">
+      <div class="print-header">
+        <h1>BOSTON LEISURE HOTEL</h1>
+        <p class="ph-phone">09039391464</p>
+        <p class="ph-addr">Before G2 Junction [off Auchi Benin Express Way]</p>
+        <h2>Front Desk Report — Booking Report</h2>
+        <p class="ph-date" id="printDate"></p>
+      </div>
+      <script>try{var d=new Date();document.getElementById('printDate').textContent='Generated: '+d.toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' '+d.toLocaleTimeString('en-NG');window.addEventListener('beforeprint',function(){var dd=new Date();var el=document.getElementById('printDate');if(el)el.textContent='Generated: '+dd.toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' '+dd.toLocaleTimeString('en-NG');var h2=document.querySelector('.print-header h2');if(h2){var isIncome=document.getElementById('tabRoomIncome')&&document.getElementById('tabRoomIncome').classList.contains('active');h2.textContent='Front Desk Report — '+(isIncome?'Room Income Report':'Booking Report');}});}catch(e){}</script>
       <!-- Tabs -->
       <div class="ri-tab-bar">
         <button class="ri-tab-btn active" data-tab="booking" onclick="switchReportTab('booking')"><i class="fa-solid fa-clipboard-list"></i> Booking Report</button>
