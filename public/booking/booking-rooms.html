@@ -480,15 +480,21 @@ function fmtDate(d) {
 }
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
 function getRoomStatus(num) {
-  const b = bookings.find(r => r.room === num);
-  if (!b || !b.status) return 'available';
-  if (b.status === 'vacant') return 'available';
-  if (b.status === 'reserved' && b.checkin) {
-    var today = new Date(); today.setHours(0,0,0,0);
-    var resStart = new Date(b.checkin); resStart.setHours(0,0,0,0);
-    if (today < resStart) return 'available';
-  }
-  return b.status;
+  const cands = bookings.filter(r => r.room === num);
+  if (!cands.length) return 'available';
+  // checkedin takes priority — room physically occupied
+  const checked = cands.find(c => c.status === 'checkedin');
+  if (checked) return 'checkedin';
+  const today = new Date(); today.setHours(0,0,0,0);
+  // reserved that is currently active (today within stay)
+  const activeReserved = cands.find(c => c.status === 'reserved' && c.checkin && c.checkout && new Date(c.checkin) <= today && today < new Date(c.checkout));
+  if (activeReserved) return 'reserved';
+  // any other reserved is future — room is still bookable for other dates
+  const anyReserved = cands.find(c => c.status === 'reserved');
+  if (anyReserved) return 'reserved';
+  const any = cands[0];
+  if (!any.status || any.status === 'vacant') return 'available';
+  return any.status;
 }
 function perms() {
   const session = getSession();
@@ -605,18 +611,29 @@ function renderRoomGrid(filter) {
   } else {
     grid.innerHTML = page.map(r => {
       const st = getRoomStatus(r.num) || 'available';  // fallback
-      const bk = bookings.find(b => b.room === r.num);
-      const hasGuest = st !== 'available' && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning' && bk && bk.guest;
+      const cands = bookings.filter(b => b.room === r.num);
+      let bk = cands.find(b => b.status === 'checkedin') || cands.find(b => b.status === 'reserved') || cands[0] || null;
+      // for checkedin/reserved that is currently active, prefer it; otherwise first
+      if (st === 'reserved' || st === 'checkedin') {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const active = cands.find(b => b.status === 'reserved' && b.checkin && b.checkout && new Date(b.checkin) <= today && today < new Date(b.checkout));
+        if (active) bk = active;
+      }
+      const hasGuest = bk && bk.guest && st !== 'available' && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
+      const upcomingCount = cands.filter(b => b.status === 'reserved').length;
+      const upcomingBadge = (st === 'reserved' && upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' upcoming</span>' : '';
 
       const guestBlock = hasGuest
-        ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
+        ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + upcomingBadge + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
         : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : st === 'cleaning' ? 'Under cleaning' : st === 'checkout' ? 'Checked out — awaiting cleaning' : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
 
       const isMgr = (getSession() && /^(manager|admin)$/i.test(getSession().role||'')) || p.canEditRoom;
       let acts = '';
-      if (st === 'available') {
+      const canBook = st === 'available' || st === 'reserved' || st === 'checkedin';
+      if (canBook) {
         acts = '<div class="room-acts">' +
           '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' +
+          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
           (isMgr ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
           '</div>';
       } else {
