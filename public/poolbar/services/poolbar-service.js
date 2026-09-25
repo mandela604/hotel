@@ -524,6 +524,16 @@
     return item || res.data;
   }
 
+  function printReceipt(sale){
+    if(!sale) return;
+    var items=sale.items||sale.cart||[];
+    var rows=items.map(function(it){ return '<div class="row"><span>'+(it.name||it.meal||'Item')+' x'+(it.qty||1)+'</span><span class="r">₦'+Number((it.price||0)*(it.qty||1)).toLocaleString('en-NG')+'</span></div>'; }).join('');
+    var total=Number(sale.total||sale.amount||0); if(!total) total=items.reduce(function(s,it){return s+Number(it.price||0)*Number(it.qty||1);},0);
+    var now=new Date(); var ds=now.toLocaleDateString('en-NG',{year:'numeric',month:'short',day:'numeric'})+' '+now.toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'});
+    var html='<!DOCTYPE html><html><head><title>Pool Bar Receipt</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Courier New",Courier,monospace;width:80mm;padding:3mm 4mm 2mm;color:#000;font-size:12px;line-height:1.45;font-weight:600}.c{text-align:center}.hdr{border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px}.hdr h1{font-size:15px;font-weight:900;letter-spacing:1px}.hdr .ph{font-size:10px;font-weight:700}.divider{border-top:1px dashed #000;margin:4px 0}.row{display:flex;justify-content:space-between;margin:2px 0}.r{text-align:right}.lbl{font-size:10px;text-transform:uppercase;font-weight:700}.val{font-weight:800;font-size:12px}.footer{border-top:1px dashed #000;margin-top:4px;padding-top:4px;font-size:9px;font-weight:600;text-align:center}@media print{body{padding:2mm 2mm 0;width:80mm}html,body{height:auto}}</style></head><body><div class="hdr c"><h1>BOSTON LEISURE HOTEL</h1><p class="ph">09039391464</p><p class="ph">Before G2 Junction [off Auchi Benin Express Way]</p><p>Pool Bar Receipt</p></div><div class="divider"></div><div class="row"><span class="lbl">Receipt</span><span class="val">'+(sale.id||sale._id||'')+'</span></div><div class="row"><span class="lbl">Date</span><span class="val">'+ds+'</span></div>'+(sale.table?'<div class="row"><span class="lbl">Table</span><span class="val">'+sale.table+'</span></div>':'')+'<div class="divider"></div>'+rows+'<div class="divider"></div><div class="row"><span class="lbl">Total</span><span class="val">₦'+total.toLocaleString('en-NG')+'</span></div><div class="footer"><p>'+ds+'</p><p>Boston Leisure Hotel — Pool Bar</p></div></body></html>';
+    var w=window.open('','_blank','width=320,height=600'); w.document.write(html); w.document.close(); w.focus(); setTimeout(function(){w.print();},300);
+  }
+
   /* ── Requisitions (Pool Bar → Store) ─────────────────────────────── */
   async function submitRequisition(opts) {
     opts = opts || {};
@@ -963,8 +973,7 @@
     onChange,
     loadAll,
     findStock,
-    addStockItem, editStockItem, deleteStockItem, deductStock, adjustStock,
-    submitRequisition, receiveRequisition,
+    addStockItem, editStockItem, deleteStockItem, deductStock, adjustStock, printReceipt,
     recordSale, openTab, markServed, updateOrder, payOrder, cancelOrder, voidSale,
     cartTotals,
     dashboardKPIs, salesKPIs, stockKPIs, ordersKPIs,

@@ -1108,23 +1108,23 @@
 
       var html = '<!DOCTYPE html><html><head><title>Receipt - Room ' + esc(b.room) + '</title><style>' +
         '*{margin:0;padding:0;box-sizing:border-box;}' +
-        'body{font-family:"Courier New",Courier,monospace;width:80mm;padding:5mm 4mm;color:#000;font-size:11px;line-height:1.4;}' +
+        'body{font-family:"Courier New",Courier,monospace;width:80mm;padding:3mm 4mm 2mm;color:#000;font-size:12px;line-height:1.45;font-weight:600;}' +
         '.c{text-align:center;}' +
-        '.hdr{border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;}' +
-        '.hdr h1{font-size:14px;font-weight:900;letter-spacing:1px;}' +
-        '.hdr .ph{font-size:9px;margin-top:1px;}' +
-        '.hdr p{font-size:9px;margin-top:1px;}' +
-        '.divider{border-top:1px dashed #000;margin:6px 0;}' +
+        '.hdr{border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;}' +
+        '.hdr h1{font-size:15px;font-weight:900;letter-spacing:1px;}' +
+        '.hdr .ph{font-size:10px;margin-top:1px;font-weight:700;color:#000;}' +
+        '.hdr p{font-size:10px;margin-top:1px;font-weight:700;}' +
+        '.divider{border-top:1px dashed #000;margin:4px 0;}' +
         '.row{display:flex;justify-content:space-between;margin:2px 0;}' +
         '.r{text-align:right;}' +
-        '.lbl{font-size:9px;text-transform:uppercase;color:#555;}' +
-        '.val{font-weight:700;font-size:11px;}' +
+        '.lbl{font-size:10px;text-transform:uppercase;color:#000;font-weight:700;}' +
+        '.val{font-weight:800;font-size:12px;color:#000;}' +
         '.total .val{font-size:13px;}' +
         '.total{border-top:2px solid #000;margin-top:4px;padding-top:4px;}' +
-        '.pay-title{font-weight:700;font-size:10px;margin:6px 0 3px;border-top:1px dashed #000;padding-top:6px;}' +
-        '.sub{font-size:9px;color:#555;}' +
-        '.footer{border-top:1px dashed #000;margin-top:8px;padding-top:6px;font-size:9px;color:#555;}' +
-        '@media print{body{padding:3mm 2mm;width:80mm;}}' +
+        '.pay-title{font-weight:800;font-size:11px;margin:5px 0 2px;border-top:1px dashed #000;padding-top:5px;color:#000;}' +
+        '.sub{font-size:10px;color:#000;font-weight:600;}' +
+        '.footer{border-top:1px dashed #000;margin-top:4px;padding-top:4px;font-size:9px;color:#000;font-weight:600;}' +
+        '@media print{body{padding:2mm 2mm 0;width:80mm;} html,body{height:auto;}}' +
         '</style></head><body>' +
         '<div class="hdr c"><h1>BOSTON LEISURE HOTEL</h1><p class="ph">09039391464</p><p class="ph">Before G2 Junction [off Auchi Benin Express Way]</p><p>Booking Receipt</p></div>' +
         '<div class="divider"></div>' +
