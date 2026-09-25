@@ -47,6 +47,7 @@ router.patch('/requisitions/:no/reject', inDept, privilegeGuard('store', 'canRej
 router.patch('/requisitions/:no/confirm', inDept, privilegeGuard('store', 'canApprove'), validateParam('no'), storeController.confirmReceipt);
 router.patch('/requisitions/:no/dispute', inDept, privilegeGuard('store', 'canApprove'), validateParam('no'), validateRejectDelivery, storeController.disputeDelivery);
 
+router.post('/stock/:id/adjust', isAdmin, storeController.adjustStock);
 router.post('/migrate/reset-all-stock', storeController.resetAllStock);
 
 module.exports = router;

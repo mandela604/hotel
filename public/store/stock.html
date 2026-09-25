@@ -476,6 +476,22 @@ function renderLevelTabs(){
 
 function fmtDualQty(s){ return String(s.qty ?? 0); }
 function fmtDualReorder(s){ return String(s.min ?? 0); }
+function isStoreAdmin(){ try{ var u=null; try{u=JSON.parse(localStorage.getItem('user')||'null');}catch(e){} if(!u) try{u=JSON.parse(localStorage.getItem('session')||'null');}catch(e){} if(u&&u.role) return String(u.role).toLowerCase()==='admin'; if(window.Permissions&&window.getSession) try{var s=getSession(); return s&&String(s.role).toLowerCase()==='admin';}catch(e){} return false; }catch(e){return false;} }
+async function openAdjustStore(id){
+  if(!isStoreAdmin()){ showToast('Only admin can adjust stock.', 'error'); return; }
+  var s=svc.findStock(id) || svc.state.stock.find(function(x){return x.id===id;});
+  if(!s){ showToast('Item not found.', 'error'); return; }
+  var deltaStr=prompt('Adjustment for "'+s.name+'" (on hand: '+s.qty+')\nEnter +/- qty (e.g. -1 for 1 broken):','-1');
+  if(deltaStr===null) return; var delta=Number(deltaStr); if(!delta||isNaN(delta)){ showToast('Enter non-zero number.', 'error'); return; }
+  var reason=prompt('Reason: Broken, Spillage, Short delivery, Count correction, Other','Broken');
+  if(reason===null) return; reason=reason.trim(); if(!reason){ showToast('Reason required.', 'error'); return; }
+  var notes=prompt('Note (optional):','')||'';
+  try{
+    var res=await fetch('/api/store/stock/'+encodeURIComponent(id)+'/adjust',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({delta:delta,reason:reason,notes:notes})});
+    var body=await res.json(); if(!res.ok) throw new Error(body.error||'Adjust failed');
+    showToast('Adjusted '+s.name+' ('+delta+').','success'); await svc.loadAll(); render();
+  }catch(e){ showToast(e.message||'Adjust failed.', 'error'); }
+}
 window.setLevel = function(k){ activeLevel = k; page = 1; render(); };
 
 window.clearFilters = function(){
@@ -550,6 +566,7 @@ function render(){
           <td class="center" data-label="Status"><span class="chip ${svc.LEVEL_CHIP[lvl]}"><i class="fa-solid fa-circle"></i>${svc.LEVEL_LABEL[lvl]}</span></td>
           <td class="center no-print" data-label="Actions">
             <div class="act-btns">
+              ${isStoreAdmin()?'<button class="act-btn" onclick="openAdjustStore(\''+s.id+'\')"><i class="fa-solid fa-sliders"></i> Adjust</button>':''}
               <button class="act-btn" onclick="openEditItem('${s.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
               <button class="act-btn danger" onclick="openDeleteItem('${s.id}')"><i class="fa-solid fa-trash"></i></button>
             </div>

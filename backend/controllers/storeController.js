@@ -398,4 +398,20 @@ exports.resetAllStock = asyncHandler(async (req, res) => {
   res.json({ success: true, message: `Reset ${result.modifiedCount} store stock items to qty 0, cost 0` });
 });
 
+exports.adjustStock = asyncHandler(async (req, res) => {
+  const { delta, reason, notes } = req.body;
+  const d = Number(delta);
+  if (!d || isNaN(d)) throw new ApiError(400, 'Adjustment quantity required (non-zero)');
+  if (!reason || !String(reason).trim()) throw new ApiError(400, 'Reason required');
+  const item = await StoreStock.findOne({ id: req.params.id });
+  if (!item) throw new ApiError(404, 'Store item not found');
+  const nextQty = (Number(item.qty) || 0) + d;
+  if (nextQty < 0) throw new ApiError(400, `Adjustment would make stock negative (have ${item.qty}, delta ${d})`);
+  const before = item.qty;
+  item.qty = nextQty;
+  await item.save();
+  console.log(`[Store] Adjust ${item.name} ${before} → ${item.qty} (${d > 0 ? '+' + d : d} — ${reason}) by ${req.user ? req.user.name : 'Admin'}`);
+  res.json({ success: true, data: item, before, delta: d });
+});
+
 exports._internal = { peekNumber, nextNumber, findStockFuzzy, actorName };
