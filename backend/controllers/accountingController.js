@@ -41,18 +41,23 @@ function parsePaymentDate(str) {
 }
 
 async function aggregateRoomRevenue(from, to) {
-  // Fetch all bookings with a guest (non-vacant)
   const bookings = await Booking.find({ guest: { $ne: '' } });
+  console.log('[Accounting] aggregateRoomRevenue: fetched', bookings.length, 'bookings, from:', from || '-', 'to:', to || '-');
   return bookings.map(b => {
     const payments = b.payments || [];
-    const paid = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0) || b.paid || 0;
+    const paid = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0) || Number(b.paid) || 0;
     if (paid <= 0) return null;
 
-    // Use the LAST payment date as the revenue date
     const lastPayment = payments.length ? payments[payments.length - 1] : null;
     const method = lastPayment ? lastPayment.mode : (b.payMethod || '');
-    const rawDate = (lastPayment && lastPayment.date) || b.checkin || lagosDate(b.createdAt || Date.now());
-    const payDate = parsePaymentDate(rawDate) || lagosDate(b.createdAt || Date.now());
+    // Prefer payment timestamp (ts) if available, then payment date string, then checkin, then createdAt
+    let rawDate = '';
+    if (lastPayment && lastPayment.ts) rawDate = lagosDate(new Date(Number(lastPayment.ts)));
+    else if (lastPayment && lastPayment.date) rawDate = lastPayment.date;
+    else if (b.checkin) rawDate = b.checkin;
+    else rawDate = lagosDate(b.createdAt ? new Date(Number(b.createdAt)) : new Date());
+    const payDate = parsePaymentDate(rawDate) || lagosDate(b.createdAt ? new Date(Number(b.createdAt)) : new Date());
+    if (b.room === '4001') console.log('[Accounting] room 4001 payDate:', payDate, 'rawDate:', rawDate, 'paid:', paid);
 
     // Apply date filter on the payment date (not checkin)
     if (from && payDate < from) return null;
