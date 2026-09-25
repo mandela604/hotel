@@ -1112,6 +1112,7 @@
         '.c{text-align:center;}' +
         '.hdr{border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;}' +
         '.hdr h1{font-size:14px;font-weight:900;letter-spacing:1px;}' +
+        '.hdr .ph{font-size:9px;margin-top:1px;}' +
         '.hdr p{font-size:9px;margin-top:1px;}' +
         '.divider{border-top:1px dashed #000;margin:6px 0;}' +
         '.row{display:flex;justify-content:space-between;margin:2px 0;}' +
@@ -1125,7 +1126,7 @@
         '.footer{border-top:1px dashed #000;margin-top:8px;padding-top:6px;font-size:9px;color:#555;}' +
         '@media print{body{padding:3mm 2mm;width:80mm;}}' +
         '</style></head><body>' +
-        '<div class="hdr c"><h1>BOSTON LEISURE</h1><p>Booking Receipt</p></div>' +
+        '<div class="hdr c"><h1>BOSTON LEISURE HOTEL</h1><p class="ph">09039391464</p><p class="ph">Before G2 Junction [off Auchi Benin Express Way]</p><p>Booking Receipt</p></div>' +
         '<div class="divider"></div>' +
         '<div class="row"><span class="lbl">Room</span><span class="val">' + esc(b.room) + ' · ' + esc(b.type || '') + '</span></div>' +
         '<div class="row"><span class="lbl">Guest</span><span class="val">' + esc(b.guest || '—') + '</span></div>' +
