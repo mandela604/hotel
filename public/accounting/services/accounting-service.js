@@ -123,7 +123,7 @@
 
   function parseTxDate(str) {
     if (!str) return null;
-    if (/^\d{4}-\d{2}-\d{2}/.test(str)) return new Date(str.length === 10 ? str + 'T00:00:00' : str);
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) return new Date(str.length === 10 ? str + 'T12:00:00' : str);
     const [datePart, timePart, ampm] = String(str).split(' ');
     if (!datePart || !datePart.includes('/')) return null;
     const [d, m, y] = datePart.split('/').map((n) => parseInt(n, 10));

@@ -968,7 +968,9 @@ async function reload() {
   document.getElementById('incomeBody').innerHTML = `<tr class="empty-row"><td colspan="4"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
   document.getElementById('expenseBody').innerHTML = `<tr class="empty-row"><td colspan="5"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>`;
   try {
+    console.log('[P&L] fetching', '/api/accounting/pnl?mode=' + dateMode + (dateFrom ? '&from=' + dateFrom : '') + (dateTo ? '&to=' + dateTo : ''));
     const data = await getAccountingData();
+    console.log('[P&L] received', { income: data.income, expenses: data.expenses, totalIncome: data.totalIncome });
     income = data.income;
     expenses = data.expenses;
     incomePage = 1;
