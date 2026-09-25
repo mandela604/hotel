@@ -610,12 +610,18 @@ function openPRDetail(id){
   if (pr) ProcurementModals.showPRDetail(pr);
 }
 
+function displayItem(p){
+  var it=(p.items&&p.items.length?p.items.map(function(x){return x.name;}):(p.item||'').split(',').map(function(s){return s.trim();}).filter(Boolean));
+  if(!it.length) return p.item||'—';
+  if(it.length===1) return it[0];
+  return it[0]+' <span style="color:var(--text3);font-size:11px;">+ '+(it.length-1)+' more</span>';
+}
 function rowHtml(p){
   const stage = p.approvalStage;
   return `
       <tr onclick="openPRDetail('${p.id}')">
         <td class="pr-no">${p.prNo}</td>
-        <td>${p.item}</td>
+        <td>${displayItem(p)}</td>
         <td><span class="dept-chip"><span class="dept-dot"></span>${p.dept}</span></td>
         <td>${p.by}</td>
         <td>${fmtDate(p.date)}</td>

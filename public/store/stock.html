@@ -474,19 +474,8 @@ function renderLevelTabs(){
     </button>`).join('');
 }
 
-function fmtDualQty(s){
-  const qty = s.qty || 0;
-  const unit = s.unit || '—';
-  if (!s.baseUnit || !s.packSize || s.packSize <= 0) return qty + ' ' + unit;
-  const bulkQty = qty / s.packSize;
-  return qty + ' ' + s.baseUnit + ' <span style="color:var(--text3);font-size:11px;">(' + bulkQty.toFixed(1) + ' ' + unit + ')</span>';
-}
-function fmtDualReorder(s){
-  const min = s.min || 0;
-  if (!s.baseUnit || !s.packSize || s.packSize <= 0) return min + ' ' + (s.unit || '');
-  const bulkMin = min / s.packSize;
-  return min + ' ' + s.baseUnit + ' <span style="color:var(--text3);font-size:11px;">(' + bulkMin.toFixed(1) + ' ' + s.unit + ')</span>';
-}
+function fmtDualQty(s){ return String(s.qty ?? 0); }
+function fmtDualReorder(s){ return String(s.min ?? 0); }
 window.setLevel = function(k){ activeLevel = k; page = 1; render(); };
 
 window.clearFilters = function(){
