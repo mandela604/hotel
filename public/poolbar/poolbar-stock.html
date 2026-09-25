@@ -284,7 +284,7 @@ body{
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" type="button" data-close="detailModal">Close</button>
-      <button class="btn btn-outline btn-sm" type="button" id="dDeductBtn"><i class="fa-solid fa-minus"></i> Deduct</button>
+      <button class="btn btn-outline btn-sm" type="button" id="dDeductBtn"><i class="fa-solid fa-sliders"></i> Adjust</button>
       <button class="btn btn-primary btn-sm" type="button" id="dEditBtn"><i class="fa-solid fa-pen"></i> Edit</button>
     </div>
   </div>
@@ -340,19 +340,19 @@ body{
   </div>
 </div>
 
-<!-- DEDUCT -->
+<!-- ADJUST (+/-) -->
 <div class="modal-overlay" id="adjustModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <div class="modal-title">Deduct Stock</div>
+      <div class="modal-title">Adjust Stock</div>
       <button class="modal-close" type="button" data-close="adjustModal"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
       <p class="field-note" style="margin-bottom:12px;">Item: <strong id="adjName">—</strong> · On hand: <strong id="adjCurrent">—</strong></p>
       <div class="form-row" style="grid-template-columns:1fr;">
         <div class="form-group">
-          <label class="form-label">Quantity Out</label>
-          <input class="form-input" type="number" id="adjQty" min="1" placeholder="0">
+          <label class="form-label">Adjustment Qty <span style="text-transform:none;">(+ add / - remove)</span></label>
+          <input class="form-input" type="number" id="adjQty" placeholder="e.g. 5 or -3" step="1">
         </div>
         <div class="form-group">
           <label class="form-label">Reason</label>
@@ -738,15 +738,20 @@ function openAdjustModal(itemOrName) {
 }
 
 async function confirmAdjust() {
-  const qty = parseFloat(document.getElementById('adjQty').value) || 0;
+  const delta = parseFloat(document.getElementById('adjQty').value);
+  if (!delta || isNaN(delta)) { showToast('Enter adjustment qty (+/-).', 'error'); return; }
   const reason = document.getElementById('adjReason').value;
+  if (!reason) { showToast('Select a reason.', 'error'); return; }
   const notes = document.getElementById('adjNotes').value.trim();
+  const it = svc.findStock ? svc.findStock(activeName) : null;
+  const id = (it && it.id) || activeName;
   try {
-    const i = await svc.deductStock(activeName, qty, reason, notes);
+    const i = await svc.adjustStock(id, delta, reason, notes);
     closeModal('adjustModal');
-    showToast(i.name + ': deducted ' + qty + ' ' + (i.unit || '') + '.', 'info');
+    showToast(i.name + ': adjusted ' + (delta > 0 ? '+' + delta : delta) + ' ' + (i.unit || '') + '.', 'success');
+    render();
   } catch (err) {
-    showToast(err.message || 'Could not deduct.', 'error');
+    showToast(err.message || 'Adjust failed.', 'error');
   }
 }
 
