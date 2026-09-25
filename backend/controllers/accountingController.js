@@ -49,15 +49,11 @@ async function aggregateRoomRevenue(from, to) {
     if (paid <= 0) return null;
 
     const lastPayment = payments.length ? payments[payments.length - 1] : null;
-    const method = lastPayment ? lastPayment.mode : (b.payMethod || '');
-    // Prefer payment timestamp (ts) if available, then payment date string, then checkin, then createdAt
-    let rawDate = '';
-    if (lastPayment && lastPayment.ts) rawDate = lagosDate(new Date(Number(lastPayment.ts)));
-    else if (lastPayment && lastPayment.date) rawDate = lastPayment.date;
-    else if (b.checkin) rawDate = b.checkin;
-    else rawDate = lagosDate(b.createdAt ? new Date(Number(b.createdAt)) : new Date());
-    const payDate = parsePaymentDate(rawDate) || lagosDate(b.createdAt ? new Date(Number(b.createdAt)) : new Date());
-    if (b.room === '4001') console.log('[Accounting] room 4001 payDate:', payDate, 'rawDate:', rawDate, 'paid:', paid);
+    if (!lastPayment || (!lastPayment.ts && !lastPayment.date)) return null;
+    const method = lastPayment.mode || b.payMethod || '';
+    const rawDate = lastPayment.ts ? lagosDate(new Date(Number(lastPayment.ts))) : lastPayment.date;
+    const payDate = parsePaymentDate(rawDate);
+    if (!payDate) return null;
 
     // Apply date filter on the payment date (not checkin)
     if (from && payDate < from) return null;
