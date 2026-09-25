@@ -361,7 +361,7 @@
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Date</th><th class="right">Procurement (₦)</th><th class="right">Manual (₦)</th><th class="right" style="font-weight:800;">Total (₦)</th><th class="no-print"></th></tr></thead>
+              <thead><tr><th>Date</th><th class="right">COGS (₦)</th><th class="right">Manual (₦)</th><th class="right" style="font-weight:800;">Total (₦)</th><th class="no-print"></th></tr></thead>
               <tbody id="expenseBody"></tbody>
             </table>
           </div>
@@ -529,7 +529,7 @@ function renderKPIs() {
   const exp = filteredExpenses();
   const totalIncome = inc.reduce((s,r)=>s+r.amount,0);
   const totalExpenses = exp.reduce((s,r)=>s+r.total,0);
-  const procCost = exp.reduce((s,r)=>s+r.procurement,0);
+  const procCost = exp.reduce((s,r)=>s+((r.cogs != null ? r.cogs : r.procurement) || 0),0);
   const grossProfit = totalIncome - procCost;
   const netProfit = totalIncome - totalExpenses;
   const netMargin = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
@@ -613,17 +613,34 @@ function renderExpenseTable() {
 
   document.getElementById('expenseBody').innerHTML = rows.length===0
     ? `<tr class="empty-row"><td colspan="5">No expenses recorded for this period.</td></tr>`
-    : rows.map(r => `
+    : rows.map(r => {
+      const cogs = r.cogs != null ? r.cogs : r.procurement;
+      const manualCell = (r.manualItems && r.manualItems.length)
+        ? `<button class="exp-expand-btn" onclick="toggleExpDetail('${r.date}')" style="background:none;border:none;color:var(--gold);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">${fmtN(r.manual)} <small style="color:var(--text3);">(${r.manualItems.length} item${r.manualItems.length!==1?'s':''})</small> <i class="fa-solid fa-chevron-down" id="exp-chevron-${r.date}" style="font-size:9px;transition:transform .2s;"></i></button>`
+        : (r.manual ? fmtN(r.manual) : '—');
+      const detailRow = (r.manualItems && r.manualItems.length)
+        ? `<tr class="exp-detail-row" id="exp-detail-${r.date}" style="display:none;"><td colspan="5" style="padding:0 12px 10px;background:var(--surface2);"><div style="display:flex;flex-direction:column;gap:6px;padding:8px 0;">${r.manualItems.map(it => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;"><span><strong>${it.expenditure || it.category}</strong> — ${it.description || ''}</span><span style="font-weight:700;">${fmtN(it.amount)}</span></div>`).join('')}</div></td></tr>`
+        : '';
+      return `
       <tr>
         <td data-label="Date" style="font-weight:600;">${fmtDate(r.date)}</td>
-        <td data-label="Procurement" class="right">${r.procurement ? fmtN(r.procurement) : '—'}</td>
-        <td data-label="Manual" class="right">${r.manual ? fmtN(r.manual) : '—'}</td>
+        <td data-label="COGS" class="right">${cogs ? fmtN(cogs) : '—'}</td>
+        <td data-label="Manual" class="right">${manualCell}</td>
         <td data-label="Total" class="right" style="font-weight:800;color:var(--red);">${fmtN(r.total)}</td>
         <td class="no-print"></td>
-      </tr>`).join('');
+      </tr>` + detailRow;
+    }).join('');
 
   renderTblPagination('expensePagination', all.length, expensePage, (p) => { expensePage = p; renderExpenseTable(); });
   document.getElementById('expenseFootTotal').textContent = fmtN(all.reduce((s,r) => s + r.total, 0));
+}
+function toggleExpDetail(date) {
+  const row = document.getElementById('exp-detail-' + date);
+  const ch = document.getElementById('exp-chevron-' + date);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : '';
+  if (ch) ch.style.transform = open ? '' : 'rotate(180deg)';
 }
 
 /* ═══════════════════════════════════════════════
@@ -646,10 +663,10 @@ function renderStatement() {
   const totalRestaurant = inc.filter(r=>r.department==='Restaurant').reduce((s,r)=>s+r.amount,0);
   const totalPoolBar = inc.filter(r=>r.department==='Pool Bar').reduce((s,r)=>s+r.amount,0);
   const totalGym = inc.filter(r=>r.department==='Gym').reduce((s,r)=>s+r.amount,0);
-  const totalProcurement = exp.reduce((s,r)=>s+r.procurement,0);
+  const totalCogs = exp.reduce((s,r)=>s+(r.cogs != null ? r.cogs : r.procurement) || 0,0);
   const totalManual = exp.reduce((s,r)=>s+r.manual,0);
-  const totalExpenses = totalProcurement + totalManual;
-  const grossProfit = totalIncome - totalProcurement;
+  const totalExpenses = totalCogs + totalManual;
+  const grossProfit = totalIncome - totalCogs;
   const netProfit = totalIncome - totalExpenses;
   const netMargin = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
   const positive = netProfit >= 0;
@@ -663,7 +680,7 @@ function renderStatement() {
     <div class="stmt-subtotal" style="color:var(--green);font-weight:800;"><span>Total Income</span><span class="amt" style="color:var(--green);">${fmtN(totalIncome)}</span></div>
 
     <div class="stmt-section-label">Expenses</div>
-    ${totalProcurement ? `<div class="stmt-line neg"><span>Procurement (COGS)</span><span class="amt">(${fmtN(totalProcurement)})</span></div>` : ''}
+    ${totalCogs ? `<div class="stmt-line neg"><span>Cost of Goods Sold (COGS)</span><span class="amt">(${fmtN(totalCogs)})</span></div>` : ''}
     ${totalManual ? `<div class="stmt-line neg"><span>Manual Expenses</span><span class="amt">(${fmtN(totalManual)})</span></div>` : ''}
     <div class="stmt-subtotal expense"><span>Total Expenses</span><span class="amt">(${fmtN(totalExpenses)})</span></div>
 
@@ -712,7 +729,7 @@ function openEntryModal(kind, id) {
   const isIncome = kind === 'income';
 
   document.getElementById('entryModalTitle').textContent = (editId ? 'Edit ' : 'Add ') + (isIncome ? 'Income' : 'Expense');
-  document.getElementById('feCatLabel').textContent = isIncome ? 'Department' : 'Category';
+  document.getElementById('feCatLabel').textContent = isIncome ? 'Department' : 'Expenditure';
   document.getElementById('entrySaveBtn').className = 'btn ' + (isIncome ? 'btn-outline' : 'btn-primary');
   populateCategorySelect(kind);
 

@@ -304,7 +304,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     department: 'poolbar',
     items: items.map((it, idx) => {
       const r = resolved.find(rv => rv.stockItem && rv.stockItem.name && rv.stockItem.name.toLowerCase() === it.name.trim().toLowerCase());
-      return { name: it.name.trim(), stockId: r ? r.stockItem.id : '', procurementId: r ? (r.stockItem.procurementId || '') : '', qty: Number(it.qty), price: Number(it.price) };
+      return { name: it.name.trim(), stockId: r ? r.stockItem.id : '', procurementId: r ? (r.stockItem.procurementId || '') : '', qty: Number(it.qty), price: Number(it.price), cost: r ? (Number(r.stockItem.cost) || Number(r.stockItem.price) || 0) : 0 };
     }),
     subtotal,
     discount: Number(discount) || 0,

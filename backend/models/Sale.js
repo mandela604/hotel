@@ -6,6 +6,7 @@ const saleItemSchema = new mongoose.Schema({
   procurementId: { type: String, default: '' },
   qty:     { type: Number, required: true },
   price:   { type: Number, required: true },
+  cost:    { type: Number, default: 0 },
 }, { _id: false });
 
 const saleSchema = new mongoose.Schema({

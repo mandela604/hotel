@@ -257,12 +257,14 @@ exports.createSale = asyncHandler(async (req, res) => {
 
   const stockIdMap = {};
   const procIdMap = {};
+  const costMap = {};
   for (const it of items) {
     const itemName = (it.name || it.key || '').trim();
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
     if (!stockItem) continue;
     stockIdMap[itemName.toLowerCase()] = stockItem.id;
     procIdMap[itemName.toLowerCase()] = stockItem.procurementId || '';
+    costMap[itemName.toLowerCase()] = Number(stockItem.cost) || Number(stockItem.price) || 0;
     const qty = Number(it.qty);
     if (stockItem.qty < qty) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -287,7 +289,8 @@ exports.createSale = asyncHandler(async (req, res) => {
     department: DEPT,
     items: items.map((i) => {
       const nm = (i.name || i.key || '').trim();
-      return { name: nm, stockId: stockIdMap[nm.toLowerCase()] || '', procurementId: procIdMap[nm.toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) };
+      const lk = nm.toLowerCase();
+      return { name: nm, stockId: stockIdMap[lk] || '', procurementId: procIdMap[lk] || '', qty: Number(i.qty), price: Number(i.price), cost: Number(costMap[lk]) || 0 };
     }),
     subtotal,
     discount: discountPct,
@@ -658,6 +661,7 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
   /* ── Deduct RestaurantStock per item — skip for COO orders (Kitchen owns the stock) ── */
   const stockIdMap = {};
   const procIdMap2 = {};
+  const costMap2 = {};
   if (!order.cooId) {
     for (const it of order.items) {
       const itemName = (it.name || it.key || '').trim();
@@ -665,6 +669,7 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
       if (!stockItem) continue;
       stockIdMap[itemName.toLowerCase()] = stockItem.id;
       procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
+      costMap2[itemName.toLowerCase()] = Number(stockItem.cost) || Number(stockItem.price) || 0;
       const qty = Number(it.qty);
       if (stockItem.qty < qty) {
         const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -695,7 +700,8 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
     department: DEPT,
     items: order.items.map((i) => {
       const nm = (i.name || i.key || '').trim();
-      return { name: nm, stockId: stockIdMap[nm.toLowerCase()] || '', procurementId: procIdMap2[nm.toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) };
+      const lk = nm.toLowerCase();
+      return { name: nm, stockId: stockIdMap[lk] || '', procurementId: procIdMap2[lk] || '', qty: Number(i.qty), price: Number(i.price), cost: Number(costMap2[lk]) || 0 };
     }),
     subtotal: order.subtotal,
     discount: order.discount,
@@ -751,6 +757,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     /* Skip stock deduction for COO orders — Kitchen owns the stock */
     const stockIdMap = {};
     const procIdMap2 = {};
+    const costMap2 = {};
     if (!order.cooId) {
       for (const it of order.items) {
         const itemName = (it.name || it.key || '').trim();
@@ -758,6 +765,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
         if (!stockItem) continue;
         stockIdMap[itemName.toLowerCase()] = stockItem.id;
         procIdMap2[itemName.toLowerCase()] = stockItem.procurementId || '';
+        costMap2[itemName.toLowerCase()] = Number(stockItem.cost) || Number(stockItem.price) || 0;
         const qty = Number(it.qty);
         if (stockItem.qty < qty) {
           const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
@@ -787,7 +795,8 @@ exports.payOrder = asyncHandler(async (req, res) => {
       department: DEPT,
       items: order.items.map((i) => {
         const nm = (i.name || i.key || '').trim();
-        return { name: nm, stockId: stockIdMap[nm.toLowerCase()] || '', procurementId: procIdMap2[nm.toLowerCase()] || '', qty: Number(i.qty), price: Number(i.price) };
+        const lk = nm.toLowerCase();
+        return { name: nm, stockId: stockIdMap[lk] || '', procurementId: procIdMap2[lk] || '', qty: Number(i.qty), price: Number(i.price), cost: Number(costMap2[lk]) || 0 };
       }),
       subtotal: order.subtotal,
       discount: order.discount,

@@ -165,14 +165,14 @@ exports.pnl = asyncHandler(async (req, res) => {
     if (to) expenseMatch.date.$lte = to;
   }
 
-  const [roomIncome, restIncome, poolIncome, gymIncome, manualIncome, expenses, prs] = await Promise.all([
+  const [roomIncome, restIncome, poolIncome, gymIncome, manualIncome, expenses, cogsSales] = await Promise.all([
     safeAgg(() => aggregateRoomRevenue(from, to), 'Room Revenue'),
     safeAgg(() => aggregateOutletRevenue(from, to, 'restaurant', 'Restaurant'), 'Restaurant Revenue'),
     safeAgg(() => aggregateOutletRevenue(from, to, 'poolbar', 'Pool Bar'), 'Pool Bar Revenue'),
     safeAgg(() => aggregateGymRevenue(from, to), 'Gym Revenue'),
     IncomeEntry.find(manualMatch).sort({ date: -1 }).catch(err => { console.error('[Accounting] Manual income query failed:', err.message); return []; }),
     ExpenseEntry.find(expenseMatch).sort({ date: -1 }).catch(err => { console.error('[Accounting] Expense query failed:', err.message); return []; }),
-    PurchaseRequest.find({ approvalStage: { $in: ['fulfilled', 'sent_to_store'] }, ...(from || to ? { createdAt: { ...(from ? { $gte: new Date(from) } : {}), ...(to ? { $lte: new Date(to + 'T23:59:59.999Z') } : {}) } } : {}) }).sort({ createdAt: -1 }).catch(err => { console.error('[Accounting] PurchaseRequest query failed:', err.message); return []; }),
+    Sale.find({ department: { $in: ['restaurant', 'poolbar'] }, status: 'completed', ...(from || to ? { createdAt: { ...(from ? { $gte: new Date(from) } : {}), ...(to ? { $lte: new Date(to + 'T23:59:59.999Z') } : {}) } } : {}) }).catch(err => { console.error('[Accounting] COGS query failed:', err.message); return []; }),
   ]);
 
   // ── Income: aggregate to one row per (shift/calendar day, department) ──
@@ -199,27 +199,36 @@ exports.pnl = asyncHandler(async (req, res) => {
   const income = Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date) || a.department.localeCompare(b.department));
   console.log('[Accounting pnl] grouped income:', income.length, income.slice(0,5).map(r => r.date + '|' + r.department + '=' + r.amount));
 
-  // ── Expenses: one row per type per shift/calendar day ──
-  const procByDate = {};
-  for (const pr of prs) {
-    const key = shiftKey(lagosDate(pr.createdAt));
-    if (!procByDate[key]) procByDate[key] = 0;
-    procByDate[key] += Number(pr.totalAmount) || 0;
+  // ── Expenses: COGS (from restaurant/poolbar sales) + manual batch per day (expandable) ──
+  const cogsByDate = {};
+  for (const s of cogsSales) {
+    const key = shiftKey(lagosDate(s.createdAt));
+    const cogs = (s.items || []).reduce((sum, it) => {
+      if (Number(it.cost) > 0) return sum + Number(it.cost) * (Number(it.qty) || 0);
+      return sum;
+    }, 0);
+    if (cogs <= 0) continue; // skip sales with no stored cost (manual cost needed)
+    if (!cogsByDate[key]) cogsByDate[key] = 0;
+    cogsByDate[key] += cogs;
   }
 
   const manualExpByDate = {};
+  const manualExpItems = {};
   for (const e of expenses) {
     const key = shiftKey(fmtDate(e.date));
-    if (!manualExpByDate[key]) manualExpByDate[key] = 0;
+    if (!manualExpByDate[key]) { manualExpByDate[key] = 0; manualExpItems[key] = []; }
     manualExpByDate[key] += Number(e.amount) || 0;
+    manualExpItems[key].push({ id: e._id.toString(), date: e.date, category: e.category, expenditure: e.category, description: e.description, amount: Number(e.amount) || 0, recordedBy: e.recordedBy || '' });
   }
 
-  const allDates = [...new Set([...Object.keys(procByDate), ...Object.keys(manualExpByDate)])];
+  const allDates = [...new Set([...Object.keys(cogsByDate), ...Object.keys(manualExpByDate)])];
   const expensesOut = allDates.map(date => ({
     date,
-    procurement: procByDate[date] || 0,
+    cogs: cogsByDate[date] || 0,
+    procurement: cogsByDate[date] || 0,
     manual: manualExpByDate[date] || 0,
-    total: (procByDate[date] || 0) + (manualExpByDate[date] || 0),
+    manualItems: manualExpItems[date] || [],
+    total: (cogsByDate[date] || 0) + (manualExpByDate[date] || 0),
   })).sort((a, b) => b.date.localeCompare(a.date));
 
   const totalIncome = income.reduce((s, r) => s + r.amount, 0);
