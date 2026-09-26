@@ -150,7 +150,6 @@
       filters.paymentType = c.querySelector('#rprPayType').value;
       state._dateFrom = c.querySelector('#rprDateFrom').value;
       state._dateTo = c.querySelector('#rprDateTo').value;
-      filters.period = (state._dateFrom || state._dateTo) ? 'custom' : 'all';
     }
     c.querySelectorAll('#rprRoomType, #rprPayMethod, #rprPayType').forEach(function(sel) {
       sel.addEventListener('change', function() { applyFilters(); render(c); });
