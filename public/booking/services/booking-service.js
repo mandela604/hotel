@@ -216,7 +216,9 @@
    */
   async function checkoutBooking(roomNum) {
     const res = await post('/bookings/' + encodeURIComponent(roomNum) + '/checkout', {});
-    await setRoomStatus(roomNum, 'cleaning');
+    const roomForStatus = (res.data && res.data.room) || roomNum;
+    // setRoomStatus expects room number, not stayId — use room from checkout response
+    try { await setRoomStatus(roomForStatus, 'cleaning'); } catch(e) { /* room already cleaning or not found — ignore */ }
     return res.data;
   }
 
