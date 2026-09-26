@@ -289,10 +289,14 @@ exports.deleteRoom = asyncHandler(async (req, res) => {
 // straight from 'vacant' to 'checkedin' without a booking in between).
 exports.setRoomStatus = asyncHandler(async (req, res) => {
   const { num } = req.params;
-  const { status, notes } = req.body;
+  const { status, notes, stayId } = req.body;
   const targetStatus = status === 'available' ? 'vacant' : status;
 
-  const booking = await Booking.findOne({ room: num });
+  let booking = null;
+  if (stayId) {
+    booking = await Booking.findOne({ stayId }) || await Booking.findById(stayId).catch(()=>null);
+  }
+  if (!booking) booking = await Booking.findOne({ room: num });
   if (!booking) return res.status(404).json({ success: false, error: 'Room not found' });
 
   const from = booking.status === 'vacant' ? 'vacant' : booking.status;
@@ -938,10 +942,9 @@ exports.getReports = asyncHandler(async (req, res) => {
       if (!hit) return false;
     }
     if (start && end) {
-      const ci = b.checkin ? new Date(b.checkin) : null;
-      const co = b.checkout ? new Date(b.checkout) : ci;
-      if (!ci) return false;
-      if (ci > end || (co ? co < start : ci < start)) return false;
+      const ca = b.createdAt ? new Date(b.createdAt) : null;
+      if (!ca || isNaN(ca)) return false;
+      if (ca < start || ca > end) return false;
     }
     return true;
   });
