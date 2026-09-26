@@ -185,7 +185,7 @@
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   /* ═══════════ Pure helpers ═══════════ */
-  function buildTransactions(roomTx, restSales, poolSales) {
+  function buildTransactions(roomTx, restSales, poolSales, gymTx) {
     const out = [];
     (roomTx || []).forEach((r) => out.push({
       id: r.id, dept: 'Rooms', desc: r.desc, amount: r.amount, method: r.method, staff: r.staff, date: parseTxDate(r.date),
@@ -197,6 +197,9 @@
     (poolSales || []).forEach((s) => out.push({
       id: s.id, dept: 'Pool Bar', desc: (s.item || s.name || 'Pool Bar') + ' \u00D7' + (s.qty || 1), amount: s.total, method: s.method, staff: s.staff, date: parseTxDate(s.time || s.date),
     }));
+    (gymTx || []).forEach((g) => out.push({
+      id: g.id, dept: 'Gym', desc: g.desc, amount: g.amount, method: g.method, staff: g.staff, date: parseTxDate(g.date),
+    }));
     return out.filter((t) => t.date).sort((a, b) => b.date - a.date);
   }
 
@@ -205,9 +208,10 @@
     const rooms = rows.filter((t) => t.dept === 'Rooms').reduce((s, t) => s + t.amount, 0);
     const restaurant = rows.filter((t) => t.dept === 'Restaurant').reduce((s, t) => s + t.amount, 0);
     const poolbar = rows.filter((t) => t.dept === 'Pool Bar').reduce((s, t) => s + t.amount, 0);
-    const gross = rooms + restaurant + poolbar;
+    const gym = rows.filter((t) => t.dept === 'Gym').reduce((s, t) => s + t.amount, 0);
+    const gross = rooms + restaurant + poolbar + gym;
     const discounts = rows.filter((t) => t.method === 'Complimentary').reduce((s, t) => s + t.amount, 0);
-    return { key, rows, count: rows.length, rooms, restaurant, poolbar, gross, discounts, net: gross - discounts };
+    return { key, rows, count: rows.length, rooms, restaurant, poolbar, gym, gross, discounts, net: gross - discounts };
   }
 
   function cashSalesFor(transactions, dept, key) {
@@ -280,7 +284,7 @@
     return rows;
   }
   function getShiftDetail(dept, key) {
-    const transactions = buildTransactions(state.roomTx, state.restSales, state.poolSales);
+    const transactions = buildTransactions(state.roomTx, state.restSales, state.poolSales, state.gymTx);
     const s = findShift(state.shifts, key, dept);
     if (!s) return null;
     const mb = methodBreakdownForShift(transactions, dept, key);
@@ -308,7 +312,7 @@
 
   /* ═══════════ State ═══════════ */
   const state = {
-    roomTx: [], restSales: [], poolSales: [], shifts: [],
+    roomTx: [], restSales: [], poolSales: [], gymTx: [], shifts: [],
     income: [], expenses: [],
     ready: false,
   };
@@ -319,7 +323,7 @@
 
   /* ═══════════ Normalize backend pnl income → frontend transaction shapes ═══════════ */
   function _splitIncome(income) {
-    const roomTx = [], restSales = [], poolSales = [];
+    const roomTx = [], restSales = [], poolSales = [], gymTx = [];
     (income || []).forEach((e) => {
       if (e.source === 'booking') {
         roomTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
@@ -331,10 +335,12 @@
         const m = desc.match(/(.+)\s*\u00D7\s*(\d+)/);
         poolSales.push({ id: e.id, time: e.date, item: m ? m[1].trim() : desc, qty: m ? Number(m[2]) : 1, total: e.amount, method: e.method || '', staff: e.recordedBy || '' });
       } else if (e.source === 'gym') {
-        roomTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+        gymTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+      } else if (e.source === 'manual' && e.department === 'Gym') {
+        gymTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
       }
     });
-    return { roomTx, restSales, poolSales };
+    return { roomTx, restSales, poolSales, gymTx };
   }
 
   /* ═══════════ loadAll ═══════════ */
@@ -344,7 +350,7 @@
     const income = pnlRes.income || [];
     const expenses = pnlRes.expenses || [];
 
-    const { roomTx, restSales, poolSales } = _splitIncome(income);
+    const { roomTx, restSales, poolSales, gymTx } = _splitIncome(income);
 
     let shifts = [];
     try {
@@ -374,6 +380,7 @@
     state.roomTx = roomTx;
     state.restSales = restSales;
     state.poolSales = poolSales;
+    state.gymTx = gymTx;
     state.shifts = shifts;
     state.income = income;
     state.expenses = expenses;
@@ -388,6 +395,7 @@
       roomTx: clone(state.roomTx),
       restSales: clone(state.restSales),
       poolSales: clone(state.poolSales),
+      gymTx: clone(state.gymTx),
       shifts: clone(state.shifts),
       income: clone(state.income),
       expenses: clone(state.expenses),
@@ -612,7 +620,7 @@
   function dashboardKPIs() {
     const openShifts = state.shifts.filter(s => s.status === 'open').length;
     const reconciled = state.shifts.filter(s => s.status === 'reconciled').length;
-    const allTx = buildTransactions(state.roomTx, state.restSales, state.poolSales);
+    const allTx = buildTransactions(state.roomTx, state.restSales, state.poolSales, state.gymTx);
     const variance = state.shifts.filter(s => s.status === 'reconciled' && Math.abs(s.actualCash - expectedCashFor(s, allTx)) > 500).length;
     const totalRevenue = allTx.reduce((s, t) => s + t.amount, 0);
     return { openShifts, reconciled, variance, totalRevenue };
@@ -621,7 +629,7 @@
   function shiftKPIs() {
     const open = state.shifts.filter(s => s.status === 'open').length;
     const reconciled = state.shifts.filter(s => s.status === 'reconciled').length;
-    const allTx = buildTransactions(state.roomTx, state.restSales, state.poolSales);
+    const allTx = buildTransactions(state.roomTx, state.restSales, state.poolSales, state.gymTx);
     const variance = state.shifts.filter(s => s.status === 'reconciled' && Math.abs(s.actualCash - expectedCashFor(s, allTx)) > 500).length;
     return { open, reconciled, variance };
   }

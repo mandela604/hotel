@@ -494,12 +494,12 @@ async function init(){
   }
 
   try {
-    const { roomTx, restSales, poolSales, shifts, session } = await AccountingData.getAccountingData();
+    const { roomTx, restSales, poolSales, gymTx, shifts, session } = await AccountingData.getAccountingData();
     currentSession = session;
     SHIFT_START_HOUR = AccountingData.getShiftStartHour();
     applyPermissionsUI();
 
-    const allTx = AccountingData.buildTransactions(roomTx, restSales, poolSales);
+    const allTx = AccountingData.buildTransactions(roomTx, restSales, poolSales, gymTx);
     const shiftKey = currentShiftKey(allTx);
     const shiftTotals = AccountingData.computeShiftTotals(allTx, shiftKey);
     const openShifts = shifts.filter(s => s.status === 'open').length;
