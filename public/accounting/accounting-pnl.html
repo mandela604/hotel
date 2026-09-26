@@ -399,17 +399,36 @@
     </div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="feDate"></div>
-      <div class="form-group"><label class="form-label" id="feCatLabel">Department</label>
+      <div class="form-group" id="singleCatWrap"><label class="form-label" id="feCatLabel">Department</label>
         <select class="form-select" id="feCategory"></select>
       </div>
+
     </div>
-    <div class="form-group"><label class="form-label">Description</label><input class="form-input" type="text" id="feDesc" placeholder="e.g. Room revenue – July Week 3"></div>
-    <div class="form-grid">
-      <div class="form-group"><label class="form-label">Amount (₦)</label><input class="form-input" type="number" id="feAmount" placeholder="0" min="0"></div>
-      <div class="form-group"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="feBy" placeholder="Staff name"></div>
+    <div id="singleEntryFields">
+      <div class="form-group"><label class="form-label">Description</label><input class="form-input" type="text" id="feDesc" placeholder="e.g. Room revenue – July Week 3"></div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Amount (₦)</label><input class="form-input" type="number" id="feAmount" placeholder="0" min="0"></div>
+        <div class="form-group"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="feBy" placeholder="Staff name" readonly style="background:var(--surface2);opacity:.85"></div>
+      </div>
+    </div>
+    <div id="incomeLinesSection" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px">
+        <span class="form-label" style="margin:0">Line Items — add multiple income</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="addIncomeLine()"><i class="fa-solid fa-plus"></i> Add Line</button>
+      </div>
+      <div id="incomeLinesBody"></div>
+      <div class="form-group" style="margin-top:10px"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="feByInc" placeholder="Staff name" readonly style="background:var(--surface2);opacity:.85"></div>
+    </div>
+    <div id="expenseLinesSection" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px">
+        <span class="form-label" style="margin:0">Line Items — add multiple expenses</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="addExpenseLine()"><i class="fa-solid fa-plus"></i> Add Line</button>
+      </div>
+      <div id="expenseLinesBody"></div>
+      <div class="form-group" style="margin-top:10px"><label class="form-label">Recorded By</label><input class="form-input" type="text" id="feByExp" placeholder="Staff name" readonly style="background:var(--surface2);opacity:.85"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn-outline" onclick="closeModal('entryModal')">Cancel</button>
+      <button type="button" onclick="closeModal('entryModal')" style="background:#fff;border:1px solid var(--border2);border-radius:10px;padding:9px 16px;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s"><i class="fa-solid fa-xmark"></i> Cancel</button>
       <button class="btn btn-primary" id="entrySaveBtn" onclick="saveEntry()"><i class="fa-solid fa-check"></i> Save</button>
     </div>
   </div>
@@ -421,7 +440,7 @@
     <h3 style="font-size:17px;font-weight:800;color:var(--red);margin-bottom:8px;">Delete Entry</h3>
     <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Delete <strong id="delEntryDesc"></strong>? This cannot be undone.</p>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button class="btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+      <button type="button" onclick="closeModal('deleteModal')" style="background:#fff;border:1px solid var(--border2);border-radius:10px;padding:9px 16px;color:var(--text2);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i class="fa-solid fa-xmark"></i> Cancel</button>
       <button style="background:var(--red-bg);border:1px solid rgba(240,68,56,0.3);border-radius:10px;padding:9px 16px;color:var(--red);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;" onclick="confirmDeleteEntry()"><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
   </div>
@@ -591,16 +610,29 @@ function renderIncomeTable() {
 
   document.getElementById('incomeBody').innerHTML = rows.length===0
     ? `<tr class="empty-row"><td colspan="4">No income recorded for this period.</td></tr>`
-    : rows.map(r => `
-      <tr>
+    : rows.map(r => {
+      const items = r.incomeItems || [];
+      const hasDetail = items.length > 1 || (items.length===1 && items[0].description);
+      const expandBtn = hasDetail ? `<button class="exp-expand-btn" onclick="toggleIncDetail('${r.id}')" style="background:none;border:none;color:var(--gold);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">${fmtN(r.amount)} <small style="color:var(--text3);">(${items.length})</small> <i class="fa-solid fa-chevron-down" id="inc-chevron-${r.id}" style="font-size:9px;transition:transform .2s;"></i></button>` : fmtN(r.amount);
+      const detailRow = hasDetail ? `<tr class="inc-detail-row" id="inc-detail-${r.id}" style="display:none;"><td colspan="4" style="padding:0 12px 10px;background:var(--surface2);"><div style="display:flex;flex-direction:column;gap:6px;padding:8px 0;">${items.map(it=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;"><span><strong>${it.description || it.department}</strong> ${it.recordedBy ? '<small style="color:var(--text3)">— '+esc(it.recordedBy)+'</small>' : ''}</span><span style="font-weight:700;">${fmtN(it.amount)}</span></div>`).join('')}</div></td></tr>` : '';
+      return `<tr>
         <td data-label="Date" style="font-weight:600;">${fmtDate(r.date)}</td>
         <td data-label="Department"><span class="cat-chip"><span class="cat-dot income"></span><strong>${r.department}</strong></span></td>
-        <td data-label="Amount" class="right" style="font-weight:700;color:var(--green);">${fmtN(r.amount)}</td>
-        <td class="no-print"></td>
-      </tr>`).join('');
+        <td data-label="Amount" class="right" style="font-weight:700;color:var(--green);">${hasDetail ? expandBtn : fmtN(r.amount)}</td>
+        <td class="no-print" style="text-align:right"><div class="row-actions" style="justify-content:flex-end">${hasDetail ? '' : `<button class="icon-btn edit" title="Edit" onclick="openEntryModal('income','${r.id}')"><i class="fa-solid fa-pen"></i></button>`}</div></td>
+      </tr>` + detailRow;
+    }).join('');
 
   renderTblPagination('incomePagination', all.length, incomePage, (p) => { incomePage = p; renderIncomeTable(); });
   document.getElementById('incomeFootTotal').textContent = fmtN(all.reduce((s,r) => s + r.amount, 0));
+}
+function toggleIncDetail(id) {
+  const row = document.getElementById('inc-detail-' + id);
+  const ch = document.getElementById('inc-chevron-' + id);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : '';
+  if (ch) ch.style.transform = open ? '' : 'rotate(180deg)';
 }
 
 function renderExpenseTable() {
@@ -717,6 +749,84 @@ function printStatement() {
 /* ═══════════════════════════════════════════════
    ADD / EDIT ENTRY MODAL (shared by Income & Expense)
 ═══════════════════════════════════════════════ */
+let expenseLines = [];
+let incomeLines = [];
+function addExpenseLine(pref) {
+  expenseLines.push({ tmpId: uid('el'), category: (pref && pref.category) || EXPENSE_CATEGORIES[0], description: (pref && pref.description) || '', amount: (pref && pref.amount) != null ? String(pref.amount) : '' });
+  renderExpenseLines(); updateSaveBtn();
+}
+function removeExpenseLine(idx) {
+  expenseLines.splice(idx, 1);
+  if (expenseLines.length === 0) addExpenseLine();
+  renderExpenseLines(); updateSaveBtn();
+}
+function updateExpenseLine(idx, field, val) { expenseLines[idx][field] = val; }
+function renderExpenseLines() {
+  const body = document.getElementById('expenseLinesBody');
+  body.innerHTML = expenseLines.map((ln, i) => `
+    <div style="display:grid;grid-template-columns:1.35fr 2fr 1fr 28px;gap:8px;align-items:end;margin-bottom:8px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Expenditure</label>
+        <select class="form-select" onchange="updateExpenseLine(${i},'category',this.value)">${EXPENSE_CATEGORIES.map(c=>`<option value="${c}" ${c===ln.category?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Description</label>
+        <input class="form-input" type="text" placeholder="e.g. Diesel for generator" value="${ln.description.replace(/"/g,'&quot;')}" oninput="updateExpenseLine(${i},'description',this.value)">
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Amount (₦)</label>
+        <input class="form-input" type="number" placeholder="0" min="0" value="${ln.amount}" oninput="updateExpenseLine(${i},'amount',this.value)">
+      </div>
+      <button type="button" class="icon-btn del" style="height:36px;align-self:end" onclick="removeExpenseLine(${i})" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+    </div>`).join('');
+}
+function addIncomeLine(pref) {
+  incomeLines.push({ tmpId: uid('il'), department: (pref && pref.department) || INCOME_DEPARTMENTS[0], description: (pref && pref.description) || '', amount: (pref && pref.amount) != null ? String(pref.amount) : '' });
+  renderIncomeLines(); updateSaveBtn();
+}
+function removeIncomeLine(idx) {
+  incomeLines.splice(idx, 1);
+  if (incomeLines.length === 0) addIncomeLine();
+  renderIncomeLines(); updateSaveBtn();
+}
+function updateIncomeLine(idx, field, val) { incomeLines[idx][field] = val; }
+function renderIncomeLines() {
+  const body = document.getElementById('incomeLinesBody');
+  body.innerHTML = incomeLines.map((ln, i) => `
+    <div style="display:grid;grid-template-columns:1.35fr 2fr 1fr 28px;gap:8px;align-items:end;margin-bottom:8px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Department</label>
+        <select class="form-select" onchange="updateIncomeLine(${i},'department',this.value)">${INCOME_DEPARTMENTS.map(c=>`<option value="${c}" ${c===ln.department?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Description</label>
+        <input class="form-input" type="text" placeholder="e.g. Room revenue – July Week 3" value="${ln.description.replace(/"/g,'&quot;')}" oninput="updateIncomeLine(${i},'description',this.value)">
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Amount (₦)</label>
+        <input class="form-input" type="number" placeholder="0" min="0" value="${ln.amount}" oninput="updateIncomeLine(${i},'amount',this.value)">
+      </div>
+      <button type="button" class="icon-btn del" style="height:36px;align-self:end" onclick="removeIncomeLine(${i})" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+    </div>`).join('');
+}
+function getSessionName() {
+  try {
+    const u = shell && shell.getUser && shell.getUser();
+    if (u && u.name) return u.name;
+    const raw = localStorage.getItem('user') || localStorage.getItem('auth-user') || localStorage.getItem('session') || localStorage.getItem('hotel-session');
+    if (raw) { const j=JSON.parse(raw); if(j.name) return j.name; if(j.user&&j.user.name) return j.user.name; if(j.data&&j.data.name) return j.data.name; }
+  } catch(e){}
+  return '';
+}
+async function fetchSessionNameFill(inputId){
+  const cur = document.getElementById(inputId)?.value;
+  if(cur && cur.trim()) return;
+  try{
+    const r = await fetch('/api/auth/session',{credentials:'include'});
+    if(r.ok){ const j=await r.json(); const n=j.name||j.user?.name||j.data?.name||''; if(n) document.getElementById(inputId).value=n; }
+  }catch(e){}
+}
+function updateSaveBtn(){
+  const b=document.getElementById('entrySaveBtn');
+  if(!b || editId) return;
+  const cnt = entryKind==='income' ? incomeLines.length : expenseLines.length;
+  b.innerHTML='<i class="fa-solid fa-check"></i> Save All ('+cnt+')';
+}
+
 function populateCategorySelect(kind) {
   const sel = document.getElementById('feCategory');
   const list = kind === 'income' ? INCOME_DEPARTMENTS : EXPENSE_CATEGORIES;
@@ -727,64 +837,114 @@ function openEntryModal(kind, id) {
   entryKind = kind;
   editId = id || null;
   const isIncome = kind === 'income';
-
+  const sessName = getSessionName();
   document.getElementById('entryModalTitle').textContent = (editId ? 'Edit ' : 'Add ') + (isIncome ? 'Income' : 'Expense');
-  document.getElementById('feCatLabel').textContent = isIncome ? 'Department' : 'Expenditure';
-  document.getElementById('entrySaveBtn').className = 'btn ' + (isIncome ? 'btn-outline' : 'btn-primary');
+  document.getElementById('entrySaveBtn').className = 'btn btn-primary';
+  document.getElementById('entrySaveBtn').innerHTML = editId ? '<i class="fa-solid fa-check"></i> Save' : '<i class="fa-solid fa-check"></i> Save All ('+ (isIncome ? incomeLines.length || 1 : expenseLines.length || 1) +')';
   populateCategorySelect(kind);
 
-  if (editId) {
-    const source = isIncome ? income : expenses;
-    const rec = source.find(e => e.id === editId);
-    if (rec) {
-      document.getElementById('feDate').value     = rec.date;
-      document.getElementById('feCategory').value = isIncome ? rec.department : rec.category;
-      document.getElementById('feDesc').value      = rec.description;
-      document.getElementById('feAmount').value    = rec.amount;
-      document.getElementById('feBy').value        = rec.recordedBy || '';
+  const singleFields = document.getElementById('singleEntryFields');
+  const singleCatWrap = document.getElementById('singleCatWrap');
+  const expSection = document.getElementById('expenseLinesSection');
+  const incSection = document.getElementById('incomeLinesSection');
+
+  if (isIncome) {
+    singleFields.style.display = 'none';
+    singleCatWrap.style.display = 'none';
+    expSection.style.display = 'none';
+    incSection.style.display = '';
+    if (editId) {
+      const rec = income.find(e => e.id === editId) || (income.flatMap(e=>e.incomeItems||[]).find(x=>x.id===editId));
+      const dept = rec ? (rec.department || INCOME_DEPARTMENTS[0]) : INCOME_DEPARTMENTS[0];
+      const desc = rec ? (rec.description || '') : '';
+      const amt = rec ? (rec.amount || '') : '';
+      incomeLines = [{ tmpId: uid('il'), department: dept, description: desc, amount: String(amt) }];
+      document.getElementById('feDate').value = rec ? rec.date : new Date().toISOString().split('T')[0];
+      document.getElementById('feByInc').value = rec ? (rec.recordedBy || sessName) : sessName;
+    } else {
+      incomeLines = [{ tmpId: uid('il'), department: INCOME_DEPARTMENTS[0], description: '', amount: '' }];
+      document.getElementById('feDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('feByInc').value = sessName;
     }
+    renderIncomeLines(); updateSaveBtn(); if(!document.getElementById('feByInc').value) fetchSessionNameFill('feByInc');
   } else {
-    document.getElementById('feDate').value   = new Date().toISOString().split('T')[0];
-    document.getElementById('feDesc').value   = '';
-    document.getElementById('feAmount').value = '';
-    document.getElementById('feBy').value     = '';
+    singleFields.style.display = 'none';
+    singleCatWrap.style.display = 'none';
+    incSection.style.display = 'none';
+    expSection.style.display = '';
+    if (editId) {
+      const rec = expenses.find(e => e.id === editId) || (expenses.flatMap(e=>e.manualItems||[]).find(x=>x.id===editId));
+      const cat = rec ? (rec.category || rec.expenditure || EXPENSE_CATEGORIES[0]) : EXPENSE_CATEGORIES[0];
+      const desc = rec ? (rec.description || '') : '';
+      const amt = rec ? (rec.amount || '') : '';
+      expenseLines = [{ tmpId: uid('el'), category: cat, description: desc, amount: String(amt) }];
+      document.getElementById('feDate').value = rec ? (rec.date && rec.date.length===10? rec.date : new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0];
+      document.getElementById('feByExp').value = rec ? (rec.recordedBy || sessName) : sessName;
+    } else {
+      expenseLines = [{ tmpId: uid('el'), category: EXPENSE_CATEGORIES[0], description: '', amount: '' }];
+      document.getElementById('feDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('feByExp').value = sessName;
+    }
+    renderExpenseLines(); updateSaveBtn(); if(!document.getElementById('feByExp').value) fetchSessionNameFill('feByExp');
   }
   document.getElementById('entryModal').classList.add('show');
 }
 
 async function saveEntry() {
   const date = document.getElementById('feDate').value;
-  const cat  = document.getElementById('feCategory').value;
-  const desc = document.getElementById('feDesc').value.trim();
-  const amt  = parseFloat(document.getElementById('feAmount').value);
-  const by   = document.getElementById('feBy').value.trim();
+  const isIncome = entryKind === 'income';
 
-  if (!date || !desc || isNaN(amt) || amt <= 0) {
-    showToast('Please fill in date, description and a valid amount.', 'error');
+  if (isIncome) {
+    const byInc = (document.getElementById('feByInc').value || '').trim() || getSessionName();
+    if (!date) { showToast('Please pick a date.', 'error'); return; }
+    if (editId) {
+      if (incomeLines.length !== 1) incomeLines = [incomeLines[0]];
+      const ln = incomeLines[0];
+      const amt = parseFloat(ln.amount);
+      if (!ln.description.trim() || isNaN(amt) || amt <= 0) { showToast('Fill description and valid amount.', 'error'); return; }
+      const payload = { date, department: ln.department, description: ln.description.trim(), amount: amt, recordedBy: byInc };
+      try { await apiUpdateIncome(editId, payload); showToast('Income updated.', 'success'); closeModal('entryModal'); editId = null; await reload(); } catch (err) { showToast('Failed to save: ' + err.message, 'error'); }
+      return;
+    }
+    const valid = incomeLines.filter(l => l.description.trim() && !isNaN(parseFloat(l.amount)) && parseFloat(l.amount) > 0);
+    if (valid.length === 0) { showToast('Add at least one income line with description and amount > 0.', 'error'); return; }
+    if (valid.length !== incomeLines.length) { showToast('All income lines need description and amount > 0. Remove empty lines.', 'error'); return; }
+    try {
+      for (const ln of valid) {
+        await apiAddIncome({ date, department: ln.department, description: ln.description.trim(), amount: parseFloat(ln.amount), recordedBy: byInc });
+      }
+      showToast(`${valid.length} income(s) saved.`, 'success');
+      closeModal('entryModal'); editId = null; incomePage = 1; await reload();
+    } catch (err) { showToast('Failed to save: ' + err.message, 'error'); }
     return;
   }
 
-  const isIncome = entryKind === 'income';
-  const payload = isIncome
-    ? { date, department: cat, description: desc, amount: amt, recordedBy: by }
-    : { date, category: cat, description: desc, amount: amt, recordedBy: by };
+  // Expense: multi-line
+  const byExp = (document.getElementById('feByExp').value || '').trim();
+  if (!date) { showToast('Please pick a date.', 'error'); return; }
+  if (!byExp) { /* allow empty, will default to Accountant */ }
+
+  if (editId) {
+    if (expenseLines.length !== 1) expenseLines = [expenseLines[0]];
+    const ln = expenseLines[0];
+    const amt = parseFloat(ln.amount);
+    if (!ln.description.trim() || isNaN(amt) || amt <= 0) { showToast('Fill description and valid amount.', 'error'); return; }
+    const payload = { date, category: ln.category, description: ln.description.trim(), amount: amt, recordedBy: byExp };
+    try { await apiUpdateExpense(editId, payload); showToast('Expense updated.', 'success'); closeModal('entryModal'); editId = null; await reload(); } catch (err) { showToast('Failed to save: ' + err.message, 'error'); }
+    return;
+  }
+
+  const valid = expenseLines.filter(l => l.description.trim() && !isNaN(parseFloat(l.amount)) && parseFloat(l.amount) > 0);
+  if (valid.length === 0) { showToast('Add at least one line with description and amount > 0.', 'error'); return; }
+  if (valid.length !== expenseLines.length) { showToast('All lines need description and amount > 0. Remove empty lines.', 'error'); return; }
 
   try {
-    if (editId) {
-      if (isIncome) await apiUpdateIncome(editId, payload);
-      else await apiUpdateExpense(editId, payload);
-    } else {
-      if (isIncome) await apiAddIncome(payload);
-      else await apiAddExpense(payload);
-      if (isIncome) incomePage = 1; else expensePage = 1;
+    for (const ln of valid) {
+      await apiAddExpense({ date, category: ln.category, description: ln.description.trim(), amount: parseFloat(ln.amount), recordedBy: byExp });
     }
-    showToast(`${isIncome ? 'Income' : 'Expense'} ${editId ? 'updated' : 'saved'}.`, 'success');
-    closeModal('entryModal');
-    editId = null;
-    await reload();
-  } catch (err) {
-    showToast('Failed to save: ' + err.message, 'error');
-  }
+    showToast(`${valid.length} expense(s) saved.`, 'success');
+    closeModal('entryModal'); editId = null; expensePage = 1; await reload();
+  } catch (err) { showToast('Failed to save: ' + err.message, 'error'); }
 }
 
 function openDeleteConfirm(kind, id) {
