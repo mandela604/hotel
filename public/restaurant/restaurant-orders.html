@@ -92,8 +92,9 @@ function showGuestLoadError(msg) {
 }
 
 (async function boot() {
+  var shell=null;
   if (window.RestaurantShell) {
-    RestaurantShell.attach({
+    shell=RestaurantShell.attach({
       sidebarTarget: '#sidebarSlot',
       topbarTarget: '#topbarSlot',
       activeFile: 'restaurant-orders.html',
@@ -123,6 +124,7 @@ function showGuestLoadError(msg) {
     module: 'restaurant',
     showCookOnOrder: true,
     service: RestaurantService,
+    shellHandle: shell,
     guests: guests,
     allowRoomCharge: true,
     paymentMethods: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'],
