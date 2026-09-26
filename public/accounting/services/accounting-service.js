@@ -323,21 +323,32 @@
 
   /* ═══════════ Normalize backend pnl income → frontend transaction shapes ═══════════ */
   function _splitIncome(income) {
+    // backend income date is already shiftKey 'YYYY-MM-DD' — attach noon so shiftKeyFor doesn't roll to previous day (midnight <9am)
+    function d12(d){ return d ? (d.length===10 ? d+'T12:00:00' : d) : d; }
     const roomTx = [], restSales = [], poolSales = [], gymTx = [];
     (income || []).forEach((e) => {
       if (e.source === 'booking') {
-        roomTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+        roomTx.push({ id: e.id, date: d12(e.date), desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
       } else if (e.source === 'Restaurant') {
         const items = (e.description || '').split(', ').map((s) => { const m = s.match(/(.+)\s*\u00D7\s*(\d+)/); return m ? { meal: m[1].trim(), qty: Number(m[2]) } : { meal: s, qty: 1 }; });
-        restSales.push({ id: e.id, date: e.date, items, total: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
+        restSales.push({ id: e.id, date: d12(e.date), items, total: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
       } else if (e.source === 'Poolbar') {
         const desc = e.description || '';
         const m = desc.match(/(.+)\s*\u00D7\s*(\d+)/);
-        poolSales.push({ id: e.id, time: e.date, item: m ? m[1].trim() : desc, qty: m ? Number(m[2]) : 1, total: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+        poolSales.push({ id: e.id, time: d12(e.date), item: m ? m[1].trim() : desc, qty: m ? Number(m[2]) : 1, total: e.amount, method: e.method || '', staff: e.recordedBy || '' });
       } else if (e.source === 'gym') {
-        gymTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+        gymTx.push({ id: e.id, date: d12(e.date), desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
       } else if (e.source === 'manual' && e.department === 'Gym') {
-        gymTx.push({ id: e.id, date: e.date, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+        gymTx.push({ id: e.id, date: d12(e.date), desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '' });
+      } else if (e.source === 'manual') {
+        // manual income for other depts — route by department so dashboard counts it
+        if (e.department === 'Restaurant') {
+          restSales.push({ id: e.id, date: d12(e.date), items: [{ meal: e.description || 'Manual', qty: 1 }], total: e.amount, method: e.method||'', staff: e.recordedBy||'', status: 'completed' });
+        } else if (e.department === 'Pool Bar') {
+          poolSales.push({ id: e.id, time: d12(e.date), item: e.description || 'Manual', qty: 1, total: e.amount, method: e.method||'', staff: e.recordedBy||'' });
+        } else if (e.department === 'Front Desk') {
+          roomTx.push({ id: e.id, date: d12(e.date), desc: e.description, amount: e.amount, method: e.method||'', staff: e.recordedBy||'' });
+        }
       }
     });
     return { roomTx, restSales, poolSales, gymTx };
