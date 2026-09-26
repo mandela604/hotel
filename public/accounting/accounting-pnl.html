@@ -525,6 +525,7 @@ let entryKind = 'income';   // which modal mode is currently open
 let editId = null;
 let deleteTarget = null;    // { kind, id }
 
+function esc(s){ const d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
 function fmtN(n) { return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtDateShort(d) { if (!d) return ''; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
