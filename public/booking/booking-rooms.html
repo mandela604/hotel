@@ -830,9 +830,13 @@ async function saveRoomStatus() {
     // transitions accordingly; everything else (vacant, maintenance,
     // cancel) still goes through the plain status change.
     if (newSt === 'checkedin') {
-      await BookingData.checkinBooking(statusRoom, { notes: note });
+      var ciBk = bookings.filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; }).sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || bookings.find(function(b){ return b.room === statusRoom; });
+      var ciKey = ciBk ? (ciBk.stayId || ciBk._id || ciBk.id || statusRoom) : statusRoom;
+      await BookingData.checkinBooking(ciKey, { notes: note });
     } else if (newSt === 'no-show') {
-      await fetch('/api/booking/bookings/' + encodeURIComponent(statusRoom) + '/no-show', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({}) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) throw new Error(d.error); });
+      var nsBk = bookings.filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; }).sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || bookings.find(function(b){ return b.room === statusRoom; });
+      var nsKey = nsBk ? (nsBk.stayId || nsBk._id || nsBk.id || statusRoom) : statusRoom;
+      await fetch('/api/booking/bookings/' + encodeURIComponent(nsKey) + '/no-show', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({}) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) throw new Error(d.error); });
     } else if (newSt === 'cancel-refund') {
       openRefundModal(statusRoom);
       closeModal('roomStatusModal');
@@ -842,7 +846,9 @@ async function saveRoomStatus() {
       // checkoutBooking() always lands the room on 'cleaning' itself —
       // staff can move it further (Available/Maintenance) afterward as
       // its own separate action, not bundled into checkout.
-      await BookingData.checkoutBooking(statusRoom);
+      var coBk = bookings.find(function(b){ return b.room === statusRoom && b.status === 'checkedin'; }) || bookings.find(function(b){ return b.room === statusRoom; });
+      var coKey = coBk ? (coBk.stayId || coBk._id || coBk.id || statusRoom) : statusRoom;
+      await BookingData.checkoutBooking(coKey);
     } else {
       await BookingData.setRoomStatus(statusRoom, newSt, { notes: note });
     }
@@ -900,9 +906,10 @@ async function init() {
 
 /* ── Cancel & Refund Modal ── */
 var refundRoom = null;
-function openRefundModal(room) {
-  refundRoom = room;
-  var bk = bookings.find(function(b){ return b.room === room; });
+function openRefundModal(roomOrStay) {
+  var rbk = bookings.find(function(b){ return (b.stayId||b._id)===roomOrStay; }) || bookings.filter(function(b){ return b.room===roomOrStay; }).sort(function(a,b){return new Date(a.checkin)-new Date(b.checkin);})[0] || bookings.find(function(b){ return b.room === roomOrStay; });
+  refundRoom = rbk ? (rbk.stayId || rbk._id || rbk.id || roomOrStay) : roomOrStay;
+  var bk = rbk;
   if (!bk) return;
   document.getElementById('rfRoomNum').textContent = room;
   document.getElementById('rfGuestName').textContent = bk.guest || '—';
