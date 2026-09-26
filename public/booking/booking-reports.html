@@ -438,12 +438,9 @@ async function applyInlineFilters() {
   const params = new URLSearchParams();
   var now = new Date();
   params.set('clientDate', now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0'));
-  if (period && period !== 'all') {
-    params.set('period', period);
-  } else {
-    if (dateFrom) params.set('dateFrom', dateFrom);
-    if (dateTo) params.set('dateTo', dateTo);
-  }
+  if (period && period !== 'all') params.set('period', period);
+  if (dateFrom) params.set('dateFrom', dateFrom);
+  if (dateTo) params.set('dateTo', dateTo);
   if (status) params.set('status', status);
   if (payStatus) params.set('payment', payStatus);
   if (staff) params.set('staff', staff);
