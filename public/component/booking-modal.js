@@ -516,6 +516,7 @@
             '<div class="bkm-status-group" data-role="roomStatusHint" hidden>' +
               '<div class="bkm-status-label">Room state</div>' +
               '<div style="font-size:12px;color:var(--bkm-text);font-weight:700;" data-role="roomStateText">—</div>' +
+              '<button type="button" class="bkm-btn bkm-btn-primary" data-act="checkin" hidden style="margin-top:10px;width:100%;justify-content:center;"><i class="fa-solid fa-right-to-bracket"></i> Check in</button>' +
               '<button type="button" class="bkm-btn bkm-btn-checkout" data-act="checkout" hidden style="margin-top:10px;width:100%;justify-content:center;"><i class="fa-solid fa-right-from-bracket"></i> Check out</button>' +
             '</div>' +
           '</div>' +
@@ -668,6 +669,7 @@
       var noticeText = $('[data-role="noticeText"]');
       var saveBtn = $('[data-act="save"]');
       var delBtn = $('[data-act="delete"]');
+      var checkinBtn = $('[data-act="checkin"]');
       var checkoutBtn = $('[data-act="checkout"]');
       var depositWrap = $('[data-role="depositWrap"]');
       var payMethodWrap = $('[data-role="payMethodWrap"]');
@@ -696,6 +698,10 @@
       }
       if (delBtn) {
         delBtn.hidden = !(mode === 'edit' && onDeleted && canDeleteEntity(session, editBooking));
+      }
+      if (checkinBtn) {
+        var canCi = !!editBooking && editBooking.status === 'reserved' && canEditEntity(session, editBooking);
+        checkinBtn.hidden = !canCi;
       }
       if (checkoutBtn) {
         var canCo = !!editBooking && editBooking.status === 'checkedin' && canEditEntity(session, editBooking);
@@ -1154,6 +1160,30 @@
       setTimeout(function() { w.print(); }, 300);
     }
 
+    /* ── Check in (early allowed) ── */
+    async function checkinStay() {
+      if (!editBooking || editBooking.status !== 'reserved') return;
+      if (!canEditEntity(session, editBooking)) {
+        toast("You don't have permission to check in this booking.", 'error');
+        return;
+      }
+      if (!service || typeof service.checkinBooking !== 'function') {
+        toast('Check-in is not available.', 'error');
+        return;
+      }
+      var ok = await showConfirm('Check in guest?', 'Check in ' + (editBooking.guest || 'guest') + ' to Room ' + editBooking.room + '?');
+      if (!ok) return;
+      try {
+        var ciStay = editBooking.stayId || editBooking._id || editBooking.room;
+        var row = await service.checkinBooking(ciStay);
+        toast('Guest checked in to Room ' + editBooking.room + '.', 'success');
+        close();
+        onSaved(row);
+      } catch (err) {
+        toast((err && err.message) || 'Check-in failed.', 'error');
+      }
+    }
+
     /* ── Check out → cleaning ── */
     async function checkoutStay() {
       if (!editBooking || editBooking.status !== 'checkedin') return;
@@ -1397,6 +1427,7 @@
         if (a === 'printBooking') { printBookingReceipt(); return; }
         if (a === 'save') { save(); return; }
         if (a === 'delete') { remove(); return; }
+        if (a === 'checkin') { checkinStay(); return; }
         if (a === 'checkout') { checkoutStay(); return; }
         if (a === 'addPayment') { showNewPayRow(); return; }
         if (a === 'togglePayAcc') {
