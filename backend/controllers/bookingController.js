@@ -366,6 +366,20 @@ function datesOverlap(aStart, aEnd, bStart, bEnd) {
   if (isNaN(aS) || isNaN(aE) || isNaN(bS) || isNaN(bE)) return false;
   return aS < bE && aE > bS;
 }
+async function nextBookingNo() {
+  const year = new Date().getFullYear();
+  const prefix = `BK-${year}-`;
+  const last = await Booking.find({ bookingNo: { $regex: `^${prefix}` } }).sort({ bookingNo: -1 }).limit(1).lean();
+  let n = 1;
+  if (last.length && last[0].bookingNo) {
+    const m = last[0].bookingNo.match(/BK-\d+-(\d+)$/);
+    if (m) n = parseInt(m[1], 10) + 1;
+  } else {
+    const count = await Booking.countDocuments({ bookingNo: { $regex: `^${prefix}` } });
+    n = count + 1;
+  }
+  return `${prefix}${String(n).padStart(3, '0')}`;
+}
 
 exports.createBooking = asyncHandler(async (req, res) => {
   const {
@@ -385,12 +399,14 @@ exports.createBooking = asyncHandler(async (req, res) => {
     }
   }
 
+  const bookingNo = await nextBookingNo();
   // Reuse a vacant placeholder if one exists, otherwise create a new stay doc
   let booking = await Booking.findOne({ room, status: 'vacant' });
   const isReuse = !!booking;
   if (isReuse) {
     Object.assign(booking, {
       stayId: uuidv4(),
+      bookingNo,
       type: type || booking.type,
       guest: guest.trim(),
       phone: phone || '',
@@ -419,6 +435,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
     booking = await Booking.create({
       room,
       stayId: uuidv4(),
+      bookingNo,
       type: type || roomDoc.type || 'Standard',
       guest: (guest || '').trim(),
       phone: phone || '',
@@ -903,7 +920,7 @@ exports.getReports = asyncHandler(async (req, res) => {
 
   // Map Booking docs to report-shaped objects
   let stays = allBookings.map(b => ({
-    _id: b._id, id: b._id, stayId: b.stayId || '', room: b.room, type: b.type, guest: b._guestName || b.guest || '', phone: b.phone || '',
+    _id: b._id, id: b._id, stayId: b.stayId || '', bookingNo: b.bookingNo || b.stayId || '', room: b.room, type: b.type, guest: b._guestName || b.guest || '', phone: b.phone || '',
     rate: b.rate || 0, discount: b.discount || 0,
     checkin: b.checkin || '', checkout: b.checkout || '',
     total: calcTotal(b), paid: calcPaid(b), status: b.status || '',
@@ -1027,7 +1044,7 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
       rows.push({
         sn: seq, date: p.date || '',
         receiptNo: 'RCP-' + String(seq).padStart(5, '0'),
-        guest: guestLabel, bookingNo: b.stayId || b.room || '',
+        guest: guestLabel, bookingNo: b.bookingNo || b.stayId || b.room || '',
         room: b.room || '', roomType: b.type || '',
         paymentType: pType, paymentMethod: p.mode || 'Cash',
         referenceNo: p.id || '', amount: p.amount || 0,
@@ -1044,7 +1061,7 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
       rows.push({
         sn: seq, date: b.refundDate || '',
         receiptNo: 'RCP-' + String(seq).padStart(5, '0'),
-        guest: guestLabel, bookingNo: b.stayId || b.room || '',
+        guest: guestLabel, bookingNo: b.bookingNo || b.stayId || b.room || '',
         room: b.room || '', roomType: b.type || '',
         paymentType: 'Refund', paymentMethod: 'Refund',
         referenceNo: '', amount: -(Number(b.refunded)),
@@ -1181,4 +1198,25 @@ exports.fixBookingRoomIndex = asyncHandler(async (req, res) => {
     console.log('[Migration] Ensured unique sparse index on stayId');
   } catch (e) { console.log('[Migration] createIndex stayId:', e.message); }
   res.json({ success: true, message: 'Booking room index fixed to per-stay model' });
+});
+
+/* ── One-time migration: backfill bookingNo BK-YYYY-XXX ── */
+exports.backfillBookingNo = asyncHandler(async (req, res) => {
+  const year = new Date().getFullYear();
+  const prefix = `BK-${year}-`;
+  const all = await Booking.find({ $or: [{ bookingNo: null }, { bookingNo: '' }] }).sort({ createdAt: 1 });
+  let n = 1;
+  const last = await Booking.find({ bookingNo: { $regex: `^${prefix}` } }).sort({ bookingNo: -1 }).limit(1).lean();
+  if (last.length && last[0].bookingNo) {
+    const m = last[0].bookingNo.match(/BK-\d+-(\d+)$/);
+    if (m) n = parseInt(m[1], 10) + 1;
+  }
+  let updated = 0;
+  for (const b of all) {
+    b.bookingNo = `${prefix}${String(n).padStart(3, '0')}`;
+    await b.save();
+    n++; updated++;
+  }
+  console.log(`[Migration] Backfilled bookingNo on ${updated} bookings`);
+  res.json({ success: true, message: `Backfilled bookingNo on ${updated} bookings` });
 });
