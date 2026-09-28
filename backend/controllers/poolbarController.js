@@ -323,6 +323,16 @@ exports.createSale = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: sale });
 });
 
+exports.updateSaleDate = asyncHandler(async (req, res) => {
+  if (!req.user || String(req.user.role).toLowerCase() !== 'admin') return res.status(403).json({ success: false, error: 'Only admin can edit sale date' });
+  const sale = await Sale.findOne({ id: req.params.id, department: 'poolbar' });
+  if (!sale) return res.status(404).json({ success: false, error: 'Sale record not found' });
+  const d = req.body.date ? new Date(req.body.date) : null;
+  if (!d || isNaN(d.getTime())) return res.status(400).json({ success: false, error: 'Valid date required (YYYY-MM-DD)' });
+  sale.date = d; sale.updatedAt = Date.now(); await sale.save();
+  res.json({ success: true, data: sale });
+});
+
 exports.voidSale = asyncHandler(async (req, res) => {
   // Looked up by the app-level `id` (e.g. "PBS-001042"), never Mongo's
   // `_id` — the frontend only ever knows this id.

@@ -30,6 +30,7 @@ router.post('/stock/:id/adjust', isAdmin, v.validateParam('id'), restaurantContr
 router.get('/movements', restaurantController.listMovements);
 
 /* Sales */
+router.put('/sales/:id/date', isAdmin, restaurantController.updateSaleDate);
 router.get('/sales', restaurantController.listSales);
 router.post('/sales', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateCreateSale, restaurantController.createSale);
 router.post('/sales/:id/void', inDept, privilegeGuard('restaurant', 'canVoid'), v.validateParam('id'), v.validateVoidSale, restaurantController.voidSale);

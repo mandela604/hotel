@@ -41,6 +41,7 @@ router.put('/categories/:name', inDept, privilegeGuard('poolbar', 'canEdit'), va
 router.delete('/categories/:name', isAdmin, validateParam('name'), ctrl.deleteCategory);
 
 /* ── Sales ──────────────────────────────────── */
+router.put('/sales/:id/date', isAdmin, ctrl.updateSaleDate);
 router.get('/sales',  inDept, ctrl.listSales);
 router.post('/sales', inDept, privilegeGuard('poolbar', 'canCreate'), validateCreateSale, ctrl.createSale);
 router.post('/sales/:id/void', inDept, privilegeGuard('poolbar', 'canVoid'), validateObjectIdParam('id'), validateVoidSale, ctrl.voidSale);

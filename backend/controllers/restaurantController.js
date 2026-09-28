@@ -347,6 +347,16 @@ exports.createSale = asyncHandler(async (req, res) => {
 
 // Voids a completed sale and restores stock — matches the frontend's
 // "voided — stock restored" toast in restaurant-sales.html.
+exports.updateSaleDate = asyncHandler(async (req, res) => {
+  if (!req.user || String(req.user.role).toLowerCase() !== 'admin') return res.status(403).json({ success: false, error: 'Only admin can edit sale date' });
+  const sale = await Sale.findOne({ id: req.params.id, department: DEPT });
+  if (!sale) return res.status(404).json({ success: false, error: 'Sale not found' });
+  const d = req.body.date ? new Date(req.body.date) : null;
+  if (!d || isNaN(d.getTime())) return res.status(400).json({ success: false, error: 'Valid date required (YYYY-MM-DD)' });
+  sale.date = d; await sale.save();
+  res.json({ success: true, data: sale });
+});
+
 exports.voidSale = asyncHandler(async (req, res) => {
   const sale = await Sale.findOne({ id: req.params.id, department: DEPT });
   if (!sale) return res.status(404).json({ success: false, error: 'Sale not found' });
