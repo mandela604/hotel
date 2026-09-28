@@ -390,15 +390,14 @@ async function init() {
     onVoid: openVoidDirect,
   });
 
-  // Locked filter: NO period, NO date range — only status / payment / search
   filterBar = SalesFilterBar.create({
     target: '#filterSlot',
     show: {
-      period: false,
+      period: true,
       status: true,
       source: false,
       payment: true,
-      dateRange: false,
+      dateRange: true,
       search: true,
       clear: true,
       chips: true,
