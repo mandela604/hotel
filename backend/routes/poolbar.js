@@ -23,10 +23,10 @@ const isAdmin = roleGuard('admin');
 const inDeptCanView = [departmentGuard('Pool Bar'), privilegeGuard('poolbar', 'canView')];
 
 /* ── Dashboard ──────────────────────────────── */
-router.get('/dashboard', ...inDeptCanView, ctrl.getDashboard);
+router.get('/dashboard', inDept, ctrl.getDashboard);
 
 /* ── Stock ──────────────────────────────────── */
-router.get('/stock',       ...inDeptCanView, ctrl.listStock);
+router.get('/stock',       inDept, ctrl.listStock);
 router.post('/stock',      inDept, privilegeGuard('poolbar', 'canCreate'), validateAddStock,  ctrl.addStock);
 router.put('/stock/:id',   inDept, privilegeGuard('poolbar', 'canEdit'),   validateObjectIdParam('id'), validateUpdateStock, ctrl.updateStock);
 router.delete('/stock/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteStock);
@@ -35,18 +35,18 @@ router.post('/stock/:id/deduct', inDept, privilegeGuard('poolbar', 'canEdit'), v
 router.post('/stock/:id/adjust', isAdmin, validateObjectIdParam('id'), ctrl.adjustStockById);
 
 /* ── Categories ─────────────────────────────── */
-router.get('/categories', ...inDeptCanView, ctrl.listCategories);
+router.get('/categories', inDept, ctrl.listCategories);
 router.post('/categories', inDept, privilegeGuard('poolbar', 'canCreate'), validateAddCategory, ctrl.addCategory);
 router.put('/categories/:name', inDept, privilegeGuard('poolbar', 'canEdit'), validateParam('name'), validateRenameCategory, ctrl.renameCategory);
 router.delete('/categories/:name', isAdmin, validateParam('name'), ctrl.deleteCategory);
 
 /* ── Sales ──────────────────────────────────── */
-router.get('/sales',  ...inDeptCanView, ctrl.listSales);
+router.get('/sales',  inDept, ctrl.listSales);
 router.post('/sales', inDept, privilegeGuard('poolbar', 'canCreate'), validateCreateSale, ctrl.createSale);
 router.post('/sales/:id/void', inDept, privilegeGuard('poolbar', 'canVoid'), validateObjectIdParam('id'), validateVoidSale, ctrl.voidSale);
 
 /* ── Orders / Tabs ──────────────────────────── */
-router.get('/orders',  ...inDeptCanView, ctrl.listOrders);
+router.get('/orders',  inDept, ctrl.listOrders);
 router.post('/orders', inDept, privilegeGuard('poolbar', 'canCreate'), validateOpenOrder, ctrl.openTab);
 router.put('/orders/:id', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.updateOrder);
 router.post('/orders/:id/serve', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.markServed);
