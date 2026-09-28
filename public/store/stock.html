@@ -520,10 +520,6 @@ function isStoreAdmin(){
   try {
     var u = shell && shell.getUser ? shell.getUser() : null;
     if (u && u.role && String(u.role).toLowerCase()==='admin') return true;
-    if (u && u.role && String(u.role).toLowerCase()==='manager') return true;
-    if (window.Permissions && u) {
-      try { if (Permissions.hasPermission(u, 'canEdit', 'store') || Permissions.hasPermission(u, 'canRestock', 'store')) return true; } catch(e){}
-    }
     var ls=null; try{ls=JSON.parse(localStorage.getItem('user')||'null');}catch(e){}
     if(!ls) try{ls=JSON.parse(localStorage.getItem('session')||'null');}catch(e){}
     if(ls&&ls.role) return String(ls.role).toLowerCase()==='admin';
@@ -531,7 +527,7 @@ function isStoreAdmin(){
   } catch(e){ return false; }
 }
 function openAdjustStore(id){
-  if(!isStoreAdmin()){ showToast('Only admin/manager can adjust stock.', 'error'); return; }
+  if(!isStoreAdmin()){ showToast('Only admin can adjust stock.', 'error'); return; }
   var s=svc.findStock(id) || svc.state.stock.find(function(x){return x.id===id;});
   if(!s){ showToast('Item not found.', 'error'); return; }
   adjustId = id;
