@@ -739,7 +739,7 @@
     }
 
     function clearForm() {
-      ['name', 'phone', 'email', 'address', 'idNum', 'checkin', 'checkout', 'rate', 'paid', 'notes'].forEach(function (k) {
+      ['name', 'phone', 'email', 'address', 'idNum', 'checkin', 'checkout', 'rate', 'paid', 'notes', 'createdAt'].forEach(function (k) {
         setVal(k, '');
       });
       setVal('idType', 'NIN');
@@ -749,6 +749,7 @@
       setVal('payMethod', 'Cash');
       setVal('type', '');
       setStatusRadio('reserved');
+      originalCreatedAt = null;
       settlingIdx = null;
       pendingSettle = null;
       var drop = $('[data-role="guestDrop"]');
@@ -1360,6 +1361,10 @@
       $('[data-role="title"]').innerHTML = 'New Booking';
       $('[data-role="sub"]').textContent = 'Create a reserved or checked-in stay';
       setVal('checkin', todayStr());
+      // Always reset created date to today for new bookings — prevents back-dated value leaking from previous edit
+      var today = todayStr();
+      setVal('createdAt', today);
+      originalCreatedAt = today;
       setStatusRadio(pre.status === 'checkedin' ? 'checkedin' : 'reserved');
       populateRooms(pre.room || null);
       var meta = $('[data-role="metaFoot"]');
