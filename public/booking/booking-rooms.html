@@ -682,16 +682,7 @@ function renderRoomGrid(filter) {
     grid.innerHTML = page.map(r => {
       const st = getRoomStatus(r.num) || 'available';  // fallback
       const cands = bookings.filter(b => b.room === r.num).sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
-      let bk = cands.find(b => b.status === 'checkedin') || cands.find(b => b.status === 'reserved') || cands[0] || null;
-      // for checkedin/reserved that is currently active, prefer it; otherwise most recent
-      if (st === 'reserved' || st === 'checkedin') {
-        const today = new Date(); today.setHours(0,0,0,0);
-        const active = cands.find(b => b.status === 'reserved' && b.checkin && b.checkout && new Date(b.checkin) <= today && today < new Date(b.checkout));
-        if (active) bk = active;
-        else if (cands.length) bk = cands[0];
-      } else if (cands.length) {
-        bk = cands[0];
-      }
+      let bk = cands[0] || null;
       const hasGuest = bk && bk.guest && st !== 'available' && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
       const upcomingCount = cands.filter(b => b.status === 'reserved').length;
       const upcomingBadge = (st === 'reserved' && upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' upcoming</span>' : '';
@@ -770,18 +761,7 @@ function openBookingForRoom(num) {
 function openBookingFromCard(num) {
   const session = getSession();
   const cands = bookings.filter(function(b){ return b.room === num; }).sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
-  let bk = null;
-  if (cands.length === 1) bk = cands[0];
-  else if (cands.length > 1) {
-    bk = cands.find(function(x){ return x.status === 'checkedin'; }) || cands.find(function(x){ return x.status === 'reserved'; }) || cands[0];
-    // ensure most recent among that status
-    if (bk && cands.filter(function(x){ return x.status===bk.status; }).length > 1) {
-      const sameStatus = cands.filter(function(x){ return x.status===bk.status; }).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
-      bk = sameStatus[0];
-    } else if (!bk) {
-      bk = cands[0];
-    }
-  }
+  let bk = cands[0] || null;
   const st = bk ? (bk.status || 'vacant') : 'vacant';
   bookingModal.setSession(session);
   if (st === 'checkout' || st === 'cleaning') {
