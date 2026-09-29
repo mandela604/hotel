@@ -54,7 +54,7 @@
       },
       accountant: {
         accounting: {
-          canView: true, canCreate: true, canEdit: true, canDelete: false,
+          canView: true, canCreate: true, canEdit: true, canDelete: true,
           canApprove: true, canViewReports: true,
         },
       },
@@ -283,12 +283,7 @@
   }
 
   function canDelete(session, module, entity) {
-    // Admin only — still respects session.permissions.canDelete if API sent it
-    if (flagFromSession(session, 'canDelete', module) === true) {
-      // allow non-admin only if backend explicitly granted it
-    } else if (!session || session.role !== 'admin') {
-      return false;
-    }
+    if (!hasPermission(session, 'canDelete', module)) return false;
     if (entity && entity.status) {
       var locked = ['completed', 'approved', 'fulfilled', 'paid', 'reconciled'];
       if (locked.indexOf(entity.status) !== -1) return false;

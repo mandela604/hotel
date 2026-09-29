@@ -22,4 +22,6 @@ const shiftSchema = new mongoose.Schema({
   }],
 }, { timestamps: true });
 
+shiftSchema.index({ key: 1, dept: 1 }, { unique: true });
+
 module.exports = mongoose.model('Shift', shiftSchema);

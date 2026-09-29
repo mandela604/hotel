@@ -608,7 +608,7 @@ async function init(){
   try {
     await AccountingData.loadAll();
     transactions = AccountingData.buildTransactions(
-      AccountingData.state.roomTx, AccountingData.state.restSales, AccountingData.state.poolSales
+      AccountingData.state.roomTx, AccountingData.state.restSales, AccountingData.state.poolSales, AccountingData.state.gymTx
     );
     render();
   } catch (err) {

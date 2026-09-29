@@ -392,8 +392,8 @@ function fmtDisplayDate(dt){
 async function refreshData(manual){
   document.getElementById('tblBody').innerHTML = `<tr class="empty-row"><td colspan="8"><i class="fa-solid fa-spinner fa-spin"></i> Loading transactions…</td></tr>`;
   try {
-    const { roomTx, restSales, poolSales } = await AccountingData.getAccountingData();
-    txns = AccountingData.buildTransactions(roomTx, restSales, poolSales);
+    const { roomTx, restSales, poolSales, gymTx } = await AccountingData.getAccountingData();
+    txns = AccountingData.buildTransactions(roomTx, restSales, poolSales, gymTx);
     txns.sort((a,b) => b.date - a.date);
     renderStatusTabs();
     render();

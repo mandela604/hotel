@@ -113,12 +113,20 @@
     return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
 
+  function lagosYMD(date) {
+    try { return new Date(date).toLocaleDateString('sv-SE', { timeZone: 'Africa/Lagos' }); } catch (e) { return ymd(new Date(date)); }
+  }
+  function lagosHour(date) {
+    try { return parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', hour: '2-digit', hour12: false }).format(new Date(date)), 10); } catch (e) { return new Date(date).getHours(); }
+  }
   function shiftKeyFor(dt) {
     const d = new Date(dt);
-    if (d.getHours() < SHIFT_START_HOUR) d.setDate(d.getDate() - 1);
-    return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+    const h = lagosHour(d);
+    let base = d;
+    if (h < SHIFT_START_HOUR) base = new Date(d.getTime() - 86400000);
+    return lagosYMD(base);
   }
-  function calendarKeyFor(dt) { return ymd(new Date(dt)); }
+  function calendarKeyFor(dt) { return lagosYMD(dt); }
   function keyForMode(dt, mode) { return mode === 'calendar' ? calendarKeyFor(dt) : shiftKeyFor(dt); }
 
   function parseTxDate(str) {
@@ -402,6 +410,11 @@
 
   async function getAccountingData() {
     if (!state.ready) await loadAll();
+    let session = null;
+    try {
+      const r = await fetch('/api/auth/session', { credentials: 'include' });
+      if (r.ok) session = await r.json();
+    } catch (e) {}
     return {
       roomTx: clone(state.roomTx),
       restSales: clone(state.restSales),
@@ -410,6 +423,7 @@
       shifts: clone(state.shifts),
       income: clone(state.income),
       expenses: clone(state.expenses),
+      session: session,
     };
   }
 

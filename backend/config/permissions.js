@@ -43,7 +43,7 @@ const PERMISSIONS = {
     },
     accountant: {
       accounting: {
-        canView: true, canCreate: true, canEdit: true, canDelete: false,
+        canView: true, canCreate: true, canEdit: true, canDelete: true,
         canApprove: true, canViewReports: true,
       },
     },

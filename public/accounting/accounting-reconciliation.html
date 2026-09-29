@@ -435,7 +435,7 @@ function isValidShiftsArray(arr){
 ═══════════════════════════════════════════ */
 function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 
-function buildTransactions(roomTx, restSales, poolSales){
+function buildTransactions(roomTx, restSales, poolSales, gymTx){
   const out = [];
   roomTx.forEach(r => out.push({ id:r.id, dept:'Rooms', desc:r.desc, amount:r.amount, method:r.method, staff:r.staff, date:parseTxDate(r.date) }));
   restSales.filter(s=>s.status!=='voided').forEach(s => {
@@ -443,6 +443,7 @@ function buildTransactions(roomTx, restSales, poolSales){
     out.push({ id:s.id, dept:'Restaurant', desc, amount:s.total, method:s.method, staff:s.staff, date:parseTxDate(s.date) });
   });
   poolSales.forEach(s => out.push({ id:s.id, dept:'Pool Bar', desc:`${s.item} ×${s.qty}`, amount:s.total, method:s.method, staff:s.staff, date:parseTxDate(s.time) }));
+  (gymTx||[]).forEach(g => out.push({ id:g.id, dept:'Gym', desc:g.desc, amount:g.amount, method:g.method, staff:g.staff, date:parseTxDate(g.date) }));
   return out.filter(t => t.date).sort((a,b) => b.date - a.date);
 }
 
@@ -876,9 +877,9 @@ async function init(){
   bindStatusPills();
   bindTableDelegation();
 
-  const { roomTx, restSales, poolSales, shifts: backendShifts } = await AccountingData.getAccountingData();
+  const { roomTx, restSales, poolSales, gymTx, shifts: backendShifts } = await AccountingData.getAccountingData();
   SHIFT_START_HOUR = AccountingData.getShiftStartHour();
-  transactions = buildTransactions(roomTx, restSales, poolSales);
+  transactions = buildTransactions(roomTx, restSales, poolSales, gymTx);
 
   shifts = backendShifts || [];
   reconLog = buildReconLog(shifts);
