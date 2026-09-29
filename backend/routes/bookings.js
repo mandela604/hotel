@@ -47,6 +47,7 @@ router.post('/bookings/:room/checkout', inDept, privilegeGuard('booking', 'canCh
 router.post('/bookings/:room/payments', bookingWriteLimiter, inDept, privilegeGuard('booking', 'canCreate'), v.validateParam('room'), v.validateAddPayment, bookingController.addPayment);
 router.post('/bookings/:room/no-show', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('room'), bookingController.markNoShow);
 router.post('/bookings/:room/cancel-refund', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('room'), bookingController.cancelRefund);
+router.post('/bookings/:stayId/transfer', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('stayId'), bookingController.transferBooking);
 
 /* Guests */
 router.get('/guests', bookingController.listGuests);

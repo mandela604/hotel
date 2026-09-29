@@ -475,6 +475,7 @@
                     '<tbody data-role="paymentBody"></tbody>' +
                   '</table>' +
                 '</div>' +
+                '<div data-role="transferLog" style="margin-top:10px; font-size:11px; color:var(--bkm-text2); line-height:1.5; border-top:1px dashed var(--bkm-border); padding-top:8px; display:none;"></div>' +
               '</div>' +
             '</div>' +
             '<div class="bkm-pay-acc" data-role="payAcc" hidden>' +
@@ -642,10 +643,58 @@
       }
     }
 
-    function onRoomChange() {
+    async function onRoomChange() {
       var v = val('room');
       if (!v) { setVal('type', ''); setVal('rate', ''); refreshCalcs(); return; }
       var p = v.split('|');
+      var newRoom = p[0] || '';
+      // Transfer flow: editing an existing stay and room changed → cascade save
+      if (mode === 'edit' && editBooking && newRoom && newRoom !== editBooking.room) {
+        var oldRoom = editBooking.room;
+        var guestName = editBooking.guest || 'guest';
+        var byName = (session && session.name) || 'Staff';
+        var ok = await showConfirm('Transfer room?', guestName + ' will be moved from Room ' + oldRoom + ' to Room ' + newRoom + ' by ' + byName + '. Proceed?');
+        if (!ok) {
+          // revert select to original room
+          populateRooms(oldRoom);
+          refreshCalcs();
+          return;
+        }
+        var sel = $('[data-role="room"]');
+        if (sel) sel.disabled = true;
+        try {
+          var stayKey = editBooking.stayId || editBooking._id || editBooking.id || oldRoom;
+          var updated = null;
+          if (service && service.transferBooking) {
+            updated = await service.transferBooking(stayKey, newRoom, '');
+          } else {
+            var res = await fetch('/api/booking/bookings/' + encodeURIComponent(stayKey) + '/transfer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ toRoom: newRoom, note: '' })
+            });
+            var body = await res.json().catch(function(){ return {}; });
+            if (!res.ok) throw new Error((body && body.error) || 'Transfer failed');
+            updated = body.data || body;
+          }
+          editBooking = updated;
+          // keep type/rate from new room
+          setVal('type', p[1] || editBooking.type || '');
+          setVal('rate', p[2] || editBooking.rate || '');
+          refreshCalcs();
+          renderPayments();
+          toast(guestName + ' transferred ' + oldRoom + '→' + newRoom + ' by ' + byName, 'success');
+          onSaved(editBooking);
+        } catch (err) {
+          toast((err && err.message) || 'Transfer failed', 'error');
+          populateRooms(oldRoom);
+          refreshCalcs();
+        } finally {
+          if (sel) sel.disabled = false;
+        }
+        return;
+      }
       setVal('type', p[1] || '');
       setVal('rate', p[2] || '');
       refreshCalcs();
@@ -921,6 +970,22 @@
 
       var byEl = $('[data-role="newPayBy"]');
       if (byEl) byEl.value = (session && session.name) || '';
+
+      var tLogEl = $('[data-role="transferLog"]');
+      if (tLogEl) {
+        var logs = (editBooking && editBooking.transferLog) || [];
+        if (logs.length) {
+          tLogEl.style.display = '';
+          tLogEl.innerHTML = '<div style="font-weight:700; margin-bottom:4px; color:var(--bkm-gold);"><i class="fa-solid fa-right-left"></i> Transfers</div>' +
+            logs.map(function(l){
+              var when = l.at ? new Date(l.at).toLocaleString() : '';
+              return '<div>' + esc(l.by || '') + ' transferred from Room ' + esc(l.from) + ' to Room ' + esc(l.to) + (when ? ' at ' + esc(when) : '') + (l.note ? ' — ' + esc(l.note) : '') + '</div>';
+            }).join('');
+        } else {
+          tLogEl.style.display = 'none';
+          tLogEl.innerHTML = '';
+        }
+      }
 
       refreshCalcs();
     }

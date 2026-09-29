@@ -47,7 +47,7 @@ function payStatusFor(b) {
 /* Resolve a booking strictly by booking id (stayId / _id).
    No room fallback — caller must supply stayId. */
 async function resolveBooking(req) {
-  const param = req.params.room || req.params.num || req.params.id || '';
+  const param = req.params.stayId || req.params.room || req.params.num || req.params.id || '';
   const bodyStay = (req.body && (req.body.stayId || req.body.bookingId)) || '';
   const queryStay = req.query.stayId || req.query.bookingId || '';
   const stay = bodyStay || queryStay || param;
@@ -520,6 +520,42 @@ exports.updateBooking = asyncHandler(async (req, res) => {
   }
 
   emit(req, 'booking', 'booking:updated', { action: 'updateBooking', room: booking.room, stayId: booking.stayId, data: booking });
+  res.json({ success: true, data: booking });
+});
+
+exports.transferBooking = asyncHandler(async (req, res) => {
+  const booking = await resolveBooking(req);
+  if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+  const toRoom = String(req.body.toRoom || req.body.room || '').trim();
+  if (!toRoom) return res.status(400).json({ success: false, error: 'toRoom is required' });
+  if (toRoom === booking.room) return res.status(400).json({ success: false, error: 'Already in that room' });
+  const roomDoc = await Room.findOne({ num: toRoom });
+  if (!roomDoc) return res.status(404).json({ success: false, error: `Room ${toRoom} not found` });
+
+  const activeStays = await Booking.find({ room: toRoom, status: { $in: ['reserved', 'checkedin'] } });
+  for (const s of activeStays) {
+    if (String(s.stayId) === String(booking.stayId) || String(s._id) === String(booking._id)) continue;
+    if (datesOverlap(booking.checkin, booking.checkout, s.checkin, s.checkout)) {
+      return res.status(409).json({ success: false, error: `Room ${toRoom} already booked ${s.checkin} → ${s.checkout} (${s.guest})` });
+    }
+  }
+
+  const fromRoom = booking.room;
+  const by = req.user ? req.user.name : 'System';
+  const now = Date.now();
+  booking.room = toRoom;
+  booking.type = roomDoc.type || booking.type;
+  booking.transferLog = booking.transferLog || [];
+  booking.transferLog.push({ from: fromRoom, to: toRoom, by, at: now, note: req.body.note || '' });
+  booking.history = booking.history || [];
+  booking.history.push({ date: new Date().toISOString().split('T')[0], action: `Transferred from ${fromRoom} to ${toRoom} by ${by}`, by, note: req.body.note || '', stage: booking.status });
+  const transferNote = `${by} transferred from Room ${fromRoom} to Room ${toRoom} at ${new Date(now).toLocaleString()}` + (req.body.note ? ` — ${req.body.note}` : '');
+  booking.notes = booking.notes ? booking.notes + '\n' + transferNote : transferNote;
+  booking.updatedAt = now;
+  await booking.save();
+
+  await logActivity('Booking', 'gold', `${booking.guest} transferred ${fromRoom}→${toRoom} by ${by}`, 'booking-rooms.html');
+  emit(req, 'booking', 'booking:updated', { action: 'transferBooking', room: booking.room, stayId: booking.stayId, data: booking, fromRoom, toRoom });
   res.json({ success: true, data: booking });
 });
 

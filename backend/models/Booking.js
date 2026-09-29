@@ -41,6 +41,8 @@ const bookingSchema = new mongoose.Schema({
   _guestName:     { type: String, default: '' },
   createdAt:  { type: Number, default: 0 },
   updatedAt:  { type: Number, default: 0 },
+  transferLog: { type: [{ from: String, to: String, by: String, at: Number, note: String }], default: [] },
+  history:     { type: [{ date: String, action: String, by: String, note: String, stage: String }], default: [] },
 }, { timestamps: false, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 module.exports = mongoose.model('Booking', bookingSchema);

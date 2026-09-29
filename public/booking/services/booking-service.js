@@ -222,6 +222,11 @@
     return res.data;
   }
 
+  async function transferBooking(stayId, toRoom, note) {
+    const res = await post('/bookings/' + encodeURIComponent(stayId) + '/transfer', { toRoom, note: note || '' });
+    return res.data;
+  }
+
   async function saveRoom(room) {
     const originalNum = room.originalNum || room.num;
     let exists = false;
@@ -295,7 +300,7 @@
     CONFIG,
     getBookingData, getBooking,
     saveBooking, addBookingPayment, deleteBooking,
-    setRoomStatus, checkinBooking, checkoutBooking,
+    setRoomStatus, checkinBooking, checkoutBooking, transferBooking,
     saveRoom,
     getGuest, saveGuest, addRoomCharge, addChargePayment, settleCharge, settleAllCharges,
     listGuests,
