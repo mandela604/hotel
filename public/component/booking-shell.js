@@ -370,21 +370,11 @@
       handle.setApiMode('Live');
       if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('bks-backBtn'); if (bb) bb.style.display = 'none'; }
 
-      // ── Overdue checkout toasts ──
-      function showToast(msg, type) {
-        var c = document.createElement('div');
-        c.style.cssText = 'position:fixed;top:70px;right:20px;z-index:9999;padding:12px 18px;border-radius:10px;font-size:12px;font-weight:600;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;max-width:420px;animation:bksSlideIn .3s ease;cursor:pointer;';
-        c.style.background = type === 'overdue' ? '#dc2626' : '#f59e0b';
-        c.innerHTML = '<i class="fa-solid ' + (type === 'overdue' ? 'fa-triangle-exclamation' : 'fa-clock') + '" style="font-size:14px;"></i><span>' + msg + '</span>';
-        c.onclick = function() { c.remove(); };
-        document.body.appendChild(c);
-        setTimeout(function() { if (c.parentNode) c.remove(); }, 10000);
-      }
-      // Inject animation
+      // ── Unified checkout attention panel (replaces stacked red/amber toasts) ──
       if (!document.getElementById('bks-toast-style')) {
         var s = document.createElement('style');
         s.id = 'bks-toast-style';
-        s.textContent = '@keyframes bksSlideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}';
+        s.textContent = '@keyframes bksSlideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}} #bks-attn-panel{position:fixed;top:70px;right:20px;z-index:9999;width:min(380px,92vw);max-height:420px;overflow:auto;background:#fff;border:1px solid #eef0f6;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.15);animation:bksSlideIn .3s ease} #bks-attn-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eef0f6;font-weight:800;font-size:12.5px;color:#1c2440} #bks-attn-list{display:flex;flex-direction:column} .bks-attn-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #eef0f6;cursor:pointer;text-align:left;background:none;width:100%;border-left:none;border-right:none;border-top:none;font-family:inherit} .bks-attn-item:last-child{border-bottom:none} .bks-attn-item:hover{background:#f4f6fb} .bks-attn-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0} .bks-attn-dot.overdue{background:#dc2626} .bks-attn-dot.today{background:#f59e0b} .bks-attn-txt{flex:1;min-width:0;font-size:12px;color:#1c2440;line-height:1.4}';
         document.head.appendChild(s);
       }
       var overdueShown = false;
@@ -396,16 +386,35 @@
           var j = await r.json();
           var overdue = (j.data && j.data.overdueBookings) || [];
           overdueShown = true;
+          if (!overdue.length) return;
+          var panel = document.createElement('div');
+          panel.id = 'bks-attn-panel';
+          panel.innerHTML = '<div id="bks-attn-head"><span><i class="fa-solid fa-bell" style="color:#f59e0b;margin-right:6px;"></i>Needs Attention (' + overdue.length + ')</span><button onclick="this.closest(\'#bks-attn-panel\').remove()" style="background:none;border:none;color:#9aa1b3;cursor:pointer;font-size:14px;"><i class="fa-solid fa-xmark"></i></button></div><div id="bks-attn-list"></div>';
+          document.body.appendChild(panel);
+          var list = panel.querySelector('#bks-attn-list');
           overdue.forEach(function(b) {
-            var msg = '<b>Room ' + b.room + '</b> (' + b.guest + ') — ';
-            if (b.overdue) {
-              msg += 'checkout date <b>' + b.checkout + '</b> has passed. Please check out.';
-              showToast(msg, 'overdue');
-            } else {
-              msg += 'guest checks out <b>today</b>.';
-              showToast(msg, 'today');
-            }
+            var urgent = !!b.overdue;
+            var msg = 'Room ' + b.room + ' (' + b.guest + ') — ' + (urgent ? 'checkout ' + b.checkout + ' has passed' : 'guest checks out today');
+            var btn = document.createElement('button');
+            btn.className = 'bks-attn-item';
+            btn.innerHTML = '<span class="bks-attn-dot ' + (urgent ? 'overdue' : 'today') + '"></span><span class="bks-attn-txt">' + msg + '</span><i class="fa-solid fa-chevron-right" style="color:#9aa1b3;font-size:10px;"></i>';
+            btn.onclick = function() {
+              panel.remove();
+              if (window.BookingModal && typeof BookingModal.create === 'function') {
+                // use existing modal if available
+              }
+              // navigate to room — open booking modal via booking-rooms helper if present, else go to list
+              if (typeof openBookingFromCard === 'function') openBookingFromCard(b.room);
+              else if (typeof BookingData !== 'undefined' && BookingData.getBooking) {
+                window.location.href = 'booking-rooms.html';
+              } else {
+                window.location.href = 'booking-rooms.html';
+              }
+            };
+            list.appendChild(btn);
           });
+          // auto-hide after 15s
+          setTimeout(function(){ if(panel.parentNode) panel.remove(); }, 15000);
         } catch(e) {}
       }
       checkOverdue();
