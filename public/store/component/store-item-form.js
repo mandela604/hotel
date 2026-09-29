@@ -97,7 +97,6 @@
     .sif-btn-primary:disabled{ opacity:.55; cursor:not-allowed; }
   `;
 
-  const UNITS = ['kg','g','Ltr','ml','pcs','Bottles','Cans','Packs','Cartons','Bags','Crates','Basket','Portion'];
   const BASE_UNITS = ['','pcs','kg','g','Ltr','ml','Bottles','Cans','Packs','Bags','Basket','Portion'];
 
   let root = null;
@@ -135,9 +134,7 @@
             </div>
             <div class="sif-group">
               <label class="sif-label">Unit</label>
-              <select class="sif-select" data-role="unit">
-                ${UNITS.map(u => `<option value="${u}">${u}</option>`).join('')}
-              </select>
+              <select class="sif-select" data-role="unit"></select>
             </div>
             <div class="sif-group">
               <label class="sif-label">Base Unit (optional)</label>
@@ -199,6 +196,13 @@
       `<option value="${esc(c)}"${c === selected ? ' selected' : ''}>${esc(c)}</option>`
     ).join('');
   }
+  function fillUnits(categories, selected) {
+    const sel = $('[data-role="unit"]');
+    const list = (categories && categories.length) ? categories : ['Other'];
+    sel.innerHTML = list.map(c =>
+      `<option value="${esc(c)}"${c === selected ? ' selected' : ''}>${esc(c)}</option>`
+    ).join('');
+  }
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -219,7 +223,7 @@
 
     $('[data-role="name"]').value = item.name || '';
     fillCategories(opts.categories, item.cat || (opts.categories && opts.categories[0]) || 'Other');
-    $('[data-role="unit"]').value = item.unit || 'kg';
+    fillUnits(opts.categories, item.unit || (opts.categories && opts.categories[0]) || 'Other');
     $('[data-role="baseUnit"]').value = item.baseUnit || '';
     $('[data-role="packSize"]').value = item.packSize || '';
     $('[data-role="qty"]').value = item.qty != null ? item.qty : 0;
