@@ -4,16 +4,24 @@ const Sale = require('../models/Sale');
 const LedgerEntry = require('../models/LedgerEntry');
 const PurchaseRequest = require('../models/PurchaseRequest');
 const KitchenStock = require('../models/KitchenStock');
+const StoreStock = require('../models/StoreStock');
+const RestaurantStock = require('../models/RestaurantStock');
+const PoolbarStock = require('../models/PoolbarStock');
 const Staff = require('../models/Staff');
 const Activity = require('../models/Activity');
 const asyncHandler = require('../middleware/asyncHandler');
 
-exports.overview = asyncHandler(async (req, res) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+function lagosTodayStr() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Africa/Lagos' });
+}
 
+exports.overview = asyncHandler(async (req, res) => {
+  const lagosToday = lagosTodayStr();
+  const todayStart = new Date(lagosToday + 'T00:00:00.000Z');
+  const todayEnd = new Date(lagosToday + 'T23:59:59.999Z');
+
+  // Count low stock across all inventory modules (kitchen store + central store + outlets)
+  const lowStockFilter = { $expr: { $and: [ { $gt: ['$min', 0] }, { $lte: ['$qty', '$min'] } ] } };
   const [
     bookingStatusCounts,
     totalRooms,
@@ -21,7 +29,7 @@ exports.overview = asyncHandler(async (req, res) => {
     restaurantSales,
     poolbarSales,
     pendingProcurement,
-    lowStock,
+    lowStocks,
     staffOnDuty,
     recentActivity,
   ] = await Promise.all([
@@ -30,20 +38,26 @@ exports.overview = asyncHandler(async (req, res) => {
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]),
     Room.countDocuments(),
-    Booking.countDocuments({ createdAt: { $gte: today.getTime() } }),
+    Booking.countDocuments({ createdAt: { $gte: todayStart.getTime() } }),
     Sale.aggregate([
-      { $match: { department: 'restaurant', status: 'completed', createdAt: { $gte: today } } },
+      { $match: { department: 'restaurant', status: 'completed', createdAt: { $gte: todayStart, $lte: todayEnd } } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]),
     Sale.aggregate([
-      { $match: { department: 'poolbar', status: 'completed', createdAt: { $gte: today } } },
+      { $match: { department: 'poolbar', status: 'completed', createdAt: { $gte: todayStart, $lte: todayEnd } } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]),
     PurchaseRequest.countDocuments({ status: { $in: ['pending', 'accountant', 'gm'] } }),
-    KitchenStock.countDocuments({ $expr: { $lte: ['$qty', '$min'] } }),
+    Promise.all([
+      KitchenStock.countDocuments(lowStockFilter),
+      StoreStock.countDocuments(lowStockFilter),
+      RestaurantStock.countDocuments(lowStockFilter),
+      PoolbarStock.countDocuments(lowStockFilter),
+    ]).then(counts => counts.reduce((a, b) => a + b, 0)),
     Staff.countDocuments({ status: 'on_duty' }),
     Activity.find().sort({ createdAt: -1 }).limit(10),
   ]);
+  const lowStock = lowStocks;
 
   // Map booking statuses to readable counts
   const statusMap = {};
