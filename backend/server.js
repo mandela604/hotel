@@ -20,6 +20,17 @@ const sanitize = require('./middleware/sanitize');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
+const http = require('http');
+const { Server } = require('socket.io');
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: process.env.CORS_ORIGIN || true, credentials: true } });
+app.set('io', io);
+io.on('connection', (socket) => {
+  const dept = socket.handshake.query.dept || socket.handshake.auth?.dept || '';
+  if (dept) socket.join(dept);
+  socket.on('join', (room) => { if (room) socket.join(room); });
+  socket.on('disconnect', () => {});
+});
 app.use(cookieParser());
 
 app.use(helmet(helmetConfig));
@@ -68,7 +79,7 @@ const PORT = process.env.PORT || 4000;
 
 async function start() {
   await connectDB();
-  app.listen(PORT, () => console.log(`[server] Aurum Hotel API on port ${PORT}`));
+  server.listen(PORT, () => console.log(`[server] Aurum Hotel API + WS on port ${PORT}`));
 }
 
 if (require.main === module) {
