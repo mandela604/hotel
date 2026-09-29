@@ -1108,32 +1108,27 @@
           '<div class="row sub"><span>' + esc(p.date || '') + '</span><span class="r">' + esc(p.by || '') + '</span></div>';
       });
 
-      var now = new Date();
-      var dateStr = now.toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' });
-      var timeStr = now.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
-
       var html = '<!DOCTYPE html><html><head><title>Receipt - Room ' + esc(b.room) + '</title><style>' +
         '*{margin:0;padding:0;box-sizing:border-box;}' +
-        'body{font-family:"Courier New",Courier,monospace;width:80mm;padding:3mm 4mm 2mm;color:#000;font-size:12px;line-height:1.45;font-weight:600;}' +
+        'body{font-family:"Courier New",Courier,monospace;width:80mm;padding:2mm 3mm 1mm;color:#000;font-size:13px;line-height:1.40;font-weight:600;}' +
         '.c{text-align:center;}' +
-        '.hdr{border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;}' +
-        '.hdr h1{font-size:15px;font-weight:900;letter-spacing:1px;}' +
-        '.hdr .ph{font-size:10px;margin-top:1px;font-weight:700;color:#000;}' +
-        '.hdr p{font-size:10px;margin-top:1px;font-weight:700;}' +
-        '.divider{border-top:1px dashed #000;margin:4px 0;}' +
-        '.row{display:flex;justify-content:space-between;margin:2px 0;}' +
+        '.hdr{border-bottom:1px dashed #000;padding-bottom:3px;margin-bottom:3px;}' +
+        '.hdr h1{font-size:16px;font-weight:900;letter-spacing:1px;}' +
+        '.hdr .ph{font-size:11px;margin-top:1px;font-weight:700;color:#000;}' +
+        '.hdr p{font-size:11px;margin-top:1px;font-weight:700;}' +
+        '.divider{border-top:1px dashed #000;margin:3px 0;}' +
+        '.row{display:flex;justify-content:space-between;margin:1.5px 0;}' +
         '.r{text-align:right;}' +
-        '.lbl{font-size:10px;text-transform:uppercase;color:#000;font-weight:700;}' +
-        '.val{font-weight:800;font-size:12px;color:#000;}' +
-        '.total .val{font-size:13px;}' +
-        '.total{border-top:2px solid #000;margin-top:4px;padding-top:4px;}' +
-        '.pay-title{font-weight:800;font-size:11px;margin:5px 0 2px;border-top:1px dashed #000;padding-top:5px;color:#000;}' +
-        '.sub{font-size:10px;color:#000;font-weight:600;}' +
-        '.footer{border-top:1px dashed #000;margin-top:4px;padding-top:4px;font-size:9px;color:#000;font-weight:600;}' +
-        '@media print{body{padding:2mm 2mm 0;width:80mm;} html,body{height:auto;}}' +
+        '.lbl{font-size:11px;text-transform:uppercase;color:#000;font-weight:700;}' +
+        '.val{font-weight:800;font-size:13px;color:#000;}' +
+        '.total .val{font-size:14px;}' +
+        '.total{border-top:2px solid #000;margin-top:3px;padding-top:3px;}' +
+        '.pay-title{font-weight:800;font-size:12px;margin:3px 0 2px;border-top:1px dashed #000;padding-top:3px;color:#000;}' +
+        '.sub{font-size:11px;color:#000;font-weight:600;}' +
+        '.footer{border-top:1px dashed #000;margin-top:3px;padding-top:3px;font-size:10px;color:#000;font-weight:600;}' +
+        '@media print{body{padding:2mm 2mm 1mm;width:80mm;} html,body{height:auto;} *{overflow:visible !important;} @page{margin:0; size:auto;}}' +
         '</style></head><body>' +
-        '<div class="hdr c"><h1>BOSTON LEISURE HOTEL</h1><p class="ph">09039391464</p><p class="ph">Before G2 Junction [off Auchi Benin Express Way]</p><p>Booking Receipt</p></div>' +
-        '<div class="divider"></div>' +
+        '<div class="hdr c"><h1>BOSTON LEISURE HOTEL</h1><p class="ph">09039391464</p><p class="ph">Before G2 Junction [off Auchi Benin Express Way]</p></div>' +
         '<div class="row"><span class="lbl">Room</span><span class="val">' + esc(b.room) + ' · ' + esc(b.type || '') + '</span></div>' +
         '<div class="row"><span class="lbl">Guest</span><span class="val">' + esc(b.guest || '—') + '</span></div>' +
         '<div class="row"><span class="lbl">Phone</span><span class="val">' + esc(b.phone || '—') + '</span></div>' +
@@ -1145,12 +1140,8 @@
         '<div class="row"><span class="lbl">Paid</span><span class="val">₦' + Number(pd).toLocaleString('en-NG') + '</span></div>' +
         '<div class="row"><span class="lbl">Balance</span><span class="val">₦' + Number(bal).toLocaleString('en-NG') + '</span></div>' +
         '<div class="row"><span class="lbl">Status</span><span class="val">' + esc(b.payStatus || 'Pending') + '</span></div>' +
-        (payRows ? '<div class="pay-title">PAYMENTS</div><div class="divider"></div>' + payRows : '') +
-        '<div class="divider"></div>' +
-        '<div class="footer c">' +
-          '<p>' + dateStr + ' ' + timeStr + '</p>' +
-          '<p>Boston Leisure Hotel</p>' +
-        '</div>' +
+        (payRows ? '<div class="pay-title">PAYMENTS</div>' + payRows : '') +
+        '<div class="footer c"><p>Thank you!</p></div>' +
         '</body></html>';
 
       var w = window.open('', '_blank', 'width=320,height=600');
