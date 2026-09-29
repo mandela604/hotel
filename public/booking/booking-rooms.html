@@ -129,6 +129,8 @@ body {
 .room-act-btn.primary { background: var(--gold); border-color: var(--gold); color: #fff; box-shadow: 0 3px 8px rgba(47,111,237,0.25); }
 .room-act-btn.primary:hover { background: var(--gold-light); color: #fff; }
 .room-act-btn.danger:hover { border-color: rgba(240,68,56,0.4); color: var(--red); background: var(--red-bg); }
+.room-edit-icon{ width:22px; height:22px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text3); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:9px; flex-shrink:0; }
+.room-edit-icon:hover{ border-color:var(--gold-border); color:var(--gold); background:var(--gold-dim); }
 
 .room-empty { grid-column: 1/-1; text-align: center; padding: 30px 0; color: var(--text3); font-size: 12.5px; }
 
@@ -696,18 +698,17 @@ function renderRoomGrid(filter) {
         : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : st === 'cleaning' ? 'Under cleaning' : st === 'checkout' ? 'Checked out — awaiting cleaning' : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
 
       const isMgr = (getSession() && /^(manager|admin)$/i.test(getSession().role||'')) || p.canEditRoom;
+      const editIcon = isMgr ? '<button class="room-edit-icon" title="Edit room" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i></button>' : '';
       let acts = '';
       const canBook = st === 'available' || st === 'reserved' || st === 'checkedin';
       if (canBook) {
         acts = '<div class="room-acts">' +
           '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' +
           '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
-          (isMgr ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
           '</div>';
       } else {
         acts = '<div class="room-acts">' +
           '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
-          (isMgr ? '<button class="room-act-btn" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i> Edit</button>' : '') +
           '</div>';
       }
 
@@ -715,7 +716,7 @@ function renderRoomGrid(filter) {
       return '<div class="room-card ' + st + '" onclick="openBookingFromCard(\'' + r.num + '\')" style="cursor:pointer;">' +
         '<div class="room-card-head">' +
           '<div class="room-num">' + r.num + '</div>' +
-          '<span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' +
+          '<div style="display:flex;align-items:center;gap:6px;"><span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' + editIcon + '</div>' +
         '</div>' +
         '<div class="room-type-lbl">' + r.type + '</div>' +
         '<div class="room-guest-block">' + guestBlock + '</div>' +
