@@ -14,6 +14,7 @@ const KitchenCooOrder = require('../models/KitchenCooOrder');
 const Booking = require('../models/Booking');
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
+const { emit } = require('../utils/emit');
 
 function recomputePayStatus(booking) {
   const total = ((booking.rate || 0) - (booking.discount || 0)) *
@@ -72,6 +73,7 @@ exports.addMenuItem = asyncHandler(async (req, res) => {
   });
 
   await logActivity('gold', `Menu item "${item.name}" added`, 'restaurant-menu.html');
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'addMenuItem', data: item });
   res.status(201).json({ success: true, data: item });
 });
 
@@ -86,6 +88,7 @@ exports.updateMenuItem = asyncHandler(async (req, res) => {
   if (avail !== undefined) item.available = avail;
 
   await item.save();
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'updateMenuItem', data: item });
   res.json({ success: true, data: item });
 });
 
@@ -96,6 +99,7 @@ exports.patchMenuItem = exports.updateMenuItem;
 exports.deleteMenuItem = asyncHandler(async (req, res) => {
   const item = await MenuItem.findOneAndDelete({ id: req.params.id, department: DEPT });
   if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'deleteMenuItem', data: item });
   res.json({ success: true, message: `"${item.name}" removed from the menu` });
 });
 
@@ -140,6 +144,7 @@ exports.addStockItem = asyncHandler(async (req, res) => {
       cost: recipe.gasCostPerUnit || 0,
       desc: desc || 'Cook-on-Order — recipe linked',
     });
+    emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'addStockItem', data: item });
     return res.status(201).json({ success: true, data: item });
   }
 
@@ -166,6 +171,7 @@ exports.addStockItem = asyncHandler(async (req, res) => {
     desc: desc || '',
   });
 
+  emit(req, ['restaurant', 'store'], 'restaurant:updated', { action: 'addStockItem', data: item });
   res.status(201).json({ success: true, data: item });
 });
 
@@ -182,12 +188,14 @@ exports.editStockItem = asyncHandler(async (req, res) => {
   if (desc !== undefined) item.desc = desc;
 
   await item.save();
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'editStockItem', data: item });
   res.json({ success: true, data: item });
 });
 
 exports.deleteStockItem = asyncHandler(async (req, res) => {
   const item = await RestaurantStock.findOneAndDelete({ name: new RegExp(`^${req.params.name.trim()}$`, 'i') });
   if (!item) return res.status(404).json({ success: false, error: `"${req.params.name}" not found in inventory` });
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'deleteStockItem', data: item });
   res.json({ success: true, message: `"${item.name}" removed from inventory` });
 });
 
@@ -210,6 +218,7 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
   await item.save();
   const fullReason = `Adjustment ${d > 0 ? '+' + d : d} — ${reason}${notes ? ' — ' + notes : ''} (by ${req.user ? req.user.name : 'Admin'})`;
   await RestaurantMovement.create({ item: item.name, qtyIn: d > 0 ? d : 0, qtyOut: d < 0 ? Math.abs(d) : 0, balance: item.qty, reason: fullReason });
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'adjustStockById', data: item });
   res.json({ success: true, data: item, before, delta: d });
 });
 
@@ -342,6 +351,7 @@ exports.createSale = asyncHandler(async (req, res) => {
   }
 
   await logActivity('green', `Sale ${id} — ${total} (${method || 'Cash'})`, 'restaurant-sales.html');
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'createSale', data: sale });
   res.status(201).json({ success: true, data: sale });
 });
 
@@ -354,6 +364,7 @@ exports.updateSaleDate = asyncHandler(async (req, res) => {
   const d = req.body.date ? new Date(req.body.date) : null;
   if (!d || isNaN(d.getTime())) return res.status(400).json({ success: false, error: 'Valid date required (YYYY-MM-DD)' });
   sale.date = d; await sale.save();
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'updateSaleDate', data: sale });
   res.json({ success: true, data: sale });
 });
 
@@ -387,11 +398,12 @@ exports.voidSale = asyncHandler(async (req, res) => {
   }
 
   await logActivity('red', `Sale ${sale.id} voided — ${reason}`, 'restaurant-sales.html');
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'voidSale', data: sale });
   res.json({ success: true, data: sale });
 });
 
 /* ═══════════════════════════════════════════════
-   Transfers — incoming pushes from Kitchen/Store into
+    Transfers — incoming pushes from Kitchen/Store into
    the Restaurant. Restaurant only accepts/rejects; it
    never raises these (that's Kitchen's addTransfer).
 ═══════════════════════════════════════════════ */
@@ -478,6 +490,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
     }
   }
 
+  emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'acceptTransfer', data: transfer });
   res.json({ success: true, data: transfer });
 });
 
@@ -498,6 +511,7 @@ exports.rejectTransfer = asyncHandler(async (req, res) => {
   await transfer.save();
 
   await logActivity('red', `Transfer ${transfer.transferNo} rejected — ${rejectReason}`, 'restaurant-transfer-history.html');
+  emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'rejectTransfer', data: transfer });
   res.json({ success: true, data: transfer });
 });
 
@@ -550,6 +564,7 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
   });
 
   await logActivity('blue', `Requisition ${requisitionNo} sent to Store`, 'restaurant-transfer-history.html');
+  emit(req, ['restaurant', 'store'], 'restaurant:updated', { action: 'submitRequisition', data: requisition });
   res.status(201).json({ success: true, data: requisition });
 });
 
@@ -601,6 +616,7 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
   reqDoc.status = 'Completed';
   await reqDoc.save();
 
+  emit(req, ['restaurant', 'store'], 'restaurant:updated', { action: 'receiveRequisition', data: reqDoc });
   res.json({ success: true, data: reqDoc });
 });
 
@@ -658,6 +674,7 @@ exports.openTab = asyncHandler(async (req, res) => {
   });
 
   await logActivity('gold', `Tab ${id} opened — ${items.length} item(s)`, 'restaurant-orders.html');
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'openTab', data: order });
   res.status(201).json({ success: true, data: order });
 });
 
@@ -730,6 +747,7 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
   await order.save();
 
   await logActivity('green', `Tab ${order.id} marked as served`, 'restaurant-orders.html');
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'markOrderServed', data: order });
   res.json({ success: true, data: order, sale });
 });
 
@@ -887,6 +905,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   }
 
   await logActivity('green', `Tab ${order.id} paid — ${order.total} (${payMethod})`, 'restaurant-orders.html');
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'payOrder', data: order });
   res.json({ success: true, data: order, sale });
 });
 
@@ -917,6 +936,7 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   if (table !== undefined) order.table = table;
 
   await order.save();
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'updateOrder', data: order });
   res.json({ success: true, data: order });
 });
 
@@ -964,6 +984,7 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   await order.save();
 
   await logActivity('red', `Tab ${order.id} cancelled`, 'restaurant-orders.html');
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'cancelOrder', data: order });
   res.json({ success: true, data: order });
 });
 
@@ -982,6 +1003,7 @@ exports.addCategory = asyncHandler(async (req, res) => {
   const existing = await Category.findOne({ module: 'restaurant', name });
   if (existing) throw new ApiError(409, `Category "${name}" already exists.`);
   await Category.create({ module: 'restaurant', name });
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'addCategory', data: { name } });
   res.status(201).json({ success: true, data: { name } });
 });
 
@@ -990,6 +1012,7 @@ exports.renameCategory = asyncHandler(async (req, res) => {
   const newName = req.body.name.trim();
   await RestaurantStock.updateMany({ category: oldName }, { $set: { category: newName } });
   await Category.updateMany({ module: 'restaurant', name: oldName }, { $set: { name: newName } });
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'renameCategory', data: { name: newName } });
   res.json({ success: true, data: { name: newName } });
 });
 
@@ -999,6 +1022,7 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
   if (name === reassignTo) throw new ApiError(400, `Cannot delete "${name}" — it is the fallback category.`);
   await RestaurantStock.updateMany({ category: name }, { $set: { category: reassignTo } });
   await Category.deleteMany({ module: 'restaurant', name });
+  emit(req, 'restaurant', 'restaurant:updated', { action: 'deleteCategory', data: { name, reassignedTo: reassignTo } });
   res.json({ success: true, data: { reassignedTo: reassignTo } });
 });
 
@@ -1025,6 +1049,7 @@ exports.addRecipeToStock = asyncHandler(async (req, res) => {
       existingByName.recipeId = recipe.id;
       existingByName.desc = 'Cook-on-Order — recipe linked';
       await existingByName.save();
+      emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'addRecipeToStock', data: existingByName });
       return res.status(200).json({ success: true, data: existingByName });
     }
     throw new ApiError(409, `"${recipe.dish}" is already in Restaurant stock`);
@@ -1040,6 +1065,7 @@ exports.addRecipeToStock = asyncHandler(async (req, res) => {
     desc: `Cook-on-Order — recipe linked`,
   });
 
+  emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'addRecipeToStock', data: stockItem });
   res.status(201).json({ success: true, data: stockItem });
 });
 
@@ -1135,6 +1161,7 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
   if (kitchenCount && regularCount) activityText += ` (${kitchenCount} kitchen, ${regularCount} regular)`;
   else if (kitchenCount) activityText += ` sent to Kitchen`;
   await logActivity('gold', activityText, 'restaurant-orders.html');
+  emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'createCooOrder', data: { order, coo } });
   res.status(201).json({ success: true, data: { order, coo } });
 });
 
@@ -1246,6 +1273,7 @@ exports.updateCooOrder = asyncHandler(async (req, res) => {
   if (table !== undefined) order.table = table;
   await order.save();
 
+  emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'updateCooOrder', data: order });
   res.json({ success: true, data: order });
 });
 
@@ -1269,5 +1297,6 @@ exports.deleteCooOrder = asyncHandler(async (req, res) => {
 
   order.status = 'cancelled';
   await order.save();
+  emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'deleteCooOrder', data: order });
   res.json({ success: true, data: order });
 });

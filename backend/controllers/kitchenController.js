@@ -7,6 +7,7 @@ const KitchenMovement = require('../models/KitchenMovement');
 const Requisition = require('../models/Requisition');
 const Counter = require('../models/Counter');
 const asyncHandler = require('../middleware/asyncHandler');
+const { emit } = require('../utils/emit');
 
 // Escapes regex special characters from user-supplied strings so they
 // can be safely used in new RegExp(...) without ReDoS or broken patterns.
@@ -85,6 +86,7 @@ exports.addStock = asyncHandler(async (req, res) => {
     desc: desc || '',
   });
 
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'addStock', data: item });
   res.status(201).json({ success: true, data: item });
 });
 
@@ -103,12 +105,14 @@ exports.updateStock = asyncHandler(async (req, res) => {
   if (desc !== undefined) item.desc = desc;
 
   await item.save();
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'updateStock', data: item });
   res.json({ success: true, data: item });
 });
 
 exports.deleteStock = asyncHandler(async (req, res) => {
   const item = await KitchenStock.findOneAndDelete({ id: req.params.id });
   if (!item) return res.status(404).json({ success: false, error: 'Stock item not found' });
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'deleteStock', data: { id: item.id } });
   res.json({ success: true, message: `Ingredient "${item.name}" deleted` });
 });
 
@@ -136,6 +140,7 @@ exports.deductStock = asyncHandler(async (req, res) => {
     reason: notes ? `${reason} — ${notes}` : reason || 'Manual Deduction',
   });
 
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'deductStock', data: item });
   res.json({ success: true, data: item });
 });
 
@@ -253,6 +258,7 @@ exports.recordProduction = asyncHandler(async (req, res) => {
     destination: destination || 'Main Restaurant / POS',
   });
 
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'recordProduction', data: run });
   res.status(201).json({ success: true, data: run });
 });
 
@@ -387,6 +393,7 @@ exports.recordBatchProduction = asyncHandler(async (req, res) => {
     destination: destination || 'Main Restaurant / POS',
   });
 
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'recordBatchProduction', data: run });
   res.status(201).json({ success: true, data: run });
 });
 
@@ -475,6 +482,7 @@ exports.completeProduction = asyncHandler(async (req, res) => {
   if (status !== undefined && !Array.isArray(dishUpdates)) run.status = status;
 
   await run.save();
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'completeProduction', data: run });
   res.json({ success: true, data: run });
 });
 
@@ -538,6 +546,7 @@ exports.voidProduction = asyncHandler(async (req, res) => {
     }
 
     await run.save();
+    emit(req, 'kitchen', 'kitchen:updated', { action: 'voidProduction', data: run });
     return res.json({ success: true, data: run });
   }
 
@@ -600,6 +609,7 @@ exports.voidProduction = asyncHandler(async (req, res) => {
   }
 
   await run.save();
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'voidProduction', data: run });
   res.json({ success: true, data: run });
 });
 
@@ -652,6 +662,7 @@ exports.addTransfer = asyncHandler(async (req, res) => {
     }
   }
 
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'addTransfer', data: transfer });
   res.status(201).json({ success: true, data: transfer });
 });
 
@@ -669,6 +680,7 @@ exports.updateTransferStatus = asyncHandler(async (req, res) => {
   if (status === 'accepted') transfer.dateReceived = nowStamp();
 
   await transfer.save();
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'updateTransferStatus', data: transfer });
   res.json({ success: true, data: transfer });
 });
 
@@ -737,6 +749,7 @@ exports.createRecipe = asyncHandler(async (req, res) => {
     notes: notes || '',
   });
 
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'createRecipe', data: recipe });
   res.status(201).json({ success: true, data: recipe });
 });
 
@@ -763,6 +776,7 @@ exports.editRecipe = asyncHandler(async (req, res) => {
   if (notes !== undefined) recipe.notes = notes;
 
   await recipe.save();
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'editRecipe', data: recipe });
   res.json({ success: true, data: recipe });
 });
 
@@ -773,6 +787,7 @@ exports.editRecipe = asyncHandler(async (req, res) => {
 exports.deleteRecipe = asyncHandler(async (req, res) => {
   const recipe = await Recipe.findOneAndDelete({ id: req.params.id });
   if (!recipe) return res.status(404).json({ success: false, error: 'Recipe not found' });
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'deleteRecipe', data: { id: recipe.id } });
   res.json({ success: true, message: `Recipe "${recipe.dish}" deleted` });
 });
 
@@ -837,6 +852,7 @@ exports.createRequisition = asyncHandler(async (req, res) => {
     dateRaisedDisplay,
   });
 
+  emit(req, 'kitchen', 'kitchen:updated', { action: 'createRequisition', data: reqDoc });
   res.status(201).json({ success: true, data: reqDoc });
 });
 
@@ -891,5 +907,6 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
   reqDoc.status = 'Completed';
   await reqDoc.save();
 
+  emit(req, ['kitchen','store'], 'kitchen:updated', { action: 'receiveRequisition', data: reqDoc });
   res.json({ success: true, data: reqDoc });
 });

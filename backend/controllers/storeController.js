@@ -4,6 +4,7 @@ const StoreStock = require('../models/StoreStock');
 const Requisition = require('../models/Requisition');
 const Counter = require('../models/Counter');
 const Category = require('../models/Category');
+const { emit } = require('../utils/emit');
 
 const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
 
@@ -102,6 +103,7 @@ exports.addStock = asyncHandler(async (req, res) => {
     cost: Number(cost || price) || 0,
     min: Number(min) || 0,
   });
+  emit(req, 'store', 'store:updated', { action: 'addStock', data: item });
   res.status(201).json({ success: true, data: item });
 });
 
@@ -119,6 +121,7 @@ exports.updateStock = asyncHandler(async (req, res) => {
 
   const item = await StoreStock.findOneAndUpdate({ id: req.params.id }, updates, { new: true, runValidators: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');
+  emit(req, 'store', 'store:updated', { action: 'updateStock', data: item });
   res.json({ success: true, data: item });
 });
 
@@ -156,6 +159,7 @@ exports.deleteStock = asyncHandler(async (req, res) => {
   ]);
 
   await item.deleteOne();
+  emit(req, 'store', 'store:updated', { action: 'deleteStock', data: { id: item.id } });
   res.json({ success: true, data: { deleted: true } });
 });
 
@@ -181,6 +185,7 @@ exports.addCategory = asyncHandler(async (req, res) => {
   const stockHasIt = await StoreStock.findOne({ cat: name });
   if (stockHasIt) throw new ApiError(409, `Category "${name}" already exists (used by a stock item).`);
   await Category.create({ module: 'store', name });
+  emit(req, 'store', 'store:updated', { action: 'addCategory', data: { name } });
   res.status(201).json({ success: true, data: { name } });
 });
 
@@ -189,6 +194,7 @@ exports.renameCategory = asyncHandler(async (req, res) => {
   const newName = req.body.name.trim();
   const result = await StoreStock.updateMany({ cat: oldName }, { $set: { cat: newName } });
   await Category.updateMany({ module: 'store', name: oldName }, { $set: { name: newName } });
+  emit(req, 'store', 'store:updated', { action: 'renameCategory', data: { name: newName, oldName, stockUpdated: result.modifiedCount || result.nModified || 0 } });
   res.json({ success: true, data: { name: newName, stockUpdated: result.modifiedCount || result.nModified || 0 } });
 });
 
@@ -198,6 +204,7 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
   if (name === reassignTo) throw new ApiError(400, `Cannot delete "${name}" — it is the fallback category.`);
   const result = await StoreStock.updateMany({ cat: name }, { $set: { cat: reassignTo } });
   await Category.deleteMany({ module: 'store', name });
+  emit(req, 'store', 'store:updated', { action: 'deleteCategory', data: { name, reassignedTo: reassignTo, stockUpdated: result.modifiedCount || result.nModified || 0 } });
   res.json({ success: true, data: { reassignedTo: reassignTo, stockUpdated: result.modifiedCount || result.nModified || 0 } });
 });
 
@@ -252,6 +259,7 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
     dateRaised: todayISO(),
     dateRaisedDisplay: todayDisplay(),
   });
+  emit(req, 'store', 'store:updated', { action: 'submitRequisition', data: row });
   res.status(201).json({ success: true, data: row });
 });
 
@@ -282,6 +290,7 @@ exports.updateRequisition = asyncHandler(async (req, res) => {
   if (row.status === 'Rejected') row.status = 'Pending';
 
   await row.save();
+  emit(req, 'store', 'store:updated', { action: 'updateRequisition', data: row });
   res.json({ success: true, data: row });
 });
 
@@ -339,6 +348,12 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
 
   row.status = totalIssued >= totalReq ? 'Full' : totalIssued > 0 ? 'Partial' : 'Pending';
   await row.save();
+  {
+    const _targetDept = row.dept || row.requestingDept || '';
+    const _deptRoom = _targetDept ? _targetDept.toLowerCase().replace(/\s+/g, '') : null;
+    const _rooms = _deptRoom && _deptRoom !== 'store' ? ['store', _deptRoom] : 'store';
+    emit(req, _rooms, 'store:updated', { action: 'issueRequisition', data: row });
+  }
   res.json({ success: true, data: row });
 });
 
@@ -349,6 +364,12 @@ exports.rejectRequisition = asyncHandler(async (req, res) => {
     { new: true }
   );
   if (!row) throw new ApiError(404, `Requisition ${req.params.no} not found.`);
+  {
+    const _targetDept = row.dept || row.requestingDept || '';
+    const _deptRoom = _targetDept ? _targetDept.toLowerCase().replace(/\s+/g, '') : null;
+    const _rooms = _deptRoom && _deptRoom !== 'store' ? ['store', _deptRoom] : 'store';
+    emit(req, _rooms, 'store:updated', { action: 'rejectRequisition', data: row });
+  }
   res.json({ success: true, data: row });
 });
 
@@ -360,6 +381,12 @@ exports.confirmReceipt = asyncHandler(async (req, res) => {
   }
   row.status = 'Completed';
   await row.save();
+  {
+    const _targetDept = row.dept || row.requestingDept || '';
+    const _deptRoom = _targetDept ? _targetDept.toLowerCase().replace(/\s+/g, '') : null;
+    const _rooms = _deptRoom && _deptRoom !== 'store' ? ['store', _deptRoom] : 'store';
+    emit(req, _rooms, 'store:updated', { action: 'confirmReceipt', data: row });
+  }
   res.json({ success: true, data: row });
 });
 
@@ -372,6 +399,12 @@ exports.disputeDelivery = asyncHandler(async (req, res) => {
   row.status = 'Disputed';
   row.disputeReason = req.body.reason.trim();
   await row.save();
+  {
+    const _targetDept = row.dept || row.requestingDept || '';
+    const _deptRoom = _targetDept ? _targetDept.toLowerCase().replace(/\s+/g, '') : null;
+    const _rooms = _deptRoom && _deptRoom !== 'store' ? ['store', _deptRoom] : 'store';
+    emit(req, _rooms, 'store:updated', { action: 'disputeDelivery', data: row });
+  }
   res.json({ success: true, data: row });
 });
 
@@ -389,12 +422,14 @@ exports.receiveStock = asyncHandler(async (req, res) => {
   if (Object.keys(setFields).length) updates.$set = setFields;
   const item = await StoreStock.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');
+  emit(req, 'store', 'store:updated', { action: 'receiveStock', data: item });
   res.json({ success: true, data: item });
 });
 
 exports.resetAllStock = asyncHandler(async (req, res) => {
   const result = await StoreStock.updateMany({}, { $set: { qty: 0, cost: 0 } });
   console.log(`[Store] Reset all stock qty/cost to 0 — ${result.modifiedCount} items`);
+  emit(req, 'store', 'store:updated', { action: 'resetAllStock', data: { modifiedCount: result.modifiedCount } });
   res.json({ success: true, message: `Reset ${result.modifiedCount} store stock items to qty 0, cost 0` });
 });
 
@@ -411,6 +446,7 @@ exports.adjustStock = asyncHandler(async (req, res) => {
   item.qty = nextQty;
   await item.save();
   console.log(`[Store] Adjust ${item.name} ${before} → ${item.qty} (${d > 0 ? '+' + d : d} — ${reason}) by ${req.user ? req.user.name : 'Admin'}`);
+  emit(req, 'store', 'store:updated', { action: 'adjustStock', data: item });
   res.json({ success: true, data: item, before, delta: d });
 });
 

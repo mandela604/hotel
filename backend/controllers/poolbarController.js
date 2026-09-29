@@ -1,3 +1,4 @@
+const { emit } = require('../utils/emit');
 const { v4: uuidv4 } = require('uuid');
 const PoolbarStock   = require('../models/PoolbarStock');
 const Sale           = require('../models/Sale');
@@ -140,6 +141,7 @@ exports.addStock = asyncHandler(async (req, res) => {
     desc: desc || '',
   });
 
+  emit(req, ['poolbar','store'], 'poolbar:updated', { action: 'addStock', data: item });
   res.status(201).json({ success: true, data: item });
 });
 
@@ -165,12 +167,14 @@ exports.updateStock = asyncHandler(async (req, res) => {
   if (batch !== undefined) item.batch = batch;
 
   await item.save();
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'updateStock', data: item });
   res.json({ success: true, data: item });
 });
 
 exports.deleteStock = asyncHandler(async (req, res) => {
   const item = await PoolbarStock.findOneAndDelete({ id: req.params.id });
   if (!item) return res.status(404).json({ success: false, error: 'Stock item not found' });
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'deleteStock', data: item });
   res.json({ success: true, message: `Pool Bar item "${item.name}" deleted` });
 });
 
@@ -189,6 +193,7 @@ exports.deductStock = asyncHandler(async (req, res) => {
   const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
   await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
 
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'deductStock', data: item });
   res.json({ success: true, data: item });
 });
 
@@ -214,6 +219,7 @@ exports.deductStockById = asyncHandler(async (req, res) => {
   const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
   await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
 
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'deductStockById', data: item });
   res.json({ success: true, data: item });
 });
 
@@ -231,6 +237,7 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
   await item.save();
   const fullReason = `Adjustment ${d > 0 ? '+' + d : d} — ${reason}${notes ? ' — ' + notes : ''} (by ${req.user ? req.user.name : 'Admin'})`;
   await logMovement(item.name, d > 0 ? d : 0, d < 0 ? Math.abs(d) : 0, item.qty, fullReason);
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'adjustStockById', data: item });
   res.json({ success: true, data: item, before, delta: d });
 });
 
@@ -320,6 +327,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     guestPhone: guestPhone || null,
   });
 
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'createSale', data: sale });
   res.status(201).json({ success: true, data: sale });
 });
 
@@ -330,6 +338,7 @@ exports.updateSaleDate = asyncHandler(async (req, res) => {
   const d = req.body.date ? new Date(req.body.date) : null;
   if (!d || isNaN(d.getTime())) return res.status(400).json({ success: false, error: 'Valid date required (YYYY-MM-DD)' });
   sale.date = d; sale.updatedAt = Date.now(); await sale.save();
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'updateSaleDate', data: sale });
   res.json({ success: true, data: sale });
 });
 
@@ -356,6 +365,7 @@ exports.voidSale = asyncHandler(async (req, res) => {
   sale.voidDate = new Date();
   await sale.save();
 
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'voidSale', data: sale });
   res.json({ success: true, data: sale });
 });
 
@@ -404,6 +414,7 @@ exports.openTab = asyncHandler(async (req, res) => {
     createdBy: createdBy || (req.user ? req.user.name : ''),
   });
 
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'openTab', data: order });
   res.status(201).json({ success: true, data: order });
 });
 
@@ -431,6 +442,7 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   if (table !== undefined) order.table = table;
 
   await order.save();
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'updateOrder', data: order });
   res.json({ success: true, data: order });
 });
 
@@ -443,6 +455,7 @@ exports.markServed = asyncHandler(async (req, res) => {
 
   order.status = 'served';
   await order.save();
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'markOrderServed', data: order });
   res.json({ success: true, data: order });
 });
 
@@ -528,6 +541,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   if (effectivePhone) order.guestPhone = effectivePhone;
   await order.save();
 
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'payOrder', data: order });
   res.json({ success: true, data: { order, sale } });
 });
 
@@ -546,6 +560,7 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   order.notes = reason ? `${order.notes ? order.notes + ' — ' : ''}Cancelled: ${reason}` : order.notes;
   await order.save();
 
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'cancelOrder', data: order });
   res.json({ success: true, data: order });
 });
 
@@ -596,6 +611,7 @@ exports.createRequisition = asyncHandler(async (req, res) => {
     dateRaisedDisplay,
   });
 
+  emit(req, ['poolbar','store'], 'poolbar:updated', { action: 'createRequisition', data: reqDoc });
   res.status(201).json({ success: true, data: reqDoc });
 });
 
@@ -641,6 +657,7 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
   reqDoc.status = 'Completed';
   await reqDoc.save();
 
+  emit(req, ['poolbar','store'], 'poolbar:updated', { action: 'receiveRequisition', data: reqDoc });
   res.json({ success: true, data: reqDoc });
 });
 
@@ -713,6 +730,7 @@ exports.addCategory = asyncHandler(async (req, res) => {
   const existing = await Category.findOne({ module: 'poolbar', name });
   if (existing) throw new ApiError(409, `Category "${name}" already exists.`);
   await Category.create({ module: 'poolbar', name });
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'addCategory', data: { name } });
   res.status(201).json({ success: true, data: { name } });
 });
 
@@ -721,6 +739,7 @@ exports.renameCategory = asyncHandler(async (req, res) => {
   const newName = req.body.name.trim();
   await PoolbarStock.updateMany({ category: oldName }, { $set: { category: newName, cat: newName } });
   await Category.updateMany({ module: 'poolbar', name: oldName }, { $set: { name: newName } });
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'renameCategory', data: { name: newName } });
   res.json({ success: true, data: { name: newName } });
 });
 
@@ -730,5 +749,6 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
   if (name === reassignTo) throw new ApiError(400, `Cannot delete "${name}" — it is the fallback category.`);
   await PoolbarStock.updateMany({ category: name }, { $set: { category: reassignTo, cat: reassignTo } });
   await Category.deleteMany({ module: 'poolbar', name });
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'deleteCategory', data: { name, reassignedTo: reassignTo } });
   res.json({ success: true, data: { reassignedTo: reassignTo } });
 });

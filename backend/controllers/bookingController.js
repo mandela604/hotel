@@ -7,6 +7,7 @@ const Activity = require('../models/Activity');
 const asyncHandler = require('../middleware/asyncHandler');
 const { STATUS_TRANSITIONS } = require('../middleware/bookingValidators');
 const { v4: uuidv4 } = require('uuid');
+const { emit } = require('../utils/emit');
 
 /* ═══════════════════════════════════════════════
    Helpers — same math used client-side in every
@@ -224,6 +225,7 @@ exports.addRoom = asyncHandler(async (req, res) => {
   }
 
   await logActivity('Booking', 'blue', `Room ${room.num} added (${room.type})`, 'booking-rooms.html');
+  emit(req, 'booking', 'booking:updated', { action: 'addRoom', room: room.num, data: room });
   res.status(201).json({ success: true, data: room });
 });
 
@@ -267,6 +269,7 @@ exports.updateRoom = asyncHandler(async (req, res) => {
     await booking.save();
   }
 
+  emit(req, 'booking', 'booking:updated', { action: 'updateRoom', room: room.num, data: room });
   res.json({ success: true, data: room });
 });
 
@@ -280,6 +283,7 @@ exports.deleteRoom = asyncHandler(async (req, res) => {
   if (!room) return res.status(404).json({ success: false, error: 'Room not found' });
 
   await Booking.deleteOne({ room: req.params.num });
+  emit(req, 'booking', 'booking:updated', { action: 'deleteRoom', room: room.num });
   res.json({ success: true, message: `Room ${room.num} deleted` });
 });
 
@@ -323,6 +327,7 @@ exports.setRoomStatus = asyncHandler(async (req, res) => {
   await logActivity('Booking', targetStatus === 'maintenance' ? 'amber' : 'blue',
     `Room ${num} → ${targetStatus}`, 'booking-rooms.html');
 
+  emit(req, 'booking', 'booking:updated', { action: 'setRoomStatus', room: num, status: targetStatus, data: booking });
   res.json({ success: true, data: booking });
 });
 
@@ -469,6 +474,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
   }
 
   await logActivity('Booking', 'gold', `${booking.guest} booked into Room ${room}`, 'booking-list.html');
+  emit(req, 'booking', 'booking:updated', { action: 'createBooking', room: booking.room, stayId: booking.stayId, data: booking });
   res.status(201).json({ success: true, data: booking });
 });
 
@@ -513,6 +519,7 @@ exports.updateBooking = asyncHandler(async (req, res) => {
     await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
   }
 
+  emit(req, 'booking', 'booking:updated', { action: 'updateBooking', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
 
@@ -539,6 +546,7 @@ exports.deleteBooking = asyncHandler(async (req, res) => {
   }
 
   await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + roomNum} deleted — room marked available`, 'booking-list.html');
+  emit(req, 'booking', 'booking:updated', { action: 'deleteBooking', room: roomNum, stayId: booking.stayId });
   res.json({ success: true, message: 'Booking deleted. Room marked as Available.', data: booking });
 });
 
@@ -562,6 +570,7 @@ exports.checkinBooking = asyncHandler(async (req, res) => {
   await booking.save();
 
   await logActivity('Booking', 'green', `${booking.guest} checked in — Room ${booking.room}`, 'booking-rooms.html');
+  emit(req, 'booking', 'booking:updated', { action: 'checkin', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
 
@@ -585,6 +594,7 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
   await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
 
   await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html');
+  emit(req, 'booking', 'booking:updated', { action: 'checkout', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
 
@@ -601,6 +611,7 @@ exports.markNoShow = asyncHandler(async (req, res) => {
   booking.updatedAt = Date.now();
   await booking.save();
   await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${booking.room} marked as no-show`, 'booking-rooms.html');
+  emit(req, 'booking', 'booking:updated', { action: 'noShow', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
 
@@ -644,6 +655,7 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
 
   const label = refund > 0 ? ` (refund: ${refund})` : '';
   await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${roomNum} cancelled${label}`, 'booking-rooms.html');
+  emit(req, 'booking', 'booking:updated', { action: 'cancelRefund', room: roomNum, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
 
@@ -697,6 +709,7 @@ exports.addPayment = asyncHandler(async (req, res) => {
   await booking.save();
 
   await logActivity('Booking', 'green', `Payment of ${entry.amount} recorded for Room ${booking.room}`, 'booking-list.html');
+  emit(req, 'booking', 'booking:updated', { action: 'addPayment', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
 
@@ -748,6 +761,7 @@ exports.saveGuest = asyncHandler(async (req, res) => {
     if (req.body[f] !== undefined) guest[f] = req.body[f];
   }
   await guest.save();
+  emit(req, 'booking', 'booking:updated', { action: 'saveGuest', guestId: guest.id, data: guest });
   res.json({ success: true, data: guest });
 });
 
@@ -777,6 +791,7 @@ exports.addCharge = asyncHandler(async (req, res) => {
   });
   await guest.save();
 
+  emit(req, 'booking', 'booking:updated', { action: 'addCharge', guestId: guest.id, room: room || '', data: guest });
   res.status(201).json({ success: true, data: guest });
 });
 
@@ -837,6 +852,7 @@ exports.settleCharge = asyncHandler(async (req, res) => {
     await booking.save();
   }
 
+  emit(req, 'booking', 'booking:updated', { action: 'settleCharge', guestId: guest.id, chargeId: req.params.chargeId, data: guest });
   res.json({ success: true, data: guest });
 });
 
@@ -903,6 +919,7 @@ exports.settleAllCharges = asyncHandler(async (req, res) => {
     }
   }
 
+  emit(req, 'booking', 'booking:updated', { action: 'settleAllCharges', guestId: guest.id, data: guest });
   res.json({ success: true, message: `${settledCount} charge(s) settled`, data: guest });
 });
 

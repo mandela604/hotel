@@ -1,5 +1,6 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
+const { emit } = require('../utils/emit');
 
 const GymPlan = require('../models/GymPlan');
 const GymMember = require('../models/GymMember');
@@ -55,6 +56,7 @@ exports.createPlan = asyncHandler(async (req, res) => {
     notes: (notes || '').trim(),
     color: color || 'blue',
   });
+  emit(req, 'gym', 'gym:updated', { action: 'createPlan', data: plan });
   res.status(201).json({ success: true, data: plan });
 });
 
@@ -65,6 +67,7 @@ exports.updatePlan = asyncHandler(async (req, res) => {
     { new: true, runValidators: true }
   );
   if (!plan) throw new ApiError(404, 'Plan not found.');
+  emit(req, 'gym', 'gym:updated', { action: 'updatePlan', data: plan });
   res.json({ success: true, data: plan });
 });
 
@@ -73,6 +76,7 @@ exports.deletePlan = asyncHandler(async (req, res) => {
   if (inUse) throw new ApiError(409, 'Cannot delete – members are still on this plan.');
   const plan = await GymPlan.findOneAndDelete({ id: req.params.id });
   if (!plan) throw new ApiError(404, 'Plan not found.');
+  emit(req, 'gym', 'gym:updated', { action: 'deletePlan', data: plan });
   res.json({ success: true, data: { deleted: true } });
 });
 
@@ -97,6 +101,7 @@ exports.createMember = asyncHandler(async (req, res) => {
     totalDue: Number(totalDue) || 0,
     payments: [],
   });
+  emit(req, 'gym', 'gym:updated', { action: 'createMember', data: member });
   res.status(201).json({ success: true, data: member });
 });
 
@@ -114,12 +119,14 @@ exports.updateMember = asyncHandler(async (req, res) => {
   if (status !== undefined) member.status = status;
   if (totalDue !== undefined) member.totalDue = Number(totalDue);
   await member.save();
+  emit(req, 'gym', 'gym:updated', { action: 'updateMember', data: member });
   res.json({ success: true, data: member });
 });
 
 exports.deleteMember = asyncHandler(async (req, res) => {
   const member = await GymMember.findOneAndDelete({ id: req.params.id });
   if (!member) throw new ApiError(404, 'Member not found.');
+  emit(req, 'gym', 'gym:updated', { action: 'deleteMember', data: member });
   res.json({ success: true, data: { deleted: true } });
 });
 
@@ -140,6 +147,7 @@ exports.addMemberPayment = asyncHandler(async (req, res) => {
   };
   member.payments.push(payment);
   await member.save();
+  emit(req, 'gym', 'gym:updated', { action: 'addMemberPayment', data: member });
 
   res.status(201).json({
     success: true,
@@ -155,6 +163,7 @@ exports.renewMember = asyncHandler(async (req, res) => {
   member.expiry = req.body.newExpiry;
   member.status = 'active';
   await member.save();
+  emit(req, 'gym', 'gym:updated', { action: 'renewMember', data: member });
   res.json({ success: true, data: member });
 });
 
@@ -179,6 +188,7 @@ exports.createCheckin = asyncHandler(async (req, res) => {
   await member.save();
 
   const checkin = await GymCheckin.create({ memberId: member.id, memberName: member.name, time });
+  emit(req, 'gym', 'gym:updated', { action: 'recordCheckin', data: checkin });
   res.status(201).json({ success: true, data: checkin });
 });
 
@@ -192,12 +202,14 @@ exports.listGuests = asyncHandler(async (req, res) => {
 exports.createGuest = asyncHandler(async (req, res) => {
   const { name, room, phone, memberId } = req.body;
   const guest = await GymGuest.create({ name: name.trim(), room: (room || '').trim(), phone: (phone || '').trim(), memberId: memberId || null });
+  emit(req, 'gym', 'gym:updated', { action: 'createGuest', data: guest });
   res.status(201).json({ success: true, data: guest });
 });
 
 exports.deleteGuest = asyncHandler(async (req, res) => {
   const guest = await GymGuest.findOneAndDelete({ id: req.params.id });
   if (!guest) throw new ApiError(404, 'Guest not found.');
+  emit(req, 'gym', 'gym:updated', { action: 'deleteGuest', data: guest });
   res.json({ success: true, data: { deleted: true } });
 });
 
