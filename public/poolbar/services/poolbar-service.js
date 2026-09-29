@@ -254,7 +254,9 @@
   }
   function getDeductReasons() {
     const s = global.PoolBarSeed || {};
-    return Array.isArray(s.DEDUCT_REASONS) ? s.DEDUCT_REASONS : [];
+    const fromSeed = Array.isArray(s.DEDUCT_REASONS) ? s.DEDUCT_REASONS : [];
+    if (fromSeed.length) return fromSeed;
+    return ['Damaged','Expired','Stock Count Correction','Theft/Loss','Transfer','Other'];
   }
   function getEmptyValuePlaceholder() {
     const s = global.PoolBarSeed || {};
