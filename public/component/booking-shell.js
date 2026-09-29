@@ -166,6 +166,28 @@
     LOGIN_URL: '../login.html',
   };
 
+  // ── LiveService wiring (debounced auto-refresh via /services/live-service.js) ──
+  var _bksLiveTimer=null;
+  function _bksDoRefresh(){
+    try{
+      if(typeof window.refreshDataAndRender==='function'){ window.refreshDataAndRender(); return; }
+      if(typeof window.loadData==='function'){ window.loadData(); return; }
+      if(typeof window.fetchData==='function'){ window.fetchData(); return; }
+      if(typeof window.render==='function'){ try{ window.render(); }catch(e){} return; }
+      if(typeof window.loadInventory==='function'){ window.loadInventory(); return; }
+      if(typeof window.loadStock==='function'){ window.loadStock(); return; }
+      window.dispatchEvent(new CustomEvent('live:update'));
+    }catch(e){}
+  }
+  function _bksDebouncedRefresh(){ if(_bksLiveTimer) clearTimeout(_bksLiveTimer); _bksLiveTimer=setTimeout(_bksDoRefresh,350); }
+  function _bindBookingLive(){
+    var dept='booking';
+    function bind(){ try{ if(window.LiveService){ LiveService.on(dept+':updated', _bksDebouncedRefresh); LiveService.on('poll:tick', _bksDebouncedRefresh); } }catch(e){} }
+    if(window.LiveService){ bind(); return; }
+    if(document.querySelector('script[src="/services/live-service.js"]')){ setTimeout(bind,600); return; }
+    var s=document.createElement('script'); s.src='/services/live-service.js'; s.onload=bind; s.onerror=function(){}; document.head.appendChild(s);
+  }
+
   function goLogin(reason) {
     console.warn('[BookingShell] Auth failed — redirecting to login:', reason || '');
     const next = encodeURIComponent(location.pathname + location.search);
@@ -369,6 +391,7 @@
       }
       handle.setApiMode('Live');
       if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('bks-backBtn'); if (bb) bb.style.display = 'none'; }
+      try{ _bindBookingLive(); }catch(e){}
 
       // ── Unified checkout attention panel (replaces stacked red/amber toasts) ──
       if (!document.getElementById('bks-toast-style')) {

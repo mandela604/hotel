@@ -165,6 +165,28 @@
     LOGIN_URL: '../login.html',
   };
 
+  // ── LiveService wiring (debounced auto-refresh via /services/live-service.js) ──
+  var _gsLiveTimer=null;
+  function _gsDoRefresh(){
+    try{
+      if(typeof window.refreshDataAndRender==='function'){ window.refreshDataAndRender(); return; }
+      if(typeof window.loadData==='function'){ window.loadData(); return; }
+      if(typeof window.fetchData==='function'){ window.fetchData(); return; }
+      if(typeof window.render==='function'){ try{ window.render(); }catch(e){} return; }
+      if(typeof window.loadInventory==='function'){ window.loadInventory(); return; }
+      if(typeof window.loadStock==='function'){ window.loadStock(); return; }
+      window.dispatchEvent(new CustomEvent('live:update'));
+    }catch(e){}
+  }
+  function _gsDebouncedRefresh(){ if(_gsLiveTimer) clearTimeout(_gsLiveTimer); _gsLiveTimer=setTimeout(_gsDoRefresh,350); }
+  function _bindStoreLive(){
+    var dept='store';
+    function bind(){ try{ if(window.LiveService){ LiveService.on(dept+':updated', _gsDebouncedRefresh); LiveService.on('poll:tick', _gsDebouncedRefresh); } }catch(e){} }
+    if(window.LiveService){ bind(); return; }
+    if(document.querySelector('script[src="/services/live-service.js"]')){ setTimeout(bind,600); return; }
+    var s=document.createElement('script'); s.src='/services/live-service.js'; s.onload=bind; s.onerror=function(){}; document.head.appendChild(s);
+  }
+
   function goLogin(reason) {
     console.warn('[StoreShell] Auth failed — redirecting to login:', reason || '');
     const next = encodeURIComponent(location.pathname + location.search);
@@ -364,6 +386,7 @@
       }
       handle.setApiMode('Live');
       if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('gs-backBtn'); if (bb) bb.style.display = 'none'; }
+      try{ _bindStoreLive(); }catch(e){}
     });
 
     return handle;

@@ -22,20 +22,58 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const app = express();
 const http = require('http');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: process.env.CORS_ORIGIN || true, credentials: true } });
+const ALLOWED_DEPTS = new Set(['booking','restaurant','poolbar','kitchen','store','procurement','accounting','gym','global']);
+function getJwtSecret() { return process.env.JWT_SECRET || ''; }
+function parseSocketToken(socket) {
+  try {
+    const hdr = socket.handshake.headers.cookie || '';
+    const m = hdr.match(/(?:^|;\s*)token=([^;]+)/);
+    if (m) return decodeURIComponent(m[1]);
+  } catch(e){}
+  return socket.handshake.auth && socket.handshake.auth.token ? socket.handshake.auth.token : null;
+}
+const io = new Server(server, {
+  cors: {
+    origin: (process.env.CORS_ORIGIN || '').split(',').map(s=>s.trim()).filter(Boolean).length ? (process.env.CORS_ORIGIN || '').split(',').map(s=>s.trim()) : true,
+    credentials: true
+  }
+});
 app.set('io', io);
+io.use(async (socket, next) => {
+  try {
+    const token = parseSocketToken(socket);
+    const secret = getJwtSecret();
+    if (!token || !secret) return next(new Error('unauthorized'));
+    const decoded = jwt.verify(token, secret);
+    const user = await User.findOne({ id: decoded.id }).select('-password');
+    if (!user || user.status === 'inactive') return next(new Error('unauthorized'));
+    socket.data.user = { id: user.id, name: user.name, role: user.role, dept: user.dept || '' };
+    next();
+  } catch(e) { next(new Error('unauthorized')); }
+});
 io.on('connection', (socket) => {
-  const dept = socket.handshake.query.dept || socket.handshake.auth?.dept || '';
+  const rawDept = (socket.handshake.query.dept || socket.handshake.auth?.dept || socket.data?.user?.dept || '').toString().toLowerCase();
+  const dept = ALLOWED_DEPTS.has(rawDept) ? rawDept : '';
   if (dept) socket.join(dept);
-  socket.on('join', (room) => { if (room) socket.join(room); });
+  socket.join('global');
+  socket.on('join', (room) => {
+    const r = String(room||'').toLowerCase().trim();
+    if (ALLOWED_DEPTS.has(r)) socket.join(r);
+  });
   socket.on('disconnect', () => {});
+});
+io.engine.on('connection_error', (err) => {
+  console.warn('[ws] connection_error', err.code, err.message);
 });
 app.use(cookieParser());
 
 app.use(helmet(helmetConfig));
 app.use(express.json({ limit: '2mb' }));
-app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: true }));
+const corsOrigins = (process.env.CORS_ORIGIN || '').split(',').map(s=>s.trim()).filter(Boolean);
+app.use(cors({ origin: corsOrigins.length ? corsOrigins : true, credentials: true }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Root always serves the login page — the frontend redirects to the
@@ -81,6 +119,19 @@ async function start() {
   await connectDB();
   server.listen(PORT, () => console.log(`[server] Aurum Hotel API + WS on port ${PORT}`));
 }
+
+function shutdown(signal) {
+  console.log(`[server] ${signal} received, closing...`);
+  io.close(() => {
+    server.close(() => {
+      console.log('[server] closed');
+      process.exit(0);
+    });
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 if (require.main === module) {
   start().catch((err) => { console.error('[server] Failed:', err); process.exit(1); });

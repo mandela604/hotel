@@ -168,6 +168,28 @@
     LOGIN_URL: '../login.html',
   };
 
+  // ── LiveService wiring (debounced auto-refresh via /services/live-service.js) ──
+  var _pbsLiveTimer=null;
+  function _pbsDoRefresh(){
+    try{
+      if(typeof window.refreshDataAndRender==='function'){ window.refreshDataAndRender(); return; }
+      if(typeof window.loadData==='function'){ window.loadData(); return; }
+      if(typeof window.fetchData==='function'){ window.fetchData(); return; }
+      if(typeof window.render==='function'){ try{ window.render(); }catch(e){} return; }
+      if(typeof window.loadInventory==='function'){ window.loadInventory(); return; }
+      if(typeof window.loadStock==='function'){ window.loadStock(); return; }
+      window.dispatchEvent(new CustomEvent('live:update'));
+    }catch(e){}
+  }
+  function _pbsDebouncedRefresh(){ if(_pbsLiveTimer) clearTimeout(_pbsLiveTimer); _pbsLiveTimer=setTimeout(_pbsDoRefresh,350); }
+  function _bindPoolbarLive(){
+    var dept='poolbar';
+    function bind(){ try{ if(window.LiveService){ LiveService.on(dept+':updated', _pbsDebouncedRefresh); LiveService.on('poll:tick', _pbsDebouncedRefresh); } }catch(e){} }
+    if(window.LiveService){ bind(); return; }
+    if(document.querySelector('script[src="/services/live-service.js"]')){ setTimeout(bind,600); return; }
+    var s=document.createElement('script'); s.src='/services/live-service.js'; s.onload=bind; s.onerror=function(){}; document.head.appendChild(s);
+  }
+
   function goLogin(reason) {
     console.warn('[PoolBarShell] Auth failed — redirecting to login:', reason || '');
     const next = encodeURIComponent(location.pathname + location.search);
@@ -370,6 +392,7 @@
       }
       handle.setApiMode('Live');
       if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('pbs-backBtn'); if (bb) bb.style.display = 'none'; }
+      try{ _bindPoolbarLive(); }catch(e){}
     });
 
     return handle;
