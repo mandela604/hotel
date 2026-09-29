@@ -985,10 +985,11 @@
         var logs = (editBooking && editBooking.transferLog) || [];
         if (logs.length) {
           tLogEl.style.display = '';
-          tLogEl.innerHTML = '<div style="font-weight:700; margin-bottom:4px; color:var(--bkm-gold);"><i class="fa-solid fa-right-left"></i> Transfers</div>' +
+          tLogEl.innerHTML = '<div style="font-weight:700; margin-bottom:6px; color:var(--bkm-gold);"><i class="fa-solid fa-right-left"></i> Transfers — read-only</div>' +
             logs.map(function(l){
+              var who = l.guest || editBooking.guest || 'Guest';
               var when = l.at ? new Date(l.at).toLocaleString() : '';
-              return '<div>' + esc(l.by || '') + ' transferred from Room ' + esc(l.from) + ' to Room ' + esc(l.to) + (when ? ' at ' + esc(when) : '') + (l.note ? ' — ' + esc(l.note) : '') + '</div>';
+              return '<div style="padding:6px 8px; background:var(--bkm-surface); border:1px solid var(--bkm-border); border-radius:8px; margin-bottom:4px;">' + esc(who) + ' moved from Room ' + esc(l.from) + ' to Room ' + esc(l.to) + ' by ' + esc(l.by || '') + (when ? ' at ' + esc(when) : '') + (l.note ? ' — ' + esc(l.note) : '') + '</div>';
             }).join('');
         } else {
           tLogEl.style.display = 'none';

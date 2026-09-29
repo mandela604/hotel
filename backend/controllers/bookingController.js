@@ -542,15 +542,15 @@ exports.transferBooking = asyncHandler(async (req, res) => {
 
   const fromRoom = booking.room;
   const by = req.user ? req.user.name : 'System';
+  const guestName = booking.guest || 'Guest';
   const now = Date.now();
   booking.room = toRoom;
   booking.type = roomDoc.type || booking.type;
   booking.transferLog = booking.transferLog || [];
-  booking.transferLog.push({ from: fromRoom, to: toRoom, by, at: now, note: req.body.note || '' });
+  booking.transferLog.push({ from: fromRoom, to: toRoom, by, at: now, note: req.body.note || '', guest: guestName });
   booking.history = booking.history || [];
-  booking.history.push({ date: new Date().toISOString().split('T')[0], action: `Transferred from ${fromRoom} to ${toRoom} by ${by}`, by, note: req.body.note || '', stage: booking.status });
-  const transferNote = `${by} transferred from Room ${fromRoom} to Room ${toRoom} at ${new Date(now).toLocaleString()}` + (req.body.note ? ` — ${req.body.note}` : '');
-  booking.notes = booking.notes ? booking.notes + '\n' + transferNote : transferNote;
+  booking.history.push({ date: new Date().toISOString().split('T')[0], action: `${guestName} moved from Room ${fromRoom} to Room ${toRoom} by ${by}`, by, note: req.body.note || '', stage: booking.status });
+  // Do not append to editable notes — transfer history is read-only via transferLog
   booking.updatedAt = now;
   await booking.save();
 
