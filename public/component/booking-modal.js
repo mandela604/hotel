@@ -661,7 +661,13 @@
           return;
         }
         var sel = $('[data-role="room"]');
-        if (sel) sel.disabled = true;
+        var saveBtn = $('[data-act="save"]');
+        var origRoomHtml = sel ? sel.innerHTML : '';
+        if (sel) { sel.disabled = true; sel.style.opacity = '0.6'; }
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Transferring…'; }
+        // show inline loader in transfer log area
+        var tLogEl = $('[data-role="transferLog"]');
+        if (tLogEl) { tLogEl.style.display = ''; tLogEl.innerHTML = '<div style="color:var(--bkm-gold);"><i class="fa-solid fa-spinner fa-spin"></i> Transferring Room ' + esc(oldRoom) + ' → ' + esc(newRoom) + '…</div>'; }
         try {
           var stayKey = editBooking.stayId || editBooking._id || editBooking.id || oldRoom;
           var updated = null;
@@ -690,8 +696,11 @@
           toast((err && err.message) || 'Transfer failed', 'error');
           populateRooms(oldRoom);
           refreshCalcs();
+          var tLogErr = $('[data-role="transferLog"]');
+          if (tLogErr) { tLogErr.style.display = 'none'; tLogErr.innerHTML = ''; }
         } finally {
-          if (sel) sel.disabled = false;
+          if (sel) { sel.disabled = false; sel.style.opacity = ''; }
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save'; applyEditability(); }
         }
         return;
       }
