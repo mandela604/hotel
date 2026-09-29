@@ -753,7 +753,7 @@ async function confirmAdjust() {
     const i = await svc.adjustStock(id, delta, reason, notes);
     closeModal('adjustModal');
     showToast(i.name + ': adjusted ' + (delta > 0 ? '+' + delta : delta) + ' ' + (i.unit || '') + '.', 'success');
-    render();
+    applyFilters();
   } catch (err) {
     showToast(err.message || 'Adjust failed.', 'error');
   }
