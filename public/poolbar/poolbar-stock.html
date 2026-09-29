@@ -959,6 +959,13 @@ async function init() {
 
   bindUI();
   await svc.loadAll();
+  // Staff must see all stock like admin — only Add is hidden, not filtered
+  try {
+    const u = shell.getUser ? shell.getUser() : null;
+    const isAdmin = u && String(u.role||'').toLowerCase()==='admin';
+    const addBtn = document.getElementById('btnAdd');
+    if (addBtn) addBtn.style.display = isAdmin ? '' : 'none';
+  } catch(e){}
   applyFilters();
 
   if (svc.onChange) {
