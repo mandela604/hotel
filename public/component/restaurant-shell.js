@@ -139,6 +139,9 @@
   .rst-notif{ width:36px; height:36px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm);
     display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; position:relative; color:#6b7280; flex-shrink:0; }
   .rst-notifdot{ position:absolute; top:6px; right:6px; width:7px; height:7px; background:var(--gold); border-radius:50%; border:1.5px solid #f4f6fb; }
+  .rst-logout{ width:36px; height:36px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; color:#6b7280; flex-shrink:0; transition:all .2s; }
+  .rst-logout:hover{ background:#feecec; color:#f04438; border-color:rgba(240,68,56,.3); }
   .rst-avatar{ width:36px; height:36px; background:rgba(47,111,237,0.12); border:2px solid rgba(47,111,237,0.25); border-radius:50%;
     display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; color:#2f6fed; cursor:pointer; flex-shrink:0; }
   `;
@@ -271,6 +274,7 @@
           <div class="rst-date" id="rst-date"></div>
           <div class="rst-apibadge" id="rst-apiBadge"><span class="dot"></span><span id="rst-apiLabel">Live</span></div>
           <div class="rst-notif"><i class="fa-regular fa-bell"></i><div class="rst-notifdot"></div></div>
+          <button class="rst-logout" id="rst-logout" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></button>
           <div class="rst-avatar" id="rst-avatar">${initials}</div>
         </div>
       </div>`;
@@ -322,6 +326,12 @@
       if (saved === 'dark') isDark = true;
     } catch (e) {}
     applyTheme();
+
+    const logoutBtn = document.getElementById('rst-logout');
+    if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+      try { await fetch(CONFIG.API_BASE + '/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+      window.location.href = '/login.html';
+    });
 
     const handle = {
       setApiMode(mode) {

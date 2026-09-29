@@ -135,6 +135,9 @@
   .gs-notif{ width:36px; height:36px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm);
     display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; position:relative; color:#6b7280; flex-shrink:0; }
   .gs-notifdot{ position:absolute; top:6px; right:6px; width:7px; height:7px; background:var(--gold); border-radius:50%; border:1.5px solid #f4f6fb; }
+  .gs-logout{ width:36px; height:36px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; color:#6b7280; flex-shrink:0; transition:all .2s; }
+  .gs-logout:hover{ background:#feecec; color:#f04438; border-color:rgba(240,68,56,.3); }
   .gs-avatar{ width:36px; height:36px; background:rgba(47,111,237,0.12); border:2px solid rgba(47,111,237,0.25); border-radius:50%;
     display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; color:#2f6fed; cursor:pointer; flex-shrink:0; }
   `;
@@ -259,6 +262,7 @@
           <div class="gs-date" id="gs-date"></div>
           <div class="gs-apibadge" id="gs-apiBadge"><span class="dot"></span><span id="gs-apiLabel">Live</span></div>
           <div class="gs-notif"><i class="fa-regular fa-bell"></i><div class="gs-notifdot"></div></div>
+          <button class="gs-logout" id="gs-logout" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></button>
           <div class="gs-avatar" id="gs-avatar">${initials}</div>
         </div>
       </div>`;
@@ -310,6 +314,12 @@
       if (saved === 'dark') isDark = true;
     } catch (e) {}
     applyTheme();
+
+    const logoutBtn = document.getElementById('gs-logout');
+    if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+      try { await fetch(CONFIG.API_BASE + '/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+      window.location.href = '/login.html';
+    });
 
     const handle = {
       setApiMode(mode) {
