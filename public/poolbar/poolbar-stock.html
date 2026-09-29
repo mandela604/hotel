@@ -725,6 +725,10 @@ async function saveItem() {
 }
 
 function openAdjustModal(itemOrName) {
+  try {
+    const sess = (function(){ try{ const u=shell.getUser(); if(u&&u.role) return u; const raw=localStorage.getItem('aurum_user'); if(raw){ const j=JSON.parse(raw); if(j&&j.role) return j; } }catch(e){} return null;})();
+    if (!sess || String(sess.role||'').toLowerCase() !== 'admin') { showToast('Only admin can adjust stock.', 'error'); return; }
+  } catch(e){}
   const item = typeof itemOrName === 'string' ? svc.findStock(itemOrName) : itemOrName;
   if (!item) return;
   activeName = item.name;
@@ -941,7 +945,7 @@ async function init() {
     title: 'Pool Bar Stock',
     emptyText: 'No stock items match your filters.',
     showDeduct: false,
-    showAdjust: (function(){ try{var u=shell.getUser();return u&&String(u.role).toLowerCase()==='admin';}catch(e){return false;}})(),
+    showAdjust: true,
     showEdit: true,
     showDelete: true,
     rowClickable: true,
