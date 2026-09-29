@@ -240,7 +240,7 @@ function renderKPIs(roomRev, restRev, poolRev, rooms, procPending, lowStock){
     <a class="kpi-card acc-amber" href="kitchen/kitchen-dashboard.html">
       <div class="kpi-top"><div class="kpi-ic ic-amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="kpi-label">Low Stock Alerts</div></div>
       <div class="kpi-value" style="color:${lowStock>0?'var(--amber)':'var(--text)'};">${lowStock}</div>
-      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Kitchen ingredients low':'All stocked'}</div>
+      <div class="kpi-trend ${lowStock>0?'warn':'up'}">${lowStock>0?'Needs attention':'All stocked'}</div>
     </a>`;
 }
 
