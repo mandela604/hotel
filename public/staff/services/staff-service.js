@@ -189,6 +189,7 @@
       salary: s.salary || 0,
       hireDate: s.hireDate || '',
       overrides: p.overrides || {},
+      supervisorScopes: Array.isArray(p.supervisorScopes) ? p.supervisorScopes : [],
     };
   }
 
@@ -204,7 +205,11 @@
       status: toBackendStatus(fe.status),
       salary: Number(fe.salary) || 0,
       hireDate: fe.hireDate || '',
-      privileges: { type: fe.privilege || null, overrides: fe.overrides || {} },
+      privileges: {
+        type: fe.privilege || null,
+        overrides: fe.overrides || {},
+        supervisorScopes: Array.isArray(fe.supervisorScopes) ? fe.supervisorScopes : [],
+      },
     };
     if (fe.password) payload.password = fe.password;
     return payload;

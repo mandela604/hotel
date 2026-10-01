@@ -713,7 +713,7 @@ function editStaff(id){
   document.getElementById('fsDept').value = s.dept || '';
   // supervisorScopes for supervisor role
   if (s.role === 'supervisor') {
-    const scopes = (s.privileges && s.privileges.supervisorScopes) || s.supervisorScopes || [];
+    const scopes = s.supervisorScopes || (s.privileges && s.privileges.supervisorScopes) || [];
     renderSupervisorScopes(scopes);
   }
   document.getElementById('fsNameErr').classList.remove('show');
@@ -769,6 +769,7 @@ async function saveStaffForm(){
     role,
     privilege: role === 'staff' ? (document.getElementById('fsPrivilege').value || null) : null,
     privileges: role === 'supervisor' ? { supervisorScopes } : undefined,
+    supervisorScopes: role === 'supervisor' ? supervisorScopes : [],
     dept: document.getElementById('fsDept').value.trim(),
     status: document.getElementById('fsStatus').value,
     password: changingPw ? pw : undefined,
