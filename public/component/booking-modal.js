@@ -595,9 +595,24 @@
         bal = Math.max(0, after - paid);
       } else if (editBooking) {
         paid = calcPaid(editBooking);
-        bal = calcBal(Object.assign({}, editBooking, {
-          rate: rate, discount: disc, checkin: ci, checkout: co,
-        }));
+        // Option 2: extra nights at current room rate, not repricing promo nights
+        var origNights = nights(editBooking.checkin, editBooking.checkout);
+        var curRoomRate = (function(){ var r = rooms.find(function(x){ return x.num === editBooking.room; }); return r ? Number(r.rate)||0 : rate; })();
+        var additional = Math.max(0, n - (origNights||0));
+        if (additional > 0 && ci === editBooking.checkin) {
+          var baseTotal = calcTotal(editBooking);
+          var addRate = (rate !== Number(editBooking.rate) && rate !== 0) ? rate : curRoomRate;
+          var addAfter = Math.max(0, additional * (addRate - disc));
+          after = baseTotal + addAfter;
+          raw = (Number(editBooking.rate)||0) * origNights + addRate * additional;
+          bal = Math.max(0, after - paid);
+        } else {
+          bal = calcBal(Object.assign({}, editBooking, {
+            rate: rate, discount: disc, checkin: ci, checkout: co,
+          }));
+          after = Math.max(0, (rate - disc) * n);
+          raw = rate * n;
+        }
       }
 
       setVal('nightsDisp', String(n || 0));
@@ -966,6 +981,17 @@
         if (!editBooking) return 0;
         var ci = val('checkin'), co = val('checkout');
         var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
+        var origNights = nights(editBooking.checkin, editBooking.checkout);
+        var n = nights(ci, co);
+        var additional = Math.max(0, n - (origNights||0));
+        if (additional > 0 && ci === editBooking.checkin) {
+          var baseTotal = calcTotal(editBooking);
+          var curRoomRate = (function(){ var rr = rooms.find(function(x){ return x.num === editBooking.room; }); return rr ? Number(rr.rate)||0 : r; })();
+          var addRate = (r !== Number(editBooking.rate) && r !== 0) ? r : curRoomRate;
+          var after = baseTotal + Math.max(0, additional * (addRate - d));
+          var paid = calcPaid(editBooking);
+          return Math.max(0, after - paid);
+        }
         return calcBal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
       })();
       var allowPay = paymentActionsAllowed() && currentBal > 0;
@@ -1010,6 +1036,17 @@
       var curBal = (function(){
         var ci = val('checkin'), co = val('checkout');
         var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
+        var origNights = nights(editBooking.checkin, editBooking.checkout);
+        var n = nights(ci, co);
+        var additional = Math.max(0, n - (origNights||0));
+        if (additional > 0 && ci === editBooking.checkin) {
+          var baseTotal = calcTotal(editBooking);
+          var curRoomRate = (function(){ var rr = rooms.find(function(x){ return x.num === editBooking.room; }); return rr ? Number(rr.rate)||0 : r; })();
+          var addRate = (r !== Number(editBooking.rate) && r !== 0) ? r : curRoomRate;
+          var after = baseTotal + Math.max(0, additional * (addRate - d));
+          var paid = calcPaid(editBooking);
+          return Math.max(0, after - paid);
+        }
         return calcBal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
       })();
       if (!paymentActionsAllowed() || curBal <= 0) {
@@ -1415,8 +1452,12 @@
       setVal('children', booking.children || 0);
       setVal('notes', booking.notes || '');
       setStatusRadio(booking.status === 'checkedin' ? 'checkedin' : 'reserved');
+      var _origRate = booking.rate || 0;
+      var _origType = booking.type || '';
       populateRooms(booking.room);
-      setVal('type', booking.type || '');
+      // preserve promo rate — don't auto-bump to current room rate (55k) on edit open
+      setVal('rate', _origRate);
+      setVal('type', _origType);
 
       // Admin-only: Created Date
       var createdAtWrap = $('[data-role="createdAtWrap"]');

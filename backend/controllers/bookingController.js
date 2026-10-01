@@ -304,6 +304,9 @@ exports.setRoomStatus = asyncHandler(async (req, res) => {
   if (!booking) return res.status(404).json({ success: false, error: 'Room not found' });
 
   const from = booking.status === 'vacant' ? 'vacant' : booking.status;
+  if (from === targetStatus) {
+    return res.json({ success: true, data: booking, message: `Room ${num} already ${targetStatus}` });
+  }
   const allowed = STATUS_TRANSITIONS[from] || [];
   if (!allowed.includes(targetStatus)) {
     return res.status(400).json({ success: false, error: `Cannot move room ${num} from '${from}' to '${targetStatus}'` });
@@ -728,7 +731,19 @@ exports.addPayment = asyncHandler(async (req, res) => {
   const { amount, mode } = req.body;
   const numAmt = Number(amount);
   if (!numAmt || numAmt <= 0) return res.status(400).json({ success: false, error: 'Invalid payment amount' });
-  const bal = calcBal(booking);
+  let bal = calcBal(booking);
+  // For extended stays at new room rate (promo 50k -> 55k), allow payment for extra nights at current rate
+  try {
+    const Room = require('../models/Room');
+    const roomDoc = await Room.findOne({ num: booking.room });
+    if (roomDoc && Number(roomDoc.rate) !== Number(booking.rate)) {
+      const n = nights(booking.checkin, booking.checkout);
+      const balAtCurrent = Math.max(0, Number(roomDoc.rate) * n - calcPaid(booking));
+      bal = Math.max(bal, balAtCurrent);
+      // also allow mixed (old nights at old rate + extra at new rate) if checkout was extended
+      // mixed = baseTotal(2*50) + add*55 - paid = 55k for 1 extra, which is <= 65k above, already covered
+    }
+  } catch(e) {}
   if (numAmt > bal) return res.status(400).json({ success: false, error: `Payment ₦${numAmt.toLocaleString()} exceeds balance ₦${bal.toLocaleString()} (total ₦${calcTotal(booking).toLocaleString()} - paid ₦${calcPaid(booking).toLocaleString()})` });
   const entry = {
     id: `PMT-${uuidv4()}`,
