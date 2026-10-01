@@ -962,8 +962,13 @@
         if (payCountEl) payCountEl.textContent = '(' + payments.length + ')';
       }
 
-      var bal = calcBal(editBooking);
-      var allowPay = paymentActionsAllowed() && bal > 0;
+      var currentBal = (function(){
+        if (!editBooking) return 0;
+        var ci = val('checkin'), co = val('checkout');
+        var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
+        return calcBal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
+      })();
+      var allowPay = paymentActionsAllowed() && currentBal > 0;
 
       if (addPayBtn) {
         addPayBtn.hidden = !allowPay;
@@ -1002,14 +1007,19 @@
     function showNewPayRow() {
       var acc = $('[data-role="payAcc"]');
       if (!acc || !editBooking) return;
-      if (!paymentActionsAllowed() || calcBal(editBooking) <= 0) {
+      var curBal = (function(){
+        var ci = val('checkin'), co = val('checkout');
+        var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
+        return calcBal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
+      })();
+      if (!paymentActionsAllowed() || curBal <= 0) {
         acc.hidden = true;
         toast('This booking is already fully paid.', 'info');
         return;
       }
       acc.hidden = false;
       acc.classList.add('open');
-      setVal('newPayAmount', String(calcBal(editBooking)));
+      setVal('newPayAmount', String(curBal));
       setVal('newPayMode', 'Cash');
       setVal('newPayBy', (session && session.name) || '');
       var amt = $('[data-role="newPayAmount"]');
@@ -1020,9 +1030,28 @@
       if (addingPayment || !editBooking) return;
       var amt = parseFloat(val('newPayAmount')) || 0;
       if (amt <= 0) { toast('Enter a payment amount greater than zero.', 'error'); return; }
-      var bal = calcBal(editBooking);
-      if (amt > bal) { toast('Payment ₦' + amt.toLocaleString() + ' exceeds balance ₦' + bal.toLocaleString() + ' (total ₦' + calcTotal(editBooking).toLocaleString() + ').', 'error'); return; }
+      var curBal = (function(){
+        var ci = val('checkin'), co = val('checkout');
+        var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
+        return calcBal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
+      })();
+      var curTot = (function(){
+        var ci = val('checkin'), co = val('checkout');
+        var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
+        return calcTotal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
+      })();
+      if (amt > curBal) { toast('Payment ₦' + amt.toLocaleString() + ' exceeds balance ₦' + curBal.toLocaleString() + ' (total ₦' + curTot.toLocaleString() + ').', 'error'); return; }
       var payMode = val('newPayMode');
+      // If checkout/rate changed, save extended stay first so server balance matches
+      var entry = collectEntry();
+      var isExtended = entry.checkin !== editBooking.checkin || entry.checkout !== editBooking.checkout || Number(entry.rate) !== Number(editBooking.rate) || Number(entry.discount) !== Number(editBooking.discount);
+      if (isExtended) {
+        try { var saved = await service.saveBooking(entry); if (saved) editBooking = saved; } catch(e) { toast((e && e.message) || 'Failed to save extended dates before payment.', 'error'); return; }
+        // recalc after save
+        curBal = calcBal(editBooking);
+        curTot = calcTotal(editBooking);
+        if (amt > curBal) { toast('Payment ₦' + amt.toLocaleString() + ' exceeds new balance ₦' + curBal.toLocaleString() + ' (total ₦' + curTot.toLocaleString() + ').', 'error'); return; }
+      }
       addingPayment = true;
       applyEditability();
       try {
