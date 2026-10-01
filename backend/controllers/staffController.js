@@ -65,12 +65,16 @@ exports.createStaff = asyncHandler(async (req, res) => {
     if (!existingUser) {
       const pType = (privileges && privileges.type) || null;
       const pOverrides = (privileges && privileges.overrides) || {};
+      const pScopes = Array.isArray(privileges && privileges.supervisorScopes) ? privileges.supervisorScopes : [];
+      const userRole = ['admin','manager','supervisor'].includes(role) ? role : 'staff';
+      const priv = { type: pType, overrides: pOverrides };
+      if (pScopes.length) priv.supervisorScopes = pScopes;
       await User.create({
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password,
-        role: role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff',
-        privileges: { type: pType, overrides: pOverrides },
+        role: userRole,
+        privileges: priv,
         department: sanitizeDept(department || dept),
         phone: phone || '',
         initials: name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
@@ -107,8 +111,19 @@ exports.updateStaff = asyncHandler(async (req, res) => {
     if (user) {
       user.password = password;
       if (name) user.name = name.trim();
-      if (role) user.role = role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff';
-      if (privileges !== undefined) user.privileges = privileges;
+      if (role) user.role = ['admin','manager','supervisor'].includes(role) ? role : 'staff';
+      if (privileges !== undefined) {
+        const pScopes = Array.isArray(privileges.supervisorScopes) ? privileges.supervisorScopes : undefined;
+        if (pScopes !== undefined) {
+          user.privileges = user.privileges || {};
+          user.privileges.supervisorScopes = pScopes;
+          if (privileges.type !== undefined) user.privileges.type = privileges.type;
+          if (privileges.overrides !== undefined) user.privileges.overrides = privileges.overrides;
+          user.markModified('privileges');
+        } else {
+          user.privileges = privileges;
+        }
+      }
       if (department || dept) user.department = sanitizeDept(department || dept);
       await user.save();
     }
@@ -116,8 +131,19 @@ exports.updateStaff = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email: staff.email.toLowerCase() });
     if (user) {
       if (name) user.name = name.trim();
-      if (role) user.role = role === 'admin' ? 'admin' : role === 'manager' ? 'manager' : 'staff';
-      if (privileges !== undefined) user.privileges = privileges;
+      if (role) user.role = ['admin','manager','supervisor'].includes(role) ? role : 'staff';
+      if (privileges !== undefined) {
+        const pScopes = Array.isArray(privileges.supervisorScopes) ? privileges.supervisorScopes : undefined;
+        if (pScopes !== undefined) {
+          user.privileges = user.privileges || {};
+          user.privileges.supervisorScopes = pScopes;
+          if (privileges.type !== undefined) user.privileges.type = privileges.type;
+          if (privileges.overrides !== undefined) user.privileges.overrides = privileges.overrides;
+          user.markModified('privileges');
+        } else {
+          user.privileges = privileges;
+        }
+      }
       if (department || dept) user.department = sanitizeDept(department || dept);
       await user.save();
     }
