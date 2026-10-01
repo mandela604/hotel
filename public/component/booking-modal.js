@@ -1548,6 +1548,7 @@
       if (role === 'name') searchGuests(e.target.value);
       if (role === 'rate' || role === 'discount' || role === 'paid' || role === 'checkin' || role === 'checkout') {
         refreshCalcs();
+        if (mode !== 'new' && editBooking) renderPayments();
       }
     });
 
@@ -1556,6 +1557,7 @@
       if (role === 'room') onRoomChange();
       if (role === 'checkin' || role === 'checkout' || role === 'rate' || role === 'discount' || role === 'paid') {
         refreshCalcs();
+        if (mode !== 'new' && editBooking) renderPayments();
       }
     });
 
