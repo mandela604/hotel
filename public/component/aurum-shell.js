@@ -247,10 +247,16 @@
     };
     function isNavAllowed(item) {
       if (!user || String(user.role||'').toLowerCase() !== 'supervisor') return true;
-      const mod = NAV_MODULE_MAP[item.href] || null;
-      if (!mod) return true; // Overview, Staff, Settings always for supervisor? or hide Settings
+      const mod = NAV_MODULE_MAP[item.href];
+      // Overview always shows; everything else requires an explicit scope check
+      if (item.href === 'index.html') return true;
+      // Settings only for admin/manager — hide from supervisor
+      if (item.href === 'settings/platform-settings.html') return false;
+      // Staff Management — hide from supervisor
+      if (item.href === 'staff/staff-management.html') return false;
+      // Module items — only show if in supervisorScopes
       const scopes = (user.privileges && user.privileges.supervisorScopes) || user.supervisorScopes || [];
-      if (!scopes.length) return false;
+      if (!mod) return false;
       return scopes.includes(mod);
     }
     function navHtml() {
