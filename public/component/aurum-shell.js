@@ -224,8 +224,29 @@
 
     const overlay = _getOverlay();
 
+    const NAV_MODULE_MAP = {
+      'index.html': null,
+      'booking/booking-rooms.html': 'booking',
+      'kitchen/kitchen-dashboard.html': 'kitchen',
+      'restaurant/restaurant-dashboard.html': 'restaurant',
+      'poolbar/poolbar-dashboard.html': 'poolbar',
+      'gym/gym-dashboard.html': 'gym',
+      'store/store-dashboard.html': 'store',
+      'staff/staff-management.html': null,
+      'procurement/procurement-dashboard.html': 'procurement',
+      'accounting/accounting-dashboard.html': 'accounting',
+      'settings/platform-settings.html': null,
+    };
+    function isNavAllowed(item) {
+      if (!user || String(user.role||'').toLowerCase() !== 'supervisor') return true;
+      const mod = NAV_MODULE_MAP[item.href] || null;
+      if (!mod) return true; // Overview, Staff, Settings always for supervisor? or hide Settings
+      const scopes = (user.privileges && user.privileges.supervisorScopes) || user.supervisorScopes || [];
+      if (!scopes.length) return false;
+      return scopes.includes(mod);
+    }
     function navHtml() {
-      return navItems.map(item => `
+      return navItems.filter(isNavAllowed).map(item => `
         <a class="aur-item${item.href === activeFile ? ' aur-active' : ''}" href="${_esc(item.href)}" data-aur-file="${_esc(item.href)}">
           <span class="aur-icon"><i class="${item.icon || 'fa-solid fa-circle'}"></i></span>
           <span class="aur-nav-text">${_esc(item.label)}</span>
@@ -354,10 +375,13 @@
     applyThemeAttr();
     bindEvents();
 
-    // ── Fetch real session and update avatar ──
+    // ── Fetch real session and update avatar + filter nav for supervisor ──
     fetchSession().then(sessionUser => {
       if (sessionUser) {
         user = Object.assign({}, user, sessionUser);
+        // re-render nav for supervisor allowlist
+        const navEl = document.getElementById(instId + '-nav');
+        if (navEl) navEl.innerHTML = navHtml();
         const avatar = document.getElementById(instId + '-avatar');
         if (avatar) {
           const initials = user.initials || (user.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);

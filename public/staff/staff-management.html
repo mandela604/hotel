@@ -305,6 +305,11 @@
         <label class="form-label">Status</label>
         <select class="form-select" id="fsStatus"><option>Active</option><option>Inactive</option></select>
       </div>
+      <div class="form-group span2" id="supervisorScopesWrap" style="display:none; border:1px solid #eef0f6; border-radius:10px; padding:12px; background:#f4f6fb;">
+        <label class="form-label">Supervisor — Allowed Modules <span style="text-transform:none; color:#6b7280; font-weight:600;">(only these show on index)</span></label>
+        <div id="supervisorScopesChecks" style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px;"></div>
+        <div class="form-hint">Checked modules will appear as KPI/menu cards on his index landing. Unchecked are hidden like staff.</div>
+      </div>
     </div>
     <div id="fsChangePwWrap" style="display:none;margin-bottom:10px;">
       <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1c2440;cursor:pointer;">
@@ -465,21 +470,48 @@ function populateSelects(){
     ? PRIVILEGE_KEYS.map(p => `<option value="${p}">${labelize(p)}</option>`).join('')
     : `<option value="">No privileges defined</option>`;
 }
+function renderSupervisorScopes(selected){
+  const wrap = document.getElementById('supervisorScopesChecks');
+  if (!wrap) return;
+  const sel = new Set((selected||[]).map(s=>String(s).toLowerCase()));
+  wrap.innerHTML = ALL_MODULES.map(m => `
+    <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#1c2440;cursor:pointer;padding:4px 0;">
+      <input type="checkbox" value="${m}" ${sel.has(m)?'checked':''} style="accent-color:#2f6fed"> ${labelize(m)}
+    </label>
+  `).join('');
+}
+function getSupervisorScopesFromForm(){
+  return Array.from(document.querySelectorAll('#supervisorScopesChecks input:checked')).map(i=>i.value);
+}
 function onFormRoleChange(){
   const role = document.getElementById('fsRole').value;
   const isStaff = role === 'staff';
+  const isSupervisor = role === 'supervisor';
   const isElevated = role === 'admin' || role === 'manager';
   document.getElementById('fsPrivilege').disabled = !isStaff;
   document.getElementById('fsPrivilegeHint').textContent = isStaff
     ? 'Controls exactly what this person can do'
     : `${labelize(role)} accounts use the base role permissions, not a privilege`;
   const deptWrap = document.getElementById('fsDept').closest('.form-group');
+  const supWrap = document.getElementById('supervisorScopesWrap');
   if (isElevated) {
     deptWrap.style.display = 'none';
     document.getElementById('fsDept').value = '';
     document.getElementById('fsPrivilege').value = '';
+    if (supWrap) supWrap.style.display = 'none';
+  } else if (isSupervisor) {
+    deptWrap.style.display = '';
+    if (supWrap) {
+      supWrap.style.display = '';
+      // keep current selection or empty
+      const cur = getSupervisorScopesFromForm();
+      if (!cur.length) renderSupervisorScopes([]);
+    }
+    document.getElementById('fsPrivilege').value = '';
+    document.getElementById('fsPrivilege').disabled = true;
   } else {
     deptWrap.style.display = '';
+    if (supWrap) supWrap.style.display = 'none';
   }
 }
 window.onFormRoleChange = onFormRoleChange;
@@ -642,6 +674,7 @@ function openStaffModal(){
   onFormRoleChange();
   document.getElementById('fsPrivilege').value = '';
   document.getElementById('fsDept').value = '';
+  if (document.getElementById('fsRole').value === 'supervisor') renderSupervisorScopes([]);
   document.getElementById('fsNameErr').classList.remove('show');
   document.getElementById('fsEmailErr').classList.remove('show');
   document.getElementById('fsChangePwWrap').style.display = 'none';
@@ -678,6 +711,11 @@ function editStaff(id){
   if (s.privilege) document.getElementById('fsPrivilege').value = s.privilege;
   onPrivilegeChange();
   document.getElementById('fsDept').value = s.dept || '';
+  // supervisorScopes for supervisor role
+  if (s.role === 'supervisor') {
+    const scopes = (s.privileges && s.privileges.supervisorScopes) || s.supervisorScopes || [];
+    renderSupervisorScopes(scopes);
+  }
   document.getElementById('fsNameErr').classList.remove('show');
   document.getElementById('fsEmailErr').classList.remove('show');
   document.getElementById('fsChangePwWrap').style.display = 'block';
@@ -720,11 +758,17 @@ async function saveStaffForm(){
   if (!ok) return;
   const role = document.getElementById('fsRole').value;
   const existing = id ? STAFF.find(s=>s.id===id) : null;
+  const supervisorScopes = role === 'supervisor' ? getSupervisorScopesFromForm() : undefined;
+  if (role === 'supervisor' && (!supervisorScopes || supervisorScopes.length===0)) {
+    showToast('Pick at least one module for supervisor.', 'error');
+    return;
+  }
   const data = {
     name, email,
     phone: document.getElementById('fsPhone').value.trim(),
     role,
     privilege: role === 'staff' ? (document.getElementById('fsPrivilege').value || null) : null,
+    privileges: role === 'supervisor' ? { supervisorScopes } : undefined,
     dept: document.getElementById('fsDept').value.trim(),
     status: document.getElementById('fsStatus').value,
     password: changingPw ? pw : undefined,
