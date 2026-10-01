@@ -62,6 +62,5 @@ router.post('/migrate/clear-guest-stays', bookingController.clearGuestStays);
 router.post('/migrate/backfill-rates', bookingController.backfillBookingRates);
 router.post('/migrate/fix-room-index', bookingController.fixBookingRoomIndex);
 router.post('/migrate/backfill-bookingno', bookingController.backfillBookingNo);
-router.post('/migrate/fix-rate-bump', bookingController.fixRateBump);
 
 module.exports = router;
