@@ -300,16 +300,39 @@ exports.setRoomStatus = asyncHandler(async (req, res) => {
   if (stayId) {
     booking = await Booking.findOne({ stayId }) || await Booking.findById(stayId).catch(()=>null);
   }
-  if (!booking) booking = await Booking.findOne({ room: num });
+  if (!booking) {
+    // per-stay: may have multiple docs per room (vacant placeholder + checkout etc). Prefer the active non-vacant doc that can transition to target.
+    booking = await Booking.findOne({ room: num, status: { $ne: 'vacant' } }).sort({ updatedAt: -1 })
+           || await Booking.findOne({ room: num });
+    // If target is vacant and we picked a vacant placeholder while a checkout doc exists, pick the checkout doc instead
+    if (booking && targetStatus === 'vacant' && booking.status === 'vacant') {
+      const active = await Booking.findOne({ room: num, status: { $in: ['checkout','cleaning','maintenance','no-show','cancelled','reserved','checkedin'] } }).sort({ updatedAt: -1 });
+      if (active) booking = active;
+    }
+  }
   if (!booking) return res.status(404).json({ success: false, error: 'Room not found' });
 
   const from = booking.status === 'vacant' ? 'vacant' : booking.status;
   if (from === targetStatus) {
-    return res.json({ success: true, data: booking, message: `Room ${num} already ${targetStatus}` });
+    // if there is still a different doc (e.g. checkout) that needs clearing, don't treat as idempotent — find it
+    if (targetStatus === 'vacant') {
+      const other = await Booking.findOne({ room: num, status: { $ne: 'vacant' } }).sort({ updatedAt: -1 });
+      if (other && other._id.toString() !== booking._id.toString()) {
+        booking = other;
+      } else {
+        return res.json({ success: true, data: booking, message: `Room ${num} already ${targetStatus}` });
+      }
+    } else {
+      return res.json({ success: true, data: booking, message: `Room ${num} already ${targetStatus}` });
+    }
+    // re-derive from after possible switch
+    const newFrom = booking.status === 'vacant' ? 'vacant' : booking.status;
+    if (newFrom === targetStatus) return res.json({ success: true, data: booking, message: `Room ${num} already ${targetStatus}` });
   }
-  const allowed = STATUS_TRANSITIONS[from] || [];
+  const allowed = STATUS_TRANSITIONS[booking.status === 'vacant' ? 'vacant' : booking.status] || [];
   if (!allowed.includes(targetStatus)) {
-    return res.status(400).json({ success: false, error: `Cannot move room ${num} from '${from}' to '${targetStatus}'` });
+    const errFrom = booking.status === 'vacant' ? 'vacant' : booking.status;
+    return res.status(400).json({ success: false, error: `Cannot move room ${num} from '${errFrom}' to '${targetStatus}'` });
   }
 
   booking.status = targetStatus;
