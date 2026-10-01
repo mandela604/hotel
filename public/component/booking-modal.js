@@ -618,6 +618,13 @@
           after = baseTotal + addAfter;
           raw = (Number(editBooking.rate)||0) * origNights + addRate * additional;
           bal = Math.max(0, after - paid);
+        } else if ((Number(editBooking.extraNights)||0) > 0) {
+          // already extended — use stored mixed total, don't reprice with current Rate/Night input
+          after = calcTotal(editBooking);
+          var exN = Number(editBooking.extraNights)||0, exR = Number(editBooking.extraRate)||0;
+          var baseN2 = Math.max(0, n - exN);
+          raw = baseN2 * (Number(editBooking.rate)||0) + exN * exR;
+          bal = Math.max(0, after - paid);
         } else {
           bal = calcBal(Object.assign({}, editBooking, {
             rate: rate, discount: disc, checkin: ci, checkout: co,
