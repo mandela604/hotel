@@ -332,10 +332,9 @@
       var b = (bookingsArr || []).find(function (r) { return r.room === num; });
       if (!b || !b.status) return 'available';
       if (b.status === 'vacant') return 'available';
-      if (b.status === 'reserved' && b.checkin) {
-        var today = new Date(); today.setHours(0,0,0,0);
-        var resStart = new Date(b.checkin); resStart.setHours(0,0,0,0);
-        if (today < resStart) return 'available';
+      if (b.status === 'reserved') {
+        var todayStr = new Date().toISOString().split('T')[0];
+        return b.checkin === todayStr ? 'reserved' : 'available';
       }
       return b.status;
     }

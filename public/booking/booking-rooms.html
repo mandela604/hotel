@@ -511,19 +511,15 @@ function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
 function getRoomStatus(num) {
   const cands = bookings.filter(r => r.room === num);
   if (!cands.length) return 'available';
-  // checkedin takes priority — room physically occupied
   const checked = cands.find(c => c.status === 'checkedin');
   if (checked) return 'checkedin';
-  const today = new Date(); today.setHours(0,0,0,0);
-  // reserved that is currently active (today within stay)
-  const activeReserved = cands.find(c => c.status === 'reserved' && c.checkin && c.checkout && new Date(c.checkin) <= today && today < new Date(c.checkout));
-  if (activeReserved) return 'reserved';
-  // any other reserved is future — room is still bookable for other dates
-  const anyReserved = cands.find(c => c.status === 'reserved');
-  if (anyReserved) return 'reserved';
-  const any = cands[0];
-  if (!any.status || any.status === 'vacant') return 'available';
-  return any.status;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const reservedToday = cands.find(c => c.status === 'reserved' && c.checkin === todayStr);
+  if (reservedToday) return 'reserved';
+  // reserved for any other date is treated as available — chip shows Available and all available flows follow
+  const nonReserved = cands.find(c => c.status && c.status !== 'vacant' && c.status !== 'reserved');
+  if (nonReserved) return nonReserved.status;
+  return 'available';
 }
 function perms() {
   const session = getSession();
@@ -683,25 +679,27 @@ function renderRoomGrid(filter) {
       const st = getRoomStatus(r.num) || 'available';  // fallback
       const cands = bookings.filter(b => b.room === r.num).sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
       let bk = null;
+      var todayStr2 = new Date().toISOString().split('T')[0];
       if (cands.length) {
         var checked = cands.filter(function(x){ return x.status==='checkedin'; });
         if (checked.length) bk = checked[0];
         else {
-          var today = new Date(); today.setHours(0,0,0,0);
-          var active = cands.filter(function(x){ return x.status==='reserved' && x.checkin && x.checkout && new Date(x.checkin) <= today && today < new Date(x.checkout); }).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
-          if (active.length) bk = active[0];
+          var reservedToday = cands.filter(function(x){ return x.status==='reserved' && x.checkin === todayStr2; }).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
+          if (reservedToday.length) bk = reservedToday[0];
           else {
             var reserved = cands.filter(function(x){ return x.status==='reserved'; });
             bk = reserved.length ? reserved[0] : cands[0];
           }
         }
       }
-      const hasGuest = bk && bk.guest && st !== 'available' && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
+      const isUpcoming = bk && bk.status === 'reserved' && bk.checkin !== todayStr2;
+      const hasGuest = bk && bk.guest && (st !== 'available' || isUpcoming) && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
       const upcomingCount = cands.filter(b => b.status === 'reserved').length;
       const upcomingBadge = (st === 'reserved' && upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' upcoming</span>' : '';
+      const upcomingLabel = isUpcoming ? '<span style="font-size:9px;color:#2f6fed;font-weight:700;margin-left:4px;">UPCOMING</span>' : '';
 
       const guestBlock = hasGuest
-        ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + upcomingBadge + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
+        ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + upcomingBadge + upcomingLabel + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
         : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : st === 'cleaning' ? 'Under cleaning' : st === 'checkout' ? 'Checked out — awaiting cleaning' : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
 
       const isMgr = (getSession() && /^(manager|admin)$/i.test(getSession().role||'')) || p.canEditRoom;
