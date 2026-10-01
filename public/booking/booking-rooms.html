@@ -274,7 +274,7 @@ body {
         <div class="toolbar-left">
           <div class="search-wrap">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="roomSearch" placeholder="Room number…" oninput="roomsPage=1;renderRoomGrid(roomFilter)">
+            <input type="text" id="roomSearch" placeholder="Room or guest name…" oninput="roomsPage=1;renderRoomGrid(roomFilter)">
           </div>
           <select class="filter-sel" id="roomTypeFilter" onchange="roomsPage=1;renderRoomGrid(roomFilter)">
             <option value="">All Types</option>
@@ -660,7 +660,10 @@ function renderRoomGrid(filter) {
     const st = getRoomStatus(r.num) || 'available';
     const mf = filter === 'all' || st === filter;
     const mt = !typeF || r.type === typeF;
-    const mq = !q || r.num.toLowerCase().includes(q);
+    const candsQ = bookings.filter(function(b){ return b.room === r.num; }).sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+    const primaryQ = candsQ[0];
+    const guestQ = primaryQ ? String(primaryQ.guest||'').toLowerCase() : '';
+    const mq = !q || r.num.toLowerCase().includes(q) || guestQ.includes(q);
     return mf && mt && mq;
   });
 
