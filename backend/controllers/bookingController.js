@@ -292,9 +292,11 @@ exports.deleteRoom = asyncHandler(async (req, res) => {
 // re-enforced here so a direct API call can't skip the flow (e.g. going
 // straight from 'vacant' to 'checkedin' without a booking in between).
 exports.setRoomStatus = asyncHandler(async (req, res) => {
+  console.log('[status] req', { num: req.params.num, status: req.body.status, stayId: req.body.stayId, notes: req.body.notes });
   const { num } = req.params;
   const { status, notes, stayId } = req.body;
   const targetStatus = status === 'available' ? 'vacant' : status;
+  console.log('[status] target', targetStatus);
 
   let booking = null;
   if (stayId) {
@@ -350,10 +352,12 @@ exports.setRoomStatus = asyncHandler(async (req, res) => {
   booking.updatedAt = Date.now();
   await booking.save();
 
+  console.log('[status] from->to', { from: booking.status, to: targetStatus, room: num, id: booking._id });
   await logActivity('Booking', targetStatus === 'maintenance' ? 'amber' : 'blue',
     `Room ${num} → ${targetStatus}`, 'booking-rooms.html');
 
   emit(req, 'booking', 'booking:updated', { action: 'setRoomStatus', room: num, status: targetStatus, data: booking });
+  console.log('[status] saved', { room: num, status: booking.status });
   res.json({ success: true, data: booking });
 });
 

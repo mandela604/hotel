@@ -942,7 +942,9 @@ async function saveRoomStatus() {
       var coKey = coBk ? (coBk.stayId || coBk._id || coBk.id || statusRoom) : statusRoom;
       await BookingData.checkoutBooking(coKey);
     } else {
-      await BookingData.setRoomStatus(statusRoom, newSt, { notes: note });
+      console.log('[status] send', { room: statusRoom, from: curSt, to: newSt, notes: note });
+      var _res = await BookingData.setRoomStatus(statusRoom, newSt, { notes: note });
+      console.log('[status] recv', _res);
     }
     closeModal('roomStatusModal');
     showToast('Room ' + statusRoom + ' → ' + (RC_LBL[newSt] || newSt) + '.', 'success');
