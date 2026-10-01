@@ -1285,6 +1285,50 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
   });
 });
 
+exports.fixRateBump = asyncHandler(async (req, res) => {
+  const { room } = req.body || {};
+  const filter = room ? { room: String(room).trim() } : { status: { $ne: 'vacant' } };
+  const bookings = await Booking.find(filter);
+  const Room = require('../models/Room');
+  let fixed = 0;
+  for (const b of bookings) {
+    if ((Number(b.extraNights) || 0) > 0) continue;
+    const n = nights(b.checkin, b.checkout) || 0;
+    if (n < 3) continue;
+    const roomDoc = await Room.findOne({ num: b.room });
+    const curRate = roomDoc ? Number(roomDoc.rate) || 0 : 0;
+    if (!curRate || Number(b.rate) !== curRate) continue;
+    const promo = 50000;
+    const expectedPaidForMixed = (n - 1) * promo + curRate;
+    const paid = calcPaid(b);
+    if (Math.abs(paid - expectedPaidForMixed) < 1) {
+      b.rate = promo;
+      b.extraNights = 1;
+      b.extraRate = curRate;
+      b.payStatus = payStatusFor(b);
+      b.updatedAt = Date.now();
+      await b.save();
+      fixed++;
+      console.log(`[fixRateBump] ${b.room} ${b.guest} -> rate ${promo} + extra 1x${curRate}`);
+    }
+  }
+  if (room === '4055') {
+    const b = await Booking.findOne({ room: '4055', status: { $ne: 'vacant' } }).sort({ updatedAt: -1 });
+    if (b && (Number(b.extraNights)||0)===0) {
+      const roomDoc = await Room.findOne({ num: '4055' });
+      const curRate = roomDoc ? Number(roomDoc.rate)||55000 : 55000;
+      b.rate = 50000;
+      b.extraNights = 1;
+      b.extraRate = curRate;
+      b.payStatus = payStatusFor(b);
+      b.updatedAt = Date.now();
+      await b.save();
+      fixed++;
+    }
+  }
+  res.json({ success: true, fixed, message: `Fixed ${fixed} repriced bookings` });
+});
+
 /* ── One-time migration: clear Guest.stays[] (Booking is now single source) ── */
 exports.clearGuestStays = asyncHandler(async (req, res) => {
   const result = await Guest.updateMany({}, { $set: { stays: [] } });
