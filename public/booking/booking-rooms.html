@@ -687,7 +687,11 @@ function renderRoomGrid(filter) {
           var reservedToday = cands.filter(function(x){ return x.status==='reserved' && x.checkin === todayStr2; }).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
           if (reservedToday.length) bk = reservedToday[0];
           else {
-            var reserved = cands.filter(function(x){ return x.status==='reserved'; });
+            var reserved = cands.filter(function(x){ return x.status==='reserved'; }).sort(function(a,b){
+              var da = a.checkin || '', db = b.checkin || '';
+              if (da !== db) return da.localeCompare(db);
+              return (a.createdAt||0) - (b.createdAt||0);
+            });
             bk = reserved.length ? reserved[0] : cands[0];
           }
         }
@@ -695,7 +699,7 @@ function renderRoomGrid(filter) {
       const isUpcoming = bk && bk.status === 'reserved' && bk.checkin !== todayStr2;
       const hasGuest = bk && bk.guest && (st !== 'available' || isUpcoming) && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
       const upcomingCount = cands.filter(b => b.status === 'reserved').length;
-      const upcomingBadge = (st === 'reserved' && upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' upcoming</span>' : '';
+      const upcomingBadge = (upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' more</span>' : '';
       const upcomingLabel = isUpcoming ? '<span style="font-size:9px;color:#2f6fed;font-weight:700;margin-left:4px;">UPCOMING</span>' : '';
 
       const guestBlock = hasGuest
@@ -771,18 +775,22 @@ function openBookingForRoom(num) {
 
 function openBookingFromCard(num) {
   const session = getSession();
-  const cands = bookings.filter(function(b){ return b.room === num; }).sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
+  const cands = bookings.filter(function(b){ return b.room === num; });
   let bk = null;
   if (cands.length) {
     var checked2 = cands.filter(function(x){ return x.status==='checkedin'; });
     if (checked2.length) bk = checked2[0];
     else {
-      var today2 = new Date(); today2.setHours(0,0,0,0);
-      var active2 = cands.filter(function(x){ return x.status==='reserved' && x.checkin && x.checkout && new Date(x.checkin) <= today2 && today2 < new Date(x.checkout); }).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
-      if (active2.length) bk = active2[0];
+      var todayStr3 = new Date().toISOString().split('T')[0];
+      var reservedToday2 = cands.filter(function(x){ return x.status==='reserved' && x.checkin === todayStr3; }).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
+      if (reservedToday2.length) bk = reservedToday2[0];
       else {
-        var reserved2 = cands.filter(function(x){ return x.status==='reserved'; });
-        bk = reserved2.length ? reserved2[0] : cands[0];
+        var reserved2 = cands.filter(function(x){ return x.status==='reserved'; }).sort(function(a,b){
+          var da = a.checkin || '', db = b.checkin || '';
+          if (da !== db) return da.localeCompare(db);
+          return (a.createdAt||0) - (b.createdAt||0);
+        });
+        bk = reserved2.length ? reserved2[0] : cands.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); })[0];
       }
     }
   }
