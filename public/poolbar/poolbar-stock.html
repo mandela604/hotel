@@ -284,6 +284,7 @@ body{
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" type="button" data-close="detailModal">Close</button>
+      <button class="btn btn-outline btn-sm" type="button" id="dProduceBtn" style="display:none;"><i class="fa-solid fa-blender"></i> Produce</button>
       <button class="btn btn-outline btn-sm" type="button" id="dDeductBtn"><i class="fa-solid fa-sliders"></i> Adjust</button>
       <button class="btn btn-primary btn-sm" type="button" id="dEditBtn"><i class="fa-solid fa-pen"></i> Edit</button>
     </div>
@@ -331,11 +332,41 @@ body{
           <label class="form-label">Description <span style="text-transform:none;">(optional)</span></label>
           <input class="form-input" type="text" id="fDesc" placeholder="Brief description…">
         </div>
+        <div class="form-group span2" style="margin-top:6px;">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text2);"><input type="checkbox" id="fComposite" style="width:15px;height:15px;"> Composite drink (made from other drinks)</label>
+          <div class="field-note">Check to make this drink from a combination of other stock items (e.g. Chapman).</div>
+        </div>
+        <div id="recipeWrap" style="display:none;" class="span2">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700;margin:8px 0 6px;">Recipe — ingredients per serving</div>
+          <div id="recipeRows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnAddRecipeRow"><i class="fa-solid fa-plus"></i> Add Ingredient</button>
+          <div class="field-note">Cost auto-calculated as sum of ingredient costs × qty.</div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" type="button" data-close="itemModal">Cancel</button>
       <button class="btn btn-primary btn-sm" type="button" id="btnSaveItem"><i class="fa-solid fa-check"></i> Save Item</button>
+    </div>
+  </div>
+</div>
+<!-- PRODUCE COMPOSITE -->
+<div class="modal-overlay" id="produceModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Produce</div>
+      <button class="modal-close" type="button" data-close="produceModal"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <p class="field-note" style="margin-bottom:12px;">Drink: <strong id="prodName">—</strong> · On hand: <strong id="prodCurrent">—</strong> <span style="font-size:11px;color:var(--text3);" id="prodRecipeHint"></span></p>
+      <div class="form-group">
+        <label class="form-label">Servings to produce</label>
+        <input class="form-input" type="number" id="prodQty" min="1" placeholder="e.g. 5" step="1">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" type="button" data-close="produceModal">Cancel</button>
+      <button class="btn btn-primary btn-sm" type="button" id="btnConfirmProd"><i class="fa-solid fa-check"></i> Produce</button>
     </div>
   </div>
 </div>
@@ -654,7 +685,13 @@ function openDetail(item) {
     '<div class="detail-item"><div class="detail-label">Sale Price</div><div class="detail-value" style="color:var(--gold)">' + fmtN(item.price) + '</div></div>' +
     '<div class="detail-item"><div class="detail-label">Batch / Req No.</div><div class="detail-value">' + escapeHtml(item.batch || empty) + '</div></div>' +
     '<div class="detail-item"><div class="detail-label">Last Received</div><div class="detail-value">' + escapeHtml(item.received || empty) + '</div></div>';
-  document.getElementById('dRemarks').textContent = item.desc || 'No description on file for this item.';
+  if (item.isComposite && item.recipe) {
+    document.getElementById('dRemarks').innerHTML = '<strong>Recipe:</strong> ' + item.recipe.map(function(r){return escapeHtml(r.qty+'× '+r.name);}).join(' + ') + ' · Cost ₦' + fmtN(item.cost).replace('₦','') + (item.desc?'<br>'+escapeHtml(item.desc):'');
+  } else {
+    document.getElementById('dRemarks').textContent = item.desc || 'No description on file for this item.';
+  }
+  document.getElementById('dProduceBtn').style.display = item.isComposite ? '' : 'none';
+  document.getElementById('dProduceBtn').onclick = function(){ closeModal('detailModal'); openProduceModal(item.id); };
   document.getElementById('detailModal').classList.add('show');
 }
 
@@ -682,6 +719,10 @@ function openItemModal(name) {
     document.getElementById('fMin').value = i.min != null ? i.min : '';
     document.getElementById('fPrice').value = i.price != null ? i.price : '';
     document.getElementById('fDesc').value = i.desc || '';
+    document.getElementById('fComposite').checked = !!i.isComposite;
+    document.getElementById('recipeWrap').style.display = i.isComposite ? '' : 'none';
+    document.getElementById('recipeRows').innerHTML='';
+    (i.recipe||[]).forEach(function(r){ addRecipeRow(r); });
   } else {
     nameInput.value = '';
     nameInput.disabled = false;
@@ -693,6 +734,9 @@ function openItemModal(name) {
     document.getElementById('fMin').value = '';
     document.getElementById('fPrice').value = '';
     document.getElementById('fDesc').value = '';
+    document.getElementById('fComposite').checked = false;
+    document.getElementById('recipeWrap').style.display = 'none';
+    document.getElementById('recipeRows').innerHTML='';
   }
   document.getElementById('itemModal').classList.add('show');
 }
@@ -700,8 +744,10 @@ function openItemModal(name) {
 async function saveItem() {
   const name = document.getElementById('fName').value.trim();
   if (!name) { showToast('Please enter an item name.', 'error'); return; }
+  const isComp = document.getElementById('fComposite').checked;
   const storeId = document.getElementById('fStoreId').value.trim();
-  if (!editName && !storeId) { showToast('Please pick item from Store catalog — type 1+ chars and select from dropdown.', 'error'); return; }
+  if (!editName && !isComp && !storeId) { showToast('Please pick item from Store catalog — type 1+ chars and select from dropdown.', 'error'); return; }
+  if (isComp && !collectRecipe().length) { showToast('Add at least one ingredient to recipe.', 'error'); return; }
   const payload = {
     category: document.getElementById('fCategory2').value.trim(),
     unit: document.getElementById('fUnit').value.trim(),
@@ -709,6 +755,8 @@ async function saveItem() {
     min: parseFloat(document.getElementById('fMin').value) || 0,
     price: parseFloat(document.getElementById('fPrice').value) || 0,
     desc: document.getElementById('fDesc').value.trim(),
+    isComposite: isComp,
+    recipe: isComp ? collectRecipe() : [],
   };
   try {
     if (editName) {
@@ -916,12 +964,59 @@ function bindUI() {
   document.querySelectorAll('[data-close]').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
   });
-  ['detailModal', 'itemModal', 'adjustModal', 'categoryModal', 'editCatModal', 'deleteModal'].forEach(id => {
+  ['detailModal', 'itemModal', 'adjustModal', 'produceModal', 'categoryModal', 'editCatModal', 'deleteModal'].forEach(id => {
     document.getElementById(id).addEventListener('click', function (e) {
       if (e.target === this) closeModal(id);
     });
   });
 }
+
+/* ── Composite drink recipe + produce ── */
+let activeProduceId = null;
+function addRecipeRow(pref){
+  var c = document.getElementById('recipeRows');
+  var row = document.createElement('div');
+  row.style.cssText='display:grid;grid-template-columns:1fr 90px 32px;gap:6px;align-items:center;';
+  var ingOpts = (svc.state.stock||[]).filter(function(x){return !x.isComposite;}).map(function(s){return '<option value="'+escapeHtml(s.name)+'">';}).join('');
+  row.innerHTML='<div style="position:relative;"><input class="form-input" type="text" placeholder="Ingredient (e.g. Fanta)" list="poolIngList" value="'+escapeHtml((pref&&pref.name)||'')+'" style="width:100%;" data-r="name"><datalist id="poolIngList">'+ingOpts+'</datalist></div><input class="form-input" type="number" min="0" step="0.1" placeholder="Qty" value="'+(pref&&pref.qty||'')+'" data-r="qty"><button type="button" class="act-btn danger" title="Remove" onclick="this.closest(\'div\').parentElement.removeChild(this.parentElement)"><i class="fa-solid fa-xmark"></i></button>';
+  c.appendChild(row);
+}
+var _fComp = document.getElementById('fComposite');
+if(_fComp) _fComp.addEventListener('change', function(){ document.getElementById('recipeWrap').style.display=this.checked?'':'none'; });
+var _addRec = document.getElementById('btnAddRecipeRow');
+if(_addRec) _addRec.addEventListener('click', function(){ addRecipeRow(); });
+function collectRecipe(){
+  var rows = document.querySelectorAll('#recipeRows > div');
+  var out=[];
+  rows.forEach(function(r){
+    var n=r.querySelector('[data-r="name"]').value.trim();
+    var q=parseFloat(r.querySelector('[data-r="qty"]').value);
+    if(n && q>0) out.push({name:n, qty:q});
+  });
+  return out;
+}
+function openProduceModal(id){
+  var it = svc.state.stock.find(function(x){return x.id===id;});
+  if(!it||!it.isComposite){ showToast('Not a composite drink','error'); return; }
+  activeProduceId=id;
+  document.getElementById('prodName').textContent=it.name;
+  document.getElementById('prodCurrent').textContent=it.qty+' '+(it.unit||'');
+  var hint=(it.recipe||[]).map(function(r){return r.qty+'× '+r.name;}).join(' + ')||'';
+  document.getElementById('prodRecipeHint').textContent= hint ? '('+hint+')' : '';
+  document.getElementById('prodQty').value='';
+  document.getElementById('produceModal').classList.add('show');
+}
+document.getElementById('btnConfirmProd').addEventListener('click', async function(){
+  var n=parseInt(document.getElementById('prodQty').value,10);
+  if(!n||n<=0){ showToast('Enter servings','error'); return; }
+  try{
+    var res=await fetch('/api/poolbar/stock/'+encodeURIComponent(activeProduceId)+'/produce',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({servings:n})});
+    var j=await res.json(); if(!res.ok) throw new Error(j.error||'Produce failed');
+    showToast('Produced '+n+' × '+(j.data&&j.data.name||'')+'','success');
+    document.getElementById('produceModal').classList.remove('show');
+    await svc.loadAll();
+  }catch(e){ showToast(e.message||'Produce failed','error'); }
+});
 
 async function init() {
   if (!svc) {
