@@ -371,6 +371,28 @@
       },
     };
 
+    var _accLiveTimer=null;
+    function _accDoRefresh(){
+      try{
+        if(typeof window.refreshDataAndRender==='function') window.refreshDataAndRender();
+        else if(typeof window.loadData==='function') window.loadData();
+        else if(typeof window.fetchData==='function') window.fetchData();
+        else window.dispatchEvent(new CustomEvent('live:update',{detail:{dept:'accounting'}}));
+      }catch(e){}
+    }
+    function _accDebouncedRefresh(){ clearTimeout(_accLiveTimer); _accLiveTimer=setTimeout(_accDoRefresh,350); }
+    function _bindAccountingLive(){
+      function doBind(){
+        if(typeof LiveService==='undefined' || !LiveService.on) return setTimeout(doBind,600);
+        LiveService.on('accounting:updated', _accDebouncedRefresh);
+        LiveService.on('booking:updated', _accDebouncedRefresh);
+        LiveService.on('poll:tick', _accDebouncedRefresh);
+      }
+      if(typeof LiveService==='undefined'){
+        var s=document.createElement('script'); s.src='/services/live-service.js'; s.onload=doBind; document.head.appendChild(s);
+      } else doBind();
+    }
+
     // Fetch session and update avatar + user
     fetchSession().then(sessionUser => {
       if (sessionUser) {
@@ -383,6 +405,7 @@
         }
         handle.setApiMode('Live');
         if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('acc-backBtn'); if (bb) bb.style.display = 'none'; }
+        try{ _bindAccountingLive(); }catch(e){}
       }
     });
 
