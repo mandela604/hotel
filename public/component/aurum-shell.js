@@ -31,7 +31,15 @@
       const res = await fetch(`${CONFIG.API_BASE}/api/auth/session`, { credentials: 'include', headers: { 'Accept': 'application/json' } });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || `Session API returned ${res.status}`);
-      return { name: data.name, initials: data.initials, role: data.role, privilege: (data.privileges && data.privileges.type) || data.privilege || null, department: data.department };
+      return {
+        name: data.name,
+        initials: data.initials,
+        role: data.role,
+        privilege: (data.privileges && data.privileges.type) || data.privilege || null,
+        department: data.department,
+        privileges: data.privileges || {},
+        supervisorScopes: (data.privileges && data.privileges.supervisorScopes) || [],
+      };
     } catch (err) {
       console.warn('[AurumShell] Session invalid, redirecting to login:', err.message);
       redirectToLogin();
