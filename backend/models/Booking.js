@@ -39,6 +39,8 @@ const bookingSchema = new mongoose.Schema({
   refundBy:       { type: String, default: '' },
   refundReason:   { type: String, default: '' },
   _guestName:     { type: String, default: '' },
+  extraNights: { type: Number, default: 0 },
+  extraRate:   { type: Number, default: 0 },
   createdAt:  { type: Number, default: 0 },
   updatedAt:  { type: Number, default: 0 },
   transferLog: { type: [{ from: String, to: String, by: String, at: Number, note: String }], default: [] },

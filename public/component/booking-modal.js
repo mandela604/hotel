@@ -279,7 +279,14 @@
     }
     function calcTotal(bk) {
       var n = nights(bk.checkin, bk.checkout) || 1;
-      return Math.max(0, ((bk.rate || 0) - (bk.discount || 0)) * n);
+      var disc = Number(bk.discount) || 0;
+      var extraN = Number(bk.extraNights) || 0;
+      var extraR = Number(bk.extraRate) || 0;
+      if (extraN > 0 && extraR > 0) {
+        var baseN = Math.max(0, n - extraN);
+        return Math.max(0, baseN * ((bk.rate || 0) - disc) + extraN * (extraR - disc));
+      }
+      return Math.max(0, ((bk.rate || 0) - disc) * n);
     }
     function calcPaid(bk) {
       if (service && service.calcPaid) return service.calcPaid(bk);
@@ -599,6 +606,11 @@
         var origNights = nights(editBooking.checkin, editBooking.checkout);
         var curRoomRate = (function(){ var r = rooms.find(function(x){ return x.num === editBooking.room; }); return r ? Number(r.rate)||0 : rate; })();
         var additional = Math.max(0, n - (origNights||0));
+        // auto-show current room rate in Rate/Night box when extending (user wants 55k displayed)
+        if (additional > 0 && ci === editBooking.checkin && Number(rate) === Number(editBooking.rate) && curRoomRate !== Number(editBooking.rate)) {
+          setVal('rate', String(curRoomRate));
+          rate = curRoomRate;
+        }
         if (additional > 0 && ci === editBooking.checkin) {
           var baseTotal = calcTotal(editBooking);
           var addRate = (rate !== Number(editBooking.rate) && rate !== 0) ? rate : curRoomRate;
@@ -1455,8 +1467,9 @@
       var _origRate = booking.rate || 0;
       var _origType = booking.type || '';
       populateRooms(booking.room);
-      // preserve promo rate — don't auto-bump to current room rate (55k) on edit open
-      setVal('rate', _origRate);
+      // if booking has extension at new rate, show that rate (55k) not promo (50k)
+      if (Number(booking.extraRate) > 0) setVal('rate', String(booking.extraRate));
+      else setVal('rate', String(_origRate));
       setVal('type', _origType);
 
       // Admin-only: Created Date

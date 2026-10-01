@@ -27,7 +27,15 @@ const NO_SHOW_FIELDS = {
 };
 function calcTotal(b) {
   const n = nights(b.checkin, b.checkout) || 1;
-  return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
+  const disc = Number(b.discount) || 0;
+  const baseRate = Number(b.rate) || 0;
+  const extraN = Number(b.extraNights) || 0;
+  const extraR = Number(b.extraRate) || 0;
+  if (extraN > 0 && extraR > 0) {
+    const baseN = Math.max(0, n - extraN);
+    return Math.max(0, baseN * (baseRate - disc) + extraN * (extraR - disc));
+  }
+  return Math.max(0, (baseRate - disc) * n);
 }
 function calcPaid(b) {
   const raw = (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
@@ -527,6 +535,12 @@ exports.updateBooking = asyncHandler(async (req, res) => {
     }
   }
 
+  const oldCheckin = booking.checkin;
+  const oldCheckout = booking.checkout;
+  const oldRate = Number(booking.rate) || 0;
+  const oldExtraN = Number(booking.extraNights) || 0;
+  const oldExtraR = Number(booking.extraRate) || 0;
+
   const fields = ['type', 'guest', 'phone', 'email', 'address', 'idType', 'idNum',
     'checkin', 'checkout', 'rate', 'discount', 'payMethod', 'adults', 'children', 'notes'];
   for (const f of fields) {
@@ -534,6 +548,28 @@ exports.updateBooking = asyncHandler(async (req, res) => {
       booking[f] = ['rate', 'discount', 'adults', 'children'].includes(f) ? Number(req.body[f]) : req.body[f];
     }
   }
+  // Extension: extra nights at current room rate, not repricing promo nights
+  try {
+    const newNights = nights(booking.checkin, booking.checkout);
+    const oldNights = nights(oldCheckin, oldCheckout);
+    const additional = Math.max(0, (newNights || 0) - (oldNights || 0));
+    if (additional > 0 && booking.checkin === oldCheckin) {
+      const Room = require('../models/Room');
+      const roomDoc = await Room.findOne({ num: booking.room });
+      const curRoomRate = roomDoc ? Number(roomDoc.rate) || 0 : Number(req.body.rate) || oldRate;
+      // keep base rate at promo (oldRate), store extra at current rate
+      booking.rate = oldRate;
+      booking.extraNights = oldExtraN + additional;
+      booking.extraRate = curRoomRate;
+      // if user explicitly sent a different rate for the extra nights, use it
+      if (req.body.rate !== undefined && Number(req.body.rate) !== oldRate) {
+        booking.extraRate = Number(req.body.rate);
+      }
+    } else if (additional === 0 && req.body.rate !== undefined && oldExtraN > 0) {
+      // rate changed without extra nights but booking has extra — keep extraRate in sync if rate matches promo
+      // no-op, keep existing extra
+    }
+  } catch(e) {}
   // Admin-only: allow backdating createdAt
   if (req.body.createdAt && req.user && req.user.role === 'admin') {
     const d = new Date(req.body.createdAt);
