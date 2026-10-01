@@ -230,11 +230,13 @@ body {
       storeAuth(payload.token, payload.user);
       showToast('Signed in' + (payload.user && payload.user.name ? ' as ' + payload.user.name : ''), 'success');
       const u = payload.user || {};
-      const role = u.role || '';
+      const role = (u.role || '').toLowerCase();
       const dept = (u.department || '').toLowerCase();
       const priv = (u.privileges && u.privileges.type) || '';
       let target = 'index.html';
-      if (role !== 'admin' && role !== 'manager') {
+      if (role === 'supervisor') {
+        target = 'index.html';
+      } else if (role !== 'admin' && role !== 'manager') {
         if (dept === 'pool bar' || priv === 'pool_bar_staff' || (priv === 'waiter' && dept.indexOf('pool') >= 0)) target = 'poolbar/poolbar-dashboard.html';
         else if (dept === 'restaurant' || priv === 'restaurant_staff' || (priv === 'waiter' && dept.indexOf('restaurant') >= 0)) target = 'restaurant/restaurant-dashboard.html';
         else if (dept === 'kitchen' || priv === 'chef') target = 'kitchen/kitchen-dashboard.html';
