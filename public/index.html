@@ -305,15 +305,32 @@ async function init(){
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  // Get logged-in user
-let userName = 'Guest';
-try {
-  const raw = localStorage.getItem('aurum_user');
-  if (raw) {
-    const u = JSON.parse(raw);
-    if (u && u.name) userName = u.name;
-  }
-} catch (e) {}
+  // Get logged-in user + supervisor scopes (config-driven)
+  let userName = 'Guest';
+  let userRole = 'guest';
+  let supervisorScopes = [];
+  try {
+    const raw = localStorage.getItem('aurum_user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && u.name) userName = u.name;
+      if (u && u.role) userRole = String(u.role).toLowerCase();
+      if (u && u.privileges && Array.isArray(u.privileges.supervisorScopes)) supervisorScopes = u.privileges.supervisorScopes;
+      else if (u && Array.isArray(u.supervisorScopes)) supervisorScopes = u.supervisorScopes;
+    }
+    // also try to fetch live session for fresh scopes
+    try {
+      const sRes = await fetch('/api/auth/session', { credentials: 'include' });
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        const sess = sData.data || sData;
+        if (sess && sess.role) userRole = String(sess.role).toLowerCase();
+        if (sess && sess.name) userName = sess.name;
+        if (sess && sess.privileges && Array.isArray(sess.privileges.supervisorScopes)) supervisorScopes = sess.privileges.supervisorScopes;
+        else if (sess && Array.isArray(sess.supervisorScopes)) supervisorScopes = sess.supervisorScopes;
+      }
+    } catch(e){}
+  } catch (e) {}
 
   document.getElementById('welcomeHi').textContent = `${greeting}, ${userName}`;
   document.getElementById('welcomeDate').textContent = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -327,17 +344,41 @@ try {
   } catch (e) { /* fall through to zeros on network error */ }
 
   const roomsData = (d && d.rooms) || { total:0, occupied:0, vacant:0, cleaning:0, maintenance:0, reserved:0 };
-  const roomRev = Math.max(0, (d ? d.totalRevenueToday : 0) - (d ? d.restaurantSalesToday : 0) - (d ? d.poolbarSalesToday : 0));
-  const restRev = (d && d.restaurantSalesToday) || 0;
-  const poolRev = (d && d.poolbarSalesToday) || 0;
-  const procPending = (d && d.pendingProcurement) || 0;
-  const lowStock = (d && d.lowStock) || 0;
+  let roomRev = Math.max(0, (d ? d.totalRevenueToday : 0) - (d ? d.restaurantSalesToday : 0) - (d ? d.poolbarSalesToday : 0));
+  let restRev = (d && d.restaurantSalesToday) || 0;
+  let poolRev = (d && d.poolbarSalesToday) || 0;
+  let procPending = (d && d.pendingProcurement) || 0;
+  let lowStock = (d && d.lowStock) || 0;
   const activity = (d && d.recentActivity) || [];
+
+  // Supervisor: filter to allowed scopes (config-driven, not hardcoded)
+  const isSupervisor = userRole === 'supervisor';
+  if (isSupervisor) {
+    const scopes = supervisorScopes.map(s=>String(s).toLowerCase());
+    const allow = (mod) => scopes.length===0 ? false : scopes.includes(mod);
+    if (!allow('booking')) { roomRev = 0; roomsData.occupied = 0; roomsData.total = 0; }
+    if (!allow('restaurant')) restRev = 0;
+    if (!allow('poolbar')) poolRev = 0;
+    if (!allow('procurement')) procPending = 0;
+    if (!allow('store') && !allow('kitchen')) lowStock = 0;
+  }
 
   renderKPIs(roomRev, restRev, poolRev, roomsData, procPending, lowStock);
   renderRevenue(roomRev, restRev, poolRev);
+  // For supervisor, hide room status if not allowed, or filter activity
+  if (isSupervisor) {
+    const scopes = supervisorScopes.map(s=>String(s).toLowerCase());
+    if (!scopes.includes('booking')) document.querySelector('.panel:has(#roomStatusGrid)')?.style.setProperty('display','none');
+  }
   renderRoomStatus(roomsData);
-  renderActivity(activity);
+  // Filter activity to allowed depts for supervisor
+  let filteredActivity = activity;
+  if (isSupervisor) {
+    const scopes = supervisorScopes.map(s=>String(s).toLowerCase());
+    const deptToMod = { 'Booking':'booking','Restaurant':'restaurant','Pool Bar':'poolbar','Kitchen':'kitchen','Store':'store','Procurement':'procurement','Gym':'gym','Accounts':'accounting' };
+    filteredActivity = activity.filter(a => !a.dept || !deptToMod[a.dept] || scopes.includes(deptToMod[a.dept]));
+  }
+  renderActivity(filteredActivity);
 }
 
 

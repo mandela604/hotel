@@ -169,8 +169,8 @@ exports.createUser = asyncHandler(async (req, res) => {
   }
 
   const priv = privileges && typeof privileges === 'object'
-    ? { type: privileges.type || null, overrides: privileges.overrides || {} }
-    : { type: null, overrides: {} };
+    ? { type: privileges.type || null, overrides: privileges.overrides || {}, supervisorScopes: Array.isArray(privileges.supervisorScopes) ? privileges.supervisorScopes : [] }
+    : { type: null, overrides: {}, supervisorScopes: [] };
 
   const user = await User.create({
     name,
@@ -201,6 +201,7 @@ exports.updateUser = asyncHandler(async (req, res) => {
   if (privileges !== undefined && typeof privileges === 'object') {
     if (privileges.type !== undefined) user.privileges.type = privileges.type;
     if (privileges.overrides !== undefined) user.privileges.overrides = privileges.overrides;
+    if (privileges.supervisorScopes !== undefined && Array.isArray(privileges.supervisorScopes)) user.privileges.supervisorScopes = privileges.supervisorScopes;
   }
   if (department !== undefined) user.department = department;
   if (status !== undefined) user.status = status;

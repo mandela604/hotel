@@ -30,6 +30,12 @@
         canRestock: true, canManageUsers: false, canViewReports: true,
         canManagePlans: true, canManageRoles: false,
       },
+      supervisor: {
+        canView: true, canCreate: true, canEdit: true, canDelete: false,
+        canApprove: true, canReject: true, canVoid: false, canGiveDiscount: false,
+        canRestock: true, canManageUsers: false, canViewReports: true,
+        canManagePlans: false, canManageRoles: false,
+      },
       staff: {
         canView: true, canCreate: false, canEdit: false, canDelete: false,
         canApprove: false, canReject: false, canVoid: false, canGiveDiscount: false,

@@ -51,6 +51,20 @@ function departmentGuard(requiredDepartment) {
       req.actionLevel = 'manager';
       return next();
     }
+    if (userRole === 'supervisor') {
+      const scopes = (req.user.privileges && req.user.privileges.supervisorScopes) || [];
+      const { MODULE_KEY_MAP } = require('../config/permissions');
+      const requiredModule = MODULE_KEY_MAP[requiredDepartment] || required.replace(/\s/g, '');
+      if (scopes.length && requiredModule && scopes.includes(requiredModule)) {
+        req.actionLevel = 'supervisor';
+        return next();
+      }
+      // supervisor with empty scopes or not in allowlist → deny
+      return res.status(403).json({
+        success: false,
+        error: `Access denied. Supervisor not allowed for "${requiredDepartment}".`,
+      });
+    }
     if (userRole === 'staff' && userDept === required) {
       req.actionLevel = 'staff';
       return next();
@@ -102,6 +116,28 @@ function privilegeGuard(module, action) {
       return res.status(403).json({
         success: false,
         error: `Access denied. Manager lacks "${action}" in module "${module}".`,
+      });
+    }
+
+    if (role === 'supervisor') {
+      const scopes = (req.user.privileges && req.user.privileges.supervisorScopes) || [];
+      if (module && scopes.length && !scopes.includes(module)) {
+        return res.status(403).json({
+          success: false,
+          error: `Access denied. Supervisor not allowed for module "${module}".`,
+        });
+      }
+      const mod = module && PERMISSIONS.modules[module]
+        ? PERMISSIONS.modules[module].supervisor
+        : null;
+      if (mod && typeof mod[action] === 'boolean') {
+        if (mod[action]) return next();
+      } else if (PERMISSIONS.roles.supervisor[action]) {
+        return next();
+      }
+      return res.status(403).json({
+        success: false,
+        error: `Access denied. Supervisor lacks "${action}" in module "${module}".`,
       });
     }
 

@@ -37,6 +37,12 @@
         canRestock: true, canManageUsers: false, canViewReports: true,
         canManagePlans: true, canManageRoles: false,
       },
+      supervisor: {
+        canView: true, canCreate: true, canEdit: true, canDelete: false,
+        canApprove: true, canReject: true, canVoid: false, canGiveDiscount: false,
+        canRestock: true, canManageUsers: false, canViewReports: true,
+        canManagePlans: false, canManageRoles: false,
+      },
       staff: {
         canView: true, canCreate: false, canEdit: false, canDelete: false,
         canApprove: false, canReject: false, canVoid: false, canGiveDiscount: false,
@@ -122,36 +128,44 @@
 
     modules: {
       booking: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canCheckin: true, canCheckout: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canCheckin: true, canCheckout: true },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canCheckin: true, canCheckout: true },
+        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canCheckin: true, canCheckout: true },
+        supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canCheckin: true, canCheckout: true },
       },
       procurement: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canReject: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canReject: true },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canReject: true },
+        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canReject: true },
+        supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canReject: true },
       },
       accounting: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canViewReports: true },
-        manager: { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: true, canViewReports: true },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canViewReports: true },
+        manager:    { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: true, canViewReports: true },
+        supervisor: { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: true, canViewReports: true },
       },
       store: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canRestock: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canRestock: true },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canRestock: true },
+        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canRestock: true },
+        supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canRestock: true },
       },
       restaurant: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canVoid: true, canGiveDiscount: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canVoid: true, canGiveDiscount: true },
+        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false },
+        supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false },
       },
       poolbar: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canVoid: true, canGiveDiscount: true, canManageOrders: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false, canViewReports: true, canManageOrders: true },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canVoid: true, canGiveDiscount: true, canManageOrders: true },
+        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false, canViewReports: true, canManageOrders: true },
+        supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canVoid: true, canGiveDiscount: false, canViewReports: true, canManageOrders: true },
       },
       kitchen: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true },
+        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true },
+        supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true },
       },
       gym: {
-        admin:   { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canManagePlans: true, canCheckin: true, canSellPlan: true },
-        manager: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canManagePlans: true, canCheckin: true, canSellPlan: true },
+        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canManagePlans: true, canCheckin: true, canSellPlan: true },
+        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canManagePlans: true, canCheckin: true, canSellPlan: true },
+        supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canManagePlans: true, canCheckin: true, canSellPlan: true },
       },
     },
   };
@@ -191,6 +205,12 @@
       return (module && PERMISSIONS.modules[module] && PERMISSIONS.modules[module][role])
         || PERMISSIONS.roles.manager;
     }
+    if (role === 'supervisor') {
+      const scopes = (session.privileges && session.privileges.supervisorScopes) || session.supervisorScopes || [];
+      if (module && scopes.length && scopes.indexOf(module) === -1) return {};
+      return (module && PERMISSIONS.modules[module] && PERMISSIONS.modules[module][role])
+        || PERMISSIONS.roles.supervisor;
+    }
 
     const base = Object.assign({}, PERMISSIONS.roles.staff);
     if (privilege && PERMISSIONS.privileges[privilege]) {
@@ -226,12 +246,22 @@
     const role = session.role.toLowerCase();
     if (role === 'admin') return true;
 
+    if (role === 'supervisor') {
+      const scopes = (session.privileges && session.privileges.supervisorScopes) || session.supervisorScopes || [];
+      if (module && scopes.length && scopes.indexOf(module) === -1) return false;
+    }
+
     if (module && PERMISSIONS.modules[module]) {
       const modulePerms = PERMISSIONS.modules[module];
       if (modulePerms[role]) return !!modulePerms[role][permission];
     }
 
     if (role === 'staff') {
+      const perms = getUserEffectivePermissions(session, module || null);
+      return !!perms[permission];
+    }
+
+    if (role === 'supervisor') {
       const perms = getUserEffectivePermissions(session, module || null);
       return !!perms[permission];
     }
