@@ -15,6 +15,13 @@ const poolbarStockSchema = new mongoose.Schema({
   batch:    { type: String, default: '—' },
   received: { type: String, default: '—' },
   desc:     { type: String, default: '' },
+  isComposite: { type: Boolean, default: false },
+  recipe: [{
+    name:    { type: String, required: true },
+    storeId: { type: String, default: '' },
+    qty:     { type: Number, required: true },
+    unit:    { type: String, default: '' },
+  }],
 }, { timestamps: true });
 
 poolbarStockSchema.pre('save', function (next) {

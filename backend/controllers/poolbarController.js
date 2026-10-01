@@ -106,7 +106,48 @@ exports.listStock = asyncHandler(async (req, res) => {
 });
 
 exports.addStock = asyncHandler(async (req, res) => {
-  const { name, category, cat, unit, qty, min, price, cost, batch, received, desc, storeId } = req.body;
+  const { name, category, cat, unit, qty, min, price, cost, batch, received, desc, storeId, isComposite, recipe } = req.body;
+
+  const isComp = !!isComposite;
+  if (isComp) {
+    if (!name || !name.trim()) return res.status(400).json({ success: false, error: 'Composite name required' });
+    if (!Array.isArray(recipe) || !recipe.length) return res.status(400).json({ success: false, error: 'Recipe with at least one ingredient required' });
+    const existing = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(name.trim())}$`, 'i') });
+    if (existing) return res.status(409).json({ success: false, error: `"${name}" is already tracked in Pool Bar inventory` });
+    // Validate ingredients exist and compute cost
+    let unitCost = 0;
+    const cleanRecipe = [];
+    for (const ing of recipe) {
+      const ingName = (ing.name || '').trim();
+      if (!ingName || !ing.qty || Number(ing.qty) <= 0) continue;
+      const base = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(ingName)}$`, 'i') });
+      if (!base) return res.status(400).json({ success: false, error: `Ingredient "${ingName}" not found in Pool Bar stock` });
+      const c = Number(base.cost) || Number(base.price) || 0;
+      unitCost += c * Number(ing.qty);
+      cleanRecipe.push({ name: ingName, storeId: base.storeId || base.id, qty: Number(ing.qty), unit: ing.unit || base.unit || '' });
+    }
+    const { v4: uuidv4c } = require('uuid');
+    const item = await PoolbarStock.create({
+      id: uuidv4c(),
+      storeId: '',
+      procurementId: '',
+      name: name.trim(),
+      category: category || cat || 'Cocktails',
+      cat: cat || category || 'Cocktails',
+      unit: unit || 'glass',
+      qty: 0,
+      min: Number(min) || 10,
+      price: Number(price != null ? price : cost) || 0,
+      cost: Math.round(unitCost * 100) / 100,
+      batch: batch || '—',
+      received: received || todayDDMMYY(),
+      desc: desc || '',
+      isComposite: true,
+      recipe: cleanRecipe,
+    });
+    emit(req, ['poolbar','store'], 'poolbar:updated', { action: 'addComposite', data: item });
+    return res.status(201).json({ success: true, data: item });
+  }
 
   const sid = (storeId || '').trim();
   if (!sid) {
@@ -239,6 +280,38 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
   await logMovement(item.name, d > 0 ? d : 0, d < 0 ? Math.abs(d) : 0, item.qty, fullReason);
   emit(req, 'poolbar', 'poolbar:updated', { action: 'adjustStockById', data: item });
   res.json({ success: true, data: item, before, delta: d });
+});
+
+exports.produceComposite = asyncHandler(async (req, res) => {
+  const { servings } = req.body;
+  const n = Number(servings) || 0;
+  if (n <= 0) return res.status(400).json({ success: false, error: 'Servings must be > 0' });
+  const item = await PoolbarStock.findOne({ id: req.params.id });
+  if (!item) return res.status(404).json({ success: false, error: 'Drink not found' });
+  if (!item.isComposite || !item.recipe || !item.recipe.length) return res.status(400).json({ success: false, error: 'Not a composite drink — no recipe' });
+  // Validate base ingredients stock
+  for (const ing of item.recipe) {
+    const base = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name)}$`, 'i') });
+    if (!base) return res.status(400).json({ success: false, error: `Ingredient "${ing.name}" not found` });
+    const need = Number(ing.qty) * n;
+    if ((Number(base.qty) || 0) < need) return res.status(400).json({ success: false, error: `Not enough ${base.name}. Need ${need} ${base.unit}, have ${base.qty}` });
+  }
+  let unitCost = 0;
+  for (const ing of item.recipe) {
+    const base = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name)}$`, 'i') });
+    const c = Number(base.cost) || Number(base.price) || 0;
+    unitCost += c * Number(ing.qty);
+    base.qty -= Number(ing.qty) * n;
+    await base.save();
+    await logMovement(base.name, 0, Number(ing.qty) * n, base.qty, `Produce ${n}x ${item.name}`);
+  }
+  item.cost = Math.round(unitCost * 100) / 100;
+  item.price = item.price || item.cost;
+  item.qty = (Number(item.qty) || 0) + n;
+  await item.save();
+  await logMovement(item.name, n, 0, item.qty, `Produced ${n} ${item.unit} (cost ₦${item.cost} each)`);
+  emit(req, 'poolbar', 'poolbar:updated', { action: 'produceComposite', data: item });
+  res.json({ success: true, data: item });
 });
 
 /* ═══════════════════════════════════════════════

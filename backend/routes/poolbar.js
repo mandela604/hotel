@@ -33,6 +33,7 @@ router.delete('/stock/:id', isAdmin, validateObjectIdParam('id'), ctrl.deleteSto
 router.post('/stock/deduct', inDept, privilegeGuard('poolbar', 'canEdit'), validateDeductStock, ctrl.deductStock);
 router.post('/stock/:id/deduct', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), validateDeductById, ctrl.deductStockById);
 router.post('/stock/:id/adjust', isAdmin, validateObjectIdParam('id'), ctrl.adjustStockById);
+router.post('/stock/:id/produce', inDept, privilegeGuard('poolbar', 'canCreate'), validateObjectIdParam('id'), ctrl.produceComposite);
 
 /* ── Categories ─────────────────────────────── */
 router.get('/categories', inDept, ctrl.listCategories);
