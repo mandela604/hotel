@@ -234,9 +234,10 @@ body {
       const dept = (u.department || '').toLowerCase();
       const priv = (u.privileges && u.privileges.type) || '';
       let target = 'index.html';
+      // supervisor must always land on index — menu filtered by supervisorScopes via aurum-shell, never front desk fallback
       if (role === 'supervisor') {
         target = 'index.html';
-      } else if (role !== 'admin' && role !== 'manager') {
+      } else if (role !== 'admin' && role !== 'manager' && role !== 'supervisor') {
         if (dept === 'pool bar' || priv === 'pool_bar_staff' || (priv === 'waiter' && dept.indexOf('pool') >= 0)) target = 'poolbar/poolbar-dashboard.html';
         else if (dept === 'restaurant' || priv === 'restaurant_staff' || (priv === 'waiter' && dept.indexOf('restaurant') >= 0)) target = 'restaurant/restaurant-dashboard.html';
         else if (dept === 'kitchen' || priv === 'chef') target = 'kitchen/kitchen-dashboard.html';
