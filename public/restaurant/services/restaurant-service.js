@@ -291,6 +291,7 @@ function dashboardKPIs() {
     try { body = await res.json(); } catch (e) { /* empty/non-JSON body */ }
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
+        console.error('[RestaurantService] Auth failed on:', path, 'status:', res.status, 'body:', body);
         window.location.href = '/login.html';
         return;
       }
@@ -298,6 +299,7 @@ function dashboardKPIs() {
       err.status = res.status;
       throw err;
     }
+    console.log('[RestaurantService] apiFetch OK:', path, 'body keys:', body ? Object.keys(body) : null);
     return body;
   }
   function get(path) { return apiFetch(path, { method: 'GET' }); }
@@ -460,12 +462,13 @@ function dashboardKPIs() {
     const payload = typeof methodOrOpts === 'string' ? { method: methodOrOpts } : methodOrOpts;
     const res = await post('/orders/' + encodeURIComponent(orderId) + '/pay', payload);
     const idx = state.orders.findIndex(function (o) { return o.id === orderId; });
-    if (idx > -1) state.orders[idx] = res.data;
+    if (idx > -1) state.orders[idx] = res.data || res.order || res;
     if (res.sale) state.sales.unshift(res.sale);
     // Reload stock so picker tiles reflect deducted quantities immediately
     try { await loadAll(); } catch (e) { emitChange('order:paid'); }
     emitChange('order:paid');
-    return { order: res.data, sale: res.sale };
+    // Return both order and sale so callers can print receipt
+    return { order: res.data || res.order || res, sale: res.sale || null };
   }
   async function cancelOrder(orderId) {
     const res = await patch('/orders/' + encodeURIComponent(orderId) + '/cancel');

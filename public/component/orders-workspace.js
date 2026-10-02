@@ -2129,6 +2129,7 @@
     async function confirmPayOrder() {
       const o = orders.find(function (x) { return x.id === payOrderId; });
       if (!o) return;
+      console.log('[confirmPayOrder] Starting pay for order:', payOrderId, 'status:', o.status, 'type:', o.type, 'cooId:', o.cooId);
       const room = getRoomFields('pay');
       let method = ($('[data-role="payMethod"]') || {}).value || 'Cash';
       const isRoomCharge = method === 'Room Charge';
@@ -2144,6 +2145,7 @@
             : method;
           if (isRoomCharge) console.log('[RoomCharge] Pay Order payload →', JSON.stringify(payArg, null, 2));
           const result = await service.payOrder(payOrderId, payArg);
+          console.log('[confirmPayOrder] payOrder result:', JSON.stringify(result));
           if (isRoomCharge) console.log('[RoomCharge] Pay Order response ←', JSON.stringify(result, null, 2));
           syncFromService();
           const saleId = result && result.sale ? result.sale.id : '';
