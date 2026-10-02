@@ -61,7 +61,7 @@
     { label: 'Gym',               href: 'gym/gym-dashboard.html',                    icon: 'fa-solid fa-dumbbell' },
     { label: 'Store',             href: 'store/store-dashboard.html',                icon: 'fa-solid fa-box' },
     { label: 'Staff Management',  href: 'staff/staff-management.html',               icon: 'fa-solid fa-users' },
-    { label: 'Procurement',       href: 'procurement/procurement-dashboard.html',    icon: 'fa-solid fa-truck', badge: 3 },
+    { label: 'Procurement',       href: 'procurement/procurement-dashboard.html',    icon: 'fa-solid fa-truck' },
     { label: 'Accounting',        href: 'accounting/accounting-dashboard.html',      icon: 'fa-solid fa-calculator' },
     { label: 'Settings',          href: 'settings/platform-settings.html',           icon: 'fa-solid fa-gear' },
   ];
@@ -162,6 +162,18 @@
     .aur-api-badge.aur-live{ background:rgba(18,183,106,0.12); color:#12b76a; border-color:rgba(18,183,106,.3); }
     .aur-api-badge .aur-dot{ width:5px; height:5px; border-radius:50%; background:currentColor; animation:aur-blink 2s infinite; }
     @keyframes aur-blink{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+    /* Supervisor view-only: hide all action/CRUD buttons */
+    body[data-user-role="supervisor"] button[data-act]:not([data-act="close"]):not([data-act="closePay"]),
+    body[data-user-role="supervisor"] .act-btn:not(.act-btn-view),
+    body[data-user-role="supervisor"] .btn-primary:not(.btn-view-only),
+    body[data-user-role="supervisor"] [data-role="submitBtn"],
+    body[data-user-role="supervisor"] [data-act="addStock"],
+    body[data-user-role="supervisor"] [data-act="submit"],
+    body[data-user-role="supervisor"] .ow-btn-primary,
+    body[data-user-role="supervisor"] .add-dish-btn,
+    body[data-user-role="supervisor"] #btnNewReq,
+    body[data-user-role="supervisor"] .pmx-btn-primary { display: none !important; }
 
     @media print{ .aur-sidebar, .aur-topbar, .aur-overlay{ display:none !important; } }
   `;
@@ -396,6 +408,8 @@
         // re-render nav for supervisor allowlist
         const navEl = document.getElementById(instId + '-nav');
         if (navEl) navEl.innerHTML = navHtml();
+        // Mark body with role so CSS can hide CRUD buttons for supervisor
+        document.body.dataset.userRole = user.role || 'staff';
         const avatar = document.getElementById(instId + '-avatar');
         if (avatar) {
           const initials = user.initials || (user.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -407,6 +421,29 @@
         const text = document.getElementById(instId + '-apiText');
         if (text) text.textContent = 'Live';
         if (badge) badge.classList.add('aur-live');
+
+        // Fetch real procurement pending count and update nav badge
+        fetch('/api/procurement/pipeline', { credentials: 'include' })
+          .then(r => r.ok ? r.json() : null)
+          .then(j => {
+            const data = j && (j.data || j);
+            const count = data && (data.pendingApproval || data.pending || data.total || 0);
+            if (!count) return;
+            const navEl = document.getElementById(instId + '-nav');
+            if (!navEl) return;
+            const procLink = navEl.querySelector('[data-aur-file="procurement/procurement-dashboard.html"]');
+            if (!procLink) return;
+            let badgeEl = procLink.querySelector('.aur-nav-badge');
+            if (!badgeEl) {
+              badgeEl = document.createElement('span');
+              badgeEl.className = 'aur-nav-badge';
+              badgeEl.style.cssText = 'margin-left:auto;background:var(--aur-gold);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;';
+              procLink.appendChild(badgeEl);
+            }
+            badgeEl.textContent = count;
+            badgeEl.style.display = count > 0 ? 'inline-block' : 'none';
+          })
+          .catch(() => {});
       }
     });
 

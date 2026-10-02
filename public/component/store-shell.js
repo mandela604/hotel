@@ -385,7 +385,7 @@
         avatar.title = user.name || '';
       }
       handle.setApiMode('Live');
-      if (user.role !== 'admin' && user.role !== 'manager') { var bb = document.getElementById('gs-backBtn'); if (bb) bb.style.display = 'none'; }
+      if (user.role !== 'admin' && user.role !== 'manager' && user.role !== 'supervisor') { var bb = document.getElementById('gs-backBtn'); if (bb) bb.style.display = 'none'; }
       try{ _bindStoreLive(); }catch(e){}
     });
 
