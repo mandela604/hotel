@@ -570,11 +570,20 @@ exports.updateBooking = asyncHandler(async (req, res) => {
       // no-op, keep existing extra
     }
   } catch(e) {}
-  // Admin-only: allow backdating createdAt
+  // Admin-only: allow backdating createdAt — also moves payment dates so revenue buckets to the backdated day
   if (req.body.createdAt && req.user && req.user.role === 'admin') {
     const d = new Date(req.body.createdAt);
     if (!isNaN(d.getTime())) {
-      booking.createdAt = d;
+      d.setHours(12, 0, 0, 0);
+      booking.createdAt = d.getTime();
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yy = String(d.getFullYear()).slice(-2);
+      const ddmmyy = dd + '/' + mm + '/' + yy;
+      const ts = d.getTime();
+      if (Array.isArray(booking.payments)) {
+        booking.payments.forEach(function(p){ p.date = ddmmyy; p.ts = ts; });
+      }
     }
   }
   booking.payStatus = payStatusFor(booking);
