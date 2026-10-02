@@ -340,8 +340,8 @@ async function init(){
   let d = null;
   try {
     const res = await fetch('/api/dashboard/overview', { credentials: 'include', headers: { 'Accept': 'application/json' } });
-    if (res.ok) { const body = await res.json(); d = body.data; }
-  } catch (e) { /* fall through to zeros on network error */ }
+    if (res.ok) { const body = await res.json(); d = body.data; console.log('[Dashboard] overview', d); console.log('[Dashboard] roomRev calc: totalRevenueToday', d && d.totalRevenueToday, 'rest', d && d.restaurantSalesToday, 'pool', d && d.poolbarSalesToday, '=> rooms', (d?d.totalRevenueToday:0)-(d?d.restaurantSalesToday:0)-(d?d.poolbarSalesToday:0)); }
+  } catch (e) { console.error('[Dashboard] overview fetch failed', e); }
 
   const roomsData = (d && d.rooms) || { total:0, occupied:0, vacant:0, cleaning:0, maintenance:0, reserved:0 };
   let roomRev = Math.max(0, (d ? d.totalRevenueToday : 0) - (d ? d.restaurantSalesToday : 0) - (d ? d.poolbarSalesToday : 0));
