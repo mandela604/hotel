@@ -500,7 +500,7 @@ async function init(){
     applyPermissionsUI();
 
     const allTx = AccountingData.buildTransactions(roomTx, restSales, poolSales, gymTx);
-    const shiftKey = currentShiftKey(allTx);
+    const shiftKey = AccountingData.shiftKeyFor(new Date());
     const shiftTotals = AccountingData.computeShiftTotals(allTx, shiftKey);
     const openShifts = shifts.filter(s => s.status === 'open').length;
 
