@@ -65,7 +65,7 @@ async function resolveStockForItems(items) {
     const q = Number(it.qty);
     const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
     if (!stockItem) continue;
-    if (stockItem.qty < q) {
+    if (!stockItem.isComposite && stockItem.qty < q) {
       const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${q}`);
       err.statusCode = 400;
       throw err;
