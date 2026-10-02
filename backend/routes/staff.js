@@ -11,5 +11,6 @@ router.post('/', roleGuard(['admin', 'manager']), staffController.createStaff);
 router.put('/:id', roleGuard(['admin', 'manager']), staffController.updateStaff);
 router.delete('/:id', roleGuard(['admin', 'manager']), staffController.deleteStaff);
 router.patch('/:id/status', roleGuard(['admin', 'manager']), staffController.updateStatus);
+router.patch('/:id/overrides', roleGuard(['admin']), staffController.updateOverrides);
 
 module.exports = router;

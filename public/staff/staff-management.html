@@ -883,7 +883,7 @@ async function savePermOverrides(){
   const s = STAFF.find(x=>x.id===permTargetId);
   if (!s) return;
   try {
-    await StaffService.editStaff(permTargetId, { overrides: workingOverrides });
+    await StaffService.saveOverrides(permTargetId, workingOverrides);
     STAFF = StaffService.state.staff;
     showToast(`Permissions updated for ${s.name}.`, 'success');
     closePermModal();

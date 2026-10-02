@@ -169,3 +169,29 @@ exports.updateStatus = asyncHandler(async (req, res) => {
   await staff.save();
   res.json({ success: true, data: staff });
 });
+
+exports.updateOverrides = asyncHandler(async (req, res) => {
+  const { overrides } = req.body;
+  if (!overrides || typeof overrides !== 'object') {
+    return res.status(400).json({ success: false, error: 'overrides object is required' });
+  }
+
+  const staff = await Staff.findById(req.params.id);
+  if (!staff) return res.status(404).json({ success: false, error: 'Staff member not found' });
+
+  // Patch only overrides — preserving type, supervisorScopes, etc.
+  if (!staff.privileges) staff.privileges = {};
+  staff.privileges = Object.assign({}, staff.privileges, { overrides });
+  await staff.save();
+
+  // Sync to User document
+  const user = await User.findOne({ email: staff.email.toLowerCase() });
+  if (user) {
+    if (!user.privileges) user.privileges = {};
+    user.privileges.overrides = overrides;
+    user.markModified('privileges');
+    await user.save();
+  }
+
+  res.json({ success: true, data: staff });
+});

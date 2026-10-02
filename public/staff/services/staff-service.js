@@ -240,7 +240,15 @@
     return norm;
   }
 
-  async function editStaff(id, data) {
+  async function saveOverrides(id, overrides) {
+    // Send only overrides — preserves type, supervisorScopes, password untouched
+    const updated = await apiFetch('/' + id + '/overrides', { method: 'PATCH', body: { overrides } });
+    const norm = normalize(updated);
+    const idx = state.staff.findIndex(s => s.id === id);
+    if (idx > -1) state.staff[idx] = norm; else state.staff.unshift(norm);
+    emitChange('staff:edit');
+    return norm;
+  }
     const updated = await apiFetch('/' + id, { method: 'PUT', body: toPayload(data) });
     const norm = normalize(updated);
     const idx = state.staff.findIndex(s => s.id === id);
@@ -293,6 +301,7 @@
     addStaff,
     editStaff,
     deleteStaff,
+    saveOverrides,
     dashboardKPIs,
     getBasePermission,
     getEffectivePermission,
