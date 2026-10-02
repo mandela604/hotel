@@ -32,7 +32,7 @@ router.get('/rooms', bookingController.listRooms);
 router.post('/rooms', inDept, privilegeGuard('booking', 'canCreate'), v.validateAddRoom, bookingController.addRoom);
 router.put('/rooms/:num', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('num'), v.validateUpdateRoom, bookingController.updateRoom);
 router.delete('/rooms/:num', isAdmin, v.validateParam('num'), bookingController.deleteRoom);
-router.patch('/rooms/:num/status', roleGuard('admin', 'manager', 'front_desk', 'housekeeping'), v.validateParam('num'), v.validateRoomStatus, bookingController.setRoomStatus);
+router.patch('/rooms/:num/status', inDept, v.validateParam('num'), v.validateRoomStatus, bookingController.setRoomStatus);
 
 /* Bookings */
 router.get('/bookings', bookingController.listBookings);
