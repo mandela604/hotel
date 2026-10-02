@@ -40,7 +40,7 @@ router.get('/orders', restaurantController.listOrders);
 router.post('/orders', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateOpenTab, restaurantController.openTab);
 router.patch('/orders/:id/serve', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateParam('id'), restaurantController.markOrderServed);
 router.patch('/orders/:id', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateParam('id'), restaurantController.updateOrder);
-router.post('/orders/:id/pay', inDept, privilegeGuard('restaurant', 'canEdit'), v.validateParam('id'), v.validatePayOrder, restaurantController.payOrder);
+router.post('/orders/:id/pay', inDept, privilegeGuard('restaurant', 'canCreate'), v.validateParam('id'), v.validatePayOrder, restaurantController.payOrder);
 router.patch('/orders/:id/cancel', inDept, privilegeGuard('restaurant', 'canManageOrders'), v.validateParam('id'), restaurantController.cancelOrder);
 
 /* Transfers (incoming from Kitchen/Store) */
