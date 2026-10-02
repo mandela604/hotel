@@ -283,8 +283,11 @@
     return !!(PERMISSIONS.roles.staff || {})[action];
   }
   function getEffectivePermission(staff, module, action) {
+    if (staff.role === 'admin') return true;
+    // Overrides win for all roles
     const ov = staff.overrides && staff.overrides[module] ? staff.overrides[module][action] : undefined;
-    return ov !== undefined ? ov : getBasePermission(staff, module, action);
+    if (ov !== undefined) return ov;
+    return getBasePermission(staff, module, action);
   }
 
   /* ── Public API ── */

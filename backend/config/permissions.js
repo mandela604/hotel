@@ -195,6 +195,11 @@ function hasPermission(user, module, action) {
 
   if (role === 'admin') return true;
 
+  // Per-user overrides win for ALL roles (admin sets them via the permissions grid)
+  if (module && overrides[module] && typeof overrides[module][action] === 'boolean') {
+    return overrides[module][action];
+  }
+
   if (role === 'manager') {
     const mod = module && PERMISSIONS.modules[module]
       ? PERMISSIONS.modules[module].manager
@@ -220,11 +225,6 @@ function hasPermission(user, module, action) {
     if (module && privPerms[module]) {
       Object.assign(base, privPerms[module]);
     }
-  }
-
-  /* per-staff overrides win */
-  if (module && overrides[module] && typeof overrides[module][action] === 'boolean') {
-    return overrides[module][action];
   }
 
   return !!base[action];
