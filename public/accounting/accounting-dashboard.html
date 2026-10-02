@@ -156,7 +156,7 @@ body {
 
       <div class="shift-banner no-print" id="shiftBanner">
         <i class="fa-solid fa-circle-info"></i>
-        <span>Showing figures for the current shift: <b id="shiftBannerLabel">—</b></span>
+        <span>Showing figures for today: <b id="shiftBannerLabel">—</b></span>
       </div>
 
       <div class="kpi-row" id="kpiRow"></div>
@@ -173,21 +173,21 @@ body {
       <div class="row">
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title"><i class="fa-solid fa-sack-dollar"></i>Revenue Breakdown — Current Shift</div>
+            <div class="panel-title"><i class="fa-solid fa-sack-dollar"></i>Revenue Breakdown — Today</div>
             <button class="panel-action" id="grossBreakdownAction" onclick="location.href='accounting-reports.html'">Full Breakdown <i class="fa-solid fa-arrow-right"></i></button>
           </div>
           <div class="rev-total" id="grossTotal">₦0</div>
-          <div class="rev-sub-label">Gross revenue across all departments, this shift</div>
+          <div class="rev-sub-label">Gross revenue across all departments, today</div>
           <div id="grossBars"></div>
         </div>
 
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title"><i class="fa-solid fa-scale-balanced"></i>Current Shift Net Revenue</div>
+            <div class="panel-title"><i class="fa-solid fa-scale-balanced"></i>Today Net Revenue</div>
             <button class="panel-action" id="netBreakdownAction" onclick="location.href='accounting-reports.html'">Full Breakdown <i class="fa-solid fa-arrow-right"></i></button>
           </div>
           <div class="net-total" id="netTotal">₦0</div>
-          <div class="net-sub-label">Gross minus discounts &amp; comps, this shift</div>
+          <div class="net-sub-label">Gross minus discounts &amp; comps, today</div>
           <div id="netBreakdown"></div>
         </div>
       </div>
@@ -500,11 +500,20 @@ async function init(){
     applyPermissionsUI();
 
     const allTx = AccountingData.buildTransactions(roomTx, restSales, poolSales, gymTx);
-    const shiftKey = AccountingData.shiftKeyFor(new Date());
+    const shiftKey = AccountingData.calendarKeyFor(new Date());
     const shiftTotals = AccountingData.computeShiftTotals(allTx, shiftKey);
+    // For dashboard Today, override compute to calendar day (not shift) — sum all depts for that calendar date
+    const calRows = allTx.filter(t => AccountingData.calendarKeyFor(t.date) === shiftKey);
+    const calRooms = calRows.filter(t=>t.dept==='Rooms').reduce((s,t)=>s+t.amount,0);
+    const calRest = calRows.filter(t=>t.dept==='Restaurant').reduce((s,t)=>s+t.amount,0);
+    const calPool = calRows.filter(t=>t.dept==='Pool Bar').reduce((s,t)=>s+t.amount,0);
+    const calGym = calRows.filter(t=>t.dept==='Gym').reduce((s,t)=>s+t.amount,0);
+    shiftTotals.rooms = calRooms; shiftTotals.restaurant = calRest; shiftTotals.poolbar = calPool; shiftTotals.gym = calGym;
+    shiftTotals.gross = calRooms + calRest + calPool + calGym;
+    shiftTotals.rows = calRows; shiftTotals.count = calRows.length;
     const openShifts = shifts.filter(s => s.status === 'open').length;
 
-    document.getElementById('shiftBannerLabel').textContent = shiftRangeLabel(shiftKey);
+    document.getElementById('shiftBannerLabel').textContent = AccountingData.fullDateLabel(shiftKey) + ' — Today';
 
     renderKPIs(shiftTotals, openShifts);
     renderGrossBreakdown(shiftTotals);
