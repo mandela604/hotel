@@ -249,6 +249,8 @@
     emitChange('staff:edit');
     return norm;
   }
+
+  async function editStaff(id, data) {
     const updated = await apiFetch('/' + id, { method: 'PUT', body: toPayload(data) });
     const norm = normalize(updated);
     const idx = state.staff.findIndex(s => s.id === id);
