@@ -16,6 +16,8 @@ const poolbarStockSchema = new mongoose.Schema({
   received: { type: String, default: '—' },
   desc:     { type: String, default: '' },
   isComposite: { type: Boolean, default: false },
+  baseUnit:  { type: String, default: '', trim: true },
+  packSize:  { type: Number, default: 0 },
   recipe: [{
     name:    { type: String, required: true },
     storeId: { type: String, default: '' },

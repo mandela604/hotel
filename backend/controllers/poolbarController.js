@@ -82,6 +82,8 @@ async function deductResolvedStock(resolved, reason, by) {
     r.stockItem.qty -= r.qty;
     await r.stockItem.save();
     await logMovement(r.stockItem.name, 0, r.qty, r.stockItem.qty, reason);
+    // composite sale: COGS already posted at produce time (produce-only), skip to avoid double-count
+    if (r.stockItem.isComposite) continue;
     try {
       const unitCost = Number(r.stockItem.costPrice ?? r.stockItem.cost ?? r.stockItem.unitCost ?? 0) || 0;
       await Cogs.create({
@@ -368,14 +370,66 @@ exports.produceComposite = asyncHandler(async (req, res) => {
     const need = Number(ing.qty) * n;
     if ((Number(base.qty) || 0) < need) return res.status(400).json({ success: false, error: `Not enough ${base.name}. Need ${need} ${base.unit}, have ${base.qty}` });
   }
+  function toBaseQty(base, qty, unit) {
+    const q = Number(qty) || 0;
+    const baseUnit = String(base.baseUnit || '').toLowerCase();
+    const itemUnit = String(unit || base.unit || '').toLowerCase();
+    const pack = Number(base.packSize) || 0;
+    if (pack > 0 && baseUnit && itemUnit && baseUnit !== itemUnit) {
+      // e.g. base bottle 750ml, recipe 45ml shot -> 45/750 bottle
+      // if units look like ml/cl/shot, convert via packSize
+      const mlOf = (u) => {
+        if (u.includes('ml')) return 1;
+        if (u.includes('cl')) return 10;
+        if (u.includes('shot')) return 45;
+        if (u.includes('bottle')) return pack;
+        return null;
+      };
+      const baseMl = mlOf(baseUnit) === 1 ? pack : mlOf(baseUnit);
+      const itemMl = mlOf(itemUnit) === 1 ? q : (mlOf(itemUnit) ? mlOf(itemUnit) * 0 + q * (mlOf(itemUnit) || 1) : null);
+      // simpler: if recipe unit is ml/shot and base unit is bottle with packSize ml, ratio = qtyMl/pack
+      if (itemUnit.includes('ml') && pack > 0) return q / pack;
+      if (itemUnit.includes('shot') && pack > 0) return (q * 45) / pack;
+      if (itemUnit.includes('cl') && pack > 0) return (q * 10) / pack;
+      if (baseMl && itemMl !== null) return q;
+    }
+    // half bottle: qty 0.5 bottle
+    return q;
+  }
+  function unitCostFor(base, qty, unit) {
+    const c = Number(base.cost) || Number(base.price) || 0;
+    const baseUnit = String(base.baseUnit || '').toLowerCase();
+    const itemUnit = String(unit || base.unit || '').toLowerCase();
+    const pack = Number(base.packSize) || 0;
+    if (pack > 0 && itemUnit.includes('ml')) return (c / pack) * (Number(qty) || 0);
+    if (pack > 0 && itemUnit.includes('shot')) return (c / pack) * 45 * (Number(qty) || 0);
+    if (pack > 0 && itemUnit.includes('cl')) return (c / pack) * 10 * (Number(qty) || 0);
+    return c * (Number(qty) || 0);
+  }
   let unitCost = 0;
+  const Cogs = require('../models/Cogs');
+  const { v4: uuidv4 } = require('uuid');
   for (const ing of item.recipe) {
     const base = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name)}$`, 'i') });
-    const c = Number(base.cost) || Number(base.price) || 0;
-    unitCost += c * Number(ing.qty);
-    base.qty -= Number(ing.qty) * n;
+    const needBase = toBaseQty(base, Number(ing.qty), ing.unit);
+    unitCost += unitCostFor(base, Number(ing.qty), ing.unit);
+    base.qty -= needBase * n;
     await base.save();
-    await logMovement(base.name, 0, Number(ing.qty) * n, base.qty, `Produce ${n}x ${item.name}`);
+    await logMovement(base.name, 0, needBase * n, base.qty, `Produce ${n}x ${item.name}`);
+    try {
+      const uc = unitCostFor(base, 1, ing.unit);
+      await Cogs.create({
+        id: 'COGS-' + uuidv4(),
+        dept: 'poolbar',
+        item: base.name + ' → ' + item.name,
+        qty: needBase * n,
+        unitCost: needBase > 0 ? (unitCostFor(base, Number(ing.qty), ing.unit) / Number(ing.qty) || uc) : uc,
+        amount: unitCostFor(base, Number(ing.qty), ing.unit) * n,
+        date: new Date().toISOString().split('T')[0],
+        source: 'produce',
+        by: req.user ? req.user.name : '',
+      });
+    } catch (e) {}
   }
   item.cost = Math.round(unitCost * 100) / 100;
   item.price = item.price || item.cost;
