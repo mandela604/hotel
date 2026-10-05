@@ -75,11 +75,27 @@ async function resolveStockForItems(items) {
   return resolved;
 }
 
-async function deductResolvedStock(resolved, reason) {
+async function deductResolvedStock(resolved, reason, by) {
+  const Cogs = require('../models/Cogs');
+  const { v4: uuidv4 } = require('uuid');
   for (const r of resolved) {
     r.stockItem.qty -= r.qty;
     await r.stockItem.save();
     await logMovement(r.stockItem.name, 0, r.qty, r.stockItem.qty, reason);
+    try {
+      const unitCost = Number(r.stockItem.costPrice ?? r.stockItem.cost ?? r.stockItem.unitCost ?? 0) || 0;
+      await Cogs.create({
+        id: 'COGS-' + uuidv4(),
+        dept: 'poolbar',
+        item: r.stockItem.name,
+        qty: r.qty,
+        unitCost,
+        amount: r.qty * unitCost,
+        date: new Date().toISOString().split('T')[0],
+        source: 'sale',
+        by: by || '',
+      });
+    } catch (e) {}
   }
 }
 
@@ -234,7 +250,27 @@ exports.deductStock = asyncHandler(async (req, res) => {
   const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
   await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
 
+  try {
+    const Cogs = require('../models/Cogs');
+    const { v4: uuidv4 } = require('uuid');
+    const unitCost = Number(item.costPrice ?? item.cost ?? item.unitCost ?? 0) || 0;
+    await Cogs.create({
+      id: 'COGS-' + uuidv4(),
+      dept: 'poolbar',
+      item: item.name,
+      qty: Number(qty),
+      unitCost,
+      amount: Number(qty) * unitCost,
+      date: new Date().toISOString().split('T')[0],
+      source: 'deductStock',
+      by: req.user ? req.user.name : '',
+    });
+  } catch (e) {}
   emit(req, 'poolbar', 'poolbar:updated', { action: 'deductStock', data: item });
+  try {
+    const io = req.app.get('io');
+    if (io) io.to('accounting').to('global').emit('accounting:updated', { action: 'cogs', dept: 'poolbar', item: item.name, qty: Number(qty) });
+  } catch (e) {}
   res.json({ success: true, data: item });
 });
 
@@ -260,6 +296,22 @@ exports.deductStockById = asyncHandler(async (req, res) => {
   const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
   await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
 
+  try {
+    const Cogs = require('../models/Cogs');
+    const { v4: uuidv4 } = require('uuid');
+    const unitCost = Number(item.costPrice ?? item.cost ?? item.unitCost ?? 0) || 0;
+    await Cogs.create({
+      id: 'COGS-' + uuidv4(),
+      dept: 'poolbar',
+      item: item.name,
+      qty: Number(qty),
+      unitCost,
+      amount: Number(qty) * unitCost,
+      date: new Date().toISOString().split('T')[0],
+      source: 'deductStock',
+      by: req.user ? req.user.name : '',
+    });
+  } catch (e) {}
   emit(req, 'poolbar', 'poolbar:updated', { action: 'deductStockById', data: item });
   res.json({ success: true, data: item });
 });
@@ -278,6 +330,26 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
   await item.save();
   const fullReason = `Adjustment ${d > 0 ? '+' + d : d} — ${reason}${notes ? ' — ' + notes : ''} (by ${req.user ? req.user.name : 'Admin'})`;
   await logMovement(item.name, d > 0 ? d : 0, d < 0 ? Math.abs(d) : 0, item.qty, fullReason);
+  if (d < 0) {
+    try {
+      const Cogs = require('../models/Cogs');
+      const { v4: uuidv4 } = require('uuid');
+      const unitCost = Number(item.costPrice ?? item.cost ?? item.unitCost ?? 0) || 0;
+      await Cogs.create({
+        id: 'COGS-' + uuidv4(),
+        dept: 'poolbar',
+        item: item.name,
+        qty: Math.abs(d),
+        unitCost,
+        amount: Math.abs(d) * unitCost,
+        date: new Date().toISOString().split('T')[0],
+        source: 'deductStock',
+        by: req.user ? req.user.name : '',
+      });
+      const io = req.app.get('io');
+      if (io) io.to('accounting').to('global').emit('accounting:updated', { action: 'cogs', dept: 'poolbar', item: item.name, qty: Math.abs(d) });
+    } catch (e) {}
+  }
   emit(req, 'poolbar', 'poolbar:updated', { action: 'adjustStockById', data: item });
   res.json({ success: true, data: item, before, delta: d });
 });
@@ -344,7 +416,7 @@ exports.createSale = asyncHandler(async (req, res) => {
   const total = subtotal * (1 - (Number(discount) || 0) / 100);
   const saleId = await nextId('PBS', Sale);
 
-  await deductResolvedStock(resolved, `Sale (${saleId})`);
+  await deductResolvedStock(resolved, `Sale (${saleId})`, req.user ? req.user.name : '');
 
   /* Room Charge → attach to active booking folio */
   const effectiveMethod = (roomNumber && method === 'Room Charge') ? 'Room Charge' : (method || 'Cash');
@@ -549,7 +621,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   const resolved = await resolveStockForItems(order.items);
 
   const saleId = await nextId('PBS', Sale);
-  await deductResolvedStock(resolved, `Tab Payment (${order.id})`);
+  await deductResolvedStock(resolved, `Tab Payment (${order.id})`, req.user ? req.user.name : '');
 
   /* Room Charge → attach to active booking folio */
   const effectiveMethod = (effectiveRoom && payMethod === 'Room Charge') ? 'Room Charge' : payMethod;

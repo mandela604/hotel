@@ -496,6 +496,7 @@ async function getAccountingData() {
   if (dateFrom) url += '&from=' + dateFrom;
   if (dateTo) url += '&to=' + dateTo;
   const data = await apiFetch('GET', url);
+  window._cogsByDept = data.cogsByDept || {};
   return { income: data.income || [], expenses: data.expenses || [], totalIncome: data.totalIncome || 0, totalExpenses: data.totalExpenses || 0 };
 }
 async function apiAddIncome(entry) {
@@ -675,14 +676,20 @@ function renderExpenseTable() {
       const detailRow = (r.manualItems && r.manualItems.length)
         ? `<tr class="exp-detail-row" id="exp-detail-${r.date}" style="display:none;"><td colspan="5" style="padding:0 12px 10px;background:var(--surface2);"><div style="display:flex;flex-direction:column;gap:6px;padding:8px 0;">${r.manualItems.map(it => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;"><span><strong>${esc(it.expenditure || it.category)}</strong> — ${esc(it.description || '')} ${it.recordedBy ? '<small style="color:var(--text3)">— '+esc(it.recordedBy)+'</small>' : ''}</span><span style="display:flex;gap:6px;align-items:center"><span style="font-weight:700;">${fmtN(it.amount)}</span><button class="icon-btn edit" title="Edit manual expense" onclick="openEntryModal('expense','${it.id}')" style="width:22px;height:22px"><i class="fa-solid fa-pen" style="font-size:10px"></i></button><button class="icon-btn del" title="Delete" onclick="openDeleteConfirm('expense','${it.id}')" style="width:22px;height:22px"><i class="fa-solid fa-trash" style="font-size:10px"></i></button></span></div>`).join('')}</div></td></tr>`
         : '';
+      const cogsCell = r.cogsItems && r.cogsItems.length
+        ? `<button class="exp-expand-btn" onclick="toggleCogsDetail('${r.date}')" style="background:none;border:none;color:var(--gold);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">${cogs ? fmtN(cogs) : '—'} <small style="color:var(--text3);">(${r.cogsItems.length})</small> <i class="fa-solid fa-chevron-down" id="cogs-chevron-${r.date}" style="font-size:9px;transition:transform .2s;"></i></button>`
+        : (cogs ? fmtN(cogs) : '—');
+      const cogsDetail = r.cogsItems && r.cogsItems.length
+        ? `<tr class="exp-detail-row" id="cogs-detail-${r.date}" style="display:none;"><td colspan="5" style="padding:0 12px 10px;background:var(--surface2);"><div style="display:flex;flex-direction:column;gap:6px;padding:8px 0;">${r.cogsItems.map(it => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;"><span><strong>${esc(it.dept || '')} COGS</strong> — ${esc(it.item || '')} ×${it.qty} @ ${fmtN(it.unitCost)} ${it.by ? '<small style="color:var(--text3)">— '+esc(it.by)+'</small>' : ''}</span><span style="font-weight:700;">${fmtN(it.amount)}</span></div>`).join('')}</div></td></tr>`
+        : '';
       return `
       <tr>
         <td data-label="Date" style="font-weight:600;">${fmtDate(r.date)}</td>
-        <td data-label="COGS" class="right">${cogs ? fmtN(cogs) : '—'}</td>
+        <td data-label="COGS" class="right">${cogsCell}</td>
         <td data-label="Manual" class="right">${manualCell}</td>
         <td data-label="Total" class="right" style="font-weight:800;color:var(--red);">${fmtN(r.total)}</td>
         <td class="no-print"></td>
-      </tr>` + detailRow;
+      </tr>` + detailRow + cogsDetail;
     }).join('');
 
   renderTblPagination('expensePagination', all.length, expensePage, (p) => { expensePage = p; renderExpenseTable(); });
@@ -691,6 +698,14 @@ function renderExpenseTable() {
 function toggleExpDetail(date) {
   const row = document.getElementById('exp-detail-' + date);
   const ch = document.getElementById('exp-chevron-' + date);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : '';
+  if (ch) ch.style.transform = open ? '' : 'rotate(180deg)';
+}
+function toggleCogsDetail(date) {
+  const row = document.getElementById('cogs-detail-' + date);
+  const ch = document.getElementById('cogs-chevron-' + date);
   if (!row) return;
   const open = row.style.display !== 'none';
   row.style.display = open ? 'none' : '';
@@ -734,7 +749,8 @@ function renderStatement() {
     <div class="stmt-subtotal" style="color:var(--green);font-weight:800;"><span>Total Income</span><span class="amt" style="color:var(--green);">${fmtN(totalIncome)}</span></div>
 
     <div class="stmt-section-label">Expenses</div>
-    ${totalCogs ? `<div class="stmt-line neg"><span>Cost of Goods Sold (COGS)</span><span class="amt">(${fmtN(totalCogs)})</span></div>` : ''}
+    ${totalCogs ? `<div class="stmt-line neg"><span>Cost of Goods Sold (COGS)</span><span class="amt">(${fmtN(totalCogs)})</span></div>
+      ${(function(){ const by = window._cogsByDept || {}; const parts = []; if(by.kitchen) parts.push(`<div class="stmt-line neg" style="padding-left:14px;"><span>— Kitchen COGS</span><span class="amt">(${fmtN(by.kitchen)})</span></div>`); if(by.restaurant) parts.push(`<div class="stmt-line neg" style="padding-left:14px;"><span>— Restaurant COGS</span><span class="amt">(${fmtN(by.restaurant)})</span></div>`); if(by.poolbar) parts.push(`<div class="stmt-line neg" style="padding-left:14px;"><span>— Pool Bar COGS</span><span class="amt">(${fmtN(by.poolbar)})</span></div>`); return parts.join(''); })()}` : ''}
     ${totalManual ? `<div class="stmt-line neg"><span>Manual Expenses</span><span class="amt">(${fmtN(totalManual)})</span></div>` : ''}
     <div class="stmt-subtotal expense"><span>Total Expenses</span><span class="amt">(${fmtN(totalExpenses)})</span></div>
 

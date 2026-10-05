@@ -6,6 +6,8 @@ const ExpenseEntry = require('../models/ExpenseEntry');
 const LedgerEntry = require('../models/LedgerEntry');
 const Shift = require('../models/Shift');
 const PurchaseRequest = require('../models/PurchaseRequest');
+const Cogs = require('../models/Cogs');
+const { v4: uuidv4 } = require('uuid');
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -185,7 +187,13 @@ exports.pnl = asyncHandler(async (req, res) => {
     if (to) expenseMatch.date.$lte = to;
   }
 
-  const [roomIncome, restIncome, poolIncome, gymIncome, manualIncome, expenses, cogsSales] = await Promise.all([
+  const cogsMatch = {};
+  if (from || to) {
+    cogsMatch.date = {};
+    if (from) cogsMatch.date.$gte = from;
+    if (to) cogsMatch.date.$lte = to;
+  }
+  const [roomIncome, restIncome, poolIncome, gymIncome, manualIncome, expenses, cogsSales, cogsRows] = await Promise.all([
     safeAgg(() => aggregateRoomRevenue(from, to), 'Room Revenue'),
     safeAgg(() => aggregateOutletRevenue(from, to, 'restaurant', 'Restaurant'), 'Restaurant Revenue'),
     safeAgg(() => aggregateOutletRevenue(from, to, 'poolbar', 'Pool Bar'), 'Pool Bar Revenue'),
@@ -193,6 +201,7 @@ exports.pnl = asyncHandler(async (req, res) => {
     IncomeEntry.find(manualMatch).sort({ date: -1 }).catch(err => { console.error('[Accounting] Manual income query failed:', err.message); return []; }),
     ExpenseEntry.find(expenseMatch).sort({ date: -1 }).catch(err => { console.error('[Accounting] Expense query failed:', err.message); return []; }),
     Sale.find({ department: { $in: ['restaurant', 'poolbar'] }, status: 'completed', ...(from || to ? { createdAt: { ...(from ? { $gte: new Date(from) } : {}), ...(to ? { $lte: new Date(to + 'T23:59:59.999Z') } : {}) } } : {}) }).catch(err => { console.error('[Accounting] COGS query failed:', err.message); return []; }),
+    Cogs.find(cogsMatch).sort({ date: -1 }).catch(err => { console.error('[Accounting] Cogs query failed:', err.message); return []; }),
   ]);
 
   // ── Income: aggregate to one row per (shift/calendar day, department) ──
@@ -220,8 +229,21 @@ exports.pnl = asyncHandler(async (req, res) => {
   const income = Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date) || a.department.localeCompare(b.department));
   console.log('[Accounting pnl] grouped income:', income.length, income.slice(0,5).map(r => r.date + '|' + r.department + '=' + r.amount + ' (' + (r.incomeItems||[]).length + ' items)'));
 
-  // ── Expenses: COGS (from restaurant/poolbar sales) + manual batch per day (expandable) ──
+  // ── Expenses: COGS (per-dept Cogs docs + legacy sale-item cost) + manual batch per day (expandable) ──
   const cogsByDate = {};
+  const cogsByDept = { kitchen: 0, restaurant: 0, poolbar: 0 };
+  const cogsItems = {};
+  for (const c of (cogsRows || [])) {
+    const key = shiftKey(c.date || lagosDate(c.createdAt));
+    const amt = Number(c.amount) || 0;
+    if (amt <= 0) continue;
+    if (!cogsByDate[key]) cogsByDate[key] = 0;
+    cogsByDate[key] += amt;
+    const dept = String(c.dept || '').toLowerCase();
+    if (cogsByDept[dept] !== undefined) cogsByDept[dept] += amt;
+    if (!cogsItems[key]) cogsItems[key] = [];
+    cogsItems[key].push({ id: c.id, dept: c.dept, item: c.item, qty: c.qty, unitCost: c.unitCost, amount: amt, date: c.date, by: c.by || '' });
+  }
   for (const s of cogsSales) {
     const key = shiftKey(lagosDate(s.createdAt));
     const cogs = (s.items || []).reduce((sum, it) => {
@@ -249,13 +271,14 @@ exports.pnl = asyncHandler(async (req, res) => {
     procurement: cogsByDate[date] || 0,
     manual: manualExpByDate[date] || 0,
     manualItems: manualExpItems[date] || [],
+    cogsItems: cogsItems[date] || [],
     total: (cogsByDate[date] || 0) + (manualExpByDate[date] || 0),
   })).sort((a, b) => b.date.localeCompare(a.date));
 
   const totalIncome = income.reduce((s, r) => s + r.amount, 0);
   const totalExpenses = expensesOut.reduce((s, r) => s + r.total, 0);
 
-  res.json({ success: true, income, expenses: expensesOut, totalIncome, totalExpenses });
+  res.json({ success: true, income, expenses: expensesOut, totalIncome, totalExpenses, cogsByDept });
 });
 
 exports.addIncome = asyncHandler(async (req, res) => {
@@ -623,6 +646,43 @@ exports.rejectProcurement = asyncHandler(async (req, res) => {
   pr.history.push({ date: todayISO(), action: 'Rejected by Accountant', by: accountingActor(req), note: String(note).trim(), stage: 'rejected' });
   await pr.save();
   res.json({ success: true, data: pr });
+});
+
+exports.addCogs = asyncHandler(async (req, res) => {
+  const dept = String(req.body.dept || '').toLowerCase().trim();
+  if (!['kitchen', 'restaurant', 'poolbar'].includes(dept)) return res.status(400).json({ success: false, error: 'dept must be kitchen, restaurant, or poolbar' });
+  const qty = Number(req.body.qty) || 0;
+  const unitCost = Number(req.body.unitCost) || 0;
+  if (qty <= 0 || unitCost < 0) return res.status(400).json({ success: false, error: 'qty must be > 0 and unitCost >= 0' });
+  const c = await Cogs.create({
+    id: 'COGS-' + uuidv4(),
+    dept,
+    item: String(req.body.item || '').trim().slice(0, 200),
+    qty,
+    unitCost,
+    amount: qty * unitCost,
+    date: req.body.date || new Date().toISOString().split('T')[0],
+    source: String(req.body.source || 'deductStock').slice(0, 50),
+    by: req.user ? req.user.name : '',
+  });
+  try {
+    const io = req.app.get('io');
+    if (io) io.to('accounting').to('global').emit('accounting:updated', { action: 'addCogs', dept, data: c });
+  } catch (e) {}
+  res.status(201).json({ success: true, data: c });
+});
+
+exports.listCogs = asyncHandler(async (req, res) => {
+  const { dept, from, to } = req.query;
+  const match = {};
+  if (dept) match.dept = String(dept).toLowerCase();
+  if (from || to) {
+    match.date = {};
+    if (from) match.date.$gte = from;
+    if (to) match.date.$lte = to;
+  }
+  const rows = await Cogs.find(match).sort({ date: -1 }).limit(200);
+  res.json({ success: true, count: rows.length, data: rows });
 });
 
 exports.procurementPnl = asyncHandler(async (req, res) => {

@@ -30,4 +30,8 @@ router.get('/procurement-pending',            inDept, privilegeGuard('accounting
 router.post('/procurement/:id/approve',       inDept, privilegeGuard('accounting', 'canApprove'), ctrl.approveProcurement);
 router.post('/procurement/:id/reject',        inDept, privilegeGuard('accounting', 'canApprove'), ctrl.rejectProcurement);
 
+/* ── COGS (posted by kitchen/restaurant/poolbar deductStock) ── */
+router.get('/cogs', ctrl.listCogs);
+router.post('/cogs', ctrl.addCogs);
+
 module.exports = router;
