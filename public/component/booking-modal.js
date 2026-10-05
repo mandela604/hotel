@@ -1288,7 +1288,7 @@
         '.footer{border-top:1px dashed #000;margin-top:3px;padding-top:3px;font-size:10px;color:#000;font-weight:600;}' +
         '@media print{body{padding:2mm 2mm 1mm;width:80mm;} html,body{height:auto;} *{overflow:visible !important;} @page{margin:0; size:auto;}}' +
         '</style></head><body>' +
-        '<div class="hdr c"><h1>BOSTON LEISURE HOTEL AND APARTMENT</h1><p class="ph">Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State</p><p class="ph">09039391464 / hr.bostonleisurehotel@gmail.com</p></div>' +
+        '<div class="hdr c"><h1>BOSTON LEISURE HOTEL AND APARTMENTS</h1><p class="ph">Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State</p><p class="ph">09039391464 / hr.bostonleisurehotel@gmail.com</p></div>' +
         '<div class="row"><span class="lbl">Room</span><span class="val">' + esc(b.room) + ' · ' + esc(b.type || '') + '</span></div>' +
         '<div class="row"><span class="lbl">Guest</span><span class="val">' + esc(b.guest || '—') + '</span></div>' +
         '<div class="row"><span class="lbl">Phone</span><span class="val">' + esc(b.phone || '—') + '</span></div>' +
