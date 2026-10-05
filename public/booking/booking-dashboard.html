@@ -230,11 +230,11 @@ function getRoomStatus(num) {
    OVERVIEW RENDER
 ═══════════════════════════════════════════════ */
 function renderOverview() {
-  const occ    = bookings.filter(b => b.status === 'checkedin').length;
-  const avail  = bookings.filter(b => b.status === 'vacant').length;
-  const maint  = bookings.filter(b => b.status === 'maintenance').length;
+  const occ    = allRooms.filter(r => getRoomStatus(r.num) === 'checkedin').length;
+  const avail  = allRooms.filter(r => getRoomStatus(r.num) === 'available').length;
+  const maint  = allRooms.filter(r => getRoomStatus(r.num) === 'maintenance').length;
   const resv   = bookings.filter(b => b.status === 'reserved').length;
-  const chkout = bookings.filter(b => b.status === 'checkout').length;
+  const chkout = allRooms.filter(r => getRoomStatus(r.num) === 'checkout').length;
   const total  = allRooms.length;
   const pct    = total ? Math.round(occ / total * 100) : 0;
   const withG  = bookings.filter(b => b.guest);
