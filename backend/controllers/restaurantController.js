@@ -295,8 +295,10 @@ exports.createSale = asyncHandler(async (req, res) => {
   const stockIdMap = {};
   const procIdMap = {};
   const costMap = {};
+  const foodSet = await require('../utils/food').foodNameSet();
   for (const it of items) {
     const itemName = (it.name || it.key || '').trim();
+    if (foodSet.has(itemName.toLowerCase())) continue; // shared food — no stock tracking
     const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
     if (!stockItem) continue;
     stockIdMap[itemName.toLowerCase()] = stockItem.id;
@@ -738,8 +740,10 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
   const procIdMap2 = {};
   const costMap2 = {};
   if (!order.cooId) {
+    const foodSet2 = await require('../utils/food').foodNameSet();
     for (const it of order.items) {
       const itemName = (it.name || it.key || '').trim();
+      if (foodSet2.has(itemName.toLowerCase())) continue; // shared food — no stock tracking
       const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
       if (!stockItem) continue;
       stockIdMap[itemName.toLowerCase()] = stockItem.id;
@@ -853,8 +857,10 @@ exports.payOrder = asyncHandler(async (req, res) => {
     const procIdMap2 = {};
     const costMap2 = {};
     if (!order.cooId) {
+      const foodSet3 = await require('../utils/food').foodNameSet();
       for (const it of order.items) {
         const itemName = (it.name || it.key || '').trim();
+        if (foodSet3.has(itemName.toLowerCase())) continue; // shared food — no stock tracking
         const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
         if (!stockItem) continue;
         stockIdMap[itemName.toLowerCase()] = stockItem.id;

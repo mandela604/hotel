@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Shared Food Menu | Boston Leisure Hotel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--radius:14px;--radius-sm:10px;--transition:.3s cubic-bezier(.4,0,.2,1);
+--bg:#f4f6fb;--surface:#fff;--surface2:#f4f6fb;--border:#eef0f6;--border2:#dfe3ec;
+--text:#1c2440;--text2:#6b7280;--text3:#9aa1b3;--gold:#2f6fed;--gold-light:#5b8ff9;
+--gold-dim:rgba(47,111,237,.1);--gold-border:rgba(47,111,237,.25);--green:#12b76a;
+--green-bg:#e9f9f0;--red:#f04438;--red-bg:#feecec;--amber:#f79009;--amber-bg:#fff4e5;}
+html,body{height:100%;overflow-x:hidden;}
+body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+.main{margin-left:256px;flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh;}
+@media(max-width:768px){.main{margin-left:0 !important;}}
+.content{flex:1;padding:20px 24px 28px;min-width:0;display:flex;flex-direction:column;gap:16px;}
+@media(max-width:480px){.content{padding:16px 14px 22px;}}
+.note{background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:var(--radius);padding:12px 16px;font-size:12.5px;color:var(--text2);line-height:1.5;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 20px rgba(15,34,55,.07);overflow:hidden;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;flex-wrap:wrap;gap:8px;}
+.panel-title{font-size:14px;font-weight:800;}
+.panel-sub{font-size:11.5px;color:var(--text3);font-weight:600;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);padding:10px 20px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);}
+td{padding:11px 20px;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.badge.on{background:var(--green-bg);color:var(--green);}
+.badge.off{background:var(--red-bg);color:var(--red);}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .2s;white-space:nowrap;}
+.btn-primary{background:var(--gold);color:#fff;border-color:var(--gold);}
+.btn-primary:hover{background:var(--gold-light);}
+.btn-outline{background:var(--surface);border-color:var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--gold-border);color:var(--gold);}
+.btn-sm{padding:6px 11px;font-size:11.5px;}
+.icon-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
+.icon-btn:hover{border-color:var(--gold-border);color:var(--gold);}
+.icon-btn.del:hover{border-color:rgba(240,68,56,.4);color:var(--red);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,20,40,.55);z-index:300;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.show{display:flex;}
+.modal{background:#fff;border-radius:18px;padding:24px;width:min(440px,96vw);margin:auto;box-shadow:0 30px 80px rgba(15,20,40,.25);}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:16px;}
+.form-group{margin-bottom:12px;display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;}
+.form-input,.form-select{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-family:inherit;font-size:13px;outline:none;width:100%;color:var(--text);}
+.form-input:focus{border-color:var(--gold-border);}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
+.empty{text-align:center;padding:30px;color:var(--text3);font-size:12.5px;}
+.toast{position:fixed;bottom:20px;right:20px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:12.5px;box-shadow:0 8px 28px rgba(15,20,40,.18);z-index:9999;font-weight:600;}
+.toast.success{border-left:3px solid var(--green);}
+.toast.error{border-left:3px solid var(--red);}
+</style>
+</head>
+<body>
+<div class="app" style="display:flex;min-height:100vh;width:100%;">
+<div id="sidebarSlot"></div>
+<div class="main">
+<div id="topbarSlot"></div>
+<div class="content">
+<div class="note"><i class="fa-solid fa-circle-info" style="color:var(--gold);margin-right:6px;"></i><strong>One menu, both departments.</strong> Items entered here appear in the Restaurant <em>and</em> Pool Bar order screens and sell with no stock tracking (quick sale + open tab). Sales void/edit/delete works through the normal sales records. <span style="color:var(--text3);">Future: link a kitchen recipe to switch an item to Cook-on-Order.</span></div>
+<div class="panel">
+<div class="panel-head">
+<div><div class="panel-title">Shared Food Menu</div><div class="panel-sub" id="foodCount">—</div></div>
+<button class="btn btn-primary btn-sm" id="btnAddFood" onclick="openFoodModal()"><i class="fa-solid fa-plus"></i> Add Food</button>
+</div>
+<div style="overflow-x:auto;"><table>
+<thead><tr><th>Name</th><th>Category</th><th style="text-align:right;">Price</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+<tbody id="foodBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+</table></div>
+</div>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="foodModal">
+<div class="modal">
+<div class="modal-title" id="foodModalTitle">Add Food</div>
+<input type="hidden" id="ffId">
+<div class="form-group"><label class="form-label">Name</label><input class="form-input" id="ffName" placeholder="e.g. Jollof Rice"></div>
+<div class="form-group"><label class="form-label">Category</label><input class="form-input" id="ffCategory" placeholder="Main" value="Main"></div>
+<div class="form-group"><label class="form-label">Price (₦)</label><input class="form-input" id="ffPrice" type="number" min="0" step="50" placeholder="0"></div>
+<div class="form-group"><label class="form-label">Available</label><select class="form-select" id="ffAvail"><option value="1">Yes</option><option value="0">No</option></select></div>
+<div class="modal-footer">
+<button class="btn btn-outline" onclick="closeFoodModal()">Cancel</button>
+<button class="btn btn-primary" onclick="saveFood()"><i class="fa-solid fa-check"></i> Save</button>
+</div>
+</div>
+</div>
+<script src="component/aurum-shell.js"></script>
+<script>
+(function(){
+'use strict';
+var shell = AurumShell.attach({ sidebarTarget:'#sidebarSlot', topbarTarget:'#topbarSlot', activeFile:'food-menu.html', pageTitle:'Shared Food Menu', pageSubtitle:'One entry · sold in Restaurant + Pool Bar', apiMode:'Live', user:{name:'…',initials:'…'} });
+var session = null;
+function toast(m,t){ var d=document.createElement('div'); d.className='toast '+(t||'success'); d.textContent=m; document.body.appendChild(d); setTimeout(function(){d.remove();},3200); }
+function esc(s){ var d=document.createElement('div'); d.textContent=(s==null?'':s); return d.innerHTML; }
+function fmtN(n){ return '₦'+Math.round(Number(n)||0).toLocaleString('en-NG'); }
+async function api(method,path,body){
+  var o={method:method,headers:{'Content-Type':'application/json'},credentials:'include'};
+  if(body!==undefined) o.body=JSON.stringify(body);
+  var r=await fetch(path,o); var j=null;
+  try{j=await r.json();}catch(e){}
+  if(!r.ok||(j&&j.success===false)) throw new Error((j&&j.error)||('Request failed ('+r.status+')'));
+  return j;
+}
+async function init(){
+  try{
+    var s=await fetch('/api/auth/session',{credentials:'include'}); var sj=await s.json();
+    session=(sj.data||sj.user||sj);
+    var role=String((session&&session.role)||'').toLowerCase();
+    if(role!=='admin'&&role!=='manager') document.getElementById('btnAddFood').style.display='none';
+  }catch(e){}
+  loadFood();
+}
+async function loadFood(){
+  try{
+    var j=await api('GET','/api/foodmenu');
+    var rows=j.data||[];
+    document.getElementById('foodCount').textContent=rows.length+' item'+(rows.length!==1?'s':'')+' · shows in Restaurant + Pool Bar';
+    var role=String((session&&session.role)||'').toLowerCase();
+    var canEdit=(role==='admin'||role==='manager');
+    document.getElementById('foodBody').innerHTML=rows.length?rows.map(function(f){
+      return '<tr><td style="font-weight:700;">'+esc(f.name)+'</td><td>'+esc(f.category||'Main')+'</td>'+
+      '<td style="text-align:right;font-weight:800;">'+fmtN(f.price)+'</td>'+
+      '<td><span class="badge '+(f.available!==false?'on':'off')+'">'+(f.available!==false?'Available':'Hidden')+'</span></td>'+
+      '<td style="text-align:right;white-space:nowrap;">'+(canEdit?
+        '<button class="icon-btn" title="Edit" onclick="openFoodModal(\''+f.id+'\')"><i class="fa-solid fa-pen"></i></button> '+
+        '<button class="icon-btn" title="Toggle" onclick="toggleFood(\''+f.id+'\','+(f.available!==false?0:1)+')"><i class="fa-solid fa-eye'+(f.available!==false?'-slash':'')+'"></i></button> '+
+        '<button class="icon-btn del" title="Delete" onclick="deleteFood(\''+f.id+'\',\''+esc(f.name).replace(/'/g,"\\'")+'\')"><i class="fa-solid fa-trash"></i></button>'
+      :'<span style="color:var(--text3);font-size:11px;">View only</span>')+'</td></tr>';
+    }).join(''):'<tr><td colspan="5" class="empty">No food items yet — add the first one.</td></tr>';
+    loadFood._rows=rows;
+  }catch(e){ document.getElementById('foodBody').innerHTML='<tr><td colspan="5" class="empty">Failed to load: '+esc(e.message)+'</td></tr>'; }
+}
+window.openFoodModal=function(id){
+  var rows=loadFood._rows||[];
+  var f=id?rows.find(function(x){return x.id===id;}):null;
+  document.getElementById('foodModalTitle').textContent=f?'Edit Food':'Add Food';
+  document.getElementById('ffId').value=f?f.id:'';
+  document.getElementById('ffName').value=f?f.name:'';
+  document.getElementById('ffCategory').value=f?(f.category||'Main'):'Main';
+  document.getElementById('ffPrice').value=f?f.price:'';
+  document.getElementById('ffAvail').value=(f&&f.available===false)?'0':'1';
+  document.getElementById('foodModal').classList.add('show');
+};
+window.closeFoodModal=function(){ document.getElementById('foodModal').classList.remove('show'); };
+window.saveFood=async function(){
+  var id=document.getElementById('ffId').value;
+  var body={name:document.getElementById('ffName').value.trim(),category:document.getElementById('ffCategory').value.trim()||'Main',price:Number(document.getElementById('ffPrice').value)||0,available:document.getElementById('ffAvail').value==='1'};
+  if(!body.name){ toast('Enter a name.','error'); return; }
+  try{
+    if(id) await api('PUT','/api/foodmenu/'+encodeURIComponent(id),body);
+    else await api('POST','/api/foodmenu',body);
+    closeFoodModal(); toast(id?'Food updated.':'Food added — live in both departments.'); loadFood();
+  }catch(e){ toast(e.message,'error'); }
+};
+window.toggleFood=async function(id,to){
+  try{ await api('PATCH','/api/foodmenu/'+encodeURIComponent(id),{available:!!to}); loadFood(); }
+  catch(e){ toast(e.message,'error'); }
+};
+window.deleteFood=async function(id,name){
+  if(!confirm('Delete "'+name+'" from the shared food menu? Past sales are kept.')) return;
+  try{ await api('DELETE','/api/foodmenu/'+encodeURIComponent(id)); toast('Deleted.'); loadFood(); }
+  catch(e){ toast(e.message,'error'); }
+};
+document.getElementById('foodModal').addEventListener('click',function(e){ if(e.target===this) closeFoodModal(); });
+init();
+})();
+</script>
+</body>
+</html>

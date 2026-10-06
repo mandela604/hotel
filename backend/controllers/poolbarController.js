@@ -66,8 +66,10 @@ async function logMovement(item, qtyIn, qtyOut, balance, reason) {
  */
 async function resolveStockForItems(items) {
   const resolved = [];
+  const foodSet = await require('../utils/food').foodNameSet();
   for (const it of items) {
     const q = Number(it.qty);
+    if (foodSet.has(String(it.name || '').trim().toLowerCase())) continue; // shared food — no stock tracking
     const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
     if (!stockItem) continue;
     if (!stockItem.isComposite && stockItem.qty < q) {

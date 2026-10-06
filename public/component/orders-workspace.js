@@ -435,6 +435,11 @@
     let orders = [];
     let movements = [];
     let cart = [];
+    // Shared food menu (FoodMenu collection) — entered once, sold in both
+    // departments with no stock tracking. Kill-switch: showFoodMenu:false.
+    // When the kitchen system arrives, set showFoodMenu:false and unhide CoO.
+    let foodMenu = [];
+    const showFoodMenu = options.showFoodMenu !== false;
     let cooCart = [];
     let cooMenuItems = [];
     let kitchenStockCache = [];
@@ -457,6 +462,23 @@
       sales = service.state.sales || [];
       orders = service.state.orders || [];
       movements = service.state.movements || [];
+    }
+
+    async function loadFoodMenu() {
+      if (!showFoodMenu) { foodMenu = []; return; }
+      try {
+        const r = await fetch('/api/foodmenu', { credentials: 'include' });
+        const j = await r.json().catch(function () { return {}; });
+        foodMenu = (r.ok && j.success && Array.isArray(j.data))
+          ? j.data.filter(function (f) { return f.available !== false; })
+          : [];
+      } catch (e) { foodMenu = []; }
+    }
+    function foodTiles() {
+      if (!showFoodMenu || !foodMenu.length) return [];
+      return foodMenu.map(function (f) {
+        return { name: f.name, price: f.price, category: f.category || 'Food', unit: '', isFood: true, foodId: f.id || '' };
+      });
     }
 
     async function loadShared(key, fallback) {
@@ -575,7 +597,7 @@
                 <div class="ow-order-type-row" data-role="orderTypeRow" style="display:flex;gap:6px;margin-top:10px;">
                   <button type="button" class="ow-btn ow-btn-sm ow-order-type-btn active" data-order-type="quick" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-bolt"></i> Quick Sale</button>
                   <button type="button" class="ow-btn ow-btn-sm ow-order-type-btn" data-order-type="tab" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-receipt"></i> Open Tab</button>
-                  ${moduleName === 'restaurant' || (moduleName && moduleName.indexOf('restaurant') !== -1) || options.showCookOnOrder !== false ?
+                  ${options.showCookOnOrder !== false ?
                     '<button type="button" class="ow-btn ow-btn-sm ow-order-type-btn" data-order-type="coo" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-fire"></i> Cook</button>' : ''}
                 </div>
                 <div class="ow-order-type-hint" data-role="orderTypeHint" style="font-size:10px;color:var(--ow-text3);margin-top:4px;text-align:center;">Instant payment</div>
@@ -911,7 +933,7 @@
     }
 
     function renderPicker() {
-      var useItems = stock;
+      var useItems = showFoodMenu ? stock.concat(foodTiles()) : stock;
       var activeCategory = activeCat;
       if (orderType === 'coo') {
         if (cooMenuItems && cooMenuItems.length) useItems = cooMenuItems;
@@ -939,15 +961,19 @@
         const lvl = stockLevel(i);
         const inCart = cart.find(function (c) { return c.key === i.name; });
         const remaining = (i.qty || 0) - (inCart ? inCart.qty : 0);
-        const disabled = orderType !== 'coo' && (i.qty || 0) <= 0;
+        const isFood = !!i.isFood;
+        const disabled = !isFood && orderType !== 'coo' && (i.qty || 0) <= 0;
         const isKitchen = String(i.recipeId || '').trim() !== '';
         return '<button type="button" class="ow-mi-tile" data-add="' + esc(i.name) + '" ' + (disabled || _viewOnly ? 'disabled' : '') + '>' +
-          (orderType !== 'coo' && (i.qty || 0) <= 0 ? '<span class="ow-mi-badge">Out</span>' : '') +
+          (!isFood && orderType !== 'coo' && (i.qty || 0) <= 0 ? '<span class="ow-mi-badge">Out</span>' : '') +
+          (isFood ? '<span class="ow-mi-badge" style="background:var(--ow-blue-bg);color:var(--ow-gold);position:absolute;top:4px;left:4px;">Food</span>' : '') +
           (isKitchen ? '<span class="ow-mi-badge" style="background:var(--ow-amber-bg);color:var(--ow-amber);position:absolute;top:4px;left:4px;"><i class="fa-solid fa-fire"></i> Kitchen</span>' : '') +
           '<div class="ow-mi-cat">' + esc(i.category || '') + '</div>' +
           '<div class="ow-mi-name">' + esc(i.name) + '</div>' +
           '<div class="ow-mi-price">' + fmtN(i.price) + '</div>' +
-          '<div class="ow-mi-stock ' + lvl + '">' + (i.qty || 0) + ' ' + esc(i.unit || '') + ' on hand</div>' +
+          (isFood
+            ? '<div class="ow-mi-stock ok">Food menu</div>'
+            : '<div class="ow-mi-stock ' + lvl + '">' + (i.qty || 0) + ' ' + esc(i.unit || '') + ' on hand</div>') +
           '</button>';
       }).join('');
     }
@@ -1228,6 +1254,16 @@
     }
 
     function addToCart(key) {
+      const food = foodTiles().find(function (i) { return i.name === key; });
+      if (food) {
+        // Shared food menu — no stock tracking, always sellable, qty adjustable in cart
+        const existingFood = cart.find(function (c) { return c.key === key; });
+        if (existingFood) { existingFood.qty++; }
+        else { cart.push({ key: key, qty: 1, price: food.price, unit: '', isFood: true }); }
+        renderCart();
+        renderPicker();
+        return;
+      }
       const inv = stock.find(function (i) { return i.name === key; });
       if (!inv) {
         showToast(key + ' not found.', 'error');
@@ -1255,6 +1291,14 @@
     function adjustQty(key, delta) {
       const c = cart.find(function (x) { return x.key === key; });
       if (!c) return;
+      if (c.isFood || foodTiles().some(function (i) { return i.name === key; })) {
+        const nextFood = c.qty + delta;
+        if (nextFood < 1) { cart = cart.filter(function (x) { return x.key !== key; }); }
+        else { c.qty = nextFood; }
+        renderCart();
+        renderPicker();
+        return;
+      }
       const inv = stock.find(function (i) { return i.name === key; });
       var isKitchen = inv && String(inv.recipeId || '').trim() !== '';
       const max = isKitchen ? 999 : (inv ? inv.qty : c.qty);
@@ -2505,6 +2549,13 @@
     if ($('[data-role="cooRoomSearch"]')) { $('[data-role="cooRoomSearch"]').addEventListener('input', onCooRoomSearch); }
 
     async function init() {
+      // Shared food menu loads alongside — non-blocking
+      loadFoodMenu().then(function () { try { renderPicker(); } catch (e) {} });
+      try {
+        if (global.LiveService && LiveService.on) {
+          LiveService.on('foodmenu:updated', function () { loadFoodMenu().then(function () { try { renderPicker(); } catch (e) {} }); });
+        }
+      } catch (e) {}
       // ── Preferred path: module service ──
       if (service) {
         try {

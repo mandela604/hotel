@@ -100,6 +100,7 @@ app.use('/api/dashboard', auth, require('./routes/dashboard'));
 app.use('/api/booking', auth, require('./routes/bookings'));
 app.use('/api/restaurant', auth, require('./routes/restaurant'));
 app.use('/api/poolbar', auth, require('./routes/poolbar'));
+app.use('/api/foodmenu', auth, require('./routes/foodMenu'));
 app.use('/api/kitchen', auth, require('./routes/kitchen'));
 app.use('/api/gym', auth, require('./routes/gym'));
 app.use('/api/store', auth, require('./routes/store'));
