@@ -339,7 +339,14 @@
   function canGiveDiscount(session, module) {
     const override = flagFromSession(session, 'canGiveDiscount', module);
     if (override !== null) return override;
-    return !!(session && session.role === 'admin' && hasPermission(session, 'canGiveDiscount', module));
+    // Per-user toggle set in Staff Management → stored on session.privileges.overrides
+    // e.g. overrides: { booking: { canGiveDiscount: true }, restaurant: {...}, poolbar: {...} }
+    var ov = session && session.privileges && session.privileges.overrides;
+    if (ov && typeof ov === 'object') {
+      if (module && ov[module] && typeof ov[module].canGiveDiscount === 'boolean') return ov[module].canGiveDiscount;
+      if (typeof ov.canGiveDiscount === 'boolean') return ov.canGiveDiscount;
+    }
+    return !!(session && String(session.role || '').toLowerCase() === 'admin' && hasPermission(session, 'canGiveDiscount', module));
   }
 
   global.Permissions = {

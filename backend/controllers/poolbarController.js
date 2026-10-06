@@ -11,6 +11,11 @@ const Category       = require('../models/Category');
 const Counter        = require('../models/Counter');
 const asyncHandler   = require('../middleware/asyncHandler');
 const { ApiError }   = require('../middleware/errorHandler');
+const { hasPermission } = require('../config/permissions');
+
+function discountAllowed(user, module) {
+  return hasPermission(user, module, 'canGiveDiscount');
+}
 
 /* ── helpers ────────────────────────────────── */
 
@@ -462,6 +467,9 @@ exports.listSales = asyncHandler(async (req, res) => {
 exports.createSale = asyncHandler(async (req, res) => {
   const { items, discount, method, staff, table, notes, roomNumber, guestName, guestPhone, guestId } = req.body;
 
+  if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'poolbar')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
   // Validate stock is sufficient BEFORE any writes — the whole sale is
   // rejected (nothing partially deducts) if anything is short.
   const resolved = await resolveStockForItems(items);
@@ -584,6 +592,9 @@ exports.listOrders = asyncHandler(async (req, res) => {
 exports.openTab = asyncHandler(async (req, res) => {
   const { items, discount, staff, table, notes, roomNumber, guestName, guestPhone, createdBy } = req.body;
 
+  if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'poolbar')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const total = subtotal * (1 - (Number(discount) || 0) / 100);
   const orderId = await nextId('PB', Order);
@@ -630,6 +641,9 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   }
 
   const { items, notes, table, discount } = req.body;
+  if (discount !== undefined && Number(discount) > Number(order.discount || 0) && !discountAllowed(req.user, 'poolbar')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
   if (items !== undefined) {
     order.items = items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) }));
     order.subtotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);

@@ -975,7 +975,16 @@
       if (clearBtn) clearBtn.style.display = _viewOnly ? 'none' : '';
     }
 
+    function applyDiscountLock() {
+      var discEl = $('[data-role="cartDisc"]');
+      if (!discEl || !global.Permissions || !Permissions.canGiveDiscount) return;
+      var allow = false;
+      try { allow = !!Permissions.canGiveDiscount(getSessionUser(), moduleName); } catch (e) { allow = false; }
+      discEl.disabled = !allow;
+      discEl.title = allow ? '' : 'You do not have permission to give discounts';
+    }
     function updateTotals() {
+      applyDiscountLock();
       const sub = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
       const disc = parseFloat($('[data-role="cartDisc"]').value) || 0;
       $('[data-role="cartSub"]').textContent = fmtN(sub);

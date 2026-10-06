@@ -8,6 +8,11 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { STATUS_TRANSITIONS } = require('../middleware/bookingValidators');
 const { v4: uuidv4 } = require('uuid');
 const { emit } = require('../utils/emit');
+const { hasPermission } = require('../config/permissions');
+
+function discountAllowed(user, module) {
+  return hasPermission(user, module, 'canGiveDiscount');
+}
 
 /* ═══════════════════════════════════════════════
    Helpers — same math used client-side in every
@@ -431,6 +436,10 @@ exports.createBooking = asyncHandler(async (req, res) => {
     notes, status,
   } = req.body;
 
+  if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'booking')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
+
   const roomDoc = await Room.findOne({ num: room });
   if (!roomDoc) return res.status(404).json({ success: false, error: `Room ${room} not found — add the room first` });
 
@@ -533,6 +542,11 @@ exports.updateBooking = asyncHandler(async (req, res) => {
         return res.status(409).json({ success: false, error: `Room ${booking.room} already booked ${s.checkin} → ${s.checkout} (${s.guest})` });
       }
     }
+  }
+
+  // Discount grant/increase needs permission — unchanged existing discount stays untouched
+  if (req.body.discount !== undefined && Number(req.body.discount) > Number(booking.discount || 0) && !discountAllowed(req.user, 'booking')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
   }
 
   const oldCheckin = booking.checkin;

@@ -214,6 +214,7 @@
         initials: user.initials,
         role: user.role,
         privilege: (user.privileges && user.privileges.type) || user.privilege || null,
+        privileges: user.privileges || {},
       };
     } catch (err) {
       goLogin(err && err.message);

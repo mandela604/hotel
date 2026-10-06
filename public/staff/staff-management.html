@@ -309,6 +309,10 @@
         <label class="form-label">Supervisor — Allowed Modules <span style="text-transform:none; color:#6b7280; font-weight:600;">(only these show on index)</span></label>
         <div id="supervisorScopesChecks" style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px;"></div>
         <div class="form-hint">Checked modules will appear as KPI/menu cards on his index landing. Unchecked are hidden like staff.</div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#1c2440;cursor:pointer;margin-top:10px;padding-top:10px;border-top:1px dashed #dfe3ec;">
+          <input type="checkbox" id="fsCanDiscount" style="accent-color:#2f6fed"> Can give discount
+          <span style="font-weight:600;color:#6b7280;">(booking + restaurant/poolbar sale discounts, off by default)</span>
+        </label>
       </div>
     </div>
     <div id="fsChangePwWrap" style="display:none;margin-bottom:10px;">
@@ -482,6 +486,12 @@ function renderSupervisorScopes(selected){
 }
 function getSupervisorScopesFromForm(){
   return Array.from(document.querySelectorAll('#supervisorScopesChecks input:checked')).map(i=>i.value);
+}
+function supervisorDiscountAllowed(overrides){
+  if (!overrides || typeof overrides !== 'object') return false;
+  return ['booking', 'restaurant', 'poolbar'].some(function(m){
+    return overrides[m] && overrides[m].canGiveDiscount === true;
+  });
 }
 function onFormRoleChange(){
   const role = document.getElementById('fsRole').value;
@@ -674,7 +684,7 @@ function openStaffModal(){
   onFormRoleChange();
   document.getElementById('fsPrivilege').value = '';
   document.getElementById('fsDept').value = '';
-  if (document.getElementById('fsRole').value === 'supervisor') renderSupervisorScopes([]);
+  if (document.getElementById('fsRole').value === 'supervisor') { renderSupervisorScopes([]); document.getElementById('fsCanDiscount').checked = false; }
   document.getElementById('fsNameErr').classList.remove('show');
   document.getElementById('fsEmailErr').classList.remove('show');
   document.getElementById('fsChangePwWrap').style.display = 'none';
@@ -715,6 +725,7 @@ function editStaff(id){
   if (s.role === 'supervisor') {
     const scopes = s.supervisorScopes || (s.privileges && s.privileges.supervisorScopes) || [];
     renderSupervisorScopes(scopes);
+    document.getElementById('fsCanDiscount').checked = supervisorDiscountAllowed(s.overrides);
   }
   document.getElementById('fsNameErr').classList.remove('show');
   document.getElementById('fsEmailErr').classList.remove('show');
@@ -763,6 +774,14 @@ async function saveStaffForm(){
     showToast('Pick at least one module for supervisor.', 'error');
     return;
   }
+  // discount toggle → per-module overrides (booking/restaurant/poolbar), merged so other overrides survive
+  const baseOverrides = Object.assign({}, (existing && existing.overrides) || {});
+  if (role === 'supervisor') {
+    const allowDisc = !!document.getElementById('fsCanDiscount').checked;
+    ['booking', 'restaurant', 'poolbar'].forEach(function(m){
+      baseOverrides[m] = Object.assign({}, baseOverrides[m] || {}, { canGiveDiscount: allowDisc });
+    });
+  }
   const data = {
     name, email,
     phone: document.getElementById('fsPhone').value.trim(),
@@ -773,7 +792,7 @@ async function saveStaffForm(){
     dept: document.getElementById('fsDept').value.trim(),
     status: document.getElementById('fsStatus').value,
     password: changingPw ? pw : undefined,
-    overrides: existing ? existing.overrides : {},
+    overrides: baseOverrides,
   };
   try {
     if (id) {

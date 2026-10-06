@@ -15,6 +15,11 @@ const Booking = require('../models/Booking');
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
 const { emit } = require('../utils/emit');
+const { hasPermission } = require('../config/permissions');
+
+function discountAllowed(user, module) {
+  return hasPermission(user, module, 'canGiveDiscount');
+}
 
 function recomputePayStatus(booking) {
   const total = ((booking.rate || 0) - (booking.discount || 0)) *
@@ -277,6 +282,9 @@ exports.listSales = asyncHandler(async (req, res) => {
 exports.createSale = asyncHandler(async (req, res) => {
   const { items, method, table, discount, roomNumber, guestName, guestPhone, guestId } = req.body;
 
+  if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'restaurant')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const discountPct = Number(discount) || 0;
   const total = subtotal * (1 - discountPct / 100);
@@ -676,6 +684,9 @@ exports.openTab = asyncHandler(async (req, res) => {
   console.log('[tab-trace] openTab req', { user: req.user ? req.user.name : '?', role: req.user ? req.user.role : '?', dept: req.user ? req.user.department : '?', items: Array.isArray(req.body.items) ? req.body.items.length : 0, table: req.body.table, method: req.body.method });
   const { items, discount, staff, table, notes, method, payMethod, roomNumber, guestName, guestPhone, createdBy } = req.body;
 
+  if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'restaurant')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
   const discountPct = Number(discount) || 0;
   const total = subtotal * (1 - discountPct / 100);
@@ -980,6 +991,9 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   }
 
   const { items, notes, table, discount } = req.body;
+  if (discount !== undefined && Number(discount) > Number(order.discount || 0) && !discountAllowed(req.user, 'restaurant')) {
+    return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
   if (items !== undefined) {
     order.items = items.map(it => ({ name: (it.name || '').trim(), qty: Number(it.qty), price: Number(it.price) }));
     order.subtotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);

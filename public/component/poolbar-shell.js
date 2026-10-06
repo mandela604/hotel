@@ -219,6 +219,7 @@
         initials: user.initials,
         role: user.role,
         privilege: (user.privileges && user.privileges.type) || user.privilege || null,
+        privileges: user.privileges || {},
         permissions: user.permissions || null,
       };
     } catch (err) {
