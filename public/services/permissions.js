@@ -127,11 +127,11 @@
     },
 
     modules: {
-      booking: {
-        admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canCheckin: true, canCheckout: true },
-        manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canCheckin: true, canCheckout: true },
-        supervisor: { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canCheckin: false, canCheckout: false },
-      },
+    booking: {
+      admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canCheckin: true, canCheckout: true },
+      manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canCheckin: true, canCheckout: true },
+      supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canCheckin: false, canCheckout: false },
+    },
       procurement: {
         admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canReject: true },
         manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canReject: true },
