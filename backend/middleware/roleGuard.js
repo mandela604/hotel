@@ -144,6 +144,10 @@ function privilegeGuard(module, action) {
     /* staff — privilege-based */
     if (role === 'staff') {
       const base = Object.assign({}, PERMISSIONS.roles.staff);
+      // module-level staff override (e.g. restaurant/poolbar allow tab create/edit)
+      if (module && PERMISSIONS.modules[module] && PERMISSIONS.modules[module].staff) {
+        Object.assign(base, PERMISSIONS.modules[module].staff);
+      }
       if (privType && PERMISSIONS.privileges[privType] && PERMISSIONS.privileges[privType][module]) {
         Object.assign(base, PERMISSIONS.privileges[privType][module]);
       }
