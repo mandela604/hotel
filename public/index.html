@@ -328,6 +328,21 @@ async function init(){
         if (sess && sess.name) userName = sess.name;
         if (sess && sess.privileges && Array.isArray(sess.privileges.supervisorScopes)) supervisorScopes = sess.privileges.supervisorScopes;
         else if (sess && Array.isArray(sess.supervisorScopes)) supervisorScopes = sess.supervisorScopes;
+        // index (overview) is admin/manager/supervisor only — bounce staff to their dept dashboard
+        if (userRole && userRole !== 'admin' && userRole !== 'manager' && userRole !== 'supervisor') {
+          const dept = String((sess && sess.department) || '').toLowerCase();
+          const priv = (sess && sess.privileges && sess.privileges.type) || '';
+          let target = 'booking/booking-rooms.html';
+          if (dept === 'pool bar' || priv === 'pool_bar_staff' || (priv === 'waiter' && dept.indexOf('pool') >= 0)) target = 'poolbar/poolbar-dashboard.html';
+          else if (dept === 'restaurant' || priv === 'restaurant_staff' || (priv === 'waiter' && dept.indexOf('restaurant') >= 0)) target = 'restaurant/restaurant-dashboard.html';
+          else if (dept === 'kitchen' || priv === 'chef') target = 'kitchen/kitchen-dashboard.html';
+          else if (dept === 'store' || priv === 'store_keeper') target = 'store/store-dashboard.html';
+          else if (dept === 'procurement' || priv === 'procurement_manager') target = 'procurement/procurement-dashboard.html';
+          else if (dept === 'accounts' || priv === 'accountant') target = 'accounting/accounting-dashboard.html';
+          else if (dept === 'gym' || priv === 'gym_attendant') target = 'gym/gym-dashboard.html';
+          window.location.replace(target);
+          return;
+        }
       }
     } catch(e){}
   } catch (e) {}
