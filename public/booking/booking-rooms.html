@@ -652,10 +652,89 @@ document.addEventListener('click', function(e){
   if (w && !w.contains(e.target)) closeBell();
 });
 
+function roomCardHtml(r, st, bk, cands, p) {
+      var todayStr2 = new Date().toISOString().split('T')[0];
+      const isUpcoming = bk && bk.status === 'reserved' && bk.checkin !== todayStr2;
+      const hasGuest = bk && bk.guest && (st !== 'available' || isUpcoming) && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
+      const upcomingCount = (cands || []).filter(b => b.status === 'reserved').length;
+      const upcomingBadge = (upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' more</span>' : '';
+      const upcomingLabel = isUpcoming ? '<span style="font-size:9px;color:#2f6fed;font-weight:700;margin-left:4px;">UPCOMING</span>' : '';
+
+      const guestBlock = hasGuest
+        ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + upcomingBadge + upcomingLabel + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
+        : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : st === 'cleaning' ? 'Under cleaning' : st === 'checkout' ? 'Checked out — awaiting cleaning' : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
+
+      const isMgr = (getSession() && /^(manager|admin)$/i.test(getSession().role||'')) || p.canEditRoom;
+      const editIcon = isMgr ? '<button class="room-edit-icon" title="Edit room" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i></button>' : '';
+      let acts = '';
+      const canBook = st === 'available' || st === 'reserved' || st === 'checkedin';
+      if (canBook) {
+        acts = '<div class="room-acts">' +
+          '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' +
+          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
+          '</div>';
+      } else {
+        acts = '<div class="room-acts">' +
+          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
+          '</div>';
+      }
+
+      // Card click opens booking modal — occupied fills guest details, available opens new booking
+      var clickFn = (bk && bk.stayId) ? 'openReservedBooking(\'' + bk.stayId + '\')' : 'openBookingFromCard(\'' + r.num + '\')';
+      return '<div class="room-card ' + st + '" onclick="' + clickFn + '" style="cursor:pointer;">' +
+        '<div class="room-card-head">' +
+          '<div class="room-num">' + r.num + '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px;"><span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' + editIcon + '</div>' +
+        '</div>' +
+        '<div class="room-type-lbl">' + r.type + '</div>' +
+        '<div class="room-guest-block">' + guestBlock + '</div>' +
+        '<div class="room-rate"><span>Rate</span> ' + fmtN(r.rate) + '/night</div>' +
+        acts +
+      '</div>';
+}
+
 function renderRoomGrid(filter) {
   const p = applyPermissionUI();
   const typeF = document.getElementById('roomTypeFilter').value || '';
   const q     = document.getElementById('roomSearch').value.trim().toLowerCase();
+
+  // Reserved filter lists EVERY reservation (like All Bookings) — not just today's rooms
+  if (filter === 'reserved') {
+    var resList = bookings.filter(function(b){ return b.status === 'reserved' && b.guest; })
+      .sort(function(a,b){ return String(a.checkin||'').localeCompare(String(b.checkin||'')) || ((a.createdAt||0)-(b.createdAt||0)); });
+    var resFiltered = resList.filter(function(bk){
+      var r = allRooms.find(function(x){ return x.num === bk.room; });
+      var mt = !typeF || (r ? r.type === typeF : (bk.type || '') === typeF);
+      var mq = !q || String(bk.room||'').toLowerCase().includes(q) || String(bk.guest||'').toLowerCase().includes(q);
+      return mt && mq;
+    });
+    document.getElementById('roomsTitle').textContent = 'Reserved Rooms';
+    document.getElementById('roomsCount').textContent  = resFiltered.length + ' reservations';
+    var resTotal = resFiltered.length;
+    var resStart = (roomsPage - 1) * PAGE_ROOMS;
+    var resPage  = resFiltered.slice(resStart, resStart + PAGE_ROOMS);
+    var resGrid  = document.getElementById('roomGrid');
+    if (!resPage.length) {
+      resGrid.innerHTML = '<div class="room-empty">No reservations match these filters.</div>';
+    } else {
+      resGrid.innerHTML = resPage.map(function(bk){
+        var r = allRooms.find(function(x){ return x.num === bk.room; }) || { num: bk.room, type: bk.type || '', rate: bk.rate || 0, notes: '' };
+        var cands = bookings.filter(function(b){ return b.room === bk.room; });
+        return roomCardHtml(r, 'reserved', bk, cands, p);
+      }).join('');
+    }
+    renderPagination('roomPageBtns', 'roomPaginLabel', roomsPage, resTotal, PAGE_ROOMS, function(pg) {
+      roomsPage = pg;
+      renderRoomGrid(roomFilter);
+    });
+    updateStatPills();
+    renderBell();
+    if (shell.setPendingBadge) {
+      shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
+    }
+    return;
+  }
+
   const filtered = allRooms.filter(r => {
     const st = getRoomStatus(r.num) || 'available';
     const mf = filter === 'all' || st === filter;
@@ -699,42 +778,7 @@ function renderRoomGrid(filter) {
           }
         }
       }
-      const isUpcoming = bk && bk.status === 'reserved' && bk.checkin !== todayStr2;
-      const hasGuest = bk && bk.guest && (st !== 'available' || isUpcoming) && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
-      const upcomingCount = cands.filter(b => b.status === 'reserved').length;
-      const upcomingBadge = (upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' more</span>' : '';
-      const upcomingLabel = isUpcoming ? '<span style="font-size:9px;color:#2f6fed;font-weight:700;margin-left:4px;">UPCOMING</span>' : '';
-
-      const guestBlock = hasGuest
-        ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + upcomingBadge + upcomingLabel + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
-        : '<div class="room-guest-empty">' + (st === 'maintenance' ? (r.notes || (bk && bk.notes) || 'Under maintenance') : st === 'cleaning' ? 'Under cleaning' : st === 'checkout' ? 'Checked out — awaiting cleaning' : 'No active booking') + '</div><div class="room-dates">&nbsp;</div>';
-
-      const isMgr = (getSession() && /^(manager|admin)$/i.test(getSession().role||'')) || p.canEditRoom;
-      const editIcon = isMgr ? '<button class="room-edit-icon" title="Edit room" onclick="event.stopPropagation();openRoomModal(\'edit\',\'' + r.num + '\')"><i class="fa-solid fa-pen"></i></button>' : '';
-      let acts = '';
-      const canBook = st === 'available' || st === 'reserved' || st === 'checkedin';
-      if (canBook) {
-        acts = '<div class="room-acts">' +
-          '<button class="room-act-btn primary" onclick="event.stopPropagation();openBookingForRoom(\'' + r.num + '\')"><i class="fa-solid fa-clipboard-check"></i> Book</button>' +
-          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
-          '</div>';
-      } else {
-        acts = '<div class="room-acts">' +
-          '<button class="room-act-btn" onclick="event.stopPropagation();openRoomStatusModal(\'' + r.num + '\')"><i class="fa-solid fa-gear"></i> Status</button>' +
-          '</div>';
-      }
-
-      // Card click opens booking modal — occupied fills guest details, available opens new booking
-      return '<div class="room-card ' + st + '" onclick="openBookingFromCard(\'' + r.num + '\')" style="cursor:pointer;">' +
-        '<div class="room-card-head">' +
-          '<div class="room-num">' + r.num + '</div>' +
-          '<div style="display:flex;align-items:center;gap:6px;"><span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' + editIcon + '</div>' +
-        '</div>' +
-        '<div class="room-type-lbl">' + r.type + '</div>' +
-        '<div class="room-guest-block">' + guestBlock + '</div>' +
-        '<div class="room-rate"><span>Rate</span> ' + fmtN(r.rate) + '/night</div>' +
-        acts +
-      '</div>';
+      return roomCardHtml(r, st, bk, cands, p);
     }).join('');
   }
 
@@ -809,6 +853,14 @@ function openBookingFromCard(num) {
   } else {
     bookingModal.openNew({ room: num });
   }
+}
+
+// Open one exact reservation (used by the Reserved filter cards)
+function openReservedBooking(key) {
+  const bk = bookings.find(function(b){ return String(b.stayId || b._id || b.id || b.room) === String(key); });
+  if (!bk) { showToast('Reservation not found — refreshing.', 'info'); refreshDataAndRender(); return; }
+  bookingModal.setSession(getSession());
+  try { bookingModal.openEdit(bk); } catch(e) { bookingModal.openView(bk); }
 }
 
 /* ═══════════════════════════════════════════════
