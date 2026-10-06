@@ -8,6 +8,13 @@ const canManage = roleGuard('admin', 'manager');
 // Reads: any authenticated user (both depts need it to sell)
 router.get('/', ctrl.listFoodMenu);
 
+// Categories must come before /:id so "categories" isn't treated as an id
+router.get('/categories', ctrl.listCategories);
+router.post('/categories', canManage, ctrl.addCategory);
+router.put('/categories/:id', canManage, ctrl.renameCategory);
+router.patch('/categories/:id', canManage, ctrl.renameCategory);
+router.delete('/categories/:id', canManage, ctrl.deleteCategory);
+
 // Writes: admin/manager only (entered once, centrally)
 router.post('/', canManage, ctrl.addFoodMenuItem);
 router.put('/:id', canManage, ctrl.updateFoodMenuItem);

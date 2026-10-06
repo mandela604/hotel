@@ -65,7 +65,10 @@ tr:last-child td{border-bottom:none;}
 <div class="panel">
 <div class="panel-head">
 <div><div class="panel-title">Shared Food Menu</div><div class="panel-sub" id="foodCount">—</div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;">
+<button class="btn btn-outline btn-sm" id="btnCats" onclick="openCatModal()"><i class="fa-solid fa-tags"></i> Categories</button>
 <button class="btn btn-primary btn-sm" id="btnAddFood" onclick="openFoodModal()"><i class="fa-solid fa-plus"></i> Add Food</button>
+</div>
 </div>
 <div style="overflow-x:auto;"><table>
 <thead><tr><th>Name</th><th>Category</th><th style="text-align:right;">Price</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
@@ -80,12 +83,25 @@ tr:last-child td{border-bottom:none;}
 <div class="modal-title" id="foodModalTitle">Add Food</div>
 <input type="hidden" id="ffId">
 <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="ffName" placeholder="e.g. Jollof Rice"></div>
-<div class="form-group"><label class="form-label">Category</label><input class="form-input" id="ffCategory" placeholder="Main" value="Main"></div>
+<div class="form-group"><label class="form-label">Category</label><select class="form-select" id="ffCategory"><option>Main</option></select></div>
 <div class="form-group"><label class="form-label">Price (₦)</label><input class="form-input" id="ffPrice" type="number" min="0" step="50" placeholder="0"></div>
 <div class="form-group"><label class="form-label">Available</label><select class="form-select" id="ffAvail"><option value="1">Yes</option><option value="0">No</option></select></div>
 <div class="modal-footer">
-<button class="btn btn-outline" onclick="closeFoodModal()">Cancel</button>
-<button class="btn btn-primary" onclick="saveFood()"><i class="fa-solid fa-check"></i> Save</button>
+<button class="btn btn-outline" id="foodCancelBtn" onclick="closeFoodModal()">Cancel</button>
+<button class="btn btn-primary" id="foodSaveBtn" onclick="saveFood()"><i class="fa-solid fa-check"></i> Save</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="catModal">
+<div class="modal">
+<div class="modal-title">Food Categories</div>
+<div id="catList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+<div style="display:flex;gap:8px;">
+<input class="form-input" id="catName" placeholder="New category name" style="flex:1;">
+<button class="btn btn-primary btn-sm" id="catAddBtn" onclick="addCategory()"><i class="fa-solid fa-plus"></i> Add</button>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline" onclick="closeCatModal()">Close</button>
 </div>
 </div>
 </div>
@@ -135,27 +151,86 @@ async function loadFood(){
     loadFood._rows=rows;
   }catch(e){ document.getElementById('foodBody').innerHTML='<tr><td colspan="5" class="empty">Failed to load: '+esc(e.message)+'</td></tr>'; }
 }
+function setBusy(btn, busy, label){
+  if(!btn) return;
+  if(busy){ btn.dataset.orig=btn.innerHTML; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; btn.disabled=true; }
+  else { if(btn.dataset.orig) btn.innerHTML=btn.dataset.orig; btn.disabled=false; }
+}
+async function loadCategories(selected){
+  try{
+    var j=await api('GET','/api/foodmenu/categories');
+    var cats=j.data||['Main'];
+    var sel=document.getElementById('ffCategory');
+    var cur=selected||sel.value||'Main';
+    sel.innerHTML=cats.map(function(c){ return '<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>'; }).join('');
+    if(cats.indexOf(cur)===-1){ sel.innerHTML='<option selected>'+esc(cur)+'</option>'+sel.innerHTML; }
+    return cats;
+  }catch(e){ return ['Main']; }
+}
 window.openFoodModal=function(id){
   var rows=loadFood._rows||[];
   var f=id?rows.find(function(x){return x.id===id;}):null;
   document.getElementById('foodModalTitle').textContent=f?'Edit Food':'Add Food';
   document.getElementById('ffId').value=f?f.id:'';
   document.getElementById('ffName').value=f?f.name:'';
-  document.getElementById('ffCategory').value=f?(f.category||'Main'):'Main';
+  loadCategories(f?(f.category||'Main'):'Main');
   document.getElementById('ffPrice').value=f?f.price:'';
   document.getElementById('ffAvail').value=(f&&f.available===false)?'0':'1';
   document.getElementById('foodModal').classList.add('show');
 };
 window.closeFoodModal=function(){ document.getElementById('foodModal').classList.remove('show'); };
 window.saveFood=async function(){
+  var btn=document.getElementById('foodSaveBtn');
   var id=document.getElementById('ffId').value;
-  var body={name:document.getElementById('ffName').value.trim(),category:document.getElementById('ffCategory').value.trim()||'Main',price:Number(document.getElementById('ffPrice').value)||0,available:document.getElementById('ffAvail').value==='1'};
+  var body={name:document.getElementById('ffName').value.trim(),category:document.getElementById('ffCategory').value||'Main',price:Number(document.getElementById('ffPrice').value)||0,available:document.getElementById('ffAvail').value==='1'};
   if(!body.name){ toast('Enter a name.','error'); return; }
+  setBusy(btn,true);
   try{
     if(id) await api('PUT','/api/foodmenu/'+encodeURIComponent(id),body);
     else await api('POST','/api/foodmenu',body);
     closeFoodModal(); toast(id?'Food updated.':'Food added — live in both departments.'); loadFood();
   }catch(e){ toast(e.message,'error'); }
+  finally{ setBusy(btn,false); }
+};
+window.openCatModal=function(){
+  document.getElementById('catModal').classList.add('show');
+  loadCatList();
+};
+window.closeCatModal=function(){ document.getElementById('catModal').classList.remove('show'); };
+async function loadCatList(){
+  try{
+    var j=await api('GET','/api/foodmenu/categories');
+    var cats=j.data||[];
+    document.getElementById('catList').innerHTML=cats.length?cats.map(function(c){
+      var safe=esc(c).replace(/'/g,"\\'");
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">'+
+        '<span style="flex:1;font-weight:700;" data-cat-name="'+esc(c)+'">'+esc(c)+'</span>'+
+        '<button class="icon-btn" title="Rename" onclick="renameCategory(\''+safe+'\')"><i class="fa-solid fa-pen"></i></button>'+
+        '<button class="icon-btn del" title="Delete" onclick="deleteCategory(\''+safe+'\')"><i class="fa-solid fa-trash"></i></button></div>';
+    }).join(''):'<div class="empty">No categories yet.</div>';
+  }catch(e){ document.getElementById('catList').innerHTML='<div class="empty">Failed to load: '+esc(e.message)+'</div>'; }
+}
+window.addCategory=async function(){
+  var btn=document.getElementById('catAddBtn');
+  var name=document.getElementById('catName').value.trim();
+  if(!name){ toast('Enter a category name.','error'); return; }
+  setBusy(btn,true,'Adding…');
+  try{ await api('POST','/api/foodmenu/categories',{name:name}); document.getElementById('catName').value=''; loadCatList(); loadCategories(name); toast('Category added.'); }
+  catch(e){ toast(e.message,'error'); }
+  finally{ setBusy(btn,false); }
+};
+window.renameCategory=async function(oldName){
+  var el=document.querySelector('[data-cat-name="'+oldName.replace(/"/g,'\\"')+'"]');
+  var next=prompt('Rename "'+oldName+'" to:',oldName);
+  if(!next||!next.trim()||next.trim()===oldName) return;
+  try{ await api('PUT','/api/foodmenu/categories/'+encodeURIComponent(oldName),{name:next.trim()}); loadCatList(); loadCategories(next.trim()); loadFood(); toast('Category renamed.'); }
+  catch(e){ toast(e.message,'error'); }
+};
+window.deleteCategory=async function(name){
+  var reassign=prompt('Delete "'+name+'"? Foods move to (type a category):','Main');
+  if(reassign===null) return;
+  try{ await api('DELETE','/api/foodmenu/categories/'+encodeURIComponent(name),{reassignTo:(reassign||'Main').trim()||'Main'}); loadCatList(); loadCategories('Main'); loadFood(); toast('Category deleted.'); }
+  catch(e){ toast(e.message,'error'); }
 };
 window.toggleFood=async function(id,to){
   try{ await api('PATCH','/api/foodmenu/'+encodeURIComponent(id),{available:!!to}); loadFood(); }
