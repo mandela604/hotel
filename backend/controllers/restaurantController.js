@@ -673,6 +673,7 @@ exports.listOrders = asyncHandler(async (req, res) => {
 });
 
 exports.openTab = asyncHandler(async (req, res) => {
+  console.log('[tab-trace] openTab req', { user: req.user ? req.user.name : '?', role: req.user ? req.user.role : '?', dept: req.user ? req.user.department : '?', items: Array.isArray(req.body.items) ? req.body.items.length : 0, table: req.body.table, method: req.body.method });
   const { items, discount, staff, table, notes, method, payMethod, roomNumber, guestName, guestPhone, createdBy } = req.body;
 
   const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
@@ -804,8 +805,10 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
 });
 
 exports.payOrder = asyncHandler(async (req, res) => {
+  console.log('[tab-trace] payOrder req', { id: req.params.id, user: req.user ? req.user.name : '?', role: req.user ? req.user.role : '?', dept: req.user ? req.user.department : '?', method: req.body.method });
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
-  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!order) { console.log('[tab-trace] payOrder 404 — order not found:', req.params.id); return res.status(404).json({ success: false, error: 'Order not found' }); }
+  console.log('[tab-trace] payOrder order found', { id: order.id, status: order.status });
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
   if (order.status !== 'open' && order.status !== 'served') {

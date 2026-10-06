@@ -289,12 +289,14 @@ function dashboardKPIs() {
     }
     let body = null;
     try { body = await res.json(); } catch (e) { /* empty/non-JSON body */ }
+    console.log('[tab-trace] →', options.method || 'GET', path, 'status:', res.status);
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        console.error('[RestaurantService] Auth failed on:', path, 'status:', res.status, 'body:', body);
+        console.error('[tab-trace] ✖ AUTH FAILED:', options.method || 'GET', path, 'status:', res.status, 'body:', JSON.stringify(body));
         window.location.href = '/login.html';
         return;
       }
+      console.error('[tab-trace] ✖ FAILED:', options.method || 'GET', path, 'status:', res.status, 'body:', JSON.stringify(body));
       const err = new Error((body && body.error) || ('Request failed (' + res.status + ')'));
       err.status = res.status;
       throw err;
@@ -444,7 +446,9 @@ function dashboardKPIs() {
   }
 
   async function openTab(payload) {
+    console.log('[tab-trace] openTab payload →', JSON.stringify({ items: (payload.items || []).length, table: payload.table, method: payload.method, staff: payload.staff }));
     const res = await post('/orders', payload);
+    console.log('[tab-trace] openTab response ←', JSON.stringify({ ok: !!(res && res.data), id: res && res.data && res.data.id }));
     state.orders.unshift(res.data);
     // Reload stock so live counts stay accurate
     try { await loadAll(); } catch (e) { emitChange('order:open'); }
@@ -460,7 +464,9 @@ function dashboardKPIs() {
   }
   async function payOrder(orderId, methodOrOpts) {
     const payload = typeof methodOrOpts === 'string' ? { method: methodOrOpts } : methodOrOpts;
+    console.log('[tab-trace] payOrder payload →', orderId, JSON.stringify(payload));
     const res = await post('/orders/' + encodeURIComponent(orderId) + '/pay', payload);
+    console.log('[tab-trace] payOrder response ←', JSON.stringify({ ok: !!(res && (res.data || res.order)), id: orderId }));
     const idx = state.orders.findIndex(function (o) { return o.id === orderId; });
     if (idx > -1) state.orders[idx] = res.data || res.order || res;
     if (res.sale) state.sales.unshift(res.sale);
