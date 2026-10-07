@@ -26,6 +26,7 @@ router.post('/shifts',              inDept, privilegeGuard('accounting', 'canCre
 router.put('/shifts/:id/reconcile', inDept, privilegeGuard('accounting', 'canEdit'),   v.validateReconcileShift, ctrl.reconcileShift);
 
 /* ── Procurement Finance Review — accountant approves pending PRs without entering procurement ── */
+router.get('/stock-sheet',                ctrl.stockSheet);
 router.get('/procurement-pending',            inDept, privilegeGuard('accounting', 'canView'),    ctrl.listProcurementPending);
 router.post('/procurement/:id/approve',       inDept, privilegeGuard('accounting', 'canApprove'), ctrl.approveProcurement);
 router.post('/procurement/:id/reject',        inDept, privilegeGuard('accounting', 'canApprove'), ctrl.rejectProcurement);

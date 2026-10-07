@@ -1,10 +1,17 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
 const StoreStock = require('../models/StoreStock');
+const StoreMovement = require('../models/StoreMovement');
 const Requisition = require('../models/Requisition');
 const Counter = require('../models/Counter');
 const Category = require('../models/Category');
 const { emit } = require('../utils/emit');
+
+async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
+  try {
+    await StoreMovement.create({ date: todayDisplay(), item, qtyIn, qtyOut, balance, reason });
+  } catch (e) { /* ledger is best-effort, never block the request */ }
+}
 
 const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
 
@@ -103,6 +110,7 @@ exports.addStock = asyncHandler(async (req, res) => {
     cost: Number(cost || price) || 0,
     min: Number(min) || 0,
   });
+  if ((Number(item.qty) || 0) > 0) await logStoreMovement(item.name, Number(item.qty), 0, Number(item.qty), 'Opening stock');
   emit(req, 'store', 'store:updated', { action: 'addStock', data: item });
   res.status(201).json({ success: true, data: item });
 });
@@ -119,8 +127,13 @@ exports.updateStock = asyncHandler(async (req, res) => {
   if (cost !== undefined || price !== undefined) updates.cost = Number(cost !== undefined ? cost : price);
   if (qty !== undefined) updates.qty = Number(qty);
 
+  const beforeDoc = await StoreStock.findOne({ id: req.params.id });
+  if (!beforeDoc) throw new ApiError(404, 'Stock item not found.');
   const item = await StoreStock.findOneAndUpdate({ id: req.params.id }, updates, { new: true, runValidators: true });
-  if (!item) throw new ApiError(404, 'Stock item not found.');
+  if (updates.qty !== undefined && Number(updates.qty) !== Number(beforeDoc.qty)) {
+    const dq = Number(item.qty) - Number(beforeDoc.qty);
+    await logStoreMovement(item.name, dq > 0 ? dq : 0, dq < 0 ? Math.abs(dq) : 0, item.qty, 'Manual update');
+  }
   emit(req, 'store', 'store:updated', { action: 'updateStock', data: item });
   res.json({ success: true, data: item });
 });
@@ -339,6 +352,7 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
     if (entry.delta > 0 && entry.stockItem) {
       entry.stockItem.qty = Math.max(0, entry.stockItem.qty - entry.delta);
       await entry.stockItem.save();
+      await logStoreMovement(entry.stockItem.name, 0, entry.delta, entry.stockItem.qty, `Issued (${row.requisitionNo} → ${row.dept || ''})`);
     }
     entry.it.issuedQty = entry.issuedDisplay;
     if (entry.stockItem && !entry.it.cost) {
@@ -422,6 +436,7 @@ exports.receiveStock = asyncHandler(async (req, res) => {
   if (Object.keys(setFields).length) updates.$set = setFields;
   const item = await StoreStock.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
   if (!item) throw new ApiError(404, 'Stock item not found.');
+  await logStoreMovement(item.name, addQty, 0, item.qty, 'Stock received');
   emit(req, 'store', 'store:updated', { action: 'receiveStock', data: item });
   res.json({ success: true, data: item });
 });
@@ -445,6 +460,7 @@ exports.adjustStock = asyncHandler(async (req, res) => {
   const before = item.qty;
   item.qty = nextQty;
   await item.save();
+  await logStoreMovement(item.name, d > 0 ? d : 0, d < 0 ? Math.abs(d) : 0, item.qty, `Adjustment — ${reason}`);
   console.log(`[Store] Adjust ${item.name} ${before} → ${item.qty} (${d > 0 ? '+' + d : d} — ${reason}) by ${req.user ? req.user.name : 'Admin'}`);
   emit(req, 'store', 'store:updated', { action: 'adjustStock', data: item });
   res.json({ success: true, data: item, before, delta: d });

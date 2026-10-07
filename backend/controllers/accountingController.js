@@ -685,6 +685,99 @@ exports.listCogs = asyncHandler(async (req, res) => {
   res.json({ success: true, count: rows.length, data: rows });
 });
 
+/* ── Daily Stock Sheet — mirrors the accountant's paper sheet ──
+   GET /api/accounting/stock-sheet?dept=restaurant&date=YYYY-MM-DD
+   One row per item: opening, added, total, price, soldQty, totalSales, closing.
+   opening = last balance before the day (or implied from first movement,
+   or live qty if untouched). closing = last balance of the day.
+   soldQty = opening + added - closing (always tallies by construction). */
+const STOCK_SHEET_DEPTS = {
+  restaurant: { stock: () => require('../models/RestaurantStock'), movement: () => require('../models/RestaurantMovement'), saleDept: 'restaurant' },
+  poolbar:    { stock: () => require('../models/PoolbarStock'), movement: () => require('../models/PoolbarMovement'), saleDept: 'poolbar' },
+  store:      { stock: () => require('../models/StoreStock'), movement: () => require('../models/StoreMovement'), saleDept: null },
+  kitchen:    { stock: () => require('../models/KitchenStock'), movement: () => require('../models/KitchenMovement'), saleDept: null },
+};
+
+exports.stockSheet = asyncHandler(async (req, res) => {
+  const dept = String(req.query.dept || 'restaurant').toLowerCase();
+  const cfg = STOCK_SHEET_DEPTS[dept];
+  if (!cfg) return res.status(400).json({ success: false, error: 'dept must be restaurant, poolbar, store, or kitchen' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : lagosDate(new Date());
+
+  const Stock = cfg.stock();
+  const Movement = cfg.movement();
+  const [items, moves] = await Promise.all([
+    Stock.find().sort({ name: 1 }).lean(),
+    Movement.find().sort({ createdAt: 1 }).lean(),
+  ]);
+
+  const movesByItem = {};
+  for (const m of moves) {
+    const k = String(m.item || '').toLowerCase();
+    if (!movesByItem[k]) movesByItem[k] = [];
+    movesByItem[k].push(m);
+  }
+
+  // Sales revenue per item for the day (completed + pending room-charge; voided excluded)
+  const salesByItem = {};
+  if (cfg.saleDept) {
+    const sales = await Sale.find({ department: cfg.saleDept, status: { $in: ['completed', 'pending'] } }).lean();
+    for (const s of sales) {
+      let day = '';
+      try { day = lagosDate(s.createdAt); } catch (e) { continue; }
+      if (day !== date) continue;
+      for (const it of (s.items || [])) {
+        const k = String(it.name || '').toLowerCase();
+        const q = Number(it.qty) || 0, p = Number(it.price) || 0;
+        if (!salesByItem[k]) salesByItem[k] = { qty: 0, revenue: 0 };
+        salesByItem[k].qty += q;
+        salesByItem[k].revenue += q * p;
+      }
+    }
+  }
+
+  const rows = items.map(function (it) {
+    const k = String(it.name || '').toLowerCase();
+    const list = movesByItem[k] || [];
+    const dayMoves = list.filter(function (m) {
+      try { return lagosDate(m.createdAt) === date; } catch (e) { return false; }
+    });
+    let opening;
+    const prior = list.filter(function (m) {
+      try { return lagosDate(m.createdAt) < date; } catch (e) { return false; }
+    });
+    if (prior.length) {
+      opening = Number(prior[prior.length - 1].balance) || 0;
+    } else if (dayMoves.length) {
+      const f = dayMoves[0];
+      opening = (Number(f.balance) || 0) + (Number(f.qtyOut) || 0) - (Number(f.qtyIn) || 0);
+    } else {
+      opening = Number(it.qty) || 0;
+    }
+    const added = dayMoves.reduce(function (s, m) { return s + (Number(m.qtyIn) || 0); }, 0);
+    const closing = dayMoves.length ? (Number(dayMoves[dayMoves.length - 1].balance) || 0) : opening;
+    const total = opening + added;
+    const soldQty = total - closing;
+    const price = Number(it.price) || Number(it.cost) || 0;
+    const sale = salesByItem[k] || { qty: 0, revenue: 0 };
+    return {
+      item: it.name, unit: it.unit || '',
+      opening, added, total, price,
+      soldQty, totalSales: Math.round(sale.revenue * 100) / 100,
+      closing,
+    };
+  });
+
+  const totals = rows.reduce(function (s, r) {
+    s.opening += r.opening; s.added += r.added; s.total += r.total;
+    s.soldQty += r.soldQty; s.totalSales += r.totalSales; s.closing += r.closing;
+    return s;
+  }, { opening: 0, added: 0, total: 0, soldQty: 0, totalSales: 0, closing: 0 });
+  totals.totalSales = Math.round(totals.totalSales * 100) / 100;
+
+  res.json({ success: true, dept, date, count: rows.length, rows, totals });
+});
+
 exports.procurementPnl = asyncHandler(async (req, res) => {
   const { from, to } = req.query;
 
