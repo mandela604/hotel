@@ -14,7 +14,8 @@
     { key: 'recon',     label: 'Shift Reconciliation',  href: 'accounting-reconciliation.html', icon: 'fa-solid fa-clock-rotate-left', badgeKey: 'pending' },
     { key: 'pnl',       label: 'Profit & Loss',         href: 'accounting-pnl.html',             icon: 'fa-solid fa-scale-balanced' },
     { key: 'tx',        label: 'Transactions',          href: 'accounting-transactions.html',   icon: 'fa-solid fa-receipt' },
-    { key: 'reports',   label: 'Reports',               href: 'accounting-reports.html',        icon: 'fa-solid fa-file-lines' },
+    { key: 'sheet',     label: 'Stock Sheet',           href: 'accounting-stock-sheet.html',     icon: 'fa-solid fa-clipboard-list' },
+    { key: 'reports',   label: 'Reports',               href: 'accounting-reports.html',         icon: 'fa-solid fa-file-lines' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";
