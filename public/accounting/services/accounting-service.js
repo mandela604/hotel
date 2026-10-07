@@ -85,12 +85,18 @@
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
 
     let res;
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 30000) : null;
     try {
-      res = await fetch(CONFIG.API_BASE + path, Object.assign({}, options, { headers }));
+      res = await fetch(CONFIG.API_BASE + path, Object.assign({}, options, { headers, credentials: 'include', signal: ctrl ? ctrl.signal : undefined }));
     } catch (networkErr) {
-      const err = new Error('Network error contacting server: ' + networkErr.message);
+      const err = new Error(networkErr && networkErr.name === 'AbortError'
+        ? 'Server took too long to respond (30s timeout) — try Refresh.'
+        : 'Network error contacting server: ' + (networkErr && networkErr.message));
       err.code = 'NETWORK_ERROR';
       throw err;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
 
     let body = null;

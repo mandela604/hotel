@@ -57,8 +57,9 @@ async function aggregateRoomRevenue(from, to) {
         if (!payDate) continue;
         if (from && payDate < from) continue;
         if (to && payDate > to) continue;
+        const shortRef = String(p.id || p.ts || '').replace(/[^A-Za-z0-9]/g, '').slice(-6).toUpperCase() || payDate.replace(/-/g, '');
         rows.push({
-          id: 'auto-room-' + b.room + '-' + (p.id || p.ts || payDate) + '-' + amt,
+          id: 'RM-' + b.room + '-' + amt + '-' + shortRef,
           date: payDate,
           department: 'Rooms & Bookings',
           description: 'Room ' + b.room + ' — ' + b.guest,
@@ -76,7 +77,7 @@ async function aggregateRoomRevenue(from, to) {
       if (from && payDate < from) continue;
       if (to && payDate > to) continue;
       rows.push({
-        id: 'auto-room-' + b.room + '-' + payDate + '-legacy',
+        id: 'RM-' + b.room + '-' + Number(b.paid) + '-' + payDate.replace(/-/g, ''),
         date: payDate,
         department: 'Rooms & Bookings',
         description: 'Room ' + b.room + ' — ' + b.guest,
