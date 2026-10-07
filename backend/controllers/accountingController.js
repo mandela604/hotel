@@ -230,11 +230,13 @@ exports.pnl = asyncHandler(async (req, res) => {
   const income = Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date) || a.department.localeCompare(b.department));
   console.log('[Accounting pnl] grouped income:', income.length, income.slice(0,5).map(r => r.date + '|' + r.department + '=' + r.amount + ' (' + (r.incomeItems||[]).length + ' items)'));
 
-  // ── Expenses: COGS (per-dept Cogs docs + legacy sale-item cost) + manual batch per day (expandable) ──
+  // ── Expenses: COGS (auto-posting removed — daily expenses entered manually;
+  // set AUTO_COGS=true once real unit costs exist). Cogs docs only count when enabled. ──
+  const { AUTO_COGS } = require('../utils/cogs');
   const cogsByDate = {};
   const cogsByDept = { kitchen: 0, restaurant: 0, poolbar: 0 };
   const cogsItems = {};
-  for (const c of (cogsRows || [])) {
+  for (const c of (AUTO_COGS ? (cogsRows || []) : [])) {
     const key = shiftKey(c.date || lagosDate(c.createdAt));
     const amt = Number(c.amount) || 0;
     if (amt <= 0) continue;
@@ -245,7 +247,7 @@ exports.pnl = asyncHandler(async (req, res) => {
     if (!cogsItems[key]) cogsItems[key] = [];
     cogsItems[key].push({ id: c.id, dept: c.dept, item: c.item, qty: c.qty, unitCost: c.unitCost, amount: amt, date: c.date, by: c.by || '' });
   }
-  for (const s of cogsSales) {
+  for (const s of (AUTO_COGS ? cogsSales : [])) {
     const key = shiftKey(lagosDate(s.createdAt));
     const cogs = (s.items || []).reduce((sum, it) => {
       if (Number(it.cost) > 0) return sum + Number(it.cost) * (Number(it.qty) || 0);
@@ -418,7 +420,10 @@ exports.summary = asyncHandler(async (req, res) => {
   const autoIncome = [...roomRows, ...restRows, ...poolRows, ...gymRows].reduce((s, r) => s + (Number(r.amount) || 0), 0);
   const manualIncomeTotal = manualIncome.reduce((s, r) => s + (Number(r.amount) || 0), 0);
   const totalIncome = autoIncome + manualIncomeTotal;
-  const cogs = await Sale.find({ status: 'completed' }).lean().then(sales => sales.reduce((sum, s) => sum + (s.items||[]).reduce((a,it)=> a + (Number(it.cost)||0)*(Number(it.qty)||0),0),0));
+  const { AUTO_COGS: AUTO_COGS_SUMMARY } = require('../utils/cogs');
+  const cogs = AUTO_COGS_SUMMARY
+    ? await Sale.find({ status: 'completed' }).lean().then(sales => sales.reduce((sum, s) => sum + (s.items||[]).reduce((a,it)=> a + (Number(it.cost)||0)*(Number(it.qty)||0),0),0))
+    : 0;
   const manualExpenseTotal = manualExpenses.reduce((s, r) => s + (Number(r.amount) || 0), 0);
   const totalExpenses = cogs + manualExpenseTotal;
   const openShifts = await Shift.countDocuments({ status: 'open' });

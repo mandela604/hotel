@@ -83,28 +83,10 @@ async function resolveStockForItems(items) {
 }
 
 async function deductResolvedStock(resolved, reason, by) {
-  const Cogs = require('../models/Cogs');
-  const { v4: uuidv4 } = require('uuid');
   for (const r of resolved) {
     r.stockItem.qty -= r.qty;
     await r.stockItem.save();
     await logMovement(r.stockItem.name, 0, r.qty, r.stockItem.qty, reason);
-    // composite sale: COGS already posted at produce time (produce-only), skip to avoid double-count
-    if (r.stockItem.isComposite) continue;
-    try {
-      const unitCost = Number(r.stockItem.costPrice ?? r.stockItem.cost ?? r.stockItem.unitCost ?? 0) || 0;
-      await Cogs.create({
-        id: 'COGS-' + uuidv4(),
-        dept: 'poolbar',
-        item: r.stockItem.name,
-        qty: r.qty,
-        unitCost,
-        amount: r.qty * unitCost,
-        date: new Date().toISOString().split('T')[0],
-        source: 'sale',
-        by: by || '',
-      });
-    } catch (e) {}
   }
 }
 
@@ -259,22 +241,6 @@ exports.deductStock = asyncHandler(async (req, res) => {
   const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
   await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
 
-  try {
-    const Cogs = require('../models/Cogs');
-    const { v4: uuidv4 } = require('uuid');
-    const unitCost = Number(item.costPrice ?? item.cost ?? item.unitCost ?? 0) || 0;
-    await Cogs.create({
-      id: 'COGS-' + uuidv4(),
-      dept: 'poolbar',
-      item: item.name,
-      qty: Number(qty),
-      unitCost,
-      amount: Number(qty) * unitCost,
-      date: new Date().toISOString().split('T')[0],
-      source: 'deductStock',
-      by: req.user ? req.user.name : '',
-    });
-  } catch (e) {}
   emit(req, 'poolbar', 'poolbar:updated', { action: 'deductStock', data: item });
   try {
     const io = req.app.get('io');
@@ -305,22 +271,6 @@ exports.deductStockById = asyncHandler(async (req, res) => {
   const fullReason = notes ? `${reason || 'Manual deduction'} — ${notes}` : (reason || 'Manual deduction');
   await logMovement(item.name, 0, Number(qty), item.qty, fullReason);
 
-  try {
-    const Cogs = require('../models/Cogs');
-    const { v4: uuidv4 } = require('uuid');
-    const unitCost = Number(item.costPrice ?? item.cost ?? item.unitCost ?? 0) || 0;
-    await Cogs.create({
-      id: 'COGS-' + uuidv4(),
-      dept: 'poolbar',
-      item: item.name,
-      qty: Number(qty),
-      unitCost,
-      amount: Number(qty) * unitCost,
-      date: new Date().toISOString().split('T')[0],
-      source: 'deductStock',
-      by: req.user ? req.user.name : '',
-    });
-  } catch (e) {}
   emit(req, 'poolbar', 'poolbar:updated', { action: 'deductStockById', data: item });
   res.json({ success: true, data: item });
 });
@@ -341,22 +291,8 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
   await logMovement(item.name, d > 0 ? d : 0, d < 0 ? Math.abs(d) : 0, item.qty, fullReason);
   if (d < 0) {
     try {
-      const Cogs = require('../models/Cogs');
-      const { v4: uuidv4 } = require('uuid');
-      const unitCost = Number(item.costPrice ?? item.cost ?? item.unitCost ?? 0) || 0;
-      await Cogs.create({
-        id: 'COGS-' + uuidv4(),
-        dept: 'poolbar',
-        item: item.name,
-        qty: Math.abs(d),
-        unitCost,
-        amount: Math.abs(d) * unitCost,
-        date: new Date().toISOString().split('T')[0],
-        source: 'deductStock',
-        by: req.user ? req.user.name : '',
-      });
       const io = req.app.get('io');
-      if (io) io.to('accounting').to('global').emit('accounting:updated', { action: 'cogs', dept: 'poolbar', item: item.name, qty: Math.abs(d) });
+      if (io) io.to('accounting').to('global').emit('accounting:updated', { action: 'stock', dept: 'poolbar', item: item.name, qty: Math.abs(d) });
     } catch (e) {}
   }
   emit(req, 'poolbar', 'poolbar:updated', { action: 'adjustStockById', data: item });
@@ -414,8 +350,6 @@ exports.produceComposite = asyncHandler(async (req, res) => {
     return c * (Number(qty) || 0);
   }
   let unitCost = 0;
-  const Cogs = require('../models/Cogs');
-  const { v4: uuidv4 } = require('uuid');
   for (const ing of item.recipe) {
     const base = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(ing.name)}$`, 'i') });
     const needBase = toBaseQty(base, Number(ing.qty), ing.unit);
@@ -423,20 +357,6 @@ exports.produceComposite = asyncHandler(async (req, res) => {
     base.qty -= needBase * n;
     await base.save();
     await logMovement(base.name, 0, needBase * n, base.qty, `Produce ${n}x ${item.name}`);
-    try {
-      const uc = unitCostFor(base, 1, ing.unit);
-      await Cogs.create({
-        id: 'COGS-' + uuidv4(),
-        dept: 'poolbar',
-        item: base.name + ' → ' + item.name,
-        qty: needBase * n,
-        unitCost: needBase > 0 ? (unitCostFor(base, Number(ing.qty), ing.unit) / Number(ing.qty) || uc) : uc,
-        amount: unitCostFor(base, Number(ing.qty), ing.unit) * n,
-        date: new Date().toISOString().split('T')[0],
-        source: 'produce',
-        by: req.user ? req.user.name : '',
-      });
-    } catch (e) {}
   }
   item.cost = Math.round(unitCost * 100) / 100;
   item.price = item.price || item.cost;

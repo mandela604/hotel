@@ -803,7 +803,8 @@ function renderExpenseLines() {
   const body = document.getElementById('expenseLinesBody');
   body.innerHTML = expenseLines.map((ln, i) => `
     <div style="display:grid;grid-template-columns:1.35fr 2fr 1fr 28px;gap:8px;align-items:center;margin-bottom:8px">
-      <select class="form-select" onchange="updateExpenseLine(${i},'category',this.value)">${EXPENSE_CATEGORIES.map(c=>`<option value="${c}" ${c===ln.category?'selected':''}>${c}</option>`).join('')}</select>
+      <input class="form-input" list="expCatList" placeholder="Type or pick…" value="${(ln.category||'').replace(/"/g,'&quot;')}" oninput="updateExpenseLine(${i},'category',this.value)">
+      <datalist id="expCatList">${EXPENSE_CATEGORIES.map(c=>`<option value="${c}">`).join('')}</datalist>
       <input class="form-input" type="text" placeholder="e.g. Diesel for generator" value="${ln.description.replace(/"/g,'&quot;')}" oninput="updateExpenseLine(${i},'description',this.value)">
       <input class="form-input" type="number" placeholder="0" min="0" value="${ln.amount}" oninput="updateExpenseLine(${i},'amount',this.value)">
       <button type="button" class="icon-btn del" style="height:36px" onclick="removeExpenseLine(${i})" title="Remove"><i class="fa-solid fa-xmark"></i></button>
@@ -958,7 +959,7 @@ async function saveEntry() {
     const ln = expenseLines[0];
     const amt = parseFloat(ln.amount);
     if (!ln.description.trim() || isNaN(amt) || amt <= 0) { showToast('Fill description and valid amount.', 'error'); return; }
-    const payload = { date, category: ln.category, description: ln.description.trim(), amount: amt, recordedBy: byExp || getSessionName() };
+    const payload = { date, category: (ln.category || '').trim() || 'Miscellaneous', description: ln.description.trim(), amount: amt, recordedBy: byExp || getSessionName() };
     setBtnLoading(saveBtn, true);
     try { await apiUpdateExpense(editId, payload); showToast('Expense updated.', 'success'); closeModal('entryModal'); editId = null; await reload(); } catch (err) { showToast('Failed to save: ' + err.message, 'error'); } finally { setBtnLoading(saveBtn, false); }
     return;
@@ -971,7 +972,7 @@ async function saveEntry() {
   setBtnLoading(saveBtn, true);
   try {
     for (const ln of valid) {
-      await apiAddExpense({ date, category: ln.category, description: ln.description.trim(), amount: parseFloat(ln.amount), recordedBy: byExp || getSessionName() });
+      await apiAddExpense({ date, category: (ln.category || '').trim() || 'Miscellaneous', description: ln.description.trim(), amount: parseFloat(ln.amount), recordedBy: byExp || getSessionName() });
     }
     showToast(`${valid.length} expense(s) saved.`, 'success');
     closeModal('entryModal'); editId = null; expensePage = 1; await reload();

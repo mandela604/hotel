@@ -5,8 +5,10 @@ function isNonEmptyString(v) { return typeof v === 'string' && v.trim().length >
 function isValidDept(v) {
   return ['Front Desk','Restaurant','Pool Bar','Gym','Other','Rooms & Bookings','Rooms'].includes(v);
 }
+var PRESET_CATEGORIES = ['Salaries & Wages','Utilities','Maintenance & Repairs','Marketing & Advertising','Supplies & Inventory','Insurance','Transport & Logistics','Miscellaneous'];
 function isValidCategory(v) {
-  return ['Salaries & Wages','Utilities','Maintenance & Repairs','Marketing & Advertising','Supplies & Inventory','Insurance','Transport & Logistics','Miscellaneous'].includes(v);
+  // Presets plus any custom typed category (free text, max 60 chars)
+  return typeof v === 'string' && v.trim().length > 0 && v.trim().length <= 60;
 }
 function isValidAmount(v) {
   const n = Number(v);

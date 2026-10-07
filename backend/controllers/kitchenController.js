@@ -140,22 +140,6 @@ exports.deductStock = asyncHandler(async (req, res) => {
     reason: notes ? `${reason} — ${notes}` : reason || 'Manual Deduction',
   });
 
-  try {
-    const Cogs = require('../models/Cogs');
-    const { v4: uuidv4 } = require('uuid');
-    const unitCost = Number(item.costPrice ?? item.cost ?? item.unitCost ?? 0) || 0;
-    await Cogs.create({
-      id: 'COGS-' + uuidv4(),
-      dept: 'kitchen',
-      item: item.name,
-      qty: Number(qty),
-      unitCost,
-      amount: Number(qty) * unitCost,
-      date: new Date().toISOString().split('T')[0],
-      source: 'deductStock',
-      by: req.user ? req.user.name : '',
-    });
-  } catch (e) {}
   emit(req, 'kitchen', 'kitchen:updated', { action: 'deductStock', data: item });
   try {
     const io = req.app.get('io');

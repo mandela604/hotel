@@ -225,22 +225,8 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
   await RestaurantMovement.create({ item: item.name, qtyIn: d > 0 ? d : 0, qtyOut: d < 0 ? Math.abs(d) : 0, balance: item.qty, reason: fullReason });
   if (d < 0) {
     try {
-      const Cogs = require('../models/Cogs');
-      const { v4: uuidv4 } = require('uuid');
-      const unitCost = Number(item.cost ?? item.costPrice ?? item.price ?? 0) || 0;
-      await Cogs.create({
-        id: 'COGS-' + uuidv4(),
-        dept: 'restaurant',
-        item: item.name,
-        qty: Math.abs(d),
-        unitCost,
-        amount: Math.abs(d) * unitCost,
-        date: new Date().toISOString().split('T')[0],
-        source: 'deductStock',
-        by: req.user ? req.user.name : '',
-      });
       const io = req.app.get('io');
-      if (io) io.to('accounting').to('global').emit('accounting:updated', { action: 'cogs', dept: 'restaurant', item: item.name, qty: Math.abs(d) });
+      if (io) io.to('accounting').to('global').emit('accounting:updated', { action: 'stock', dept: 'restaurant', item: item.name, qty: Math.abs(d) });
     } catch (e) {}
   }
   emit(req, 'restaurant', 'restaurant:updated', { action: 'adjustStockById', data: item });
@@ -321,22 +307,6 @@ exports.createSale = asyncHandler(async (req, res) => {
       balance: stockItem.qty,
       reason: `Sale ${id}`,
     });
-    try {
-      const Cogs = require('../models/Cogs');
-      const { v4: uuidv4 } = require('uuid');
-      const unitCost = Number(stockItem.cost ?? stockItem.costPrice ?? stockItem.price ?? costMap[itemName.toLowerCase()] ?? 0) || 0;
-      await Cogs.create({
-        id: 'COGS-' + uuidv4(),
-        dept: 'restaurant',
-        item: stockItem.name,
-        qty,
-        unitCost,
-        amount: qty * unitCost,
-        date: new Date().toISOString().split('T')[0],
-        source: 'sale',
-        by: req.user ? req.user.name : '',
-      });
-    } catch (e) {}
   }
 
   const sale = await Sale.create({
@@ -766,22 +736,6 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
         balance: stockItem.qty,
         reason: `Tab ${order.id} served`,
       });
-      try {
-        const Cogs = require('../models/Cogs');
-        const { v4: uuidv4 } = require('uuid');
-        const unitCost = Number(stockItem.cost ?? stockItem.costPrice ?? stockItem.price ?? costMap2[itemName.toLowerCase()] ?? 0) || 0;
-        await Cogs.create({
-          id: 'COGS-' + uuidv4(),
-          dept: 'restaurant',
-          item: stockItem.name,
-          qty,
-          unitCost,
-          amount: qty * unitCost,
-          date: new Date().toISOString().split('T')[0],
-          source: 'tab-served',
-          by: req.user ? req.user.name : '',
-        });
-      } catch (e) {}
     }
   }
 
