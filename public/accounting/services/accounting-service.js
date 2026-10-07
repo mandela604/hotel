@@ -202,19 +202,19 @@
   function buildTransactions(roomTx, restSales, poolSales, gymTx) {
     const out = [];
     (roomTx || []).forEach((r) => out.push({
-      id: r.id, dept: 'Rooms', desc: r.desc || r.description, amount: (r.amount != null ? r.amount : r.total), method: r.method || '', staff: r.staff || r.recordedBy || '', date: parseTxDate(r.date), status: r.status || 'completed',
+      id: r.id, dept: 'Rooms', desc: r.desc || r.description, amount: (r.amount != null ? r.amount : r.total), method: r.method || '', staff: r.staff || r.recordedBy || '', date: parseTxDate(r.date), ts: Number(r.ts) || 0, status: r.status || 'completed',
     }));
     (restSales || []).filter((s) => s.status !== 'voided').forEach((s) => {
       const desc = (s.items || []).map((i) => (i.meal || i.name) + ' \u00D7' + i.qty).join(', ') || s.description || 'Restaurant sale';
-      out.push({ id: s.id, dept: 'Restaurant', desc, amount: (s.total != null ? s.total : s.amount), method: s.method || '', staff: s.staff || s.recordedBy || '', date: parseTxDate(s.date), status: s.status || 'completed' });
+      out.push({ id: s.id, dept: 'Restaurant', desc, amount: (s.total != null ? s.total : s.amount), method: s.method || '', staff: s.staff || s.recordedBy || '', date: parseTxDate(s.date), ts: Number(s.ts) || 0, status: s.status || 'completed' });
     });
     (poolSales || []).filter((s) => s.status !== 'voided').forEach((s) => out.push({
-      id: s.id, dept: 'Pool Bar', desc: (s.item || s.name || s.description || 'Pool Bar') + ' \u00D7' + (s.qty || 1), amount: (s.total != null ? s.total : s.amount), method: s.method || '', staff: s.staff || s.recordedBy || '', date: parseTxDate(s.time || s.date), status: s.status || 'completed',
+      id: s.id, dept: 'Pool Bar', desc: (s.item || s.name || s.description || 'Pool Bar') + ' \u00D7' + (s.qty || 1), amount: (s.total != null ? s.total : s.amount), method: s.method || '', staff: s.staff || s.recordedBy || '', date: parseTxDate(s.time || s.date), ts: Number(s.ts) || 0, status: s.status || 'completed',
     }));
     (gymTx || []).forEach((g) => out.push({
-      id: g.id, dept: 'Gym', desc: g.desc || g.description, amount: (g.amount != null ? g.amount : g.total), method: g.method || '', staff: g.staff || g.recordedBy || '', date: parseTxDate(g.date), status: g.status || 'completed',
+      id: g.id, dept: 'Gym', desc: g.desc || g.description, amount: (g.amount != null ? g.amount : g.total), method: g.method || '', staff: g.staff || g.recordedBy || '', date: parseTxDate(g.date), ts: Number(g.ts) || 0, status: g.status || 'completed',
     }));
-    return out.filter((t) => t.date).sort((a, b) => b.date - a.date);
+    return out.filter((t) => t.date).sort((a, b) => (b.date - a.date) || ((b.ts || 0) - (a.ts || 0)));
   }
 
   function computeShiftTotals(transactions, key) {
@@ -341,19 +341,20 @@
     function d12(d){ return d ? (d.length===10 ? d+'T12:00:00' : d) : d; }
     function pushOne(e) {
       const src = String(e.source || '').toLowerCase();
+      const ts = Number(e.ts) || 0;
       if (src === 'booking') {
-        roomTx.push({ id: e.id, date: d12(e.date), desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
+        roomTx.push({ id: e.id, date: d12(e.date), ts, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
       } else if (src === 'restaurant') {
         const items = (e.description || '').split(', ').map((s) => { const m = s.match(/(.+)\s*\u00D7\s*(\d+)/); return m ? { meal: m[1].trim(), qty: Number(m[2]) } : { meal: s, qty: 1 }; });
-        restSales.push({ id: e.id, date: d12(e.date), items, total: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
+        restSales.push({ id: e.id, date: d12(e.date), ts, items, total: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
       } else if (src === 'poolbar') {
         const desc = e.description || '';
         const m = desc.match(/(.+)\s*\u00D7\s*(\d+)/);
-        poolSales.push({ id: e.id, time: d12(e.date), item: m ? m[1].trim() : desc, qty: m ? Number(m[2]) : 1, total: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
+        poolSales.push({ id: e.id, time: d12(e.date), ts, item: m ? m[1].trim() : desc, qty: m ? Number(m[2]) : 1, total: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
       } else if (src === 'gym') {
-        gymTx.push({ id: e.id, date: d12(e.date), desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
+        gymTx.push({ id: e.id, date: d12(e.date), ts, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
       } else if (src === 'manual' && e.department === 'Gym') {
-        gymTx.push({ id: e.id, date: d12(e.date), desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
+        gymTx.push({ id: e.id, date: d12(e.date), ts, desc: e.description, amount: e.amount, method: e.method || '', staff: e.recordedBy || '', status: 'completed' });
       } else if (src === 'manual') {
         if (e.department === 'Restaurant') {
           restSales.push({ id: e.id, date: d12(e.date), items: [{ meal: e.description || 'Manual', qty: 1 }], total: e.amount, method: e.method||'', staff: e.recordedBy||'', status: 'completed' });
@@ -368,7 +369,7 @@
     (income || []).forEach((e) => {
       // grouped row from P&L has incomeItems — expand to per-transaction for dashboard
       if (Array.isArray(e.incomeItems) && e.incomeItems.length) {
-        e.incomeItems.forEach(it => pushOne({ id: it.id, date: it.date || e.date, department: it.department || e.department, amount: it.amount, source: it.source || e.source, description: it.description, method: it.method, recordedBy: it.recordedBy, autoGenerated: it.autoGenerated }));
+        e.incomeItems.forEach(it => pushOne({ id: it.id, date: it.date || e.date, ts: it.ts || e.ts || 0, department: it.department || e.department, amount: it.amount, source: it.source || e.source, description: it.description, method: it.method, recordedBy: it.recordedBy, autoGenerated: it.autoGenerated }));
       } else {
         pushOne(e);
       }
