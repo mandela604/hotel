@@ -287,7 +287,7 @@
           <div class="aur-sb-head">
             <div class="aur-logo-mark">G</div>
             <div class="aur-logo-text">
-              <div class="aur-name">Grace Hotel</div>
+              <div class="aur-name">Boston Leisure Hotel</div>
               <div class="aur-sub">Management Suite</div>
             </div>
             <button class="aur-collapse-btn" id="${instId}-collapse" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
@@ -300,7 +300,7 @@
               <div class="aur-toggle-track${theme === 'light' ? ' aur-on' : ''}" id="${instId}-toggleTrack"><div class="aur-toggle-thumb"></div></div>
             </button>
           </div>
-          <div class="aur-copyright">© 2026 Grace Hotel</div>
+          <div class="aur-copyright">© 2026 Boston Leisure Hotel</div>
         </aside>`;
     }
 

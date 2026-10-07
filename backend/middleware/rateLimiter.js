@@ -1,5 +1,5 @@
 /**
- * Grace Hotel — Rate Limiter
+ * Boston Leisure Hotel — Rate Limiter
  * Uses express-rate-limit under the hood.
  */
 

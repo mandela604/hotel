@@ -1,5 +1,5 @@
 /**
- * component/grace-po-detail.js — Grace Hotel HMS Reusable PO / PR Detail Modal
+ * component/grace-po-detail.js — Boston Leisure Hotel HMS Reusable PO / PR Detail Modal
  * ─────────────────────────────────────────────────────────────────
  * Extracted from the inline #poDetailModal in all-requisitions.html so
  * both Store and Procurement pages can show the same "full order detail

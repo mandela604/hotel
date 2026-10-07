@@ -1,5 +1,5 @@
 /**
- * Grace Hotel — Pagination Helper
+ * Boston Leisure Hotel — Pagination Helper
  * Shared by any controller that lists a collection.
  */
 

@@ -1,5 +1,5 @@
 /**
- * Grace Hotel — Data Service
+ * Boston Leisure Hotel — Data Service
  * Generic CRUD + query helpers used across all modules.
  */
 

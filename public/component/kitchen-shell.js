@@ -259,7 +259,7 @@
             <div class="khs-toggle-track" id="khs-toggleTrack"><div class="khs-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="khs-copyright">© 2026 Grace Hotel</div>
+        <div class="khs-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

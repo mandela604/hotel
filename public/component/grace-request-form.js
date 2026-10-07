@@ -1,5 +1,5 @@
 /**
- * grace-request-form.js — Grace Hotel HMS Reusable Request Form Component
+ * grace-request-form.js — Boston Leisure Hotel HMS Reusable Request Form Component
  * ─────────────────────────────────────────────────────────────────────
  * Drop one <script src="grace-request-form.js"></script> in any page,
  * then attach it to a container:

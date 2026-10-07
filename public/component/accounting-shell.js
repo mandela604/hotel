@@ -259,7 +259,7 @@
             <div class="acc-toggle-track" id="acc-toggleTrack"><div class="acc-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="acc-copyright">© 2026 Grace Hotel</div>
+        <div class="acc-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     // ── Render topbar ──

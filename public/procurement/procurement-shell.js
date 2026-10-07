@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    ProcurementShell — sidebar + topbar for the standalone
    Procurement module. Mirrors RestaurantShell: same blue theme
-   (#2f6fed), Segoe UI, collapsible sidebar, Grace Hotel branding.
+   (#2f6fed), Segoe UI, collapsible sidebar, Boston Leisure Hotel branding.
 
    "Back to Main Suite" sits under the logo and points to
    "../index.html" — Procurement pages live one level down in
@@ -165,7 +165,7 @@
         <div class="prc-head">
           <div class="prc-logo">P</div>
           <div class="prc-brand">
-            <div class="name">Grace Hotel</div>
+            <div class="name">Boston Leisure Hotel</div>
             <div class="sub">Procurement</div>
           </div>
           <button class="prc-collapse" id="prc-collapseBtn" title="Toggle sidebar">◀</button>
@@ -187,7 +187,7 @@
             <div class="prc-toggle-track" id="prc-toggleTrack"><div class="prc-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="prc-copyright">© 2026 Grace Hotel</div>
+        <div class="prc-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

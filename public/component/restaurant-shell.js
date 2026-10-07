@@ -281,7 +281,7 @@
             <div class="rst-toggle-track" id="rst-toggleTrack"><div class="rst-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="rst-copyright">© 2026 Grace Hotel</div>
+        <div class="rst-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

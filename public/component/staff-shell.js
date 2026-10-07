@@ -244,7 +244,7 @@
             <div class="stf-toggle-track" id="stf-toggleTrack"><div class="stf-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="stf-copyright">© 2026 Grace Hotel</div>
+        <div class="stf-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

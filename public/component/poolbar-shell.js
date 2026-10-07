@@ -270,7 +270,7 @@
             <div class="pbs-toggle-track" id="pbs-toggleTrack"><div class="pbs-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="pbs-copyright">© 2026 Grace Hotel</div>
+        <div class="pbs-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

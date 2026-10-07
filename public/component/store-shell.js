@@ -268,7 +268,7 @@
             <div class="gs-toggle-track" id="gs-toggleTrack"><div class="gs-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="gs-copyright">© 2026 Grace Hotel</div>
+        <div class="gs-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

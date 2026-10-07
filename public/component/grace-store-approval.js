@@ -1,5 +1,5 @@
 /**
- * grace-store-approval.js — Grace Hotel HMS Reusable Store-Approval / Delivery-Review Component
+ * grace-store-approval.js — Boston Leisure Hotel HMS Reusable Store-Approval / Delivery-Review Component
  * ─────────────────────────────────────────────────────────────────────
  * Drop one <script src="grace-store-approval.js"></script> in any page,
  * then attach it to a container:

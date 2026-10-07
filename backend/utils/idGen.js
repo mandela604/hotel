@@ -1,5 +1,5 @@
 /**
- * Grace Hotel — Human-readable ID Generator
+ * Boston Leisure Hotel — Human-readable ID Generator
  *
  * Requisition.reqNo is required+unique but nothing generates it — this
  * does, in the same "REQ-2025-00045" style your frontend demo data uses.

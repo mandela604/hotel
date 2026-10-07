@@ -272,7 +272,7 @@
         <div class="gym-head">
           <div class="gym-logo">G</div>
           <div class="gym-brand">
-            <div class="name">Grace Hotel</div>
+            <div class="name">Boston Leisure Hotel</div>
             <div class="sub">Gym & Fitness</div>
           </div>
           <button class="gym-collapse" id="gym-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
@@ -294,7 +294,7 @@
             <div class="gym-toggle-track" id="gym-toggleTrack"><div class="gym-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="gym-copyright">© 2026 Grace Hotel</div>
+        <div class="gym-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `

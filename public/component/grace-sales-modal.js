@@ -1,5 +1,5 @@
 /**
- * grace-sales-modal.js — Grace Hotel HMS Reusable Sales Detail / Void Modal
+ * grace-sales-modal.js — Boston Leisure Hotel HMS Reusable Sales Detail / Void Modal
  * ─────────────────────────────────────────────────────────────────────
  * Drop one <script src="grace-sales-modal.js"></script> in any page,
  * then attach it once (it lives on document.body, not a container):

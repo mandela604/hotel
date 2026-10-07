@@ -1,5 +1,5 @@
 /**
- * grace-kitchen-production.js — Grace Hotel HMS Reusable Kitchen-Production Component
+ * grace-kitchen-production.js — Boston Leisure Hotel HMS Reusable Kitchen-Production Component
  * ─────────────────────────────────────────────────────────────────────
  * Compact accordion form · light theme · search-to-add meals & ingredients
  *

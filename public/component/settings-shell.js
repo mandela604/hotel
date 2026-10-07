@@ -232,7 +232,7 @@
             <div class="sts-toggle-track" id="sts-toggleTrack"><div class="sts-toggle-thumb"></div></div>
           </button>
         </div>
-        <div class="sts-copyright">© 2026 Grace Hotel</div>
+        <div class="sts-copyright">© 2026 Boston Leisure Hotel</div>
       </aside>`;
 
     topbarTarget.innerHTML = `
