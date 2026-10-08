@@ -230,9 +230,13 @@
     $('[data-role="reorder"]').value = item.reorder != null && item.reorder !== '' ? item.reorder : (item.min != null ? item.min : '');
     $('[data-role="cost"]').value = item.cost != null ? item.cost : 0;
 
-    // Always locked — system controlled
+    // Qty always locked — system controlled. Cost editable in edit mode
+    // for admin/manager only (opts.allowCostEdit) — everyone else locked.
     $('[data-role="qty"]').disabled = true;
-    $('[data-role="cost"]').disabled = true;
+    var costInput = $('[data-role="cost"]');
+    var allowCost = !!(isEdit && opts.allowCostEdit);
+    costInput.disabled = !allowCost;
+    costInput.title = allowCost ? '' : 'Only admin/manager can edit cost';
 
     saving = false;
     const saveBtn = $('[data-role="saveBtn"]');
@@ -274,7 +278,7 @@
       packSize: parseFloat($('[data-role="packSize"]').value) || 0,
       reorder: parseFloat($('[data-role="reorder"]').value) || 0,
       qty: isEdit ? (opts.item.qty ?? 0) : 0,
-      cost: isEdit ? (opts.item.cost ?? 0) : 0,
+      cost: (isEdit && opts.allowCostEdit) ? (parseFloat($('[data-role="cost"]').value) || 0) : (isEdit ? (opts.item.cost ?? 0) : 0),
     };
 
     saving = true;

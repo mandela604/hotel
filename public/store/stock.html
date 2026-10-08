@@ -682,6 +682,14 @@ window.openAddItem = function(){
   });
 };
 
+function isCostManager(){
+  try {
+    var u = shell && shell.getUser ? shell.getUser() : null;
+    var role = u && u.role ? String(u.role).toLowerCase() : '';
+    if (role === 'admin' || role === 'manager') return true;
+  } catch(e){}
+  return false;
+}
 window.openEditItem = function(id){
   const item = svc.findStockById(id);
   if (!item) return;
@@ -689,11 +697,14 @@ window.openEditItem = function(id){
     mode: 'edit',
     item: item,
     categories: svc.getCategories(),
+    allowCostEdit: isCostManager(),
     onSave: async (entry) => {
       try {
-        // qty + cost intentionally not editable here (StoreService.editStockItem drops them) —
-        // those only move via requisitions / goods receipt.
-        await svc.editStockItem(id, { name: entry.name, cat: entry.cat, unit: entry.unit, baseUnit: entry.baseUnit, packSize: entry.packSize, min: entry.reorder || 0 });
+        // qty intentionally not editable here — only moves via requisitions / goods receipt.
+        // cost editable for admin/manager only (form locks it for everyone else).
+        var payload = { name: entry.name, cat: entry.cat, unit: entry.unit, baseUnit: entry.baseUnit, packSize: entry.packSize, min: entry.reorder || 0 };
+        if (isCostManager() && entry.cost !== undefined) payload.cost = entry.cost;
+        await svc.editStockItem(id, payload);
         showToast('Item updated.', 'success');
       } catch (e) {
         showToast(e.message || 'Could not update item.', 'error');
