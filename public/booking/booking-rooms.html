@@ -698,10 +698,11 @@ function renderRoomGrid(filter) {
   const typeF = document.getElementById('roomTypeFilter').value || '';
   const q     = document.getElementById('roomSearch').value.trim().toLowerCase();
 
-  // Reserved filter lists EVERY reservation (like All Bookings) — not just today's rooms
+  // Reserved filter lists TODAY's reservations only (full list incl. future lives in All Bookings)
   if (filter === 'reserved') {
-    var resList = bookings.filter(function(b){ return b.status === 'reserved' && b.guest; })
-      .sort(function(a,b){ return String(a.checkin||'').localeCompare(String(b.checkin||'')) || ((a.createdAt||0)-(b.createdAt||0)); });
+    var todayStrR = new Date().toISOString().split('T')[0];
+    var resList = bookings.filter(function(b){ return b.status === 'reserved' && b.guest && b.checkin === todayStrR; })
+      .sort(function(a,b){ return ((a.createdAt||0)-(b.createdAt||0)); });
     var resFiltered = resList.filter(function(bk){
       var r = allRooms.find(function(x){ return x.num === bk.room; });
       var mt = !typeF || (r ? r.type === typeF : (bk.type || '') === typeF);

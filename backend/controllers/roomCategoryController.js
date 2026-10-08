@@ -67,11 +67,30 @@ exports.update = asyncHandler(async (req, res) => {
     await Room.updateMany({ type: oldName }, { $set: { type: newName } });
     await Booking.updateMany({ type: oldName }, { $set: { type: newName } });
   }
-  if (rate !== undefined) category.rate = Number(rate);
+  let roomsUpdated = 0;
+  if (rate !== undefined && Number(rate) !== Number(category.rate)) {
+    category.rate = Number(rate);
+    // Cascade to every room in this category (existing bookings keep locked rates;
+    // only vacant placeholders sync, mirroring updateRoom)
+    if (req.body.applyToRooms !== false) {
+      const r = await Room.updateMany({ type: category.name }, { $set: { rate: Number(rate) } });
+      roomsUpdated = r.modifiedCount || 0;
+      await Booking.updateMany(
+        { type: category.name, $or: [{ status: 'vacant' }, { guest: '' }] },
+        { $set: { rate: Number(rate) } }
+      );
+      try {
+        const io = req.app.get('io');
+        if (io) io.to('booking').to('global').emit('booking:updated', { action: 'categoryRate', type: category.name, rate: Number(rate), roomsUpdated });
+      } catch (e) {}
+    }
+  } else if (rate !== undefined) {
+    category.rate = Number(rate);
+  }
   if (sortOrder !== undefined) category.sortOrder = Number(sortOrder);
   if (active !== undefined) category.active = !!active;
   await category.save();
-  res.json({ success: true, data: category });
+  res.json({ success: true, data: category, roomsUpdated });
 });
 
 exports.remove = asyncHandler(async (req, res) => {

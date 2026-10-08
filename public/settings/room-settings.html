@@ -175,11 +175,16 @@ async function editCat(id) {
   const name = prompt('Category name:', c.name); if (name === null) return;
   const rate = prompt('Rate (₦):', c.rate || 0); if (rate === null) return;
   const sort = prompt('Sort order:', c.sortOrder || 0); if (sort === null) return;
+  const newRate = Number(rate);
+  let applyToRooms = true;
+  if (newRate !== Number(c.rate || 0)) {
+    applyToRooms = confirm('Apply ₦' + newRate.toLocaleString() + ' to ALL "' + c.name + '" rooms? (Existing bookings keep their locked rates. Cancel keeps rooms on old prices.)');
+  }
   try {
-    const res = await fetch(API + '/' + encodeURIComponent(id), { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), rate: Number(rate), sortOrder: Number(sort) }) });
+    const res = await fetch(API + '/' + encodeURIComponent(id), { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), rate: newRate, sortOrder: Number(sort), applyToRooms }) });
     const j = await res.json();
     if (!res.ok) throw new Error(j.error || 'Failed');
-    showToast('Category updated.', 'success');
+    showToast('Category updated.' + (j.roomsUpdated ? ' ' + j.roomsUpdated + ' room(s) repriced.' : ''), 'success');
     loadCategories();
   } catch (e) { showToast(e.message, 'error'); }
 }
