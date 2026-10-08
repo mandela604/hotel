@@ -1456,7 +1456,7 @@
     }
 
     function fillBookingFields(booking) {
-      setVal('name', booking.guest || '');
+      setVal('name', booking.guest || booking._guestName || '');
       setVal('phone', booking.phone || '');
       setVal('email', booking.email || '');
       setVal('address', booking.address || '');

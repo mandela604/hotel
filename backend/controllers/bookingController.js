@@ -732,7 +732,7 @@ exports.markNoShow = asyncHandler(async (req, res) => {
   const guestName = booking.guest;
   booking._guestName = guestName;
   booking.status = 'no-show';
-  Object.assign(booking, NO_SHOW_FIELDS);
+  // Keep guest PII so the no-show record still shows who it was booked for
   booking.updatedAt = Date.now();
   await booking.save();
   await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${booking.room} marked as no-show`, 'booking-rooms.html');
@@ -785,11 +785,12 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
 });
 
 // Auto-cancel reservations where checkout date has passed and guest never checked in
+// (guest PII kept so the record still shows who it was booked for)
 exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   const result = await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
-    { $set: Object.assign({ status: 'no-show', updatedAt: Date.now() }, NO_SHOW_FIELDS) }
+    { $set: { status: 'no-show', updatedAt: Date.now() } }
   );
   if (result.modifiedCount > 0) {
     await logActivity('Booking', 'amber', `Auto-cancelled ${result.modifiedCount} expired reservation(s)`, 'booking-rooms.html');
@@ -803,7 +804,7 @@ exports.getBookingData = asyncHandler(async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   await Booking.updateMany(
     { status: 'reserved', checkout: { $lt: today } },
-    { $set: Object.assign({ status: 'no-show', updatedAt: Date.now() }, NO_SHOW_FIELDS) }
+    { $set: { status: 'no-show', updatedAt: Date.now() } }
   );
   return origGetBookingData(req, res);
 });
