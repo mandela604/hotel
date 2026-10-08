@@ -218,7 +218,7 @@
         <div class="stf-head">
           <div class="stf-logo">S</div>
           <div class="stf-brand">
-            <div class="name">Grace Staff</div>
+            <div class="name">Boston Staff</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="stf-collapse" id="stf-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>

@@ -259,7 +259,7 @@
         <div class="rst-head">
           <div class="rst-logo">R</div>
           <div class="rst-brand">
-            <div class="name">Grace Restaurant</div>
+            <div class="name">Boston Restaurant</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="rst-collapse" id="rst-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>

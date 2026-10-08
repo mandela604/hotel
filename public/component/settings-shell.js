@@ -210,7 +210,7 @@
         <div class="sts-head">
           <div class="sts-logo">S</div>
           <div class="sts-brand">
-            <div class="name">Grace Settings</div>
+            <div class="name">Boston Settings</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="sts-collapse" id="sts-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>

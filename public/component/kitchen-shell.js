@@ -237,7 +237,7 @@
         <div class="khs-head">
           <div class="khs-logo">K</div>
           <div class="khs-brand">
-            <div class="name">Grace Kitchen</div>
+            <div class="name">Boston Kitchen</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="khs-collapse" id="khs-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>

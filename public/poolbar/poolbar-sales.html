@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title id="pageTitleTag">Sales | Grace Pool Bar</title>
+<title id="pageTitleTag">Sales | Boston Pool Bar</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
@@ -189,7 +189,7 @@ function escapeHtml(str) {
 function applyModuleBranding() {
   const dept = svc.getDepartmentName();
   const titleTag = document.getElementById('pageTitleTag');
-  if (titleTag) titleTag.textContent = 'Sales | Grace ' + dept;
+  if (titleTag) titleTag.textContent = 'Sales | Boston ' + dept;
   const printTitle = document.getElementById('printHeaderTitle');
   if (printTitle) printTitle.textContent = 'Boston Leisure Hotel — ' + dept + ' Sales (My Shift)';
   if (shell.setTitle) shell.setTitle('Sales', 'Your ' + dept + ' sales for today\u2019s shift');

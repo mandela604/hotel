@@ -232,7 +232,7 @@
         <div class="acc-head">
           <div class="acc-logo">A</div>
           <div class="acc-brand">
-            <div class="name">Grace Accounting</div>
+            <div class="name">Boston Accounting</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="acc-collapse" id="acc-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>

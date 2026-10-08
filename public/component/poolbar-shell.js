@@ -248,7 +248,7 @@
         <div class="pbs-head">
           <div class="pbs-logo">P</div>
           <div class="pbs-brand">
-            <div class="name">Grace Pool Bar</div>
+            <div class="name">Boston Pool Bar</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="pbs-collapse" id="pbs-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>

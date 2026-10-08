@@ -246,7 +246,7 @@
         <div class="gs-head">
           <div class="gs-logo">S</div>
           <div class="gs-brand">
-            <div class="name">Grace Store</div>
+            <div class="name">Boston Store</div>
             <div class="sub">Module Suite</div>
           </div>
           <button class="gs-collapse" id="gs-collapseBtn" title="Toggle sidebar"><i class="fa-solid fa-chevron-left"></i></button>
