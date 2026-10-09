@@ -679,9 +679,11 @@
         var st = roomStatus(bookings, r.num);
         var keep = st === 'available' || r.num === preferNum;
         if (!keep) return;
+        var cat = roomCategories.find(function(c){ return c.name === r.type; });
+        var typeName = cat ? cat.name : r.type;
         var opt = document.createElement('option');
-        opt.value = r.num + '|' + r.type + '|' + r.rate;
-        opt.textContent = r.num + ' – ' + r.type + ' (' + fmtN(r.rate) + '/nt)' +
+        opt.value = r.num + '|' + typeName + '|' + r.rate;
+        opt.textContent = r.num + ' – ' + typeName + ' (' + fmtN(r.rate) + '/nt)' +
           (r.num === preferNum ? ' · current' : '');
         sel.appendChild(opt);
       });
@@ -912,6 +914,17 @@
       if (drop) drop.classList.remove('show');
     }
 
+    var roomCategories = [];
+
+    async function loadRoomCategories() {
+      try {
+        var res = await fetch('/api/room-categories', { credentials: 'include' });
+        var j = await res.json();
+        roomCategories = (j.data || []).filter(function(c){ return c.active !== false; });
+        console.log('[BookingModal] Loaded room categories:', roomCategories.map(function(c){ return c.name; }));
+      } catch (e) { console.warn('[BookingModal] Failed to load room categories:', e); }
+    }
+
     async function loadContext() {
       if (service && typeof service.getBookingData === 'function') {
         var data = await service.getBookingData();
@@ -920,6 +933,7 @@
         guests = data.guests || [];
         if (!externalSession) session = data.session || session;
       }
+      await loadRoomCategories();
     }
 
     function findGuestForBooking(bk) {

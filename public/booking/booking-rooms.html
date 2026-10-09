@@ -838,12 +838,16 @@ function openBookingFromCard(num) {
       var reservedToday2 = cands.filter(function(x){ return x.status==='reserved' && x.checkin === todayStr3; }).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
       if (reservedToday2.length) bk = reservedToday2[0];
       else {
-        var reserved2 = cands.filter(function(x){ return x.status==='reserved'; }).sort(function(a,b){
-          var da = a.checkin || '', db = b.checkin || '';
-          if (da !== db) return da.localeCompare(db);
-          return (a.createdAt||0) - (b.createdAt||0);
-        });
-        bk = reserved2.length ? reserved2[0] : cands.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); })[0];
+        var noShow = cands.filter(function(x){ return x.status==='no-show'; }).sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+        if (noShow.length) bk = noShow[0];
+        else {
+          var reserved2 = cands.filter(function(x){ return x.status==='reserved'; }).sort(function(a,b){
+            var da = a.checkin || '', db = b.checkin || '';
+            if (da !== db) return da.localeCompare(db);
+            return (a.createdAt||0) - (b.createdAt||0);
+          });
+          bk = reserved2.length ? reserved2[0] : cands.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); })[0];
+        }
       }
     }
   }
