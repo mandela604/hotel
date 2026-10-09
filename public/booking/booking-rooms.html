@@ -801,12 +801,15 @@ function renderRoomGrid(filter) {
    BookingModal wrappers
 ═══════════════════════════════════════════════ */
 function openBookingModal() {
+  console.log('[BookingRooms] openBookingModal called');
   const session = getSession();
+  console.log('[BookingRooms] session:', session);
   if (!perms().canCreate) {
+    console.warn('[BookingRooms] No permission to create bookings');
     showToast("You don't have permission to create bookings.", 'error');
     return;
   }
-  // Pass current session to modal
+  console.log('[BookingRooms] Calling bookingModal.openNew');
   bookingModal.setSession(session);
   bookingModal.openNew({});
 }
@@ -822,7 +825,9 @@ function openBookingForRoom(num) {
 }
 
 function openBookingFromCard(num) {
+  console.log('[BookingRooms] openBookingFromCard called for room:', num);
   const session = getSession();
+  console.log('[BookingRooms] session:', session);
   const cands = bookings.filter(function(b){ return b.room === num; });
   let bk = null;
   if (cands.length) {
@@ -858,10 +863,12 @@ function openBookingFromCard(num) {
 
 // Open one exact reservation (used by the Reserved filter cards)
 function openReservedBooking(key) {
+  console.log('[BookingRooms] openReservedBooking called with key:', key);
   const bk = bookings.find(function(b){ return String(b.stayId || b._id || b.id || b.room) === String(key); });
-  if (!bk) { showToast('Reservation not found — refreshing.', 'info'); refreshDataAndRender(); return; }
+  if (!bk) { console.warn('[BookingRooms] Reservation not found for key:', key); showToast('Reservation not found — refreshing.', 'info'); refreshDataAndRender(); return; }
+  console.log('[BookingRooms] Found booking:', bk);
   bookingModal.setSession(getSession());
-  try { bookingModal.openEdit(bk); } catch(e) { bookingModal.openView(bk); }
+  try { console.log('[BookingRooms] Calling openEdit'); bookingModal.openEdit(bk); } catch(e) { console.error('[BookingRooms] openEdit failed:', e); bookingModal.openView(bk); }
 }
 
 /* ═══════════════════════════════════════════════

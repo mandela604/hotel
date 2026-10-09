@@ -1472,8 +1472,10 @@
     }
 
     function open() {
+      console.log('[BookingModal] open() called');
       root.classList.add('show');
       document.body.style.overflow = 'hidden';
+      console.log('[BookingModal] modal shown');
     }
     function close() {
       root.classList.remove('show');
