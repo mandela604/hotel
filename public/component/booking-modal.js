@@ -680,6 +680,7 @@
         var keep = st === 'available' || r.num === preferNum;
         if (!keep) return;
         var cat = roomCategories.find(function(c){ return c.name === r.type; });
+        if (!cat && roomCategories.length) return;
         var typeName = cat ? cat.name : r.type;
         var opt = document.createElement('option');
         opt.value = r.num + '|' + typeName + '|' + r.rate;
