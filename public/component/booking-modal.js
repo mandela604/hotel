@@ -475,8 +475,7 @@
             '<div class="bkm-fg" data-role="payMethodWrap">' +
               '<label class="bkm-label">Pay method</label>' +
               '<select class="bkm-select" data-role="payMethod">' +
-                '<option>Cash</option><option>POS</option><option>Transfer</option>' +
-                '<option>Split – Cash + Transfer</option><option>Room Charge</option>' +
+                '<option value="">Select…</option>' +
               '</select>' +
             '</div>' +
           '</div>' +
