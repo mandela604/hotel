@@ -1486,15 +1486,33 @@
       if (onCloseCb) onCloseCb();
     }
 
+    async function fetchPayMethods() {
+      try {
+        const res = await fetch('/api/settings', { credentials: 'include' });
+        const j = await res.json();
+        if (res.ok && j.data && Array.isArray(j.data.paymentMethods) && j.data.paymentMethods.length) {
+          console.log('[BookingModal] Pay methods from API:', j.data.paymentMethods);
+          return j.data.paymentMethods;
+        }
+      } catch (e) { console.warn('[BookingModal] Failed to fetch pay methods:', e); }
+      console.log('[BookingModal] Using default pay methods');
+      return ['Cash', 'POS', 'Transfer', 'Room Charge'];
+    }
+
     function getPayMethods() {
       try {
-        if (typeof PlatformSettings !== 'undefined' && PlatformSettings.state && Array.isArray(PlatformSettings.state.settings.paymentMethods) && PlatformSettings.state.settings.paymentMethods.length) {
-          console.log('[BookingModal] Pay methods from settings:', PlatformSettings.state.settings.paymentMethods);
+        if (typeof PlatformSettings !== 'undefined' && PlatformSettings.state && PlatformSettings.state.settings && Array.isArray(PlatformSettings.state.settings.paymentMethods) && PlatformSettings.state.settings.paymentMethods.length) {
+          console.log('[BookingModal] Pay methods from settings state:', PlatformSettings.state.settings.paymentMethods);
           return PlatformSettings.state.settings.paymentMethods;
         }
       } catch (e) {}
-      console.log('[BookingModal] Using default pay methods');
-      return ['Cash', 'POS', 'Transfer', 'Room Charge'];
+      return null;
+    }
+
+    function populatePayMethodDropdown(methods) {
+      var sel = document.querySelector('[data-role="payMethod"]');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Select...</option>' + methods.map(function(m) { return '<option value="' + m + '">' + m + '</option>'; }).join('');
     }
 
     function fillBookingFields(booking) {
@@ -1578,6 +1596,9 @@
       if (meta) meta.textContent = session && session.name ? 'Staff: ' + session.name : '';
       applyEditability();
       renderPayments();
+      var pm = getPayMethods();
+      if (pm) populatePayMethodDropdown(pm);
+      else fetchPayMethods().then(populatePayMethodDropdown);
       open();
     }
 

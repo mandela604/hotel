@@ -1054,6 +1054,14 @@ async function init() {
     document.getElementById('roomGrid').innerHTML =
       '<div class="room-empty">Couldn\'t load room data. Please refresh.</div>';
   }
+
+  if (typeof io !== 'undefined') {
+    var socket = io();
+    socket.on('roomCategory:deleted', function(data) {
+      console.log('[BookingRooms] roomCategory:deleted received:', data);
+      refreshDataAndRender();
+    });
+  }
 }
 
 /* ── Cancel & Refund Modal ── */
