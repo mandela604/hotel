@@ -45,6 +45,13 @@
   .btn-primary:hover{ background:var(--gold-light); }
   .btn-outline{ background:none; border-color:var(--border); color:var(--text2); }
   .btn-outline:hover{ border-color:var(--gold); color:var(--gold); }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .edit-row{ display:none; gap:8px; flex-wrap:wrap; padding:12px; background:var(--surface2); border:1px solid var(--gold-border); border-radius:10px; margin-top:12px; }
+  .edit-row.show{ display:flex; }
+  .edit-row input{ flex:1; background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; font-size:13px; font-family:inherit; color:var(--text); outline:none; min-width:120px; }
+  .edit-row input:focus{ border-color:var(--gold-border); }
+  .edit-label{ font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; width:100%; margin-bottom:2px; }
 
   .rc-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); gap:12px; }
   .rc-row:last-child{ border-bottom:none; }
@@ -99,6 +106,17 @@
         </div>
         <div class="panel-body">
           <div id="rcTable"></div>
+          <div class="edit-row" id="editRow">
+            <span class="edit-label">Edit Category</span>
+            <input type="text" id="editName" placeholder="Category name" maxlength="60">
+            <input type="number" id="editRate" placeholder="Rate (₦)" min="0" style="max-width:140px;">
+            <input type="number" id="editSort" placeholder="Order" min="0" style="max-width:90px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);white-space:nowrap;">
+              <input type="checkbox" id="editApplyToRooms" checked style="width:auto;"> Apply to rooms
+            </label>
+            <button class="btn btn-primary" id="editSaveBtn"><i class="fa-solid fa-check"></i> Save</button>
+            <button class="btn btn-outline" id="editCancelBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+          </div>
           <div class="add-row" style="margin-top:16px;">
             <input type="text" id="rcName" placeholder="Category name (e.g. Deluxe)" maxlength="60">
             <input type="number" id="rcRate" placeholder="Rate (₦)" min="0" style="max-width:140px;">
@@ -193,29 +211,54 @@ document.getElementById('rcAddBtn').addEventListener('click', async () => {
   finally { btn.disabled = false; btn.innerHTML = origHTML; }
 });
 
-async function editCat(id) {
+let editingId = null;
+
+function editCat(id) {
   console.log('[RoomSettings] editCat called with id:', id);
   const c = categories.find(x => (x._id || x.id) === id);
   if (!c) { console.warn('[RoomSettings] Category not found for id:', id); showToast('Category not found.', 'error'); return; }
   console.log('[RoomSettings] Found category:', c.name, c._id || c.id);
-  const name = prompt('Category name:', c.name); if (name === null) { console.log('[RoomSettings] Edit cancelled at name prompt'); return; }
-  const rate = prompt('Rate (₦):', c.rate || 0); if (rate === null) { console.log('[RoomSettings] Edit cancelled at rate prompt'); return; }
-  const sort = prompt('Sort order:', c.sortOrder || 0); if (sort === null) { console.log('[RoomSettings] Edit cancelled at sort prompt'); return; }
-  const newRate = Number(rate);
-  let applyToRooms = true;
-  if (newRate !== Number(c.rate || 0)) {
-    applyToRooms = confirm('Apply ₦' + newRate.toLocaleString() + ' to ALL "' + c.name + '" rooms? (Existing bookings keep their locked rates. Cancel keeps rooms on old prices.)');
-  }
-  console.log('[RoomSettings] Saving edit:', { name: name.trim(), rate: newRate, sortOrder: Number(sort), applyToRooms });
+  editingId = id;
+  document.getElementById('editName').value = c.name;
+  document.getElementById('editRate').value = c.rate || 0;
+  document.getElementById('editSort').value = c.sortOrder || 0;
+  document.getElementById('editApplyToRooms').checked = true;
+  document.getElementById('editRow').classList.add('show');
+  document.getElementById('editName').focus();
+}
+
+function cancelEdit() {
+  console.log('[RoomSettings] Edit cancelled');
+  editingId = null;
+  document.getElementById('editRow').classList.remove('show');
+}
+
+async function saveEdit() {
+  if (!editingId) return;
+  const btn = document.getElementById('editSaveBtn');
+  const origHTML = btn.innerHTML;
+  const name = document.getElementById('editName').value.trim();
+  const rate = Number(document.getElementById('editRate').value) || 0;
+  const sort = Number(document.getElementById('editSort').value) || 0;
+  const applyToRooms = document.getElementById('editApplyToRooms').checked;
+  if (!name) { showToast('Enter a category name.', 'error'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+  console.log('[RoomSettings] Saving edit:', { id: editingId, name, rate, sortOrder: sort, applyToRooms });
   try {
-    const res = await fetch(API + '/' + encodeURIComponent(id), { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), rate: newRate, sortOrder: Number(sort), applyToRooms }) });
+    const res = await fetch(API + '/' + encodeURIComponent(editingId), { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rate, sortOrder: sort, applyToRooms }) });
     const j = await res.json();
     if (!res.ok) throw new Error(j.error || 'Failed');
     console.log('[RoomSettings] Edit saved:', j.data);
     showToast('Category updated.' + (j.roomsUpdated ? ' ' + j.roomsUpdated + ' room(s) repriced.' : ''), 'success');
+    cancelEdit();
     loadCategories();
   } catch (e) { console.error('[RoomSettings] Edit failed:', e); showToast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = origHTML; }
 }
+
+document.getElementById('editSaveBtn').addEventListener('click', saveEdit);
+document.getElementById('editCancelBtn').addEventListener('click', cancelEdit);
 
 loadCategories();
 

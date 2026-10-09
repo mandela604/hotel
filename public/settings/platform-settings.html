@@ -246,12 +246,20 @@ function renderPaymentChips() {
 
   el.querySelectorAll('button[data-method]').forEach(btn => {
     btn.addEventListener('click', async () => {
+      const method = btn.dataset.method;
+      console.log('[PlatformSettings] Removing payment method:', method);
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
       try {
-        settings = await PlatformSettings.removePaymentMethod(btn.dataset.method);
+        settings = await PlatformSettings.removePaymentMethod(method);
+        console.log('[PlatformSettings] Payment method removed. Remaining:', settings.paymentMethods);
         renderPaymentChips();
-        showToast(`Removed "${btn.dataset.method}"`, 'success');
+        showToast(`Removed "${method}"`, 'success');
       } catch (err) {
+        console.error('[PlatformSettings] Remove payment method failed:', err);
         showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
       }
     });
   });
