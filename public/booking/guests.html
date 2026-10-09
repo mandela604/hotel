@@ -481,10 +481,40 @@ function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
 function fmtDate(d){ if(!d) return '—'; var p=String(d).split(/[/\-]/); if(p.length<3){var dt=new Date(d);return isNaN(dt.getTime())?'—':dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});} return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10)).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function initials(name){ return name.replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Chief)\s*/i,'').split(/[\s,]+/).filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 function parseLocalDate(s){var p=String(s).split(/[/\-]/);if(p.length>=3)return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10));var d=new Date(s);return d;}
-function bookingTotal(b){ const n=(parseLocalDate(b.checkout)-parseLocalDate(b.checkin))/86400000; const nights=Math.max(1,n||1); return Math.max(0,((b.rate||0)-(b.discount||0))*nights); }
+function bookingTotal(b){ const n=(parseLocalDate(b.checkout)-parseLocalDate(b.checkin))/86400000; const nights=Math.max(1,n||1); const disc=Number(b.discount)||0; const exN=Number(b.extraNights)||0, exR=Number(b.extraRate)||0; if(exN>0&&exR>0){ const baseN=Math.max(0,nights-exN); return Math.max(0, baseN*((Number(b.rate)||0)-disc)+exN*(exR-disc)); } return Math.max(0,((Number(b.rate)||0)-disc)*nights); }
 function bookingPaid(b){ return (b.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0) || Number(b.paid)||0; }
-function activeBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return b.guest===g.name && (b.status==='reserved'||b.status==='checkedin'); }); }
-function allBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return b.guest===g.name; }); }
+function guestMatches(g, b){
+  if (!b) return false;
+  if (b.guest && g.name && b.guest === g.name) return true;
+  if (b.guestId && (b.guestId === g.id || b.guestId === g.guestId)) return true;
+  return false;
+}
+function activeBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return guestMatches(g, b) && (b.status==='reserved'||b.status==='checkedin'); }); }
+// Live bookings plus archived stay snapshots (survive the vacant wipe after checkout)
+function historyStaysForGuest(g){
+  return ((g && g.stays) || []).filter(function(s){ return s && s.room; }).map(function(s){
+    return {
+      _history: true, stayId: s.stayId || '', bookingNo: s.bookingNo || '',
+      room: s.room, type: s.type || '', guest: g.name,
+      phone: s.phone || g.phone || '', email: s.email || g.email || '',
+      checkin: s.checkin || '', checkout: s.checkout || '',
+      rate: Number(s.rate) || 0, discount: Number(s.discount) || 0,
+      extraNights: Number(s.extraNights) || 0, extraRate: Number(s.extraRate) || 0,
+      payments: Array.isArray(s.payments) ? s.payments : [],
+      paid: Number(s.paid) || 0, payStatus: s.payStatus || '',
+      payMethod: s.payMethod || 'Cash', recordedBy: s.recordedBy || '',
+      adults: 1, children: 0, notes: '',
+      status: 'checkout', checkedOutAt: s.checkedOutAt || 0, checkedOutBy: s.checkedOutBy || '',
+    };
+  });
+}
+function allBookingsForGuest(g){
+  var live = (bookingsData||[]).filter(function(b){ return guestMatches(g, b) && b.guest; });
+  var seen = {};
+  live.forEach(function(b){ var k = b.stayId || b._id || b.id; if (k) seen[k] = true; });
+  var hist = historyStaysForGuest(g).filter(function(h){ return !h.stayId || !seen[h.stayId]; });
+  return live.concat(hist);
+}
 function roomTotal(g){ return allBookingsForGuest(g).reduce(function(s,b){return s+bookingTotal(b);},0); }
 function roomPaid(g){ return allBookingsForGuest(g).reduce(function(s,b){return s+bookingPaid(b);},0); }
 function chargeTotal(g){ return g.charges.reduce(function(s,c){return s+(Number(c.amount)||0);},0); }
@@ -579,14 +609,27 @@ function renderSummaryBar(rows){
 /* ── Data Loading & Guest list ── */
 async function loadGuestsData() {
   try {
-    const res = await BookingData.listGuests(1, 1000);
-    guestsData = res.data || [];
+    // Page through the entire directory (backend caps at 100/page)
+    var all = [], pg = 1;
+    for (;;) {
+      const res = await BookingData.listGuests(pg, 100);
+      var rows = (res && res.data) || [];
+      all = all.concat(rows);
+      var total = (res && res.total) || 0;
+      if (!rows.length || (total && all.length >= total) || rows.length < 100) break;
+      pg++;
+      if (pg > 50) break; // sanity cap: 5000 guests
+    }
+    guestsData = all;
     const data = await BookingData.getBookingData();
     bookingsData = data.bookings || [];
+    if (typeof renderGuests === 'function') renderGuests();
   } catch (err) {
     console.error('Failed to refresh guest data', err);
   }
 }
+// Live-update hook (booking shell auto-refresh calls this name)
+window.refreshDataAndRender = function(){ loadGuestsData(); };
 
 function clearFilters(){
   document.getElementById('gSearch').value = '';
@@ -769,8 +812,33 @@ async function toggleVip(){
 }
 
 /* ── Stay history — all bookings for this guest from Booking collection ── */
+function openStayBooking(gid, stayId, room, checkin){
+  var g = (guestsData||[]).find(function(x){ return x.id === gid; });
+  if (!g) return;
+  if (!bookingModal) { showToast('Booking module not ready.', 'error'); return; }
+  var entry = null;
+  if (stayId) {
+    entry = (bookingsData||[]).find(function(b){ return String(b.stayId||'') === String(stayId) && b.guest; })
+      || historyStaysForGuest(g).find(function(h){ return String(h.stayId||'') === String(stayId); });
+  }
+  if (!entry) {
+    entry = allBookingsForGuest(g).find(function(b){ return String(b.room||'') === String(room) && String(b.checkin||'') === String(checkin); });
+  }
+  if (!entry) { showToast('Stay record not found.', 'error'); return; }
+  // Prefer the live doc when it still carries this stay
+  var live = (!entry._history) ? entry : null;
+  if (!live && entry.stayId) {
+    live = (bookingsData||[]).find(function(b){ return String(b.stayId||'') === String(entry.stayId) && b.guest; }) || null;
+  }
+  try {
+    if (live) bookingModal.openEdit(live);
+    else bookingModal.openView(entry);
+  } catch(e) {
+    try { bookingModal.openView(entry); } catch(e2) {}
+  }
+}
 function renderStayHistory(g){
-  var all = allBookingsForGuest(g).map(function(b){ return {room:b.room, type:b.type, checkin:b.checkin, checkout:b.checkout, total:bookingTotal(b), paid:bookingPaid(b), status:b.status}; });
+  var all = allBookingsForGuest(g);
   var stays = all.sort(function(a,b){ return new Date(b.checkin)-new Date(a.checkin); });
   var total = stays.length;
   var start = (pfStayPage-1)*STAY_PER_PAGE;
@@ -778,15 +846,18 @@ function renderStayHistory(g){
 
   document.getElementById('pfStayBody').innerHTML = page.length===0
     ? '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text3)">No stays on file</td></tr>'
-    : page.map(s=>`<tr>
-        <td style="font-weight:600">${s.room}</td>
-        <td>${s.type}</td>
-        <td>${fmtDate(s.checkin)}</td>
-        <td>${fmtDate(s.checkout)}</td>
+    : page.map(function(b){
+        var s = { total: bookingTotal(b), paid: bookingPaid(b) };
+        return `<tr style="cursor:pointer" onclick="openStayBooking('${g.id}','${b.stayId||''}','${b.room}','${b.checkin}')" title="Open in booking modal">
+        <td style="font-weight:600">${b.room}</td>
+        <td>${b.type||''}</td>
+        <td>${fmtDate(b.checkin)}</td>
+        <td>${fmtDate(b.checkout)}</td>
         <td class="r" style="font-weight:600">${fmtN(s.total)}</td>
         <td class="r" style="color:var(--green)">${fmtN(s.paid)}</td>
-        <td><span class="chip chip-${s.status}">${s.status==='checkedin'?'Checked In':s.status==='checkout'?'Checked Out':'Reserved'}</span></td>
-      </tr>`).join('');
+        <td><span class="chip chip-${b.status}">${b.status==='checkedin'?'Checked In':b.status==='checkout'?'Checked Out':'Reserved'}</span></td>
+      </tr>`;
+      }).join('');
 
   buildPagination('stayPageBtns','stayPaginLabel',pfStayPage,total,STAY_PER_PAGE,p=>{pfStayPage=p;renderStayHistory(g);});
 }

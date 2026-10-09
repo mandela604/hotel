@@ -6,14 +6,37 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
+const stayPaymentSchema = new mongoose.Schema({
+  id:     { type: String, default: '' },
+  amount: { type: Number, default: 0 },
+  mode:   { type: String, default: 'Cash' },
+  date:   { type: String, default: '' },
+  by:     { type: String, default: '' },
+  ts:     { type: Number, default: 0 },
+}, { _id: false });
+
 const staySchema = new mongoose.Schema({
-  room:     { type: String, default: '' },
-  type:     { type: String, default: '' },
-  checkin:  { type: String, default: '' },
-  checkout: { type: String, default: '' },
-  total:    { type: Number, default: 0 },
-  paid:     { type: Number, default: 0 },
-  status:   { type: String, default: '' },
+  stayId:       { type: String, default: '' },
+  bookingNo:    { type: String, default: '' },
+  room:         { type: String, default: '' },
+  type:         { type: String, default: '' },
+  checkin:      { type: String, default: '' },
+  checkout:     { type: String, default: '' },
+  rate:         { type: Number, default: 0 },
+  discount:     { type: Number, default: 0 },
+  extraNights:  { type: Number, default: 0 },
+  extraRate:    { type: Number, default: 0 },
+  total:        { type: Number, default: 0 },
+  paid:         { type: Number, default: 0 },
+  payStatus:    { type: String, default: '' },
+  payments:     { type: [stayPaymentSchema], default: [] },
+  phone:        { type: String, default: '' },
+  email:        { type: String, default: '' },
+  payMethod:    { type: String, default: 'Cash' },
+  recordedBy:   { type: String, default: '' },
+  status:       { type: String, default: 'checkout' },
+  checkedOutAt: { type: Number, default: 0 },
+  checkedOutBy: { type: String, default: '' },
 }, { _id: false });
 
 const chargePaymentSchema = new mongoose.Schema({

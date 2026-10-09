@@ -715,8 +715,32 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
   booking.updatedAt = Date.now();
   await booking.save();
 
-  // Ensure guest profile exists (no more stays[] archival — Booking is single source of truth)
-  await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
+  // Snapshot the completed stay onto the guest profile so stays/spend/
+  // history survive the later vacant wipe of this booking doc
+  try {
+    const gp = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
+    if (gp) {
+      gp.stays = gp.stays || [];
+      const already = gp.stays.some(function (s) { return s && s.stayId && booking.stayId && String(s.stayId) === String(booking.stayId); });
+      if (!already) {
+        gp.stays.push({
+          stayId: booking.stayId || '', bookingNo: booking.bookingNo || '',
+          room: booking.room, type: booking.type,
+          checkin: booking.checkin, checkout: booking.checkout,
+          rate: Number(booking.rate) || 0, discount: Number(booking.discount) || 0,
+          extraNights: Number(booking.extraNights) || 0, extraRate: Number(booking.extraRate) || 0,
+          total: calcTotal(booking), paid: calcPaid(booking), payStatus: booking.payStatus || '',
+          payments: (booking.payments || []).map(function (p) {
+            return { id: p.id || '', amount: Number(p.amount) || 0, mode: p.mode || 'Cash', date: p.date || '', by: p.by || '', ts: p.ts || 0 };
+          }),
+          phone: booking.phone || '', email: booking.email || '',
+          payMethod: booking.payMethod || 'Cash', recordedBy: booking.recordedBy || '',
+          status: 'checkout', checkedOutAt: Date.now(), checkedOutBy: req.user ? req.user.name : '',
+        });
+        await gp.save();
+      }
+    }
+  } catch (e) { /* history is best-effort, never block checkout */ }
 
   await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html');
   emit(req, 'booking', 'booking:updated', { action: 'checkout', room: booking.room, stayId: booking.stayId, data: booking });
