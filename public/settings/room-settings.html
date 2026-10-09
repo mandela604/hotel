@@ -136,11 +136,13 @@ let categories = [];
 
 async function loadCategories() {
   try {
+    console.log('[RoomSettings] Loading categories...');
     const res = await fetch(API, { credentials: 'include' });
     const j = await res.json();
     categories = j.data || [];
+    console.log('[RoomSettings] Loaded ' + categories.length + ' categories:', categories.map(c => ({ _id: c._id, id: c.id, name: c.name })));
     render();
-  } catch (e) { console.error(e); }
+  } catch (e) { console.error('[RoomSettings] Failed to load categories:', e); }
 }
 
 function render() {
@@ -150,57 +152,69 @@ function render() {
     el.innerHTML = '<div style="color:var(--text3);font-style:italic;font-size:12px;padding:8px 0;">No categories yet. Add one above.</div>';
     return;
   }
-  el.innerHTML = categories.map(c =>
-    '<div class="rc-row" data-id="' + c.id + '">' +
+  el.innerHTML = categories.map(c => {
+    const cid = c._id || c.id;
+    return '<div class="rc-row" data-id="' + cid + '">' +
       '<div class="rc-info">' +
         '<div class="rc-name">' + esc(c.name) + '</div>' +
         '<div class="rc-meta">₦' + Number(c.rate||0).toLocaleString() + (c.active === false ? ' · <span style="color:var(--red)">Inactive</span>' : '') + '</div>' +
       '</div>' +
       '<div class="rc-actions">' +
-        '<button onclick="editCat(\'' + c.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
-        '<button class="del" onclick="deleteCat(\'' + c.id + '\')"><i class="fa-solid fa-trash"></i></button>' +
+        '<button onclick="editCat(\'' + cid + '\')"><i class="fa-solid fa-pen"></i></button>' +
+        '<button class="del" onclick="deleteCat(\'' + cid + '\')"><i class="fa-solid fa-trash"></i></button>' +
       '</div>' +
-    '</div>'
-  ).join('');
+    '</div>';
+  }).join('');
 }
 
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
 document.getElementById('rcAddBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('rcAddBtn');
+  const origHTML = btn.innerHTML;
   const name = document.getElementById('rcName').value.trim();
   const rate = document.getElementById('rcRate').value;
   const sort = document.getElementById('rcSort').value;
   if (!name) { showToast('Enter a category name.', 'error'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Adding…';
+  console.log('[RoomSettings] Adding category:', { name, rate, sort });
   try {
     const res = await fetch(API, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rate: Number(rate)||0, sortOrder: Number(sort)||0 }) });
     const j = await res.json();
     if (!res.ok) throw new Error(j.error || 'Failed');
+    console.log('[RoomSettings] Category added:', j.data);
     document.getElementById('rcName').value = '';
     document.getElementById('rcRate').value = '';
     document.getElementById('rcSort').value = '';
     showToast('Category added.', 'success');
     loadCategories();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { console.error('[RoomSettings] Add failed:', e); showToast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = origHTML; }
 });
 
 async function editCat(id) {
-  const c = categories.find(x => x.id === id);
-  if (!c) return;
-  const name = prompt('Category name:', c.name); if (name === null) return;
-  const rate = prompt('Rate (₦):', c.rate || 0); if (rate === null) return;
-  const sort = prompt('Sort order:', c.sortOrder || 0); if (sort === null) return;
+  console.log('[RoomSettings] editCat called with id:', id);
+  const c = categories.find(x => (x._id || x.id) === id);
+  if (!c) { console.warn('[RoomSettings] Category not found for id:', id); showToast('Category not found.', 'error'); return; }
+  console.log('[RoomSettings] Found category:', c.name, c._id || c.id);
+  const name = prompt('Category name:', c.name); if (name === null) { console.log('[RoomSettings] Edit cancelled at name prompt'); return; }
+  const rate = prompt('Rate (₦):', c.rate || 0); if (rate === null) { console.log('[RoomSettings] Edit cancelled at rate prompt'); return; }
+  const sort = prompt('Sort order:', c.sortOrder || 0); if (sort === null) { console.log('[RoomSettings] Edit cancelled at sort prompt'); return; }
   const newRate = Number(rate);
   let applyToRooms = true;
   if (newRate !== Number(c.rate || 0)) {
     applyToRooms = confirm('Apply ₦' + newRate.toLocaleString() + ' to ALL "' + c.name + '" rooms? (Existing bookings keep their locked rates. Cancel keeps rooms on old prices.)');
   }
+  console.log('[RoomSettings] Saving edit:', { name: name.trim(), rate: newRate, sortOrder: Number(sort), applyToRooms });
   try {
     const res = await fetch(API + '/' + encodeURIComponent(id), { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), rate: newRate, sortOrder: Number(sort), applyToRooms }) });
     const j = await res.json();
     if (!res.ok) throw new Error(j.error || 'Failed');
+    console.log('[RoomSettings] Edit saved:', j.data);
     showToast('Category updated.' + (j.roomsUpdated ? ' ' + j.roomsUpdated + ' room(s) repriced.' : ''), 'success');
     loadCategories();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { console.error('[RoomSettings] Edit failed:', e); showToast(e.message, 'error'); }
 }
 
 loadCategories();
@@ -208,8 +222,10 @@ loadCategories();
 let pendingDeleteId = null;
 
 function deleteCat(id) {
-  const c = categories.find(x => x.id === id);
-  if (!c) return;
+  console.log('[RoomSettings] deleteCat called with id:', id);
+  const c = categories.find(x => (x._id || x.id) === id);
+  if (!c) { console.warn('[RoomSettings] Category not found for id:', id); showToast('Category not found.', 'error'); return; }
+  console.log('[RoomSettings] Found category to delete:', c.name, c._id || c.id);
   pendingDeleteId = id;
   document.getElementById('confirmCatName').textContent = c.name;
   document.getElementById('confirmOverlay').classList.add('show');
