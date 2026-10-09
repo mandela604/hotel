@@ -74,6 +74,10 @@
       mdApprovalThreshold: typeof cfg.mdApprovalThreshold === 'number' ? cfg.mdApprovalThreshold : 100000,
       departments: Array.isArray(cfg.departments) ? cfg.departments : seedDefaults().departments,
       disabledDepartments: Array.isArray(cfg.disabledDepartments) ? cfg.disabledDepartments : [],
+      hotelName: cfg.hotelName || 'Boston Leisure Hotel and Apartments',
+      hotelAddress: cfg.hotelAddress || '',
+      hotelPhone: cfg.hotelPhone || '',
+      hotelEmail: cfg.hotelEmail || '',
     };
   }
 
@@ -97,7 +101,7 @@
 
   function getSession() {
     try {
-      var keys = ['accounting-session','hotel-session','session','user','auth-user'];
+      var keys = ['aurum_user','accounting-session','hotel-session','session','user','auth-user'];
       for (var i=0;i<keys.length;i++){
         var v = localStorage.getItem(keys[i]);
         if (v) { try { var p=JSON.parse(v); if(p && p.role) return p; } catch(e){} }

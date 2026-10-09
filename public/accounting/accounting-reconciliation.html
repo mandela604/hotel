@@ -374,6 +374,7 @@ const VARIANCE_TOLERANCE = 500;
    SHIFT-DAY LOGIC
 ═══════════════════════════════════════════ */
 const SHIFT_START_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftStartHour) ? AccountingData.getShiftStartHour() : 9;
+let SHIFT_END_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftEndHour) ? AccountingData.getShiftEndHour() : 8;
 function pad2(n){ return String(n).padStart(2,'0'); }
 function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 function shiftKeyFor(dt){
@@ -385,7 +386,9 @@ function fmtTime(d){ return d.toLocaleTimeString('en-GB',{hour:'numeric',minute:
 function shiftRangeLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
-  const end = new Date(start); end.setDate(end.getDate()+1);
+  const end = new Date(start);
+  if (SHIFT_END_HOUR <= SHIFT_START_HOUR) end.setDate(end.getDate()+1);
+  end.setHours(SHIFT_END_HOUR, 0, 0, 0);
   const opt = {day:'numeric', month:'short'};
   return `${start.toLocaleDateString('en-GB',opt)}, ${fmtTime(start)} → ${end.toLocaleDateString('en-GB',opt)}, ${fmtTime(end)}`;
 }
@@ -878,7 +881,7 @@ async function init(){
   bindTableDelegation();
 
   const { roomTx, restSales, poolSales, gymTx, shifts: backendShifts } = await AccountingData.getAccountingData();
-  SHIFT_START_HOUR = AccountingData.getShiftStartHour();
+  try { SHIFT_END_HOUR = AccountingData.getShiftEndHour(); } catch (e) {}
   transactions = buildTransactions(roomTx, restSales, poolSales, gymTx);
 
   shifts = backendShifts || [];

@@ -156,22 +156,23 @@ exports.pnl = asyncHandler(async (req, res) => {
   const { from, to, mode } = req.query;
   const isShift = mode !== 'calendar';
 
-  // Get shift start hour from Config
-  let shiftStart = 9;
+  // Get shift window from Config (single source: utils/shift.js)
+  const { shiftKeyFor } = require('../utils/shift');
+  let shiftStart = 9, shiftEnd = 8;
   try {
     const Config = require('../models/Config');
     const cfg = await Config.findOne();
     if (cfg && typeof cfg.shiftStartHour === 'number') shiftStart = cfg.shiftStartHour;
+    if (cfg && typeof cfg.shiftEndHour === 'number') shiftEnd = cfg.shiftEndHour;
   } catch (err) {
-    console.error('[Accounting] Failed to load shift start hour from Config:', err.message);
+    console.error('[Accounting] Failed to load shift hours from Config:', err.message);
   }
 
   function shiftKey(dateStr) {
     if (!isShift) return dateStr;
     const d = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? new Date(dateStr + 'T12:00:00') : new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    if (d.getHours() < shiftStart) d.setDate(d.getDate() - 1);
-    return lagosDate(d);
+    return shiftKeyFor(d, shiftStart, shiftEnd) || lagosDate(d);
   }
 
   const safeAgg = (fn, label) => fn().catch(err => { console.error(`[Accounting] ${label} aggregation failed:`, err.message); return []; });
@@ -517,23 +518,15 @@ async function computeServerExpectedCash(shift) {
     const key = shift.key;
     const dept = shift.dept;
     let cashTotal = 0;
-    // Helper to get Lagos shift key for a date string/Date
+    // Helper to get Lagos shift key for a date string/Date (single source: utils/shift.js)
     function lagosYMD(d) { try { return new Date(d).toLocaleDateString('sv-SE', { timeZone: 'Africa/Lagos' }); } catch (e) { return new Date(d).toISOString().slice(0,10); } }
-    function lagosHour(d) { try { return parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', hour: '2-digit', hour12: false }).format(new Date(d)),10); } catch(e){ return new Date(d).getHours(); } }
+    const { shiftKeyFor: sharedShiftKeyFor, shiftHoursFromConfig } = require('../utils/shift');
+    const { start: cfgStart, end: cfgEnd } = await shiftHoursFromConfig();
+    global.__shiftStartHour = cfgStart;
+    global.__shiftEndHour = cfgEnd;
     function shiftKeyFor(d) {
-      const dt = new Date(d);
-      const h = lagosHour(dt);
-      let base = dt;
-      // shiftStart from Config, default 9
-      let shiftStart = 9;
-      try { const cfg = global.__shiftStartHour; if (typeof cfg === 'number') shiftStart = cfg; } catch(e){}
-      if (h < shiftStart) base = new Date(dt.getTime() - 86400000);
-      return lagosYMD(base);
+      return sharedShiftKeyFor(d, cfgStart, cfgEnd) || lagosYMD(d);
     }
-    // Try to get shiftStart from Config if available
-    let shiftStart = 9;
-    try { const Config = require('../models/Config'); const cfg = await Config.findOne().sort({ createdAt: -1 }); if (cfg && typeof cfg.shiftStartHour === 'number') shiftStart = cfg.shiftStartHour; } catch(e){}
-    global.__shiftStartHour = shiftStart;
     function isSameShift(dateStr) {
       if (!dateStr) return false;
       const d = new Date(dateStr.length===10 ? dateStr+'T12:00:00' : dateStr);

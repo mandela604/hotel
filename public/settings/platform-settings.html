@@ -119,6 +119,33 @@
         </div>
       </div>
 
+      <!-- Hotel Identity -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-hotel"></i> Hotel Identity</div>
+            <div class="panel-sub">Name, address and contacts printed on every receipt and report header.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="field-row" style="margin-bottom:10px;">
+            <label for="hotelNameInput">Hotel name</label>
+            <input type="text" id="hotelNameInput" maxlength="80" placeholder="Boston Leisure Hotel and Apartments" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;flex:1;min-width:220px;">
+          </div>
+          <div class="field-row" style="margin-bottom:10px;">
+            <label for="hotelAddrInput">Address</label>
+            <input type="text" id="hotelAddrInput" maxlength="160" placeholder="Idi Close, Km 75, Auchi-Benin Expressway…" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;flex:1;min-width:220px;">
+          </div>
+          <div class="field-row" style="margin-bottom:10px;">
+            <label for="hotelPhoneInput">Phone</label>
+            <input type="text" id="hotelPhoneInput" maxlength="20" placeholder="09039391464" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;width:200px;">
+            <label for="hotelEmailInput" style="margin-left:8px;">Email</label>
+            <input type="text" id="hotelEmailInput" maxlength="80" placeholder="hr.bostonleisurehotel@gmail.com" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;flex:1;min-width:200px;">
+          </div>
+          <button class="btn btn-outline" id="saveBrandBtn"><i class="fa-solid fa-check"></i> Save Identity</button>
+        </div>
+      </div>
+
       <!-- Shift Settings -->
       <div class="panel">
         <div class="panel-head">
@@ -306,6 +333,7 @@ function applyEditPermission() {
   document.getElementById('addDeptBtn').disabled = !canEdit;
   document.getElementById('shiftHourSel').disabled = !canEdit;
   document.getElementById('shiftEndSel').disabled = !canEdit;
+  ['hotelNameInput','hotelAddrInput','hotelPhoneInput','hotelEmailInput','saveBrandBtn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.disabled=!canEdit; });
   document.getElementById('saveShiftBtn').disabled = !canEdit;
   document.getElementById('thresholdInput').disabled = !canEdit;
   document.getElementById('saveThresholdBtn').disabled = !canEdit;
@@ -345,6 +373,21 @@ document.getElementById('newDeptInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('addDeptBtn').click();
 });
 
+document.getElementById('saveBrandBtn').addEventListener('click', async () => {
+  var patch = {
+    hotelName: document.getElementById('hotelNameInput').value.trim(),
+    hotelAddress: document.getElementById('hotelAddrInput').value.trim(),
+    hotelPhone: document.getElementById('hotelPhoneInput').value.trim(),
+    hotelEmail: document.getElementById('hotelEmailInput').value.trim(),
+  };
+  if (!patch.hotelName) { showToast('Hotel name is required.', 'error'); return; }
+  try {
+    settings = await PlatformSettings.updateSettings(patch);
+    showToast('Hotel identity saved — receipts and headers use it.', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
 document.getElementById('saveShiftBtn').addEventListener('click', async () => {
   const startHour = Number(document.getElementById('shiftHourSel').value);
   const endHour = Number(document.getElementById('shiftEndSel').value);
@@ -391,6 +434,10 @@ async function init() {
   renderDeptList();
   renderShiftHourSelect();
   document.getElementById('thresholdInput').value = settings.mdApprovalThreshold || 100000;
+  document.getElementById('hotelNameInput').value = settings.hotelName || '';
+  document.getElementById('hotelAddrInput').value = settings.hotelAddress || '';
+  document.getElementById('hotelPhoneInput').value = settings.hotelPhone || '';
+  document.getElementById('hotelEmailInput').value = settings.hotelEmail || '';
   applyEditPermission();
 
   PlatformSettings.onChange((s) => { settings = s; });

@@ -14,27 +14,11 @@ const asyncHandler = require('../middleware/asyncHandler');
 function lagosTodayStr() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Africa/Lagos' });
 }
-function lagosShiftRange(shiftStartHour) {
-  const now = new Date();
-  const lagosNowStr = now.toLocaleString('en-GB', { timeZone: 'Africa/Lagos', hour12: false });
-  // lagosNowStr like "02/10/2026, 07:16:00" — parse to get Lagos hour
-  const lagosHour = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', hour: '2-digit', hour12: false }).format(now), 10);
-  const lagosDateStr = now.toLocaleDateString('sv-SE', { timeZone: 'Africa/Lagos' }); // YYYY-MM-DD Lagos
-  let shiftDateStr = lagosDateStr;
-  if (lagosHour < shiftStartHour) {
-    // before shift start today -> shift started yesterday
-    const yest = new Date(now.getTime() - 86400000);
-    shiftDateStr = yest.toLocaleDateString('sv-SE', { timeZone: 'Africa/Lagos' });
-  }
-  const shiftStart = new Date(shiftDateStr + `T${String(shiftStartHour).padStart(2,'0')}:00:00+01:00`);
-  const shiftEnd = new Date(shiftStart.getTime() + 24*60*60*1000 - 1);
-  return { shiftStart, shiftEnd, shiftDateStr };
-}
+const { shiftRange, shiftHoursFromConfig } = require('../utils/shift');
 
 exports.overview = asyncHandler(async (req, res) => {
-  let shiftStartHour = 9;
-  try { const Config = require('../models/Config'); const cfg = await Config.findOne().sort({ createdAt: -1 }); if (cfg && typeof cfg.shiftStartHour === 'number') shiftStartHour = cfg.shiftStartHour; } catch(e){}
-  const { shiftStart: todayStart, shiftEnd: todayEnd } = lagosShiftRange(shiftStartHour);
+  const { start: shiftStartHour, end: shiftEndHour } = await shiftHoursFromConfig();
+  const { shiftStart: todayStart, shiftEnd: todayEnd } = shiftRange(new Date(), shiftStartHour, shiftEndHour);
 
   // Count low stock across all inventory modules (kitchen store + central store + outlets)
   const lowStockFilter = { $expr: { $and: [ { $gt: ['$min', 0] }, { $lte: ['$qty', '$min'] } ] } };

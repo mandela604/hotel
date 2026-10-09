@@ -187,7 +187,7 @@
     <div id="topbarSlot"></div>
 
     <div class="content">
-      <div class="print-header"><h2>Aurum Hotel — Revenue Report</h2><p id="printSub"></p></div>
+      <div class="print-header"><h2 id="printTitle">Boston Leisure Hotel and Apartments — Revenue Report</h2><p id="printSub"></p></div>
 
       <!-- KPIs now lead the page, ahead of the filter toolbar -->
       <div class="kpi-row" id="kpiRow"></div>
@@ -314,6 +314,7 @@
 <script src="../services/permissions.js"></script>
 
 <script src="services/accounting-service.js"></script>
+<script src="../services/brand.js"></script>
 <script src="../component/accounting-shell.js"></script>
 <script>
 /* ═══════════════════════════════════════════
@@ -345,8 +346,11 @@ function keyFor(dt){ return dateMode === 'shift' ? AccountingData.shiftKeyFor(dt
 function dayLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   if (dateMode === 'shift') {
+    const endHour = (typeof AccountingData !== 'undefined' && AccountingData.getShiftEndHour) ? AccountingData.getShiftEndHour() : 8;
     const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
-    const end = new Date(start); end.setDate(end.getDate()+1);
+    const end = new Date(start);
+    if (endHour <= SHIFT_START_HOUR) end.setDate(end.getDate()+1);
+    end.setHours(endHour, 0, 0, 0);
     const opt = {day:'numeric', month:'short'};
     return `${start.toLocaleDateString('en-GB',opt)} → ${end.toLocaleDateString('en-GB',opt)}`;
   }
@@ -695,6 +699,7 @@ function printReport(){
    as accounting-dashboard.html.
 ═══════════════════════════════════════════ */
 async function init(){
+  try { var _brand = await HotelBrand.get(); var _pt = document.getElementById('printTitle'); if (_brand && _pt) _pt.textContent = _brand.hotelName + ' — Revenue Report'; } catch (e) {}
   initSelects();
   bindModeToggle();
   bindPresets();

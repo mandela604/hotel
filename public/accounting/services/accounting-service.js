@@ -29,6 +29,7 @@
   };
 
   let SHIFT_START_HOUR = 9;
+  let SHIFT_END_HOUR = 8;
 
   const CONFIG = {
     API_BASE: '/api/accounting',
@@ -71,6 +72,7 @@
     const json = await res.json();
     const cfg = json && json.data ? json.data : {};
     if (typeof cfg.shiftStartHour === 'number') SHIFT_START_HOUR = cfg.shiftStartHour;
+    if (typeof cfg.shiftEndHour === 'number') SHIFT_END_HOUR = cfg.shiftEndHour;
   }
 
   /* ═══════════ Token + apiFetch ═══════════ */
@@ -125,12 +127,22 @@
   function lagosHour(date) {
     try { return parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', hour: '2-digit', hour12: false }).format(new Date(date)), 10); } catch (e) { return new Date(date).getHours(); }
   }
+  function shiftWindow() {
+    const s = SHIFT_START_HOUR;
+    const e = (typeof SHIFT_END_HOUR === 'number') ? SHIFT_END_HOUR : s;
+    return { start: s, end: e };
+  }
   function shiftKeyFor(dt) {
     const d = new Date(dt);
+    const { start: s, end: e } = shiftWindow();
     const h = lagosHour(d);
-    let base = d;
-    if (h < SHIFT_START_HOUR) base = new Date(d.getTime() - 86400000);
-    return lagosYMD(base);
+    const inWindow = (e <= s) ? (h >= s || h < e) : (h >= s && h < e);
+    if (inWindow) {
+      if (e <= s && h < e) return lagosYMD(new Date(d.getTime() - 86400000));
+      return lagosYMD(d);
+    }
+    if (h < s) return lagosYMD(new Date(d.getTime() - 86400000));
+    return lagosYMD(d);
   }
   function calendarKeyFor(dt) { return lagosYMD(dt); }
   function keyForMode(dt, mode) { return mode === 'calendar' ? calendarKeyFor(dt) : shiftKeyFor(dt); }
@@ -766,6 +778,7 @@
 
     PAY_METHODS,
     getShiftStartHour: function () { return SHIFT_START_HOUR; },
+    getShiftEndHour: function () { return (typeof SHIFT_END_HOUR === 'number') ? SHIFT_END_HOUR : SHIFT_START_HOUR; },
     getProcurementPnl,
     getPendingProcurement, approveProcurement, rejectProcurement,
   };

@@ -302,10 +302,13 @@ function applyPermissionsUI(){
    this page just asks AccountingData for numbers and renders them.
 ═══════════════════════════════════════════ */
 let SHIFT_START_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftStartHour) ? AccountingData.getShiftStartHour() : 9;
+let SHIFT_END_HOUR = (typeof AccountingData !== 'undefined' && AccountingData.getShiftEndHour) ? AccountingData.getShiftEndHour() : 8;
 function shiftRangeLabel(key){
   const [y,m,d] = key.split('-').map(Number);
   const start = new Date(y, m-1, d, SHIFT_START_HOUR, 0);
-  const end = new Date(start); end.setDate(end.getDate()+1);
+  const end = new Date(start);
+  if (SHIFT_END_HOUR <= SHIFT_START_HOUR) end.setDate(end.getDate()+1);
+  end.setHours(SHIFT_END_HOUR, 0, 0, 0);
   const opt = {day:'numeric', month:'short'};
   const t = (dt) => dt.toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit',hour12:true});
   return `${start.toLocaleDateString('en-GB',opt)}, ${t(start)} → ${end.toLocaleDateString('en-GB',opt)}, ${t(end)}`;
@@ -497,6 +500,7 @@ async function init(){
     const { roomTx, restSales, poolSales, gymTx, shifts, session } = await AccountingData.getAccountingData();
     currentSession = session;
     SHIFT_START_HOUR = AccountingData.getShiftStartHour();
+    try { SHIFT_END_HOUR = AccountingData.getShiftEndHour(); } catch (e) {}
     applyPermissionsUI();
 
     const allTx = AccountingData.buildTransactions(roomTx, restSales, poolSales, gymTx);

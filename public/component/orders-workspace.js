@@ -1018,10 +1018,28 @@
       $('[data-role="submitBtn"]').disabled = cart.length === 0;
     }
 
+    var receiptBrand = null;
+    function prefetchBrand() {
+      try {
+        if (global.HotelBrand && HotelBrand.get) {
+          HotelBrand.get().then(function (b) { if (b) receiptBrand = b; });
+        } else if (!document.querySelector('script[data-hotel-brand]')) {
+          var s = document.createElement('script');
+          s.setAttribute('data-hotel-brand', '1');
+          s.src = '/services/brand.js';
+          s.onload = function () { try { HotelBrand.prefetch(); } catch (e) {} };
+          document.head.appendChild(s);
+        }
+      } catch (e) {}
+    }
     function generateReceipt(orderData, isSale) {
       var header = moduleName === 'restaurant' ? 'Boston Leisure Restaurant' : 'Boston Leisure Pool Bar';
       var orderTypeLabel = isSale ? (orderType === 'tab' ? 'Tab' : 'Sale') : 'Order';
       var brand = moduleName === 'restaurant' ? 'Restaurant' : 'Pool Bar';
+      var hb = receiptBrand || ((global.HotelBrand && HotelBrand.fallback) || null) || {};
+      var hbName = hb.hotelNameUpper || hb.hotelName || 'BOSTON LEISURE HOTEL AND APARTMENTS';
+      var hbAddr = hb.hotelAddress || 'Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State';
+      var hbContact = hb.contactLine || '09039391464 / hr.bostonleisurehotel@gmail.com';
       var itemsHtml = (orderData.items || []).map(function(i) {
         return '<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">' + esc(i.name) + '</td><td style="text-align:center;padding:6px 0;border-bottom:1px solid #eee;">' + esc(i.qty) + '</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">' + fmtN(i.price) + '</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">' + fmtN(i.price * i.qty) + '</td></tr>';
       }).join('');
@@ -1030,7 +1048,7 @@
       var methodInfo = orderData.method ? '<div style="font-size:11px;color:#444;">Payment: ' + esc(orderData.method) + '</div>' : '';
       var notesInfo = orderData.notes ? '<div style="font-size:11px;color:#444;margin-top:6px;">Notes: ' + esc(orderData.notes) + '</div>' : '';
       var discAmt = orderData.discount ? (orderData.subtotal * orderData.discount / 100) : 0;
-      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:10mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:380px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px} .h p{margin:2px 0 0;font-size:10px;color:#555} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#666;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#666;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>BOSTON LEISURE — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(orderType) + ' Receipt</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(orderData.date || nowStamp()) + '</p><p style="font-size:10px;">Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State</p><p style="font-size:10px;">09039391464 / hr.bostonleisurehotel@gmail.com</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
+      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:10mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:380px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px} .h p{margin:2px 0 0;font-size:10px;color:#555} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#666;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#666;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>' + esc(hbName) + ' — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(orderType) + ' Receipt</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(orderData.date || nowStamp()) + '</p><p style="font-size:10px;">' + esc(hbAddr) + '</p><p style="font-size:10px;">' + esc(hbContact) + '</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
     }
 
     function openPrintWindow(html) {
@@ -2549,7 +2567,8 @@
     if ($('[data-role="cooRoomSearch"]')) { $('[data-role="cooRoomSearch"]').addEventListener('input', onCooRoomSearch); }
 
     async function init() {
-      // Shared food menu loads alongside — non-blocking
+      // Hotel brand + shared food menu load alongside — non-blocking
+      try { prefetchBrand(); } catch (e) {}
       loadFoodMenu().then(function () { try { renderPicker(); } catch (e) {} });
       try {
         if (global.LiveService && LiveService.on) {

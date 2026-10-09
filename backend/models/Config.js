@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 
 const configSchema = new mongoose.Schema({
-  hotelName:            { type: String, default: 'Aurum Hotel' },
+  hotelName:            { type: String, default: 'Boston Leisure Hotel and Apartments' },
+  hotelAddress:         { type: String, default: 'Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State' },
+  hotelPhone:           { type: String, default: '09039391464' },
+  hotelEmail:           { type: String, default: 'hr.bostonleisurehotel@gmail.com' },
   currency:             { type: String, default: '₦' },
   currencyCode:         { type: String, default: 'NGN' },
   locale:               { type: String, default: 'en-NG' },

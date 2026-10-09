@@ -248,6 +248,26 @@
     s.textContent = CSS;
     document.head.appendChild(s);
   }
+  function ensureBrand() {
+    try {
+      if (global.HotelBrand) { if (HotelBrand.prefetch) HotelBrand.prefetch(); return; }
+      if (document.querySelector('script[data-hotel-brand]')) return;
+      var b = document.createElement('script');
+      b.setAttribute('data-hotel-brand', '1');
+      b.src = (function () {
+        var scripts = document.getElementsByTagName('script');
+        for (var i = 0; i < scripts.length; i++) {
+          var src = scripts[i].getAttribute('src') || '';
+          if (src.indexOf('booking-modal.js') !== -1) {
+            return src.split('booking-modal.js')[0] + '../services/brand.js';
+          }
+        }
+        return '/services/brand.js';
+      })();
+      b.onload = function () { try { if (global.HotelBrand) HotelBrand.prefetch(); } catch (e) {} };
+      document.head.appendChild(b);
+    } catch (e) {}
+  }
 
   function fmtN(n) {
     var num = Math.round(Number(n) || 0);
@@ -264,6 +284,7 @@
   function create(opts) {
     opts = opts || {};
     injectCss();
+    ensureBrand();
 
     var service = opts.service || global.BookingData || null;
     var onSaved = typeof opts.onSaved === 'function' ? opts.onSaved : function () {};
@@ -1257,9 +1278,18 @@
       }
     }
 
-    /* ── Print individual booking receipt ── */
+    /* ── Print individual booking receipt (brand from Settings, hardcoded fallback) ── */
     function printBookingReceipt() {
       if (!editBooking) return;
+      var fallbackBrand = { hotelName: 'BOSTON LEISURE HOTEL AND APARTMENTS', hotelAddress: 'Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State', contactLine: '09039391464 / hr.bostonleisurehotel@gmail.com' };
+      if (global.HotelBrand && HotelBrand.get) {
+        var done = false;
+        var timer = setTimeout(function () { if (!done) { done = true; buildReceipt((HotelBrand.fallback || fallbackBrand)); } }, 1500);
+        HotelBrand.get().then(function (b2) { if (!done) { done = true; clearTimeout(timer); buildReceipt(b2 || HotelBrand.fallback || fallbackBrand); } });
+      } else {
+        buildReceipt(fallbackBrand);
+      }
+      function buildReceipt(brand) {
       var b = editBooking;
       var tot = calcTotal(b), pd = calcPaid(b), bal = calcBal(b);
       var payRows = '';
@@ -1288,7 +1318,7 @@
         '.footer{border-top:1px dashed #000;margin-top:3px;padding-top:3px;font-size:10px;color:#000;font-weight:600;}' +
         '@media print{body{padding:2mm 2mm 1mm;width:80mm;} html,body{height:auto;} *{overflow:visible !important;} @page{margin:0; size:auto;}}' +
         '</style></head><body>' +
-        '<div class="hdr c"><h1>BOSTON LEISURE HOTEL AND APARTMENTS</h1><p class="ph">Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State</p><p class="ph">09039391464 / hr.bostonleisurehotel@gmail.com</p></div>' +
+        '<div class="hdr c"><h1>' + esc(brand.hotelNameUpper || brand.hotelName) + '</h1><p class="ph">' + esc(brand.hotelAddress) + '</p><p class="ph">' + esc(brand.contactLine) + '</p></div>' +
         '<div class="row"><span class="lbl">Room</span><span class="val">' + esc(b.room) + ' · ' + esc(b.type || '') + '</span></div>' +
         '<div class="row"><span class="lbl">Guest</span><span class="val">' + esc(b.guest || '—') + '</span></div>' +
         '<div class="row"><span class="lbl">Phone</span><span class="val">' + esc(b.phone || '—') + '</span></div>' +
@@ -1309,6 +1339,7 @@
       w.document.close();
       w.focus();
       setTimeout(function() { w.print(); }, 300);
+      }
     }
 
     /* ── Check in (early allowed) ── */
