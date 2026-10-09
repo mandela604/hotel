@@ -680,11 +680,10 @@
         var keep = st === 'available' || r.num === preferNum;
         if (!keep) return;
         var cat = roomCategories.find(function(c){ return c.name === r.type; });
-        if (!cat && roomCategories.length) return;
-        var typeName = cat ? cat.name : r.type;
+        if (!cat) return;
         var opt = document.createElement('option');
-        opt.value = r.num + '|' + typeName + '|' + r.rate;
-        opt.textContent = r.num + ' – ' + typeName + ' (' + fmtN(r.rate) + '/nt)' +
+        opt.value = r.num + '|' + cat.name + '|' + r.rate;
+        opt.textContent = r.num + ' – ' + cat.name + ' (' + fmtN(r.rate) + '/nt)' +
           (r.num === preferNum ? ' · current' : '');
         sel.appendChild(opt);
       });
