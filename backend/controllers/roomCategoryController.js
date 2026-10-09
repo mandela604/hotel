@@ -105,5 +105,10 @@ exports.remove = asyncHandler(async (req, res) => {
   await Room.updateMany({ type: category.name }, { $set: { type: fallbackName } });
   await Booking.updateMany({ type: category.name }, { $set: { type: fallbackName } });
   await category.deleteOne();
+  try {
+    const io = req.app.get('io');
+    if (io) io.to('booking').to('global').emit('roomCategory:deleted', { id: req.params.id, reassignedTo: fallbackName });
+  } catch (e) {}
+  console.log('[RoomCategory] Deleted category:', category.name, '→ reassigned to:', fallbackName);
   res.json({ success: true, data: { id: req.params.id, reassignedTo: fallbackName } });
 });

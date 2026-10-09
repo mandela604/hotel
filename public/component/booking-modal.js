@@ -857,7 +857,8 @@
       setVal('adults', '1');
       setVal('children', '0');
       setVal('discount', '0');
-      setVal('payMethod', 'Cash');
+      var pm = getPayMethods();
+      setVal('payMethod', pm.length ? pm[0] : 'Cash');
       setVal('type', '');
       setStatusRadio('reserved');
       originalCreatedAt = null;
@@ -995,7 +996,7 @@
       if (!payments.length && (Number(editBooking.paid) || 0) > 0) {
         payments = [{
           amount: Number(editBooking.paid) || 0,
-          mode: editBooking.payMethod || 'Cash',
+          mode: editBooking.payMethod || (getPayMethods().length ? getPayMethods()[0] : 'Cash'),
           date: editBooking.checkin || '',
           by: editBooking.recordedBy || '—',
           ts: 0,
@@ -1485,6 +1486,17 @@
       if (onCloseCb) onCloseCb();
     }
 
+    function getPayMethods() {
+      try {
+        if (typeof PlatformSettings !== 'undefined' && PlatformSettings.state && Array.isArray(PlatformSettings.state.settings.paymentMethods) && PlatformSettings.state.settings.paymentMethods.length) {
+          console.log('[BookingModal] Pay methods from settings:', PlatformSettings.state.settings.paymentMethods);
+          return PlatformSettings.state.settings.paymentMethods;
+        }
+      } catch (e) {}
+      console.log('[BookingModal] Using default pay methods');
+      return ['Cash', 'POS', 'Transfer', 'Room Charge'];
+    }
+
     function fillBookingFields(booking) {
       setVal('name', booking.guest || booking._guestName || '');
       setVal('phone', booking.phone || '');
@@ -1496,7 +1508,8 @@
       setVal('checkout', booking.checkout || '');
       setVal('rate', booking.rate || 0);
       setVal('discount', booking.discount || 0);
-      setVal('payMethod', booking.payMethod || 'Cash');
+      var pmEdit = getPayMethods();
+      setVal('payMethod', booking.payMethod || (pmEdit.length ? pmEdit[0] : 'Cash'));
       setVal('adults', booking.adults || 1);
       setVal('children', booking.children || 0);
       setVal('notes', booking.notes || '');
