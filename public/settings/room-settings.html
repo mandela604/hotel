@@ -291,6 +291,7 @@ async function confirmDelete() {
     closeConfirm();
     showToast('Category deleted.' + (j.data && j.data.reassignedTo ? ' Rooms reassigned to "' + j.data.reassignedTo + '".' : ''), 'success');
     loadCategories();
+    document.dispatchEvent(new CustomEvent('roomCategoryDeleted', { detail: j.data }));
   } catch (e) {
     showToast(e.message, 'error');
   } finally {

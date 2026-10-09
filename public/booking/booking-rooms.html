@@ -686,7 +686,7 @@ function roomCardHtml(r, st, bk, cands, p) {
           '<div class="room-num">' + r.num + '</div>' +
           '<div style="display:flex;align-items:center;gap:6px;"><span class="room-chip ' + (RC_CLS[st] || '') + '">' + (RC_LBL[st] || st) + '</span>' + editIcon + '</div>' +
         '</div>' +
-        '<div class="room-type-lbl">' + r.type + '</div>' +
+        '<div class="room-type-lbl">' + esc((roomCategories.find(function(c){ return c.name === r.type; }) || {}).name || r.type) + '</div>' +
         '<div class="room-guest-block">' + guestBlock + '</div>' +
         '<div class="room-rate"><span>Rate</span> ' + fmtN(r.rate) + '/night</div>' +
         acts +
@@ -1055,13 +1055,10 @@ async function init() {
       '<div class="room-empty">Couldn\'t load room data. Please refresh.</div>';
   }
 
-  if (typeof io !== 'undefined') {
-    var socket = io();
-    socket.on('roomCategory:deleted', function(data) {
-      console.log('[BookingRooms] roomCategory:deleted received:', data);
-      refreshDataAndRender();
-    });
-  }
+  document.addEventListener('roomCategoryDeleted', function(e) {
+    console.log('[BookingRooms] roomCategory:deleted received:', e.detail);
+    refreshDataAndRender();
+  });
 }
 
 /* ── Cancel & Refund Modal ── */
