@@ -858,7 +858,7 @@
       setVal('children', '0');
       setVal('discount', '0');
       var pm = getPayMethods();
-      setVal('payMethod', pm.length ? pm[0] : 'Cash');
+      setVal('payMethod', pm && pm.length ? pm[0] : 'Cash');
       setVal('type', '');
       setStatusRadio('reserved');
       originalCreatedAt = null;
