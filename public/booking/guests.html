@@ -487,6 +487,7 @@ function guestMatches(g, b){
   if (!b) return false;
   if (b.guest && g.name && b.guest === g.name) return true;
   if (b.guestId && (b.guestId === g.id || b.guestId === g.guestId)) return true;
+  if (b.phone && g.phone && b.phone === g.phone) return true;
   return false;
 }
 function activeBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return guestMatches(g, b) && (b.status==='reserved'||b.status==='checkedin'); }); }
@@ -520,7 +521,7 @@ function roomPaid(g){ return allBookingsForGuest(g).reduce(function(s,b){return 
 function chargeTotal(g){ return g.charges.reduce(function(s,c){return s+(Number(c.amount)||0);},0); }
 function chargeOutstanding(g){ return g.charges.reduce(function(s,c){ if(c.status==='Settled') return s; return s+Math.max(0,(Number(c.amount)||0)-(Number(c.paid)||0)-(c.payments||[]).reduce(function(a,p){return a+(Number(p.amount)||0);},0)); },0); }
 function guestOutstanding(g){ return Math.max(0, roomTotal(g)-roomPaid(g)) + chargeOutstanding(g); }
-function guestSpend(g){ return roomTotal(g)+chargeTotal(g); }
+function guestSpend(g){ return roomPaid(g)+chargeTotal(g); }
 function isReturning(g){ return allBookingsForGuest(g).length > 1; }
 function currentRoom(g){ var act=activeBookingsForGuest(g).find(function(s){return s.status==='checkedin';}); if(act) return act.room; return null; }
 const SRC_CHIP = { Restaurant:'chip-restaurant', Bar:'chip-bar', 'Pool Bar':'chip-pool' };
