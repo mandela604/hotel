@@ -60,6 +60,20 @@
   .toast.success{ border-left:3px solid #12b76a; } .toast.success i{ color:#12b76a; }
   .toast.error{ border-left:3px solid #f04438; } .toast.error i{ color:#f04438; }
   @keyframes toastIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Confirm modal */
+  .confirm-overlay{ display:none; position:fixed; inset:0; background:rgba(15,34,55,.45); backdrop-filter:blur(3px); z-index:400; align-items:center; justify-content:center; }
+  .confirm-overlay.show{ display:flex; }
+  .confirm-box{ background:#fff; border:1px solid #eef0f6; border-radius:14px; padding:22px 24px; width:min(360px,92vw); box-shadow:0 20px 60px rgba(15,34,55,.2); animation:toastIn .2s ease; }
+  .confirm-box h3{ font-size:15px; font-weight:800; color:#1c2440; margin-bottom:6px; }
+  .confirm-box p{ font-size:12.5px; color:#6b7280; line-height:1.5; margin-bottom:18px; }
+  .confirm-box p strong{ color:#1c2440; }
+  .confirm-acts{ display:flex; gap:8px; justify-content:flex-end; }
+  .confirm-acts .btn-cancel{ background:none; border:1px solid #dfe3ec; border-radius:8px; padding:8px 16px; font-size:12.5px; font-weight:600; color:#6b7280; cursor:pointer; font-family:inherit; }
+  .confirm-acts .btn-cancel:hover{ border-color:#9aa1b3; color:#1c2440; }
+  .confirm-acts .btn-delete{ background:#feecec; border:1px solid rgba(240,68,56,.35); border-radius:8px; padding:8px 16px; font-size:12.5px; font-weight:700; color:#f04438; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
+  .confirm-acts .btn-delete:hover{ background:rgba(240,68,56,.18); }
+  .confirm-acts .btn-delete:disabled{ opacity:.5; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -189,18 +203,61 @@ async function editCat(id) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-async function deleteCat(id) {
-  if (!confirm('Delete this category? Rooms using it will keep their type.')) return;
-  try {
-    const res = await fetch(API + '/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' });
-    const j = await res.json();
-    if (!res.ok) throw new Error(j.error || 'Failed');
-    showToast('Category deleted.', 'success');
-    loadCategories();
-  } catch (e) { showToast(e.message, 'error'); }
+loadCategories();
+
+let pendingDeleteId = null;
+
+function deleteCat(id) {
+  const c = categories.find(x => x.id === id);
+  if (!c) return;
+  pendingDeleteId = id;
+  document.getElementById('confirmCatName').textContent = c.name;
+  document.getElementById('confirmOverlay').classList.add('show');
 }
 
-loadCategories();
+function closeConfirm() {
+  pendingDeleteId = null;
+  document.getElementById('confirmOverlay').classList.remove('show');
+}
+
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting…';
+  try {
+    const res = await fetch(API + '/' + encodeURIComponent(pendingDeleteId), { method: 'DELETE', credentials: 'include' });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || 'Failed to delete');
+    closeConfirm();
+    showToast('Category deleted.' + (j.data && j.data.reassignedTo ? ' Rooms reassigned to "' + j.data.reassignedTo + '".' : ''), 'success');
+    loadCategories();
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-trash"></i> Delete';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var overlay = document.getElementById('confirmOverlay');
+  if (overlay) overlay.addEventListener('click', function(e) {
+    if (e.target === this) closeConfirm();
+  });
+});
 </script>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3><i class="fa-solid fa-triangle-exclamation" style="color:#f79009;margin-right:6px;"></i> Delete Category</h3>
+    <p>Are you sure you want to delete <strong id="confirmCatName"></strong>? Rooms using it will be reassigned to another category.</p>
+    <div class="confirm-acts">
+      <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-delete" id="confirmDeleteBtn" onclick="confirmDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

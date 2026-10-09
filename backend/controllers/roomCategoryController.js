@@ -51,7 +51,8 @@ exports.create = asyncHandler(async (req, res) => {
 });
 
 exports.update = asyncHandler(async (req, res) => {
-  const category = await RoomCategory.findOne({ id: req.params.id });
+  const category = await RoomCategory.findById(req.params.id).catch(() => null)
+    || await RoomCategory.findOne({ id: req.params.id });
   if (!category) {
     return res.status(404).json({ success: false, error: 'Category not found' });
   }
@@ -94,7 +95,8 @@ exports.update = asyncHandler(async (req, res) => {
 });
 
 exports.remove = asyncHandler(async (req, res) => {
-  const category = await RoomCategory.findOne({ id: req.params.id });
+  const category = await RoomCategory.findById(req.params.id).catch(() => null)
+    || await RoomCategory.findOne({ id: req.params.id });
   if (!category) {
     return res.status(404).json({ success: false, error: 'Category not found' });
   }

@@ -95,6 +95,7 @@
           <h1>Platform Settings</h1>
           <p>Payment methods, shift timing, and departments used across every module.</p>
         </div>
+        <button class="btn btn-primary" id="saveAllBtn"><i class="fa-solid fa-check"></i> Save All Settings</button>
       </div>
 
       <div class="banner" id="permBanner">
@@ -373,6 +374,24 @@ document.getElementById('newDeptInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('addDeptBtn').click();
 });
 
+document.getElementById('saveAllBtn').addEventListener('click', async () => {
+  const patch = {
+    hotelName: document.getElementById('hotelNameInput').value.trim(),
+    hotelAddress: document.getElementById('hotelAddrInput').value.trim(),
+    hotelPhone: document.getElementById('hotelPhoneInput').value.trim(),
+    hotelEmail: document.getElementById('hotelEmailInput').value.trim(),
+    shiftStartHour: Number(document.getElementById('shiftHourSel').value),
+    shiftEndHour: Number(document.getElementById('shiftEndSel').value),
+    mdApprovalThreshold: Number(document.getElementById('thresholdInput').value) || 0,
+  };
+  if (!patch.hotelName) { showToast('Hotel name is required.', 'error'); return; }
+  try {
+    settings = await PlatformSettings.updateSettings(patch);
+    showToast('All settings saved.', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
 document.getElementById('saveBrandBtn').addEventListener('click', async () => {
   var patch = {
     hotelName: document.getElementById('hotelNameInput').value.trim(),
@@ -427,7 +446,7 @@ async function init() {
   settings = await PlatformSettings.getSettings();
   var sess = await waitForShellSession(2000);
   // try shell session first, then localStorage fallback inside service
-  canEdit = PlatformSettings.canEditSettings(sess);
+  canEdit = await PlatformSettings.canEditSettings(sess);
   // admin/manager must never be read-only — explicit fallback if Permissions not loaded
   if (!canEdit && sess && /^(admin|manager)$/i.test(sess.role||'')) canEdit = true;
   renderPaymentChips();

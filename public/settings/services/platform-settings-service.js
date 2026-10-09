@@ -99,20 +99,19 @@
     return clone(state.settings);
   }
 
-  function getSession() {
+  async function getSession() {
     try {
-      var keys = ['aurum_user','accounting-session','hotel-session','session','user','auth-user'];
-      for (var i=0;i<keys.length;i++){
-        var v = localStorage.getItem(keys[i]);
-        if (v) { try { var p=JSON.parse(v); if(p && p.role) return p; } catch(e){} }
+      const res = await fetch('/api/auth/session', { credentials: 'include' });
+      if (res.ok) {
+        const body = await res.json();
+        if (body && body.role) return body;
       }
     } catch (e) {}
     return null;
   }
 
-  function canEditSettings(session) {
-    var s = session || getSession();
-    // explicit admin/manager bypass - settings has no module entry, ensure they are never read-only
+  async function canEditSettings(session) {
+    var s = session || await getSession();
     if (s && /^(admin|manager)$/i.test(s.role||'')) return true;
     var P = global.Permissions;
     if (!P) return !!s && (s.role === 'admin' || s.role === 'manager');
@@ -120,7 +119,7 @@
   }
 
   async function updateSettings(patch, session) {
-    if (!canEditSettings(session)) {
+    if (!await canEditSettings(session)) {
       const err = new Error("You don't have permission to change platform settings.");
       err.code = 'PERMISSION_DENIED';
       throw err;
