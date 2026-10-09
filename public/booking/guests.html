@@ -489,6 +489,7 @@ function guestMatches(g, b){
   if (b.guestId && g.guestId && b.guestId === g.guestId) return true;
   if (b.guest && g.name && b.guest === g.name) return true;
   if (b.phone && g.phone && b.phone === g.phone) return true;
+  console.log('[Guests] No match: guest', { id: g.id, guestId: g.guestId, name: g.name, phone: g.phone }, 'booking', { guestId: b.guestId, guest: b.guest, phone: b.phone });
   return false;
 }
 function activeBookingsForGuest(g){ return (bookingsData||[]).filter(function(b){ return guestMatches(g, b) && (b.status==='reserved'||b.status==='checkedin'); }); }
@@ -515,7 +516,9 @@ function allBookingsForGuest(g){
   var seen = {};
   live.forEach(function(b){ var k = b.stayId || b._id || b.id; if (k) seen[k] = true; });
   var hist = historyStaysForGuest(g).filter(function(h){ return !h.stayId || !seen[h.stayId]; });
-  return live.concat(hist);
+  var all = live.concat(hist);
+  console.log('[Guests] allBookingsForGuest:', { guest: g.name, guestId: g.id, liveCount: live.length, histCount: hist.length, total: all.length, totalStays: (g.stays||[]).length });
+  return all;
 }
 function roomTotal(g){ return allBookingsForGuest(g).reduce(function(s,b){return s+bookingTotal(b);},0); }
 function roomPaid(g){ return allBookingsForGuest(g).reduce(function(s,b){return s+bookingPaid(b);},0); }
