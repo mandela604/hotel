@@ -659,18 +659,6 @@
         }
       }
 
-      try {
-        console.log('[bkm-calcs]', JSON.stringify({
-          formCi: ci, formCo: co, formNights: n, formRate: rate, formDisc: disc,
-          storedCi: editBooking ? editBooking.checkin : null,
-          storedCo: editBooking ? editBooking.checkout : null,
-          storedNights: editBooking ? nights(editBooking.checkin, editBooking.checkout) : null,
-          storedRate: editBooking ? editBooking.rate : null,
-          storedExtraN: editBooking ? editBooking.extraNights : null,
-          storedExtraR: editBooking ? editBooking.extraRate : null,
-          raw: raw, after: after, paid: paid, bal: bal,
-        }));
-      } catch (e) {}
       setVal('nightsDisp', String(n || 0));
       var elT = $('[data-role="dispTotal"]');
       var elA = $('[data-role="dispAfter"]');
