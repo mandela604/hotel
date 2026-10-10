@@ -514,13 +514,15 @@
                   '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Amount</label>' +
                     '<input class="bkm-input" data-role="newPayAmount" type="number" min="0" step="500" placeholder="0"></div>' +
                   '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Mode</label>' +
-                    '<select class="bkm-select" data-role="newPayMode"><option>Cash</option><option>POS</option><option>Transfer</option></select></div>' +
+                    '<select class="bkm-select" data-role="newPayMode"><option>Cash</option><option>POS</option><option>Transfer</option><option>Complimentary</option></select></div>' +
                   '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Recorded by</label>' +
                     '<input class="bkm-input" data-role="newPayBy" type="text" readonly></div>' +
                   '<button type="button" class="bkm-btn bkm-btn-primary" data-act="confirmPay" style="padding:7px 12px;font-size:12px;">' +
                     '<i class="fa-solid fa-check"></i> Add' +
                   '</button>' +
                 '</div>' +
+                '<div class="bkm-fg" data-role="compNoteWrap" hidden style="margin-top:8px;"><label class="bkm-label">Complimentary note <span style="color:var(--bkm-red)">*</span></label>' +
+                  '<input class="bkm-input" data-role="compNote" type="text" placeholder="Required — e.g. CEO order"></div>' +
               '</div>' +
             '</div>' +
             '<div class="bkm-pay-acc" data-role="chargesAcc" hidden>' +
@@ -616,12 +618,14 @@
       var after = Math.max(0, raw - disc * (n || 0));
 
       var paid = 0;
+      var comped = 0;
       var bal = after;
       if (mode === 'new') {
         paid = parseFloat(val('paid')) || 0;
         bal = Math.max(0, after - paid);
       } else if (editBooking) {
         paid = calcPaid(editBooking);
+        comped = Number(editBooking.comped) || 0;
         // Option 2: extra nights at current room rate, not repricing promo nights
         var origNights = nights(editBooking.checkin, editBooking.checkout);
         var curRoomRate = (function(){ var r = rooms.find(function(x){ return x.num === editBooking.room; }); return r ? Number(r.rate)||0 : rate; })();
@@ -667,7 +671,8 @@
         elB.textContent = fmtN(bal);
         elB.className = 'bkm-rate-v ' + (bal > 0 ? 'red' : 'green');
       }
-      var status = paid <= 0 ? 'Pending' : (paid >= after ? 'Fully Paid' : 'Deposit Paid');
+      bal = Math.max(0, bal - comped);
+      var status = paid <= 0 && comped <= 0 ? 'Pending' : (paid + comped >= after ? (comped > 0 ? 'Complimentary' : 'Fully Paid') : 'Deposit Paid');
       if (elS) elS.textContent = status;
     }
 
@@ -1024,7 +1029,7 @@
         body.innerHTML = payments.map(function (p) {
           return '<tr>' +
             '<td class="bkm-pay-amt">' + fmtN(p.amount) + '</td>' +
-            '<td>' + esc(p.mode || 'Cash') + '</td>' +
+            '<td>' + esc(p.mode || 'Cash') + (p.note ? '<div style="font-size:10px;color:var(--bkm-text3);font-weight:600;">' + esc(p.note) + '</div>' : '') + '</td>' +
             '<td>' + esc(p.date || '—') + '</td>' +
             '<td>' + esc(p.by || '—') + '</td></tr>';
         }).join('');
@@ -1033,6 +1038,7 @@
 
       var currentBal = (function(){
         if (!editBooking) return 0;
+        var comped = Number(editBooking.comped) || 0;
         var ci = val('checkin'), co = val('checkout');
         var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
         var origNights = nights(editBooking.checkin, editBooking.checkout);
@@ -1044,9 +1050,10 @@
           var addRate = (r !== Number(editBooking.rate) && r !== 0) ? r : curRoomRate;
           var after = baseTotal + Math.max(0, additional * (addRate - d));
           var paid = calcPaid(editBooking);
-          return Math.max(0, after - paid);
+          return Math.max(0, after - paid - comped);
         }
-        return calcBal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
+        var b2 = Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d });
+        return Math.max(0, calcBal(b2) - comped);
       })();
       var allowPay = paymentActionsAllowed() && currentBal > 0;
 
@@ -1088,6 +1095,7 @@
       var acc = $('[data-role="payAcc"]');
       if (!acc || !editBooking) return;
       var curBal = (function(){
+        var comped = Number(editBooking.comped) || 0;
         var ci = val('checkin'), co = val('checkout');
         var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
         var origNights = nights(editBooking.checkin, editBooking.checkout);
@@ -1099,9 +1107,10 @@
           var addRate = (r !== Number(editBooking.rate) && r !== 0) ? r : curRoomRate;
           var after = baseTotal + Math.max(0, additional * (addRate - d));
           var paid = calcPaid(editBooking);
-          return Math.max(0, after - paid);
+          return Math.max(0, after - paid - comped);
         }
-        return calcBal(Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d }));
+        var b3 = Object.assign({}, editBooking, { checkin: ci, checkout: co, rate: r, discount: d });
+        return Math.max(0, calcBal(b3) - comped);
       })();
       if (!paymentActionsAllowed() || curBal <= 0) {
         acc.hidden = true;
@@ -1113,14 +1122,32 @@
       setVal('newPayAmount', String(curBal));
       setVal('newPayMode', 'Cash');
       setVal('newPayBy', (session && session.name) || '');
+      setVal('compNote', '');
+      syncCompNote();
       var amt = $('[data-role="newPayAmount"]');
       if (amt) amt.focus();
     }
 
+    function isCompPay() { return String(val('newPayMode') || '').toLowerCase() === 'complimentary'; }
+    function syncCompNote() {
+      var comp = isCompPay();
+      var wrap = $('[data-role="compNoteWrap"]');
+      if (wrap) wrap.hidden = !comp;
+      var amtEl = $('[data-role="newPayAmount"]');
+      if (amtEl) {
+        amtEl.disabled = comp;
+        if (comp) amtEl.value = '0';
+      }
+    }
+
     async function confirmPay() {
       if (addingPayment || !editBooking) return;
+      var comp = isCompPay();
       var amt = parseFloat(val('newPayAmount')) || 0;
-      if (amt <= 0) { toast('Enter a payment amount greater than zero.', 'error'); return; }
+      var note = String(val('compNote') || '').trim();
+      if (comp && !note) { toast('A note is required for complimentary payments (e.g. CEO order).', 'error'); return; }
+      if (!comp && amt <= 0) { toast('Enter a payment amount greater than zero.', 'error'); return; }
+      if (comp) amt = 0;
       var curBal = (function(){
         var ci = val('checkin'), co = val('checkout');
         var r = parseFloat(val('rate')) || 0, d = parseFloat(val('discount')) || 0;
@@ -1141,13 +1168,14 @@
         // recalc after save
         curBal = calcBal(editBooking);
         curTot = calcTotal(editBooking);
-        if (amt > curBal) { toast('Payment ₦' + amt.toLocaleString() + ' exceeds new balance ₦' + curBal.toLocaleString() + ' (total ₦' + curTot.toLocaleString() + ').', 'error'); return; }
+        if (!comp && amt > curBal) { toast('Payment ₦' + amt.toLocaleString() + ' exceeds new balance ₦' + curBal.toLocaleString() + ' (total ₦' + curTot.toLocaleString() + ').', 'error'); return; }
       }
       addingPayment = true;
       applyEditability();
       try {
         var payStay = (editBooking.stayId || editBooking._id || editBooking.room);
         var payPayload = { amount: amt, mode: payMode, stayId: editBooking.stayId || '' };
+        if (comp) payPayload.note = note;
         var row = await service.addBookingPayment(payStay, payPayload);
         editBooking = row;
         var payAcc = $('[data-role="payAcc"]');
@@ -1724,6 +1752,7 @@
 
     root.addEventListener('change', function (e) {
       var role = e.target.getAttribute('data-role');
+      if (role === 'newPayMode') syncCompNote();
       if (role === 'room') onRoomChange();
       if (role === 'checkin' || role === 'checkout' || role === 'rate' || role === 'discount' || role === 'paid') {
         refreshCalcs();

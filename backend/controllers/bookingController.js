@@ -47,13 +47,14 @@ function calcPaid(b) {
   return Math.max(0, raw - (Number(b.refunded) || 0));
 }
 function calcBal(b) {
-  return Math.max(0, calcTotal(b) - calcPaid(b));
+  return Math.max(0, calcTotal(b) - calcPaid(b) - (Number(b.comped) || 0));
 }
 function payStatusFor(b) {
   const paid = calcPaid(b);
+  const comped = Number(b.comped) || 0;
   const total = calcTotal(b);
-  if (paid <= 0) return 'Pending';
-  if (paid >= total) return 'Fully Paid';
+  if (total > 0 && paid + comped >= total) return comped > 0 ? 'Complimentary' : 'Fully Paid';
+  if (paid <= 0 && comped <= 0) return 'Pending';
   return 'Deposit Paid';
 }
 
@@ -839,9 +840,14 @@ exports.addPayment = asyncHandler(async (req, res) => {
   const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
 
-  const { amount, mode } = req.body;
+  const { amount, mode, note } = req.body;
   const numAmt = Number(amount);
-  if (!numAmt || numAmt <= 0) return res.status(400).json({ success: false, error: 'Invalid payment amount' });
+  const isComp = String(mode || '').toLowerCase() === 'complimentary';
+  if (isComp) {
+    if (!String(note || '').trim()) return res.status(400).json({ success: false, error: 'A note is required for complimentary payments (e.g. CEO order).' });
+  } else if (!numAmt || numAmt <= 0) {
+    return res.status(400).json({ success: false, error: 'Invalid payment amount' });
+  }
   let bal = calcBal(booking);
   // For extended stays at new room rate (promo 50k -> 55k), allow payment for extra nights at current rate
   try {
@@ -858,19 +864,24 @@ exports.addPayment = asyncHandler(async (req, res) => {
   if (numAmt > bal) return res.status(400).json({ success: false, error: `Payment ₦${numAmt.toLocaleString()} exceeds balance ₦${bal.toLocaleString()} (total ₦${calcTotal(booking).toLocaleString()} - paid ₦${calcPaid(booking).toLocaleString()})` });
   const entry = {
     id: `PMT-${uuidv4()}`,
-    amount: numAmt,
+    amount: isComp ? 0 : numAmt,
     mode: mode || 'Cash',
     date: todayDDMMYY(),
     by: req.user ? req.user.name : booking.recordedBy || '',
     ts: Date.now(),
+    note: isComp ? String(note).trim().slice(0, 300) : '',
   };
   booking.payments.push(entry);
+  if (isComp) {
+    // Complimentary covers the remaining balance at ₦0 collected
+    booking.comped = (Number(booking.comped) || 0) + bal;
+  }
   booking.paid = calcPaid(booking);
   booking.payStatus = payStatusFor(booking);
   booking.updatedAt = Date.now();
   await booking.save();
 
-  await logActivity('Booking', 'green', `Payment of ${entry.amount} recorded for Room ${booking.room}`, 'booking-list.html');
+  await logActivity('Booking', 'green', isComp ? `Complimentary stay recorded for Room ${booking.room} — ${String(note).trim().slice(0, 120)}` : `Payment of ${entry.amount} recorded for Room ${booking.room}`, 'booking-list.html');
   emit(req, 'booking', 'booking:updated', { action: 'addPayment', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });

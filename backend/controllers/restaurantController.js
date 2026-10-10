@@ -266,8 +266,11 @@ exports.listSales = asyncHandler(async (req, res) => {
 // record, e.g. plain menu-only items with nothing tracked in inventory),
 // and posts a room charge onto the guest's folio when paid via Room Charge.
 exports.createSale = asyncHandler(async (req, res) => {
-  const { items, method, table, discount, roomNumber, guestName, guestPhone, guestId } = req.body;
+  const { items, method, table, discount, roomNumber, guestName, guestPhone, guestId, notes, note } = req.body;
 
+  if (String(method || '').toLowerCase() === 'complimentary' && !String(note || notes || '').trim()) {
+    return res.status(400).json({ success: false, error: 'A note is required for complimentary sales (e.g. CEO order).' });
+  }
   if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'restaurant')) {
     return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
   }
@@ -323,6 +326,7 @@ exports.createSale = asyncHandler(async (req, res) => {
     method: method || 'Cash',
     staff: req.user ? req.user.name : '',
     table: table || '',
+    notes: notes || note || '',
     date: new Date(),
     status: method === 'Room Charge' ? 'pending' : 'completed',
     roomNumber: roomNumber || null,
@@ -784,8 +788,12 @@ exports.payOrder = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: `Cannot pay an order with status '${order.status}'` });
   }
 
-  const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
+  const { method, roomNumber, guestName, guestPhone, guestId, note } = req.body;
   const payMethod = method || order.payMethod || order.method || 'Cash';
+  if (String(payMethod).toLowerCase() === 'complimentary' && !String(note || order.notes || '').trim()) {
+    return res.status(400).json({ success: false, error: 'A note is required for complimentary payments (e.g. CEO order).' });
+  }
+  const compNote = String(note || '').trim();
   const effectiveRoom = roomNumber || order.roomNumber || null;
   const effectiveGuest = guestName || order.guestName || null;
   const effectivePhone = guestPhone || order.guestPhone || null;
@@ -799,6 +807,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     if (sale) {
       sale.status = payMethod === 'Room Charge' ? 'pending' : 'completed';
       sale.method = payMethod;
+      if (compNote) sale.notes = compNote;
       if (effectiveRoom) sale.roomNumber = effectiveRoom;
       if (effectiveGuest) sale.guestName = effectiveGuest;
       if (effectivePhone) sale.guestPhone = effectivePhone;
@@ -858,7 +867,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
       method: payMethod,
       staff: order.staff,
       table: order.table,
-      notes: order.notes,
+      notes: compNote || order.notes,
       date: new Date(),
       status: payMethod === 'Room Charge' ? 'pending' : 'completed',
       roomNumber: effectiveRoom,

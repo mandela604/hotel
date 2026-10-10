@@ -219,6 +219,7 @@
   };
   const DEFAULT_PAY_MAP = {
     'Fully Paid':        'ft-pay-full',
+    'Complimentary':     'ft-pay-full',
     'Deposit Paid':       'ft-pay-deposit',
     'Partially Settled':  'ft-pay-partial',
     'Pending':            'ft-pay-pending',

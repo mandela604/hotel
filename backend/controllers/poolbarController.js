@@ -387,8 +387,11 @@ exports.listSales = asyncHandler(async (req, res) => {
 });
 
 exports.createSale = asyncHandler(async (req, res) => {
-  const { items, discount, method, staff, table, notes, roomNumber, guestName, guestPhone, guestId } = req.body;
+  const { items, discount, method, staff, table, notes, note, roomNumber, guestName, guestPhone, guestId } = req.body;
 
+  if (String(method || '').toLowerCase() === 'complimentary' && !String(note || notes || '').trim()) {
+    return res.status(400).json({ success: false, error: 'A note is required for complimentary sales (e.g. CEO order).' });
+  }
   if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'poolbar')) {
     return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
   }
@@ -600,8 +603,12 @@ exports.payOrder = asyncHandler(async (req, res) => {
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order is already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
 
-  const { method, roomNumber, guestName, guestPhone, guestId } = req.body;
+  const { method, roomNumber, guestName, guestPhone, guestId, note } = req.body;
   const payMethod = method || 'Cash';
+  if (String(payMethod).toLowerCase() === 'complimentary' && !String(note || order.notes || '').trim()) {
+    return res.status(400).json({ success: false, error: 'A note is required for complimentary payments (e.g. CEO order).' });
+  }
+  const compNote = String(note || '').trim();
   const effectiveRoom = roomNumber || order.roomNumber || null;
   const effectiveGuest = guestName || order.guestName || null;
   const effectivePhone = guestPhone || order.guestPhone || null;
@@ -658,7 +665,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     method: effectiveMethod,
     staff: order.staff,
     table: order.table,
-    notes: order.notes,
+    notes: compNote || order.notes,
     date: new Date(),
     status: effectiveMethod === 'Room Charge' ? 'pending' : 'completed',
     roomNumber: effectiveRoom,

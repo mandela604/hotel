@@ -665,6 +665,10 @@
                 }).join('')}
               </select>
             </div>
+            <div class="ow-fg" data-role="payCompNoteWrap" style="display:none;">
+              <label class="ow-label">Complimentary note <span style="color:var(--ow-red);">*</span></label>
+              <input class="ow-input" data-role="payCompNote" placeholder="Required — e.g. CEO order">
+            </div>
             ${allowRoomCharge ? `
             <div class="ow-fg" data-role="payRoomChargeWrap" style="display:none;">
               <label class="ow-label">Room / Guest</label>
@@ -1462,9 +1466,12 @@
           // 2) Pay directly using form payment fields (no modal)
           const payMethod = ($('[data-role="fMethod"]') || {}).value || 'Cash';
           const room = getRoomFields('');
+          const isCompPay = payMethod === 'Complimentary';
+          var compNoteDirect = (($('[data-role="fNotes"]') || {}).value || '').trim();
+          if (isCompPay && !compNoteDirect) { throw new Error('A note is required for complimentary payments (e.g. CEO order) — use the Notes field.'); }
           const payPayload = payMethod === 'Room Charge'
             ? { method: payMethod, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
-            : payMethod;
+            : (isCompPay ? { method: payMethod, note: compNoteDirect } : payMethod);
           if (typeof service !== 'undefined' && service && typeof service.payOrder === 'function') {
             await service.payOrder(_editingOrderId, payPayload);
           } else {
@@ -1513,6 +1520,10 @@
           const isRoomCharge = method === 'Room Charge';
           if (isRoomCharge && !room.room) {
             showToast('Select a room for Room Charge.', 'error');
+            return;
+          }
+          if (method === 'Complimentary' && !notes.trim()) {
+            showToast('A note is required for complimentary sales (e.g. CEO order) — use the Notes field.', 'error');
             return;
           }
           if (service && typeof service.recordSale === 'function') {
@@ -2169,10 +2180,13 @@
     function togglePayRoomChargeUI() {
       const method = ($('[data-role="payMethod"]') || {}).value || '';
       const wrap = $('[data-role="payRoomChargeWrap"]');
-      if (!wrap) return;
-      const show = method === 'Room Charge';
-      wrap.style.display = show ? '' : 'none';
-      if (!show) clearSelectedRoom('pay');
+      if (wrap) {
+        const show = method === 'Room Charge';
+        wrap.style.display = show ? '' : 'none';
+        if (!show) clearSelectedRoom('pay');
+      }
+      const compWrap = $('[data-role="payCompNoteWrap"]');
+      if (compWrap) compWrap.style.display = method === 'Complimentary' ? '' : 'none';
     }
 
     function openPayModal(id) {
@@ -2204,8 +2218,14 @@
       const room = getRoomFields('pay');
       let method = ($('[data-role="payMethod"]') || {}).value || 'Cash';
       const isRoomCharge = method === 'Room Charge';
+      const isComp = method === 'Complimentary';
       if (isRoomCharge && !room.room) {
         showToast('Select a room for Room Charge.', 'error');
+        return;
+      }
+      var compNote = (($('[data-role="payCompNote"]') || {}).value || '').trim();
+      if (isComp && !compNote) {
+        showToast('A note is required for complimentary payments (e.g. CEO order).', 'error');
         return;
       }
 
@@ -2213,7 +2233,7 @@
         if (service && typeof service.payOrder === 'function') {
           const payArg = isRoomCharge
             ? { method: method, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
-            : method;
+            : (isComp ? { method: method, note: compNote } : method);
           if (isRoomCharge) console.log('[RoomCharge] Pay Order payload →', JSON.stringify(payArg, null, 2));
           const result = await service.payOrder(payOrderId, payArg);
           console.log('[confirmPayOrder] payOrder result:', JSON.stringify(result));
