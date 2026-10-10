@@ -235,6 +235,8 @@
   async function addStaff(data) {
     const created = await apiFetch('', { method: 'POST', body: toPayload(data) });
     const norm = normalize(created);
+    // backend reports whether a login User was actually created (email reuse / missing password silently skip it)
+    norm._login = (created && created._login) || null;
     state.staff.unshift(norm);
     emitChange('staff:add');
     return norm;

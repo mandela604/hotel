@@ -105,15 +105,18 @@ exports.login = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email: email.toLowerCase() });
   if (!user || user.status === 'inactive') {
+    console.log('[auth] login failed — unknown email or inactive:', email.toLowerCase());
     return res.status(401).json({ success: false, error: 'Invalid credentials or account disabled' });
   }
 
   if (!user.password) {
+    console.log('[auth] login failed — no password set for:', email.toLowerCase());
     return res.status(401).json({ success: false, error: 'Account has no password set — contact administrator' });
   }
 
   const ok = await user.comparePassword(password || '');
   if (!ok) {
+    console.log('[auth] login failed — wrong password for:', email.toLowerCase());
     return res.status(401).json({ success: false, error: 'Invalid credentials' });
   }
 

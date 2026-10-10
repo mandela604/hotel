@@ -802,7 +802,10 @@ async function saveStaffForm(){
         showToast('A staff member with that email already exists.', 'error');
         return;
       }
-      await StaffService.addStaff(data);
+      var created = await StaffService.addStaff(data);
+      if (created && created._login && !created._login.created && created._login.note) {
+        showToast(created._login.note, 'error');
+      }
     }
     STAFF = StaffService.state.staff;
     closeStaffModal();

@@ -60,8 +60,10 @@ exports.createStaff = asyncHandler(async (req, res) => {
     privileges: privileges || {},
   });
 
+  let loginCreated = false, loginNote = '';
   if (password && email) {
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    console.log('[staff] createStaff login check:', { email: email.toLowerCase().trim(), hasPassword: !!password, emailExists: !!existingUser });
     if (!existingUser) {
       const pType = (privileges && privileges.type) || null;
       const pOverrides = (privileges && privileges.overrides) || {};
@@ -79,10 +81,20 @@ exports.createStaff = asyncHandler(async (req, res) => {
         phone: phone || '',
         initials: name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
       });
+      loginCreated = true;
+      console.log('[staff] login User created:', { email: email.toLowerCase().trim(), role: userRole });
+    } else {
+      loginNote = 'A login already exists for this email — staff saved, but sign-in still uses the OLD password.';
+      console.log('[staff] login NOT created (email already has a User):', email.toLowerCase().trim());
     }
+  } else {
+    loginNote = 'No login created (email or password missing) — staff saved without sign-in access.';
+    console.log('[staff] login NOT created (missing email/password):', { hasEmail: !!email, hasPassword: !!password });
   }
 
-  res.status(201).json({ success: true, data: staff });
+  const out = staff.toObject();
+  out._login = { created: loginCreated, note: loginNote };
+  res.status(201).json({ success: true, data: out });
 });
 
 exports.updateStaff = asyncHandler(async (req, res) => {
