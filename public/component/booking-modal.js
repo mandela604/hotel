@@ -285,6 +285,7 @@
     opts = opts || {};
     injectCss();
     ensureBrand();
+    ensurePayMethods();
 
     var service = opts.service || global.BookingData || null;
     var onSaved = typeof opts.onSaved === 'function' ? opts.onSaved : function () {};
@@ -1530,6 +1531,23 @@
       if (onCloseCb) onCloseCb();
     }
 
+    var DEFAULT_PAY_METHODS = ['Cash', 'POS', 'Transfer', 'Room Charge'];
+    var cachedPayMethods = null;
+    var payMethodsLoading = null;
+
+    // Prefetched once at page load (create()) so the modal never waits on
+    // /api/settings per open. Never rejects — falls back to defaults.
+    function ensurePayMethods() {
+      if (cachedPayMethods) return Promise.resolve(cachedPayMethods);
+      if (payMethodsLoading) return payMethodsLoading;
+      payMethodsLoading = fetchPayMethods().then(function (list) {
+        cachedPayMethods = list;
+        payMethodsLoading = null;
+        return list;
+      });
+      return payMethodsLoading;
+    }
+
     async function fetchPayMethods() {
       try {
         const res = await fetch('/api/settings', { credentials: 'include' });
@@ -1540,17 +1558,18 @@
         }
       } catch (e) { console.warn('[BookingModal] Failed to fetch pay methods:', e); }
       console.log('[BookingModal] Using default pay methods');
-      return ['Cash', 'POS', 'Transfer', 'Room Charge'];
+      return DEFAULT_PAY_METHODS.slice();
     }
 
+    // Never returns null — PlatformSettings state, then page-load cache, then defaults.
     function getPayMethods() {
       try {
         if (typeof PlatformSettings !== 'undefined' && PlatformSettings.state && PlatformSettings.state.settings && Array.isArray(PlatformSettings.state.settings.paymentMethods) && PlatformSettings.state.settings.paymentMethods.length) {
-          console.log('[BookingModal] Pay methods from settings state:', PlatformSettings.state.settings.paymentMethods);
           return PlatformSettings.state.settings.paymentMethods;
         }
       } catch (e) {}
-      return null;
+      if (cachedPayMethods && cachedPayMethods.length) return cachedPayMethods;
+      return DEFAULT_PAY_METHODS.slice();
     }
 
     function populatePayMethodDropdown(methods) {
@@ -1620,12 +1639,23 @@
       }
     }
 
+    async function loadContextSafe() {
+      try {
+        await loadContext();
+        return true;
+      } catch (e) {
+        console.warn('[BookingModal] loadContext failed:', e);
+        toast('Could not load booking data — refresh the page and try again.', 'error');
+        return false;
+      }
+    }
+
     async function openNew(pre) {
       pre = pre || {};
       mode = 'new';
       editBooking = null;
       currentGuest = null;
-      await loadContext();
+      await loadContextSafe();
       clearForm();
       $('[data-role="title"]').innerHTML = 'New Booking';
       $('[data-role="sub"]').textContent = 'Create a reserved or checked-in stay';
@@ -1640,20 +1670,24 @@
       if (meta) meta.textContent = session && session.name ? 'Staff: ' + session.name : '';
       applyEditability();
       renderPayments();
-      var pm = getPayMethods();
-      if (pm) populatePayMethodDropdown(pm);
-      else fetchPayMethods().then(populatePayMethodDropdown);
+      populatePayMethodDropdown(getPayMethods());
       open();
     }
 
     async function openEdit(booking) {
       if (!booking) return;
       mode = 'edit';
-      await loadContext();
+      await loadContextSafe();
       var key = booking.stayId || booking._id || booking.id || booking.room;
-      editBooking = (service && service.getBooking)
-        ? (await service.getBooking(key)) || booking
-        : booking;
+      try {
+        editBooking = (service && service.getBooking)
+          ? (await service.getBooking(key)) || booking
+          : booking;
+      } catch (e) {
+        console.warn('[BookingModal] getBooking failed, using passed-in booking:', e);
+        toast('Could not refresh booking — showing saved details. Refresh the page if anything looks stale.', 'error');
+        editBooking = booking;
+      }
       currentGuest = findGuestForBooking(editBooking);
       clearForm();
       $('[data-role="title"]').innerHTML = 'Edit Booking — Room ' + esc(editBooking.room);
@@ -1668,12 +1702,18 @@
     async function openView(booking) {
       if (!booking) return;
       mode = 'view';
-      await loadContext();
+      await loadContextSafe();
       var vkey = booking.stayId || booking._id || booking.id || booking.room;
       var vIsHistorical = booking.status === 'checkout' || booking.status === 'cancelled' || booking.status === 'no-show';
-      editBooking = (!vIsHistorical && service && service.getBooking)
-        ? (await service.getBooking(vkey)) || booking
-        : booking;
+      try {
+        editBooking = (!vIsHistorical && service && service.getBooking)
+          ? (await service.getBooking(vkey)) || booking
+          : booking;
+      } catch (e) {
+        console.warn('[BookingModal] getBooking failed, using passed-in booking:', e);
+        toast('Could not refresh booking — showing saved details. Refresh the page if anything looks stale.', 'error');
+        editBooking = booking;
+      }
       currentGuest = findGuestForBooking(editBooking);
       clearForm();
       $('[data-role="title"]').innerHTML = 'Booking — Room ' + esc(editBooking.room) + ' <span class="bkm-view-pill">View</span>';
