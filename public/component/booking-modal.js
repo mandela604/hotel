@@ -515,7 +515,7 @@
                   '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Amount</label>' +
                     '<input class="bkm-input" data-role="newPayAmount" type="number" min="0" step="500" placeholder="0"></div>' +
                   '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Mode</label>' +
-                    '<select class="bkm-select" data-role="newPayMode"><option>Cash</option><option>POS</option><option>Transfer</option><option>Complimentary</option></select></div>' +
+                    '<select class="bkm-select" data-role="newPayMode"><option value="">Loading payment methods…</option></select></div>' +
                   '<div class="bkm-fg" style="margin:0;"><label class="bkm-label">Recorded by</label>' +
                     '<input class="bkm-input" data-role="newPayBy" type="text" readonly></div>' +
                   '<button type="button" class="bkm-btn bkm-btn-primary" data-act="confirmPay" style="padding:7px 12px;font-size:12px;">' +
@@ -1014,9 +1014,9 @@
       payments.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
 
       if (!payments.length && (Number(editBooking.paid) || 0) > 0) {
-        payments = [{
-          amount: Number(editBooking.paid) || 0,
-          mode: editBooking.payMethod || (getPayMethods().length ? getPayMethods()[0] : 'Cash'),
+      payments = [{
+        amount: Number(editBooking.paid) || 0,
+        mode: editBooking.payMethod || (getPayMethods()[0] || ''),
           date: editBooking.checkin || '',
           by: editBooking.recordedBy || '—',
           ts: 0,
@@ -1121,7 +1121,8 @@
       acc.hidden = false;
       acc.classList.add('open');
       setVal('newPayAmount', String(curBal));
-      setVal('newPayMode', 'Cash');
+      var _modes = getPayMethods();
+      setVal('newPayMode', _modes.indexOf('Cash') !== -1 ? 'Cash' : (_modes[0] || ''));
       setVal('newPayBy', (session && session.name) || '');
       setVal('compNote', '');
       syncCompNote();
@@ -1143,6 +1144,7 @@
 
     async function confirmPay() {
       if (addingPayment || !editBooking) return;
+      if (!val('newPayMode')) { toast('Payment methods are still loading — wait a moment or refresh the page.', 'error'); return; }
       var comp = isCompPay();
       var amt = parseFloat(val('newPayAmount')) || 0;
       var note = String(val('compNote') || '').trim();
@@ -1531,51 +1533,80 @@
       if (onCloseCb) onCloseCb();
     }
 
-    var DEFAULT_PAY_METHODS = ['Cash', 'POS', 'Transfer', 'Room Charge'];
-    var cachedPayMethods = null;
+    // Payment methods come ONLY from Settings (/api/settings) — no hardcoded
+    // list anywhere in this modal. Prefetched once at page load; both
+    // dropdowns show Loading… until it arrives, or an error asking refresh.
+    var cachedPayMethods = null; // null = not loaded yet (NOT a fallback)
     var payMethodsLoading = null;
+    var payMethodsFailed = false;
 
-    // Prefetched once at page load (create()) so the modal never waits on
-    // /api/settings per open. Never rejects — falls back to defaults.
-    function ensurePayMethods() {
+    async function fetchPayMethods() {
+      const res = await fetch('/api/settings', { credentials: 'include' });
+      const j = await res.json();
+      if (res.ok && j.data && Array.isArray(j.data.paymentMethods) && j.data.paymentMethods.length) {
+        console.log('[BookingModal] Pay methods from API:', j.data.paymentMethods);
+        return j.data.paymentMethods.slice();
+      }
+      throw new Error('Payment methods missing from settings response');
+    }
+
+    function ensurePayMethods(retries) {
       if (cachedPayMethods) return Promise.resolve(cachedPayMethods);
       if (payMethodsLoading) return payMethodsLoading;
-      payMethodsLoading = fetchPayMethods().then(function (list) {
-        cachedPayMethods = list;
-        payMethodsLoading = null;
-        return list;
-      });
+      var left = (retries == null ? 3 : retries);
+      payMethodsLoading = (function tryOnce(n) {
+        return fetchPayMethods().then(function (list) {
+          cachedPayMethods = list;
+          payMethodsFailed = false;
+          payMethodsLoading = null;
+          paintPayMethodDropdowns();
+          return list;
+        }).catch(function (e) {
+          if (n > 1) {
+            return new Promise(function (resolve) { setTimeout(resolve, 800); }).then(function () { return tryOnce(n - 1); });
+          }
+          payMethodsLoading = null;
+          payMethodsFailed = true;
+          paintPayMethodDropdowns();
+          console.warn('[BookingModal] Pay methods failed after retries:', e);
+          toast('Could not load payment methods — refresh the page and try again.', 'error');
+          throw e;
+        });
+      })(left);
       return payMethodsLoading;
     }
 
-    async function fetchPayMethods() {
-      try {
-        const res = await fetch('/api/settings', { credentials: 'include' });
-        const j = await res.json();
-        if (res.ok && j.data && Array.isArray(j.data.paymentMethods) && j.data.paymentMethods.length) {
-          console.log('[BookingModal] Pay methods from API:', j.data.paymentMethods);
-          return j.data.paymentMethods;
-        }
-      } catch (e) { console.warn('[BookingModal] Failed to fetch pay methods:', e); }
-      console.log('[BookingModal] Using default pay methods');
-      return DEFAULT_PAY_METHODS.slice();
-    }
-
-    // Never returns null — PlatformSettings state, then page-load cache, then defaults.
+    // Settings state, then page-load cache, else [] (not ready — never invented).
     function getPayMethods() {
       try {
         if (typeof PlatformSettings !== 'undefined' && PlatformSettings.state && PlatformSettings.state.settings && Array.isArray(PlatformSettings.state.settings.paymentMethods) && PlatformSettings.state.settings.paymentMethods.length) {
-          return PlatformSettings.state.settings.paymentMethods;
+          return PlatformSettings.state.settings.paymentMethods.slice();
         }
       } catch (e) {}
-      if (cachedPayMethods && cachedPayMethods.length) return cachedPayMethods;
-      return DEFAULT_PAY_METHODS.slice();
+      if (cachedPayMethods && cachedPayMethods.length) return cachedPayMethods.slice();
+      return [];
     }
 
-    function populatePayMethodDropdown(methods) {
-      var sel = document.querySelector('[data-role="payMethod"]');
-      if (!sel) return;
-      sel.innerHTML = '<option value="">Select...</option>' + methods.map(function(m) { return '<option value="' + m + '">' + m + '</option>'; }).join('');
+    function paintPayMethodDropdowns() {
+      var list = getPayMethods();
+      var html;
+      if (list.length) {
+        html = list.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('');
+      } else if (payMethodsFailed) {
+        html = '<option value="">Could not load — refresh page</option>';
+      } else {
+        html = '<option value="">Loading payment methods…</option>';
+      }
+      ['payMethod', 'newPayMode'].forEach(function (role) {
+        var sel = $('[data-role="' + role + '"]');
+        if (!sel) return;
+        var cur = sel.value;
+        sel.innerHTML = html;
+        if (cur) {
+          sel.value = cur;
+          if (!sel.value) sel.selectedIndex = 0;
+        }
+      });
     }
 
     function fillBookingFields(booking) {
@@ -1590,7 +1621,8 @@
       setVal('rate', booking.rate || 0);
       setVal('discount', booking.discount || 0);
       var pmEdit = getPayMethods();
-      setVal('payMethod', booking.payMethod || (pmEdit.length ? pmEdit[0] : 'Cash'));
+      if (pmEdit.length) paintPayMethodDropdowns();
+      setVal('payMethod', booking.payMethod || (pmEdit[0] || ''));
       setVal('adults', booking.adults || 1);
       setVal('children', booking.children || 0);
       setVal('notes', booking.notes || '');
@@ -1670,13 +1702,15 @@
       if (meta) meta.textContent = session && session.name ? 'Staff: ' + session.name : '';
       applyEditability();
       renderPayments();
-      populatePayMethodDropdown(getPayMethods());
+      paintPayMethodDropdowns();
+      ensurePayMethods().then(paintPayMethodDropdowns, paintPayMethodDropdowns);
       open();
     }
 
     async function openEdit(booking) {
       if (!booking) return;
       mode = 'edit';
+      ensurePayMethods().then(paintPayMethodDropdowns, paintPayMethodDropdowns);
       await loadContextSafe();
       var key = booking.stayId || booking._id || booking.id || booking.room;
       try {
@@ -1702,6 +1736,7 @@
     async function openView(booking) {
       if (!booking) return;
       mode = 'view';
+      ensurePayMethods().then(paintPayMethodDropdowns, paintPayMethodDropdowns);
       await loadContextSafe();
       var vkey = booking.stayId || booking._id || booking.id || booking.room;
       var vIsHistorical = booking.status === 'checkout' || booking.status === 'cancelled' || booking.status === 'no-show';
