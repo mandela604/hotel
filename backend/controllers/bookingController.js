@@ -58,6 +58,23 @@ function payStatusFor(b) {
   return 'Deposit Paid';
 }
 
+/* Reset a booking doc to a clean vacant placeholder. Every stay-scoped
+   field is cleared so a reused doc can never leak a previous guest's
+   nights, money, or history into the next stay. Does NOT touch status
+   (caller sets it) or rate/type (caller syncs them from the Room doc). */
+function clearStayFields(booking) {
+  Object.assign(booking, {
+    guest: '', phone: '', email: '',
+    address: '', idNum: '', guestId: '',
+    checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
+    payStatus: 'Pending', adults: 1, children: 0, notes: '',
+    extraNights: 0, extraRate: 0, comped: 0,
+    refunded: 0, refundDate: '', refundBy: '', refundReason: '',
+    _guestName: '', transferLog: [], history: [],
+  });
+  return booking;
+}
+
 /* Resolve a booking strictly by booking id (stayId / _id).
    No room fallback — caller must supply stayId. */
 async function resolveBooking(req) {
@@ -352,17 +369,21 @@ exports.setRoomStatus = asyncHandler(async (req, res) => {
   }
 
   booking.status = targetStatus;
-  if (notes !== undefined) booking.notes = notes;
 
   // Clearing a room back to vacant (from checkout/maintenance/cleaning)
   // wipes the previous occupant's details off the record.
   if (targetStatus === 'vacant') {
-    Object.assign(booking, {
-      guest: '', phone: '', email: '', address: '', idNum: '',
-      checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
-      payStatus: 'Pending', adults: 1, children: 0,
-    });
+    clearStayFields(booking);
+    try {
+      const Room = require('../models/Room');
+      const roomDoc = await Room.findOne({ num: booking.room });
+      if (roomDoc) {
+        booking.rate = Number(roomDoc.rate) || 0;
+        booking.type = roomDoc.type || booking.type;
+      }
+    } catch (e) {}
   }
+  if (notes !== undefined) booking.notes = notes;
   booking.updatedAt = Date.now();
   await booking.save();
 
@@ -457,6 +478,8 @@ exports.createBooking = asyncHandler(async (req, res) => {
   let booking = await Booking.findOne({ room, status: 'vacant' });
   const isReuse = !!booking;
   if (isReuse) {
+    // Start clean even if the placeholder was left dirty
+    clearStayFields(booking);
     Object.assign(booking, {
       stayId: uuidv4(),
       bookingNo,
@@ -670,11 +693,16 @@ exports.deleteBooking = asyncHandler(async (req, res) => {
   if (countForRoom > 1) {
     await Booking.deleteOne({ _id: booking._id });
   } else {
-    Object.assign(booking, {
-      guest: '', phone: '', email: '', address: '', idNum: '',
-      checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
-      payStatus: 'Pending', adults: 1, children: 0, notes: '', status: 'vacant',
-    });
+    clearStayFields(booking);
+    booking.status = 'vacant';
+    try {
+      const Room = require('../models/Room');
+      const roomDoc = await Room.findOne({ num: booking.room });
+      if (roomDoc) {
+        booking.rate = Number(roomDoc.rate) || 0;
+        booking.type = roomDoc.type || booking.type;
+      }
+    } catch (e) {}
     booking.updatedAt = Date.now();
     await booking.save();
   }
