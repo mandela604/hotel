@@ -65,6 +65,7 @@
     return n > 0 ? n : 0;
   }
   function calcTotal(b) {
+    if (!b.checkin || !b.checkout) return 0;
     const n = nights(b.checkin, b.checkout) || 1;
     return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
   }

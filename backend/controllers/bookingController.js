@@ -31,11 +31,16 @@ const NO_SHOW_FIELDS = {
   notes: '', rate: 0,
 };
 function calcTotal(b) {
-  const n = nights(b.checkin, b.checkout) || 1;
+  if (!b.checkin || !b.checkout) return 0;
+  const rawN = nights(b.checkin, b.checkout);
+  const n = rawN || 1;
   const disc = Number(b.discount) || 0;
   const baseRate = Number(b.rate) || 0;
   const extraN = Number(b.extraNights) || 0;
   const extraR = Number(b.extraRate) || 0;
+  if (extraN > rawN) {
+    console.warn(`[booking] extraNights (${extraN}) exceeds real nights (${rawN}) — room ${b.room || '?'} stayId ${b.stayId || b._id || '?'}`);
+  }
   if (extraN > 0 && extraR > 0) {
     const baseN = Math.max(0, n - extraN);
     return Math.max(0, baseN * (baseRate - disc) + extraN * (extraR - disc));

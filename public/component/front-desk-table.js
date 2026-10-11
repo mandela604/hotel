@@ -252,6 +252,7 @@
     const BD = global.BookingData || null;
     const calcNights = (options.calc && options.calc.nights) || (BD && BD.nights) || defaultNights;
     const calcTotal = (options.calc && options.calc.total) || (BD && BD.calcTotal) || function (b) {
+      if (!b.checkin || !b.checkout) return 0;
       const n = calcNights(b.checkin, b.checkout) || 1;
       return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
     };

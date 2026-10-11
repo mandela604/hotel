@@ -8,6 +8,7 @@ function nights(checkin, checkout) {
 }
 
 function total(booking) {
+  if (!booking.checkin || !booking.checkout) return 0;
   const n = nights(booking.checkin, booking.checkout) || 1;
   return booking.rate * n * (1 - (booking.discount || 0) / 100);
 }

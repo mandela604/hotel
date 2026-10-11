@@ -300,10 +300,15 @@
       return n > 0 ? n : 0;
     }
     function calcTotal(bk) {
-      var n = nights(bk.checkin, bk.checkout) || 1;
+      if (!bk.checkin || !bk.checkout) return 0;
+      var rawN = nights(bk.checkin, bk.checkout);
+      var n = rawN || 1;
       var disc = Number(bk.discount) || 0;
       var extraN = Number(bk.extraNights) || 0;
       var extraR = Number(bk.extraRate) || 0;
+      if (extraN > rawN) {
+        try { console.warn('[booking] extraNights (' + extraN + ') exceeds real nights (' + rawN + ') — room ' + (bk.room || '?') + ' stayId ' + (bk.stayId || bk._id || bk.id || '?')); } catch (e) {}
+      }
       if (extraN > 0 && extraR > 0) {
         var baseN = Math.max(0, n - extraN);
         return Math.max(0, baseN * ((bk.rate || 0) - disc) + extraN * (extraR - disc));
@@ -651,11 +656,9 @@
           raw = baseN2 * (Number(editBooking.rate)||0) + exN * exR;
           bal = Math.max(0, after - paid);
         } else {
-          bal = calcBal(Object.assign({}, editBooking, {
-            rate: rate, discount: disc, checkin: ci, checkout: co,
-          }));
           after = Math.max(0, (rate - disc) * n);
           raw = rate * n;
+          bal = Math.max(0, after - paid);
         }
       }
 
