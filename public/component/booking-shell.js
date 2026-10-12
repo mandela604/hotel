@@ -13,6 +13,7 @@
     { key: 'rooms',    label: 'Front Desk',        href: 'booking-rooms.html',   icon: 'fa-solid fa-bed' },
     { key: 'guests',   label: 'Guests',             href: 'guests.html',          icon: 'fa-solid fa-user', badgeKey: 'guests' },
     { key: 'bookings', label: 'All Bookings',       href: 'booking-list.html',    icon: 'fa-solid fa-clipboard-list', badgeKey: 'bookings' },
+    { key: 'activity', label: 'Activity Log',        href: 'booking-activity.html',  icon: 'fa-solid fa-clock-rotate-left' },
     { key: 'reports',  label: 'Reports & Revenue',  href: 'booking-reports.html', icon: 'fa-solid fa-chart-column' },
   ];
 
