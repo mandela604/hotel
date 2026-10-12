@@ -309,7 +309,9 @@
         <label class="form-label">Supervisor — Allowed Modules <span style="text-transform:none; color:#6b7280; font-weight:600;">(only these show on index)</span></label>
         <div id="supervisorScopesChecks" style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px;"></div>
         <div class="form-hint">Checked modules will appear as KPI/menu cards on his index landing. Unchecked are hidden like staff.</div>
-        <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#1c2440;cursor:pointer;margin-top:10px;padding-top:10px;border-top:1px dashed #dfe3ec;">
+      </div>
+      <div class="form-group span2" id="discountWrap" style="display:none; border:1px solid #eef0f6; border-radius:10px; padding:12px; background:#f4f6fb;">
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#1c2440;cursor:pointer;">
           <input type="checkbox" id="fsCanDiscount" style="accent-color:#2f6fed"> Can give discount
           <span style="font-weight:600;color:#6b7280;">(booking + restaurant/poolbar sale discounts, off by default)</span>
         </label>
@@ -504,11 +506,13 @@ function onFormRoleChange(){
     : `${labelize(role)} accounts use the base role permissions, not a privilege`;
   const deptWrap = document.getElementById('fsDept').closest('.form-group');
   const supWrap = document.getElementById('supervisorScopesWrap');
+  const discWrap = document.getElementById('discountWrap');
   if (isElevated) {
     deptWrap.style.display = 'none';
     document.getElementById('fsDept').value = '';
     document.getElementById('fsPrivilege').value = '';
     if (supWrap) supWrap.style.display = 'none';
+    if (discWrap) discWrap.style.display = 'none';
   } else if (isSupervisor) {
     deptWrap.style.display = '';
     if (supWrap) {
@@ -517,11 +521,13 @@ function onFormRoleChange(){
       const cur = getSupervisorScopesFromForm();
       if (!cur.length) renderSupervisorScopes([]);
     }
+    if (discWrap) discWrap.style.display = '';
     document.getElementById('fsPrivilege').value = '';
     document.getElementById('fsPrivilege').disabled = true;
   } else {
     deptWrap.style.display = '';
     if (supWrap) supWrap.style.display = 'none';
+    if (discWrap) discWrap.style.display = '';
   }
 }
 window.onFormRoleChange = onFormRoleChange;
@@ -684,7 +690,7 @@ function openStaffModal(){
   onFormRoleChange();
   document.getElementById('fsPrivilege').value = '';
   document.getElementById('fsDept').value = '';
-  if (document.getElementById('fsRole').value === 'supervisor') { renderSupervisorScopes([]); document.getElementById('fsCanDiscount').checked = false; }
+  document.getElementById('fsCanDiscount').checked = false;
   document.getElementById('fsNameErr').classList.remove('show');
   document.getElementById('fsEmailErr').classList.remove('show');
   document.getElementById('fsChangePwWrap').style.display = 'none';
@@ -725,6 +731,9 @@ function editStaff(id){
   if (s.role === 'supervisor') {
     const scopes = s.supervisorScopes || (s.privileges && s.privileges.supervisorScopes) || [];
     renderSupervisorScopes(scopes);
+  }
+  // discount toggle for staff + supervisor (admin/manager inherent)
+  if (s.role === 'staff' || s.role === 'supervisor') {
     document.getElementById('fsCanDiscount').checked = supervisorDiscountAllowed(s.overrides);
   }
   document.getElementById('fsNameErr').classList.remove('show');
@@ -776,7 +785,7 @@ async function saveStaffForm(){
   }
   // discount toggle → per-module overrides (booking/restaurant/poolbar), merged so other overrides survive
   const baseOverrides = Object.assign({}, (existing && existing.overrides) || {});
-  if (role === 'supervisor') {
+  if (role === 'supervisor' || role === 'staff') {
     const allowDisc = !!document.getElementById('fsCanDiscount').checked;
     ['booking', 'restaurant', 'poolbar'].forEach(function(m){
       baseOverrides[m] = Object.assign({}, baseOverrides[m] || {}, { canGiveDiscount: allowDisc });
