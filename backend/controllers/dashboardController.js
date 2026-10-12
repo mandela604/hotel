@@ -23,7 +23,8 @@ exports.overview = asyncHandler(async (req, res) => {
   // Count low stock across all inventory modules (kitchen store + central store + outlets)
   const lowStockFilter = { $expr: { $and: [ { $gt: ['$min', 0] }, { $lte: ['$qty', '$min'] } ] } };
   const [
-    bookingStatusCounts,
+    roomNums,
+    statusBookings,
     totalRooms,
     todayBookings,
     restaurantSales,
@@ -33,10 +34,9 @@ exports.overview = asyncHandler(async (req, res) => {
     staffOnDuty,
     recentActivity,
   ] = await Promise.all([
-    // Count rooms by status from Booking (not Room)
-    Booking.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]),
+    // Per-room effective status (same rule as booking module) — never count docs
+    Room.find().select('num').lean(),
+    Booking.find().select('room status checkin checkout').lean(),
     Room.countDocuments(),
     Booking.countDocuments({ createdAt: { $gte: todayStart.getTime() } }),
     Sale.aggregate([
@@ -59,10 +59,25 @@ exports.overview = asyncHandler(async (req, res) => {
   ]);
   const lowStock = lowStocks;
 
-  // Map booking statuses to readable counts
+  // Map booking statuses to readable counts — one vote per ROOM using the
+  // booking module's effective-status rule (checkedin > reserved-today >
+  // other active status > available), so snapshot always sums to room count
   const statusMap = {};
-  for (const entry of bookingStatusCounts) {
-    statusMap[entry._id] = entry.count;
+  {
+    const todayStr = lagosTodayStr();
+    const byRoom = {};
+    for (const b of statusBookings) {
+      (byRoom[b.room] = byRoom[b.room] || []).push(b);
+    }
+    const countAs = (st) => { statusMap[st] = (statusMap[st] || 0) + 1; };
+    for (const r of roomNums) {
+      const cands = byRoom[r.num] || [];
+      if (cands.some((c) => c.status === 'checkedin')) { countAs('checkedin'); continue; }
+      if (cands.some((c) => c.status === 'reserved' && c.checkin === todayStr)) { countAs('reserved'); continue; }
+      const other = cands.find((c) => c.status && c.status !== 'vacant' && c.status !== 'reserved');
+      if (other) { countAs(other.status); continue; }
+      countAs('vacant');
+    }
   }
 
   // Room revenue: sum of payments where payDate falls in current shift (Lagos) — same as accounting
