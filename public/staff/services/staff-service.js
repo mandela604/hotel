@@ -26,7 +26,7 @@
       },
       manager: {
         canView: true, canCreate: true, canEdit: true, canDelete: false,
-        canApprove: true, canReject: true, canVoid: true, canGiveDiscount: false,
+        canApprove: true, canReject: true, canVoid: true, canGiveDiscount: true,
         canRestock: true, canManageUsers: false, canViewReports: true,
         canManagePlans: true, canManageRoles: false,
       },
