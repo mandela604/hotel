@@ -5,6 +5,7 @@ const StoreMovement = require('../models/StoreMovement');
 const Requisition = require('../models/Requisition');
 const Counter = require('../models/Counter');
 const Category = require('../models/Category');
+const User = require('../models/User');
 const { emit } = require('../utils/emit');
 
 async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
@@ -13,7 +14,12 @@ async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
   } catch (e) { /* ledger is best-effort, never block the request */ }
 }
 
-const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
+const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
+
+// Depts that have no dashboard module of their own, so their store
+// collections are recorded directly at the store counter
+// (POST /department-issues) with the receiving staff member's password.
+const ISSUE_DEPTS = ['Housekeeping', 'Laundry'];
 
 function actorName(req) {
   return (req.user && (req.user.name || req.user.role)) || 'User';
@@ -226,7 +232,13 @@ exports.deleteCategory = asyncHandler(async (req, res) => {
 exports.listRequisitions = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.mode) filter.mode = req.query.mode;
-  if (req.query.dept) filter.dept = req.query.dept;
+  // Comma-separated dept filter — e.g. ?dept=Housekeeping,Laundry powers
+  // the Dept Issues history table with one call. Single dept still works.
+  if (req.query.dept) {
+    const depts = String(req.query.dept).split(',').map(s => s.trim()).filter(Boolean);
+    if (depts.length === 1) filter.dept = depts[0];
+    else if (depts.length > 1) filter.dept = { $in: depts };
+  }
   if (req.query.status) filter.status = req.query.status;
   const rows = await Requisition.find(filter).sort({ createdAt: -1 });
   res.json({ success: true, data: rows });
@@ -273,6 +285,118 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
     dateRaisedDisplay: todayDisplay(),
   });
   emit(req, 'store', 'store:updated', { action: 'submitRequisition', data: row });
+  res.status(201).json({ success: true, data: row });
+});
+
+/* ═══════════════ Department Issues (Housekeeping / Laundry) ═══════════════
+   These two departments have no dashboard module of their own, so their
+   store collections are recorded directly at the store counter in ONE
+   step: create + issue + deduct stock + Completed requisition.
+   Fraud control: the receiving dept staff member must authenticate with
+   their OWN password before anything is written — the store keeper cannot
+   forge a collection on their behalf. */
+
+async function verifyReceiver(dept, email, password) {
+  const user = await User.findOne({ email: String(email || '').toLowerCase().trim() });
+  if (!user || user.status === 'inactive') {
+    throw new ApiError(401, 'Invalid receiver credentials or account disabled');
+  }
+  if (!user.password) {
+    throw new ApiError(401, 'Receiver account has no password set — contact administrator');
+  }
+  const ok = await user.comparePassword(password || '');
+  if (!ok) {
+    throw new ApiError(401, 'Invalid receiver credentials');
+  }
+  if (user.department !== dept) {
+    throw new ApiError(403, `"${user.name}" is not an active ${dept} staff member (belongs to ${user.department || 'no department'}).`);
+  }
+  return user;
+}
+
+// Active users in a direct-issue dept — powers the receiver dropdown on
+// the Dept Issues page. Returns id/name/email ONLY (never password hashes).
+exports.listDepartmentStaff = asyncHandler(async (req, res) => {
+  const dept = req.query.dept;
+  if (!ISSUE_DEPTS.includes(dept)) {
+    throw new ApiError(400, `dept must be one of: ${ISSUE_DEPTS.join(', ')}`);
+  }
+  const users = await User.find({ department: dept, status: 'active' }, { id: 1, name: 1, email: 1 }).sort({ name: 1 });
+  res.json({ success: true, data: users.map(u => ({ id: u.id, name: u.name, email: u.email })) });
+});
+
+/**
+ * Record a direct store-counter issue to Housekeeping/Laundry.
+ * Order of operations (fraud control — nothing is written until the
+ * receiver is authenticated):
+ *   1. verifyReceiver() — 401 on bad credentials, 403 on wrong dept
+ *   2. plan phase   — resolve every stockId, reject qty > available
+ *   3. apply phase  — deduct StoreStock.qty + StoreMovement per line
+ *   4. record       — Requisition mode 'store_issue', status Completed,
+ *                     collectedBy/collectedByEmail = authenticated user
+ */
+exports.createDepartmentIssue = asyncHandler(async (req, res) => {
+  const { dept, receiverEmail, receiverPassword, remark, items } = req.body;
+
+  // 1. Authenticate the receiving department staff member BEFORE any write.
+  const receiver = await verifyReceiver(dept, receiverEmail, receiverPassword);
+
+  // 2. Plan phase — resolve stock lines, NO writes yet.
+  const plan = [];
+  for (const i of items) {
+    const stockItem = await StoreStock.findOne({ id: i.stockId });
+    if (!stockItem) {
+      throw new ApiError(404, `Store item not found for "${i.name}" (stockId: ${i.stockId}) — pick from Store catalog.`);
+    }
+    const qty = Number(i.qty) || 0;
+    if (qty <= 0) {
+      throw new ApiError(400, `Issue quantity for "${stockItem.name}" must be greater than 0.`);
+    }
+    if (qty > stockItem.qty) {
+      throw new ApiError(400, `Insufficient stock for "${stockItem.name}" — requested ${qty}, available ${stockItem.qty} ${stockItem.unit || ''}.`);
+    }
+    plan.push({ stockItem, qty });
+  }
+
+  // 3. Consume the dept-prefixed number (HREQ-… / LREQ-…).
+  const no = await nextNumber(dept, 'store_issue');
+
+  // 4. Apply phase — deduct + ledger, same movement reason shape as
+  //    issueRequisition so Accounting's Daily Stock Sheet picks them up.
+  const lineDocs = [];
+  for (const entry of plan) {
+    const { stockItem, qty } = entry;
+    stockItem.qty = Math.max(0, stockItem.qty - qty);
+    await stockItem.save();
+    await logStoreMovement(stockItem.name, 0, qty, stockItem.qty, `Issued (${no} → ${dept})`);
+    lineDocs.push({
+      name: stockItem.name, stockId: stockItem.id, unit: stockItem.unit || 'unit',
+      packSize: stockItem.packSize || 0, baseUnit: stockItem.baseUnit || '', qty,
+      cost: stockItem.cost || 0, remark: '', issuedQty: qty,
+    });
+  }
+
+  // 5. Record — Completed immediately: the physical handover has already
+  //    happened and the receiver's password IS the receipt.
+  const row = await Requisition.create({
+    id: no,
+    requisitionNo: no,
+    mode: 'store_issue',
+    requester: receiver.name,
+    dept,
+    priority: 'Normal',
+    remark: (remark || '').trim(),
+    fulfillStore: 'Central Store',
+    items: lineDocs,
+    status: 'Completed',
+    collectedBy: receiver.name,
+    collectedByEmail: receiver.email,
+    dateRaised: todayISO(),
+    dateRaisedDisplay: todayDisplay(),
+  });
+
+  console.log(`[Store] Dept issue ${no} → ${dept}: ${lineDocs.length} line(s), collected by ${receiver.name} <${receiver.email}>, recorded by ${actorName(req)}`);
+  emit(req, 'store', 'store:updated', { action: 'createDepartmentIssue', data: row });
   res.status(201).json({ success: true, data: row });
 });
 

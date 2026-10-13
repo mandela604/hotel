@@ -11,6 +11,7 @@ const {
   validateSubmitRequisition,
   validateUpdateRequisition,
   validateIssueRequisition,
+  validateDepartmentIssue,
   validateRejectRequisition,
   validateRejectDelivery,
   validateParam,
@@ -46,6 +47,12 @@ router.patch('/requisitions/:no/issue', inDept, privilegeGuard('store', 'canRest
 router.patch('/requisitions/:no/reject', inDept, privilegeGuard('store', 'canReject'), validateParam('no'), validateRejectRequisition, storeController.rejectRequisition);
 router.patch('/requisitions/:no/confirm', inDept, privilegeGuard('store', 'canApprove'), validateParam('no'), storeController.confirmReceipt);
 router.patch('/requisitions/:no/dispute', inDept, privilegeGuard('store', 'canApprove'), validateParam('no'), validateRejectDelivery, storeController.disputeDelivery);
+
+/* Department Issues — direct counter issue to Housekeeping / Laundry.
+   The receiving dept staff member authenticates with their OWN password
+   inside the same request (verifyReceiver) before stock is deducted. */
+router.get('/department-staff', inDept, storeController.listDepartmentStaff);
+router.post('/department-issues', inDept, privilegeGuard('store', 'canRestock'), validateDepartmentIssue, storeController.createDepartmentIssue);
 
 router.post('/stock/:id/adjust', isAdmin, storeController.adjustStock);
 router.post('/migrate/reset-all-stock', storeController.resetAllStock);

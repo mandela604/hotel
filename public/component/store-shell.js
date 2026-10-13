@@ -15,6 +15,7 @@
     { key: 'dashboard',    label: 'Dashboard',          href: 'store-dashboard.html',       icon: 'fa-solid fa-gauge-high' },
     { key: 'stock',        label: 'Stock',              href: 'stock.html',                 icon: 'fa-solid fa-box' },
     { key: 'requisitions', label: 'All Requisitions',   href: 'all-requisitions.html',      icon: 'fa-solid fa-clipboard-list' },
+    { key: 'dept-issues',  label: 'Dept Issues',        href: 'department-issues.html',     icon: 'fa-solid fa-hand-holding' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";

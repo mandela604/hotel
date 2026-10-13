@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 const DEPARTMENTS = [
-  'Management', 'Front Desk', 'Housekeeping', 'Restaurant',
+  'Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant',
   'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
 ];
 

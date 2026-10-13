@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dept Issues | Boston Leisure Hotel HMS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --radius: 14px; --radius-sm: 10px; --transition: .3s cubic-bezier(.4,0,.2,1); }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; font-size: 13px; }
+.app { display: flex; height: 100vh; overflow: hidden; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100%; overflow: hidden; margin-left: 256px; transition: margin-left .3s cubic-bezier(.4,0,.2,1); }
+body.gs-collapsed .main { margin-left: 68px; }
+@media (max-width: 860px) { .main { margin-left: 0 !important; width: 100%; } }
+
+.content, .modal-overlay {
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f4f6fb; --surface3: #eef0f6;
+  --border: #eef0f6; --border2: #dfe3ec;
+  --text: #1c2440; --text2: #6b7280; --text3: #9aa1b3;
+  --shadow: 0 4px 20px rgba(15,34,55,0.07); --shadow-lg: 0 8px 40px rgba(15,34,55,0.10);
+  --input-bg: #f4f6fb; --modal-bg: #ffffff;
+  --gold: #2f6fed; --gold-light: #5b8ff9; --gold-dim: rgba(47,111,237,0.10); --gold-border: rgba(47,111,237,0.25);
+  --green: #12b76a; --green-bg: #e9f9f0;
+  --red: #f04438; --red-bg: #feecec;
+  --amber: #f79009; --amber-bg: #fff4e5;
+  --blue: #2f6fed; --blue-bg: #eaf1ff;
+  --purple: #8b5cf6; --purple-bg: #f4efff;
+}
+[data-theme="dark"] .content, [data-theme="dark"] .modal-overlay {
+  --bg: #081540; --surface: #0a1848; --surface2: #0e2158; --surface3: #122868;
+  --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+  --text: #ffffff; --text2: #aab0d0; --text3: #8891bd;
+  --shadow: 0 8px 32px rgba(0,0,0,0.5); --shadow-lg: 0 16px 48px rgba(0,0,0,0.6);
+  --input-bg: #0e2158; --modal-bg: #0a1848;
+  --gold-dim: rgba(47,111,237,0.18); --green-bg: rgba(18,183,106,0.14);
+  --red-bg: rgba(240,68,56,0.14); --amber-bg: rgba(247,144,9,0.14);
+  --blue-bg: rgba(47,111,237,0.14); --purple-bg: rgba(139,92,246,0.14);
+}
+.content {
+  flex: 1; padding: 20px 24px 28px; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 16px; min-height: 0;
+  background: var(--bg); color: var(--text);
+}
+@media (max-width: 640px) { .content { padding: 16px 14px 22px; } }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+/* ═══ KPI ═══ */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex-shrink: 0; }
+@media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .kpi-row { grid-template-columns: 1fr; } }
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; position: relative; overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column; animation: fadeUp .4s ease both; }
+.kpi-card:nth-child(1){animation-delay:.03s} .kpi-card:nth-child(2){animation-delay:.06s}
+.kpi-card:nth-child(3){animation-delay:.09s} .kpi-card:nth-child(4){animation-delay:.12s}
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); }
+.kpi-card.acc-green::before { background: linear-gradient(90deg, var(--green), transparent); }
+.kpi-card.acc-amber::before { background: linear-gradient(90deg, var(--amber), transparent); }
+.kpi-card.acc-purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+.kpi-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+.kpi-ic { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.ic-blue { background: var(--blue-bg); color: var(--blue); }
+.ic-green { background: var(--green-bg); color: var(--green); }
+.ic-amber { background: var(--amber-bg); color: var(--amber); }
+.ic-purple { background: var(--purple-bg); color: var(--purple); }
+.kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; line-height: 1.3; }
+.kpi-value { font-size: 22px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
+
+/* ═══ Cards / toolbar / table ═══ */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); flex-shrink: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+.card-title { font-size: 14px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.card-title i { color: var(--gold); }
+.card-sub { font-size: 11px; color: var(--text3); font-weight: 500; display: block; margin-top: 2px; }
+.table-count { font-size: 11.5px; color: var(--text3); font-weight: 600; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; min-width: 860px; border-collapse: collapse; }
+thead th { text-align: left; font-size: 9.5px; color: var(--text3); font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
+thead th.center { text-align: center; }
+tbody td { padding: 11px 14px; font-size: 12.5px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; white-space: nowrap; }
+tbody tr { cursor: pointer; transition: background .15s; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+tbody td.center { text-align: center; }
+.req-link { color: var(--gold); font-weight: 700; }
+.status-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.status-chip i { font-size: 6px; }
+.chip-completed { background: var(--green-bg); color: var(--green); }
+.chip-low { background: var(--amber-bg); color: var(--amber); }
+.chip-out { background: var(--red-bg); color: var(--red); }
+.dept-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); font-weight: 600; }
+.dept-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-hk { background: var(--purple); } .dot-ln { background: var(--amber); }
+.empty-row td, .state-row td { text-align: center; padding: 32px; color: var(--text3); font-weight: 600; cursor: default; }
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
+.page-btns { display: flex; gap: 4px; }
+.page-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; color: var(--text2); cursor: pointer; font-family: inherit; padding: 0 8px; }
+.page-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+.page-btn.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+.page-btn:disabled { opacity: .4; cursor: default; }
+
+.toolbar { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 14px 16px; display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
+.flt-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.flt-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.1px; color: var(--text3); font-weight: 700; padding-left: 2px; }
+.search-box { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; transition: border-color .2s; min-width: 200px; }
+.search-box:focus-within { border-color: var(--gold-border); }
+.search-box input { background: none; border: none; outline: none; color: var(--text); font-size: 13px; width: 100%; font-family: inherit; }
+.filter-select, .form-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; color: var(--text); font-size: 12.5px; cursor: pointer; outline: none; transition: border-color .2s; font-family: inherit; }
+.filter-select:focus, .form-input:focus { border-color: var(--gold-border); }
+.form-input { cursor: text; width: 100%; }
+
+/* ═══ Form ═══ */
+.form-grid { display: grid; grid-template-columns: 180px 1fr 1fr; gap: 12px; padding: 16px 18px 4px; }
+@media (max-width: 900px) { .form-grid { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700; }
+.field-label .req { color: var(--red); }
+.form-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; color: var(--text); font-size: 13px; outline: none; font-family: inherit; width: 100%; transition: border-color .2s; }
+.form-select:focus { border-color: var(--gold-border); }
+.form-select:disabled { opacity: .5; cursor: not-allowed; }
+.field-hint { font-size: 10.5px; color: var(--text3); }
+.field-hint.warn { color: var(--amber); }
+
+.lines-wrap { padding: 10px 18px 6px; display: flex; flex-direction: column; gap: 8px; }
+.line-row { display: grid; grid-template-columns: 1fr 110px 130px 36px; gap: 8px; align-items: center; }
+@media (max-width: 760px) { .line-row { grid-template-columns: 1fr 90px 36px; } .line-row .line-avail { display: none; } }
+.line-avail { font-size: 11px; color: var(--text3); font-weight: 600; }
+.line-avail .chip-low, .line-avail .chip-out { padding: 2px 8px; }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; transition: all .2s; }
+.icon-btn:hover { background: var(--red-bg); color: var(--red); border-color: rgba(240,68,56,.3); }
+.form-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px 16px; flex-wrap: wrap; }
+.next-no { font-size: 12px; color: var(--text3); font-weight: 600; }
+.next-no b { color: var(--gold); font-size: 13px; letter-spacing: .3px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .2s; white-space: nowrap; border: 1px solid transparent; text-decoration: none; }
+.btn-primary { background: var(--gold); color: #fff; font-weight: 700; box-shadow: 0 4px 10px rgba(47,111,237,0.28); }
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-outline { background: var(--surface); border-color: var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--gold-border); color: var(--gold); }
+.btn-sm { padding: 7px 12px; font-size: 11.5px; }
+.btn-ghost { background: none; border: none; color: var(--text3); font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 8px 6px; display: inline-flex; align-items: center; gap: 5px; font-family: inherit; }
+.btn-ghost:hover { color: var(--gold); }
+.btn-danger { background: var(--red); color: #fff; font-weight: 700; }
+.btn-danger:hover { filter: brightness(1.08); }
+
+.notice { display: none; align-items: center; gap: 8px; margin: 0 18px 12px; padding: 10px 12px; border-radius: 10px; background: var(--amber-bg); color: var(--amber); font-size: 12px; font-weight: 600; border: 1px solid rgba(247,144,9,.25); }
+.notice.show { display: flex; }
+
+/* ═══ Modal ═══ */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,20,40,0.55); backdrop-filter: blur(5px); z-index: 300; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; }
+.modal-overlay.show { display: flex; }
+.modal-box { background: var(--modal-bg); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 560px; box-shadow: var(--shadow-lg); position: relative; animation: fadeUp .25s ease both; color: var(--text); }
+.modal-box-lg { max-width: 720px; }
+.modal-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 2; }
+.modal-close:hover { color: var(--red); border-color: rgba(240,68,56,.3); }
+.modal-head { padding: 20px 22px 12px; border-bottom: 1px solid var(--border); }
+.modal-title { font-size: 15px; font-weight: 800; color: var(--text); }
+.modal-sub { font-size: 11.5px; color: var(--text3); margin-top: 2px; font-weight: 600; }
+.modal-body { padding: 16px 22px; display: flex; flex-direction: column; gap: 14px; max-height: 60vh; overflow-y: auto; }
+.modal-foot { padding: 14px 22px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } }
+.summary-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.summary-lbl { font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700; }
+.summary-val { font-size: 13px; font-weight: 700; color: var(--text); margin-top: 3px; word-break: break-word; }
+.auth-box { border: 1px solid var(--gold-border); background: var(--gold-dim); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.auth-title { font-size: 12px; font-weight: 800; color: var(--gold); display: flex; align-items: center; gap: 7px; }
+.auth-note { font-size: 11px; color: var(--text2); line-height: 1.45; }
+.modal-lines { width: 100%; min-width: 0; border-collapse: collapse; }
+.modal-lines th { font-size: 9px; letter-spacing: 1px; }
+.modal-lines td { font-size: 12px; padding: 8px 10px; white-space: nowrap; }
+.modal-lines tfoot td { font-weight: 800; border-top: 2px solid var(--border); }
+
+.toast { position: fixed; bottom: 20px; right: 20px; background: #ffffff; border: 1px solid #eef0f6; border-radius: var(--radius-sm); padding: 11px 16px; font-size: 13px; color: #1c2440; box-shadow: 0 8px 28px rgba(15,20,40,0.18); z-index: 999; display: flex; align-items: center; gap: 8px; animation: toastIn .3s ease; max-width: calc(100vw - 40px); font-weight: 600; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; }
+.toast.success { border-left: 3px solid #12b76a; } .toast.success i { color: #12b76a; }
+.toast.error { border-left: 3px solid #f04438; } .toast.error i { color: #f04438; }
+.toast.info { border-left: 3px solid #2f6fed; } .toast.info i { color: #2f6fed; }
+@media (max-width: 480px) { .toast { left: 14px; right: 14px; bottom: 14px; max-width: none; } }
+
+@media print {
+  #sidebarSlot, #topbarSlot, .toolbar, .no-print, .pagination, .toast { display: none !important; }
+  .main { margin-left: 0 !important; }
+  html, body { overflow: visible; height: auto; }
+  .content { overflow: visible; height: auto; }
+  .card { box-shadow: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div id="sidebarSlot"></div>
+
+  <div class="main">
+    <div id="topbarSlot"></div>
+
+    <div class="content">
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- ═══ New Issue form ═══ -->
+      <div class="card no-print" id="issueFormCard">
+        <div class="card-head">
+          <div>
+            <div class="card-title"><i class="fa-solid fa-hand-holding"></i> Record Department Issue</div>
+            <span class="card-sub">Housekeeping &amp; Laundry collect directly from the counter — stock is deducted the moment the receiving staff member confirms with their password.</span>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="resetForm()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+        </div>
+
+        <div class="notice" id="permNotice"><i class="fa-solid fa-lock"></i> You don't have the <b>canRestock</b> privilege — only store keepers, managers and admins can issue department stock.</div>
+
+        <div class="form-grid">
+          <div class="field">
+            <span class="field-label">Department <span class="req">*</span></span>
+            <select class="form-select" id="fIssueDept" onchange="onDeptChange()">
+              <option value="Housekeeping">Housekeeping</option>
+              <option value="Laundry">Laundry</option>
+            </select>
+          </div>
+          <div class="field">
+            <span class="field-label">Collected By <span class="req">*</span></span>
+            <select class="form-select" id="fReceiver" disabled>
+              <option value="">— choose department first —</option>
+            </select>
+            <span class="field-hint" id="receiverHint">Active staff in the selected department (they'll confirm with their password).</span>
+          </div>
+          <div class="field">
+            <span class="field-label">Remark</span>
+            <input type="text" class="form-input" id="fRemark" placeholder="e.g. Guest room restock, banquet linen…" maxlength="200">
+          </div>
+        </div>
+
+        <div class="lines-wrap" id="linesWrap"></div>
+        <div style="padding: 0 18px 4px;">
+          <button class="btn btn-outline btn-sm" onclick="addLine()"><i class="fa-solid fa-plus"></i> Add Item</button>
+        </div>
+
+        <div class="form-foot">
+          <div class="next-no">Will be recorded as <b id="nextNoPreview">—</b></div>
+          <button class="btn btn-primary" id="reviewBtn" onclick="openReviewModal()" disabled>
+            <i class="fa-solid fa-shield-halved"></i> Review &amp; Issue
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ History ═══ -->
+      <div class="toolbar no-print">
+        <div class="flt-group" style="flex:1;min-width:180px;max-width:260px;">
+          <span class="flt-label">Search</span>
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass" style="color:var(--text3);font-size:12px;"></i>
+            <input type="text" id="fSearch" placeholder="Issue no., collector, item…" oninput="page=1;render()">
+          </div>
+        </div>
+        <div class="flt-group">
+          <span class="flt-label">Department</span>
+          <select class="filter-select" id="fHistDept" onchange="page=1;render()">
+            <option value="">All Departments</option>
+            <option value="Housekeeping">Housekeeping</option>
+            <option value="Laundry">Laundry</option>
+          </select>
+        </div>
+        <div class="flt-group">
+          <span class="flt-label">From</span>
+          <input type="date" class="filter-select" id="fDateFrom" onchange="page=1;render()">
+        </div>
+        <div class="flt-group">
+          <span class="flt-label">To</span>
+          <input type="date" class="filter-select" id="fDateTo" onchange="page=1;render()">
+        </div>
+        <button class="btn-ghost" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+        <button class="btn btn-outline btn-sm" onclick="loadAll()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+      </div>
+
+      <div class="table-card card">
+        <div class="card-head">
+          <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Issue History</div>
+          <div class="table-count" id="tableCount">—</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Issue No.</th>
+                <th>Date</th>
+                <th>Department</th>
+                <th>Collected By</th>
+                <th class="center">Lines</th>
+                <th>Items</th>
+                <th class="center">Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"><tr class="state-row"><td colspan="8"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="paginLabel">—</span>
+          <div class="page-btns" id="pageBtns"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Review + receiver authentication modal ═══ -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal-box modal-box-lg">
+    <button class="modal-close" onclick="closeReviewModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-head">
+      <div class="modal-title"><i class="fa-solid fa-shield-halved" style="color:var(--gold);margin-right:6px;"></i> Confirm Department Issue</div>
+      <div class="modal-sub">Stock is deducted only after the collecting staff member authenticates below.</div>
+    </div>
+    <div class="modal-body">
+      <div class="summary-grid" id="reviewSummary"></div>
+      <div>
+        <table class="modal-lines">
+          <thead>
+            <tr><th>Item</th><th class="center">Qty</th><th>Unit</th><th class="center">In Stock</th><th class="center">Unit Cost</th><th class="center">Total</th></tr>
+          </thead>
+          <tbody id="reviewLines"></tbody>
+          <tfoot id="reviewFoot"></tfoot>
+        </table>
+      </div>
+      <div class="auth-box">
+        <div class="auth-title"><i class="fa-solid fa-key"></i> Receiver Authentication — <span id="authDeptLabel">Housekeeping</span> staff, enter your password</div>
+        <div class="auth-note">This confirms you physically received the items above. Your identity is recorded on the issue note — the store keeper cannot complete this without you.</div>
+        <div class="field">
+          <span class="field-label">Receiver</span>
+          <input type="text" class="form-input" id="authReceiver" disabled>
+        </div>
+        <div class="field">
+          <span class="field-label">Password <span class="req">*</span></span>
+          <input type="password" class="form-input" id="authPassword" placeholder="Receiver's account password" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeReviewModal()">Cancel</button>
+      <button class="btn btn-primary" id="confirmIssueBtn" onclick="confirmIssue()"><i class="fa-solid fa-check"></i> Confirm &amp; Issue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Detail modal ═══ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box modal-box-lg">
+    <button class="modal-close" onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-head">
+      <div class="modal-title" id="detailTitle">—</div>
+      <div class="modal-sub" id="detailSub">—</div>
+    </div>
+    <div class="modal-body">
+      <div class="summary-grid" id="detailSummary"></div>
+      <div>
+        <table class="modal-lines">
+          <thead>
+            <tr><th>Item</th><th class="center">Issued Qty</th><th>Unit</th><th class="center">Unit Cost</th><th class="center">Total</th></tr>
+          </thead>
+          <tbody id="detailLines"></tbody>
+          <tfoot id="detailFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="../services/permissions.js"></script>
+<script src="services/store-service.js"></script>
+<script src="../component/store-shell.js"></script>
+<script>
+const shell = StoreShell.attach({
+  sidebarTarget: '#sidebarSlot',
+  topbarTarget:  '#topbarSlot',
+  activeFile:    'department-issues.html',
+  pageTitle:     'Dept Issues',
+  pageSubtitle:  'Direct store-counter issues to Housekeeping & Laundry',
+});
+window.shell = shell;
+
+/* ═══════════ Helpers ═══════════ */
+function pad2(n){ return String(n).padStart(2,'0'); }
+function ymdOf(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+function fmtN(n){ return '₦' + Math.round(n||0).toLocaleString('en-NG'); }
+function fmtDate(d){
+  if(!d) return '—';
+  const s = String(d);
+  return new Date(s + (s.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg, type='success'){
+  const icon = type==='success' ? 'fa-circle-check' : type==='error' ? 'fa-circle-xmark' : 'fa-circle-info';
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+window.showToast = showToast;
+
+/* ═══════════ Permission gate ═══════════ */
+let canIssue = false;
+function refreshPermission(){
+  const user = shell.getUser();
+  canIssue = !!(user && window.Permissions && Permissions.hasPermission(user, 'canRestock', 'store'));
+  document.getElementById('permNotice').classList.toggle('show', !!user && !canIssue);
+  updateReviewBtn();
+  return canIssue;
+}
+// Session resolves async inside the shell — check now and again shortly.
+refreshPermission();
+setTimeout(refreshPermission, 700);
+
+/* ═══════════ Form state ═══════════ */
+let stock = [];            // normalized stock list
+let staffList = [];        // active users for the selected dept
+let lines = [];            // [{ stockId, name, qty }]
+let lineSeq = 0;
+
+function stockById(id){ return stock.find(s => s.id === id) || null; }
+
+async function loadStock(){
+  try {
+    await StoreService.loadAll();
+    stock = StoreService.state.stock.slice();
+  } catch(e) {
+    stock = [];
+  }
+}
+
+async function onDeptChange(){
+  const dept = document.getElementById('fIssueDept').value;
+  const sel = document.getElementById('fReceiver');
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading staff…</option>';
+  document.getElementById('receiverHint').textContent = 'Loading active staff…';
+  updateNextNo();
+  try {
+    staffList = await StoreService.getDepartmentStaff(dept);
+  } catch(e) {
+    staffList = [];
+  }
+  if (!staffList.length) {
+    sel.innerHTML = '<option value="">— no active staff in this dept —</option>';
+    document.getElementById('receiverHint').textContent = 'No active ' + dept + ' staff found — add staff with a login first.';
+    document.getElementById('receiverHint').className = 'field-hint warn';
+  } else {
+    sel.innerHTML = '<option value="">— select staff member —</option>' +
+      staffList.map(u => '<option value="' + esc(u.email) + '">' + esc(u.name) + ' — ' + esc(u.email) + '</option>').join('');
+    sel.disabled = false;
+    document.getElementById('receiverHint').textContent = 'They will confirm the collection with their own password.';
+    document.getElementById('receiverHint').className = 'field-hint';
+  }
+  updateReviewBtn();
+}
+
+function updateNextNo(){
+  const dept = document.getElementById('fIssueDept').value;
+  const el = document.getElementById('nextNoPreview');
+  el.textContent = '…';
+  StoreService.peekNextNumber(dept, 'store_issue').then(no => { el.textContent = no || '—'; }).catch(() => { el.textContent = '—'; });
+}
+
+function addLine(){
+  lines.push({ key: ++lineSeq, stockId: '', name: '', qty: '' });
+  renderLines();
+}
+function removeLine(key){
+  lines = lines.filter(l => l.key !== key);
+  renderLines();
+}
+function onLineItem(key, val){
+  const l = lines.find(x => x.key === key);
+  if (!l) return;
+  l.stockId = val;
+  const s = stockById(val);
+  l.name = s ? s.name : '';
+  renderLines();
+}
+function onLineQty(key, val){
+  const l = lines.find(x => x.key === key);
+  if (!l) return;
+  l.qty = val;
+  updateReviewBtn();
+}
+
+function renderLines(){
+  const wrap = document.getElementById('linesWrap');
+  if (!lines.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:600;padding:8px 0 4px;">No items yet — click <b>Add Item</b> to start.</div>';
+    updateReviewBtn();
+    return;
+  }
+  wrap.innerHTML = lines.map(l => {
+    const s = stockById(l.stockId);
+    const lvl = s ? StoreService.stockLevel(s) : 'ok';
+    const availHtml = s
+      ? (lvl === 'ok'
+          ? '<span class="line-avail">In stock: <b>' + s.qty + '</b> ' + esc(s.unit) + '</span>'
+          : '<span class="line-avail"><span class="status-chip ' + (lvl==='low'?'chip-low':'chip-out') + '"><i class="fa-solid fa-circle"></i> ' + (lvl==='low'?'Low: ':'Out: ') + s.qty + '</span></span>')
+      : '<span class="line-avail">—</span>';
+    const opts = '<option value="">— pick item —</option>' + stock.map(x =>
+      '<option value="' + esc(x.id) + '"' + (x.id === l.stockId ? ' selected' : '') + '>' + esc(x.name) + ' (' + esc(x.unit) + ')</option>'
+    ).join('');
+    return '<div class="line-row">' +
+      '<select class="form-select" onchange="onLineItem(' + l.key + ', this.value)">' + opts + '</select>' +
+      '<input type="number" min="0.01" step="any" class="form-input" placeholder="Qty" value="' + esc(l.qty) + '" oninput="onLineQty(' + l.key + ', this.value)">' +
+      availHtml +
+      '<button class="icon-btn" onclick="removeLine(' + l.key + ')" title="Remove line"><i class="fa-solid fa-trash"></i></button>' +
+    '</div>';
+  }).join('');
+  updateReviewBtn();
+}
+
+function validLines(){
+  return lines.filter(l => l.stockId && (parseFloat(l.qty) || 0) > 0);
+}
+
+function updateReviewBtn(){
+  const btn = document.getElementById('reviewBtn');
+  const receiverOk = !!document.getElementById('fReceiver').value;
+  btn.disabled = !(canIssue && validLines().length && receiverOk);
+}
+
+function resetForm(){
+  lines = [];
+  document.getElementById('fRemark').value = '';
+  document.getElementById('fReceiver').value = '';
+  addLine();
+  onDeptChange();
+}
+window.resetForm = resetForm;
+window.addLine = addLine;
+window.removeLine = removeLine;
+window.onLineItem = onLineItem;
+window.onLineQty = onLineQty;
+window.onDeptChange = onDeptChange;
+
+/* ═══════════ Review + authenticate + issue ═══════════ */
+function openReviewModal(){
+  const dept = document.getElementById('fIssueDept').value;
+  const email = document.getElementById('fReceiver').value;
+  const staff = staffList.find(u => u.email === email);
+  if (!staff) { showToast('Please choose the staff member collecting the items.', 'error'); return; }
+  const vl = validLines();
+  if (!vl.length) { showToast('Add at least one item with a quantity.', 'error'); return; }
+
+  document.getElementById('authDeptLabel').textContent = dept;
+  document.getElementById('authReceiver').value = staff.name + ' (' + staff.email + ')';
+
+  document.getElementById('reviewSummary').innerHTML =
+    '<div class="summary-item"><div class="summary-lbl">Department</div><div class="summary-val">' + esc(dept) + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Collected By</div><div class="summary-val">' + esc(staff.name) + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Issue No.</div><div class="summary-val">' + esc(document.getElementById('nextNoPreview').textContent) + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Remark</div><div class="summary-val">' + esc(document.getElementById('fRemark').value || '—') + '</div></div>';
+
+  let total = 0;
+  document.getElementById('reviewLines').innerHTML = vl.map(l => {
+    const s = stockById(l.stockId);
+    const qty = parseFloat(l.qty) || 0;
+    const cost = s ? (s.cost || 0) : 0;
+    const lineTotal = qty * cost;
+    total += lineTotal;
+    return '<tr>' +
+      '<td>' + esc(l.name) + '</td>' +
+      '<td class="center"><b>' + qty + '</b></td>' +
+      '<td>' + esc(s ? s.unit : '') + '</td>' +
+      '<td class="center">' + (s ? s.qty : '—') + '</td>' +
+      '<td class="center">' + fmtN(cost) + '</td>' +
+      '<td class="center"><b>' + fmtN(lineTotal) + '</b></td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('reviewFoot').innerHTML =
+    '<tr><td colspan="5" style="text-align:right;">Total value</td><td class="center">' + fmtN(total) + '</td></tr>';
+
+  document.getElementById('authPassword').value = '';
+  document.getElementById('reviewModal').classList.add('show');
+  setTimeout(() => document.getElementById('authPassword').focus(), 150);
+}
+function closeReviewModal(){ document.getElementById('reviewModal').classList.remove('show'); }
+window.openReviewModal = openReviewModal;
+window.closeReviewModal = closeReviewModal;
+
+async function confirmIssue(){
+  const btn = document.getElementById('confirmIssueBtn');
+  const dept = document.getElementById('fIssueDept').value;
+  const email = document.getElementById('fReceiver').value;
+  const password = document.getElementById('authPassword').value;
+  if (!password) { showToast('Receiver password is required.', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying & issuing…';
+  try {
+    const row = await StoreService.createDepartmentIssue({
+      dept: dept,
+      receiverEmail: email,
+      receiverPassword: password,
+      remark: document.getElementById('fRemark').value,
+      items: validLines().map(l => ({ stockId: l.stockId, name: l.name, qty: parseFloat(l.qty) || 0 })),
+    });
+    closeReviewModal();
+    showToast('Issued ' + row.no + ' to ' + dept + ' — collected by ' + (row.collectedBy || email), 'success');
+    resetForm();
+    await loadHistory();
+    renderKPIs();
+  } catch(err) {
+    showToast(err.message || 'Could not issue — check the receiver password.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirm &amp; Issue';
+    updateReviewBtn();
+  }
+}
+window.confirmIssue = confirmIssue;
+
+/* ═══════════ History ═══════════ */
+let ISSUES = [];
+let page = 1;
+const PAGE_SIZE = 10;
+
+async function loadHistory(){
+  try {
+    ISSUES = await StoreService.getDepartmentIssues();
+  } catch(e) {
+    ISSUES = [];
+    showToast('Could not load issue history: ' + (e.message || e), 'error');
+  }
+}
+
+function rowDate(r){ return r.dateRaised || ''; }
+function lineValue(r){
+  return (r.items || []).reduce((sum, i) => sum + (i.qty || 0) * (i.cost || 0), 0);
+}
+function itemsSummary(r){
+  const names = (r.items || []).map(i => i.name);
+  const head = names.slice(0, 2).join(', ');
+  return head + (names.length > 2 ? ' +' + (names.length - 2) + ' more' : '');
+}
+
+function filtered(){
+  const q = (document.getElementById('fSearch').value || '').toLowerCase().trim();
+  const dept = document.getElementById('fHistDept').value;
+  const from = document.getElementById('fDateFrom').value;
+  const to = document.getElementById('fDateTo').value;
+  return ISSUES.filter(r => {
+    if (dept && r.dept !== dept) return false;
+    const d = rowDate(r).slice(0, 10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    if (q) {
+      const hay = (r.no + ' ' + r.dept + ' ' + (r.collectedBy||'') + ' ' + (r.collectedByEmail||'') + ' ' + (r.items||[]).map(i=>i.name).join(' ')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderKPIs(){
+  const today = ymdOf(new Date());
+  const d30 = new Date(); d30.setDate(d30.getDate() - 30);
+  const d30s = ymdOf(d30);
+  const todayRows = ISSUES.filter(r => rowDate(r).slice(0,10) === today);
+  const linesToday = todayRows.reduce((n, r) => n + (r.items||[]).length, 0);
+  const hk30 = ISSUES.filter(r => r.dept === 'Housekeeping' && rowDate(r).slice(0,10) >= d30s).length;
+  const ln30 = ISSUES.filter(r => r.dept === 'Laundry' && rowDate(r).slice(0,10) >= d30s).length;
+  document.getElementById('kpiRow').innerHTML =
+    kpi('ic-blue', 'fa-solid fa-inbox', "Today's Issues", todayRows.length, 'Recorded at the counter') +
+    kpi('ic-green', 'fa-solid fa-boxes-stacked', 'Lines Issued Today', linesToday, 'Item lines handed over') +
+    kpi('ic-purple', 'fa-solid fa-broom', 'Housekeeping (30d)', hk30, 'Issues this month') +
+    kpi('ic-amber', 'fa-solid fa-shirts', 'Laundry (30d)', ln30, 'Issues this month');
+}
+function kpi(ic, icon, label, value, trend){
+  return '<div class="kpi-card"><div class="kpi-top"><div class="kpi-ic ' + ic + '"><i class="' + icon + '"></i></div>' +
+    '<div class="kpi-label">' + label + '</div></div>' +
+    '<div class="kpi-value">' + value + '</div>' +
+    '<div class="kpi-trend" style="font-size:10.5px;color:var(--text3);font-weight:600;">' + trend + '</div></div>';
+}
+
+function render(){
+  const rows = filtered();
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if (page > pages) page = pages;
+  const slice = rows.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+  document.getElementById('tableCount').textContent = rows.length + ' issue' + (rows.length===1?'':'s');
+  const tbody = document.getElementById('tbody');
+  if (!slice.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><i class="fa-solid fa-hand-holding-heart" style="display:block;font-size:22px;margin-bottom:8px;opacity:.4;"></i>No department issues recorded yet.</td></tr>';
+  } else {
+    tbody.innerHTML = slice.map(r => {
+      const dot = r.dept === 'Housekeeping' ? 'dot-hk' : 'dot-ln';
+      const dsp = r.dateRaisedDisplay || fmtDate(rowDate(r));
+      return '<tr onclick="openDetail(\'' + esc(r.no) + '\')">' +
+        '<td><span class="req-link">' + esc(r.no) + '</span></td>' +
+        '<td>' + esc(dsp) + '</td>' +
+        '<td><span class="dept-chip"><span class="dept-dot ' + dot + '"></span>' + esc(r.dept) + '</span></td>' +
+        '<td>' + esc(r.collectedBy || r.by || '—') + '</td>' +
+        '<td class="center">' + (r.items||[]).length + '</td>' +
+        '<td title="' + esc((r.items||[]).map(i=>i.name).join(', ')) + '">' + esc(itemsSummary(r)) + '</td>' +
+        '<td class="center">' + fmtN(lineValue(r)) + '</td>' +
+        '<td><span class="status-chip chip-completed"><i class="fa-solid fa-circle"></i> ' + esc(r.status) + '</span></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  document.getElementById('paginLabel').textContent = rows.length
+    ? 'Showing ' + ((page-1)*PAGE_SIZE+1) + '–' + Math.min(page*PAGE_SIZE, rows.length) + ' of ' + rows.length
+    : '—';
+  const btns = [];
+  btns.push('<button class="page-btn" onclick="goPage(' + (page-1) + ')"' + (page<=1?' disabled':'') + '><i class="fa-solid fa-chevron-left"></i></button>');
+  for (let p = 1; p <= pages; p++){
+    if (pages > 7 && p > 2 && p < pages-1 && Math.abs(p-page) > 1){
+      if (btns[btns.length-1] !== '<span style="padding:0 4px;">…</span>') btns.push('<span style="padding:0 4px;">…</span>');
+      continue;
+    }
+    btns.push('<button class="page-btn' + (p===page?' active':'') + '" onclick="goPage(' + p + ')">' + p + '</button>');
+  }
+  btns.push('<button class="page-btn" onclick="goPage(' + (page+1) + ')"' + (page>=pages?' disabled':'') + '><i class="fa-solid fa-chevron-right"></i></button>');
+  document.getElementById('pageBtns').innerHTML = btns.join('');
+}
+function goPage(p){ page = p; render(); }
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fHistDept').value = '';
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value = '';
+  page = 1; render();
+}
+window.goPage = goPage;
+window.clearFilters = clearFilters;
+window.render = render;
+
+/* ═══════════ Detail modal ═══════════ */
+window.openDetail = function(no){
+  const r = ISSUES.find(x => x.no === no);
+  if (!r) return;
+  document.getElementById('detailTitle').innerHTML = '<span class="req-link">' + esc(r.no) + '</span> → ' + esc(r.dept);
+  document.getElementById('detailSub').textContent = r.dateRaisedDisplay || fmtDate(rowDate(r));
+  document.getElementById('detailSummary').innerHTML =
+    '<div class="summary-item"><div class="summary-lbl">Collected By</div><div class="summary-val">' + esc(r.collectedBy || '—') + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Receiver Email (verified)</div><div class="summary-val">' + esc(r.collectedByEmail || '—') + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Status</div><div class="summary-val">' + esc(r.status) + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Remark</div><div class="summary-val">' + esc(r.remark || '—') + '</div></div>';
+  let total = 0;
+  document.getElementById('detailLines').innerHTML = (r.items||[]).map(i => {
+    const t = (i.qty||0) * (i.cost||0);
+    total += t;
+    return '<tr>' +
+      '<td>' + esc(i.name) + '</td>' +
+      '<td class="center"><b>' + (i.issuedQty != null ? i.issuedQty : i.qty) + '</b></td>' +
+      '<td>' + esc(i.unit || '') + '</td>' +
+      '<td class="center">' + fmtN(i.cost) + '</td>' +
+      '<td class="center"><b>' + fmtN(t) + '</b></td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('detailFoot').innerHTML =
+    '<tr><td colspan="4" style="text-align:right;">Total value</td><td class="center">' + fmtN(total) + '</td></tr>';
+  document.getElementById('detailModal').classList.add('show');
+};
+function closeDetailModal(){ document.getElementById('detailModal').classList.remove('show'); }
+window.closeDetailModal = closeDetailModal;
+
+// Click outside closes modals
+['reviewModal','detailModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+  });
+});
+document.getElementById('authPassword').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') confirmIssue();
+});
+
+/* ═══════════ Init / live refresh ═══════════ */
+async function loadAll(){
+  await loadStock();
+  await loadHistory();
+  renderKPIs();
+  render();
+}
+// Shell's LiveService wiring calls window.loadData on store:updated ticks.
+window.loadData = loadAll;
+
+(async function init(){
+  addLine();
+  await loadAll();
+  await onDeptChange();
+  StoreService.onChange(function(){
+    loadHistory().then(function(){ renderKPIs(); render(); });
+  });
+})();
+</script>
+</body>
+</html>

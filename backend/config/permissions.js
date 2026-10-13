@@ -169,6 +169,7 @@ const MODULE_KEY_MAP = {
   'Management':  null,
   'Front Desk':  'booking',
   'Housekeeping': null,
+  'Laundry':      null,
   'Restaurant':  'restaurant',
   'Kitchen':     'kitchen',
   'Pool Bar':    'poolbar',

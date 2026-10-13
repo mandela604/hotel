@@ -192,7 +192,7 @@
   // ══════════════════════════════════════════════════════════════════
   // Defaults (catalog-only — no storage adapter, that's StoreService's job)
   // ══════════════════════════════════════════════════════════════════
-  const DEFAULT_DEPARTMENTS = ['Kitchen', 'Housekeeping', 'Bar', 'Front Desk', 'Maintenance', 'Store'];
+  const DEFAULT_DEPARTMENTS = ['Kitchen', 'Housekeeping', 'Laundry', 'Bar', 'Front Desk', 'Maintenance', 'Store'];
   const DEFAULT_FULFILL_CENTERS = ['Central Store', 'Main Kitchen Store', 'Housekeeping Store'];
   const DEFAULT_CATALOG = [
     { name: 'Rice (Long Grain)', unit: 'kg' }, { name: 'Palm Oil', unit: 'Ltr' },

@@ -191,6 +191,44 @@ exports.validateRejectRequisition = (req, res, next) => {
   next();
 };
 
+/* ── Department Issues (Housekeeping / Laundry direct counter issue) ──
+   The receiver authenticates with their OWN password here — identity is
+   proven server-side in storeController.verifyReceiver(), so there is no
+   free-text "collected by" field to forge. */
+
+const DIRECT_ISSUE_DEPTS = ['Housekeeping', 'Laundry'];
+
+function looksLikeEmail(v) {
+  return typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
+
+exports.validateDepartmentIssue = (req, res, next) => {
+  const { dept, receiverEmail, receiverPassword, remark, items } = req.body;
+
+  if (!DIRECT_ISSUE_DEPTS.includes(dept)) {
+    return fail(res, `dept must be one of: ${DIRECT_ISSUE_DEPTS.join(', ')}`, 'dept');
+  }
+  if (!looksLikeEmail(receiverEmail)) {
+    return fail(res, 'receiverEmail must be a valid staff email', 'receiverEmail');
+  }
+  if (!isNonEmptyString(receiverPassword)) {
+    return fail(res, 'receiverPassword is required — the collecting staff member must authenticate', 'receiverPassword');
+  }
+  if (remark !== undefined && typeof remark !== 'string') return fail(res, 'remark must be a string', 'remark');
+
+  const itemsErr = validateItemsArray(res, items);
+  if (itemsErr) return itemsErr;
+  // Direct issues always deduct a specific stock record — no fuzzy
+  // name matching on a manual counter slip, so stockId is mandatory.
+  for (let i = 0; i < items.length; i++) {
+    if (!isNonEmptyString(items[i].stockId)) {
+      return fail(res, `items[${i}].stockId is required — pick items from the Store catalog`, 'items');
+    }
+  }
+
+  next();
+};
+
 exports.validateRejectDelivery = (req, res, next) => {
   const { reason } = req.body;
   if (!isNonEmptyString(reason)) return fail(res, 'reason is required to dispute a delivery', 'reason');

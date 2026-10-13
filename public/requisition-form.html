@@ -193,7 +193,7 @@
           <div class="form-group"><label class="form-label">Requested By</label><input class="form-input" id="fBy" placeholder="Your name"></div>
           <div class="form-group"><label class="form-label">Department</label>
             <select class="form-select" id="fDept" onchange="updatePreview()">
-              <option>Kitchen</option><option>Housekeeping</option><option>Bar</option><option>Front Desk</option><option>Maintenance</option><option>Store</option>
+              <option>Kitchen</option><option>Housekeeping</option><option>Laundry</option><option>Bar</option><option>Front Desk</option><option>Maintenance</option><option>Store</option>
             </select>
           </div>
           <div class="form-group"><label class="form-label">Date Raised</label><input class="form-input" id="fDateRaised" readonly></div>
@@ -268,7 +268,7 @@ const storage = window.storage || {
   async list(prefix, shared){ const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys, prefix, shared}; }
 };
 
-const DEPT_PREFIX = { Kitchen:'KREQ', Housekeeping:'HREQ', Bar:'BREQ', 'Front Desk':'FREQ', Maintenance:'MREQ', Store:'PR' };
+const DEPT_PREFIX = { Kitchen:'KREQ', Housekeeping:'HREQ', Laundry:'LREQ', Bar:'BREQ', 'Front Desk':'FREQ', Maintenance:'MREQ', Store:'PR' };
 
 const CATALOG = [
   { name:'Rice (Long Grain)', unit:'kg' }, { name:'Palm Oil', unit:'Ltr' },

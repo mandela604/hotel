@@ -82,7 +82,15 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
 
-app.use(express.static(PUBLIC_DIR));
+// no-cache on JS/HTML: browsers revalidate via ETag on every visit
+// (cheap 304s), so UI updates like new sidebar entries reach users
+// without a hard refresh — heuristic caching of static files was
+// serving stale shells after deploys.
+app.use(express.static(PUBLIC_DIR, {
+  setHeaders: (res, filePath) => {
+    if (/\.(js|html)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 app.use('/api', sanitize); // strip Mongo operators + trim/sanitize all incoming strings
 

@@ -31,6 +31,12 @@ const requisitionSchema = new mongoose.Schema({
       default: 'Pending',
     },  
   rejectReason:  { type: String, default: '' },
+  // Direct store-counter issues to Housekeeping/Laundry (POST
+  // /api/store/department-issues): the receiving dept staff member
+  // authenticates with their own password at handover, so these hold
+  // the IDENTITY OF THE RECEIVER, not free text typed by Store.
+  collectedBy:      { type: String, default: '' },
+  collectedByEmail: { type: String, default: '' },
   dateRaised:    { type: Date, default: Date.now },
   // Set once a mode:'purchase' requisition has been pulled into
   // Procurement by POST /procurement/incoming-store-requests/:no/import.

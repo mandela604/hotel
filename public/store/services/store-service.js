@@ -16,7 +16,12 @@
     STOCK: 'store-stock',
   };
 
-  const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
+  const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
+
+  // Depts recorded directly at the store counter (no dashboard module of
+  // their own) — see createDepartmentIssue(): the receiving dept staff
+  // member authenticates with their own password before stock is deducted.
+  const DEPT_ISSUE_DEPTS = ['Housekeeping', 'Laundry'];
 
   function fmtN(n) { return '\u20A6' + Math.round(n || 0).toLocaleString('en-NG'); }
   function todayISO() { return new Date().toISOString().split('T')[0]; }
@@ -115,6 +120,8 @@
       status: r.status || 'Pending',
       rejectReason: r.rejectReason || '',
       disputeReason: r.disputeReason || '',
+      collectedBy: r.collectedBy || '',
+      collectedByEmail: r.collectedByEmail || '',
       dateRaised: r.dateRaised || '',
       dateRaisedDisplay: r.dateRaisedDisplay || '',
       procurementPrId: r.procurementPrId || null,
@@ -453,6 +460,65 @@
     return norm;
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     Department Issues (Housekeeping / Laundry direct counter issue)
+     One-step: create + issue + deduct stock + Completed requisition.
+     Fraud control: the receiving staff member authenticates with their
+     OWN password (receiverEmail/receiverPassword) — the backend
+     verifies it BEFORE any stock is written.
+  ══════════════════════════════════════════════════════════════ */
+
+  async function getDepartmentStaff(dept) {
+    if (DEPT_ISSUE_DEPTS.indexOf(dept) === -1) {
+      throw new Error('Department must be one of: ' + DEPT_ISSUE_DEPTS.join(', '));
+    }
+    const data = await apiFetch('/department-staff?dept=' + encodeURIComponent(dept));
+    return Array.isArray(data) ? data : [];
+  }
+
+  async function getDepartmentIssues(depts) {
+    const list = (Array.isArray(depts) && depts.length ? depts : DEPT_ISSUE_DEPTS).map(function (d) { return d.trim(); }).filter(Boolean);
+    const data = await apiFetch('/requisitions?mode=store_issue&dept=' + encodeURIComponent(list.join(',')));
+    return (Array.isArray(data) ? data : []).map(normalizeRequisition);
+  }
+
+  async function createDepartmentIssue(opts) {
+    opts = opts || {};
+    const dept = opts.dept;
+    if (DEPT_ISSUE_DEPTS.indexOf(dept) === -1) throw new Error('Please choose Housekeeping or Laundry.');
+    const receiverEmail = (opts.receiverEmail || '').trim();
+    const receiverPassword = opts.receiverPassword || '';
+    if (!receiverEmail) throw new Error('Please choose the staff member collecting the items.');
+    if (!receiverPassword) throw new Error('The collecting staff member must enter their password to confirm.');
+
+    const validItems = (opts.items || []).filter(function (i) {
+      return i.stockId && (parseFloat(i.qty) || 0) > 0;
+    });
+    if (!validItems.length) throw new Error('Add at least one catalog item with a quantity.');
+
+    const payload = {
+      dept: dept,
+      receiverEmail: receiverEmail,
+      receiverPassword: receiverPassword,
+      remark: (opts.remark || '').trim(),
+      items: validItems.map(function (i) {
+        return { stockId: i.stockId, name: i.name || '', qty: parseFloat(i.qty) || 0 };
+      }),
+    };
+    const created = await apiFetch('/department-issues', { method: 'POST', body: JSON.stringify(payload) });
+    const norm = normalizeRequisition(created);
+    state.requests.unshift(norm);
+    // Refresh local stock view so the page's available-qty hints stay true.
+    try {
+      const stockData = await apiFetch('/stock?_=' + Date.now());
+      state.stock = (Array.isArray(stockData) ? stockData : []).map(normalizeStock);
+      state.categories = deriveCategories(state.stock);
+      rebuildCatalog();
+    } catch (e) { /* non-fatal — next loadAll syncs */ }
+    emitChange('departmentIssue:create');
+    return norm;
+  }
+
   async function rejectRequisition(no, reason) {
     const result = await apiFetch('/requisitions/' + encodeURIComponent(no) + '/reject', {
       method: 'PATCH',
@@ -617,6 +683,11 @@
     rejectRequisition: rejectRequisition,
     confirmReceipt: confirmReceipt,
     rejectDelivery: rejectDelivery,
+
+    DEPT_ISSUE_DEPTS: DEPT_ISSUE_DEPTS,
+    getDepartmentStaff: getDepartmentStaff,
+    getDepartmentIssues: getDepartmentIssues,
+    createDepartmentIssue: createDepartmentIssue,
 
     getRequisitions: getRequisitions,
     getRequisition: getRequisition,
