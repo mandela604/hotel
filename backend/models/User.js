@@ -47,3 +47,6 @@ userSchema.methods.toJSON = function () {
 };
 
 module.exports = mongoose.model('User', userSchema);
+// Single source of truth for valid departments — storeController derives
+// its direct-issue dept list (ISSUE_DEPTS) from this.
+module.exports.DEPARTMENTS = DEPARTMENTS;

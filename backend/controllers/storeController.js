@@ -6,6 +6,12 @@ const Requisition = require('../models/Requisition');
 const Counter = require('../models/Counter');
 const Category = require('../models/Category');
 const User = require('../models/User');
+const KitchenStock = require('../models/KitchenStock');
+const KitchenMovement = require('../models/KitchenMovement');
+const RestaurantStock = require('../models/RestaurantStock');
+const RestaurantMovement = require('../models/RestaurantMovement');
+const PoolbarStock = require('../models/PoolbarStock');
+const PoolbarMovement = require('../models/PoolbarMovement');
 const { emit } = require('../utils/emit');
 
 async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
@@ -14,12 +20,14 @@ async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
   } catch (e) { /* ledger is best-effort, never block the request */ }
 }
 
-const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
+const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', Restaurant: 'RREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
 
-// Depts that have no dashboard module of their own, so their store
-// collections are recorded directly at the store counter
+// Depts that can collect directly at the store counter
 // (POST /department-issues) with the receiving staff member's password.
-const ISSUE_DEPTS = ['Housekeeping', 'Laundry'];
+// Every valid user department except Store itself. For Kitchen /
+// Restaurant / Pool Bar the same transaction also credits their outlet
+// stock (double-entry) — see creditOutletStock().
+const ISSUE_DEPTS = User.DEPARTMENTS.filter(d => d !== 'Store');
 
 function actorName(req) {
   return (req.user && (req.user.name || req.user.role)) || 'User';
@@ -288,13 +296,13 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: row });
 });
 
-/* ═══════════════ Department Issues (Housekeeping / Laundry) ═══════════════
-   These two departments have no dashboard module of their own, so their
-   store collections are recorded directly at the store counter in ONE
-   step: create + issue + deduct stock + Completed requisition.
+/* ═══════════════ Department Issues (direct counter issue) ═══════════════
+   Any department (except Store) can collect directly at the store counter
+   in ONE step: create + issue + deduct stock + Completed requisition.
    Fraud control: the receiving dept staff member must authenticate with
    their OWN password before anything is written — the store keeper cannot
-   forge a collection on their behalf. */
+   forge a collection on their behalf. Kitchen / Restaurant / Pool Bar
+   also get their outlet stock credited (double-entry) — see creditOutletStock. */
 
 async function verifyReceiver(dept, email, password) {
   const user = await User.findOne({ email: String(email || '').toLowerCase().trim() });
@@ -314,6 +322,65 @@ async function verifyReceiver(dept, email, password) {
   return user;
 }
 
+// Outlet depts keep their own stock ledgers — a direct issue must credit
+// them too, or their inventory pages would silently disagree with the
+// shelves. Match/create/movement logic mirrors each outlet's own
+// receiveRequisition handler.
+const OUTLET_DEPTS = {
+  Kitchen:    { Stock: KitchenStock,    Movement: KitchenMovement,    event: 'kitchen:updated',    room: 'kitchen',    defaults: { category: 'General',   unit: 'kg' } },
+  Restaurant: { Stock: RestaurantStock, Movement: RestaurantMovement, event: 'restaurant:updated', room: 'restaurant', defaults: { category: 'General',   unit: 'portion' } },
+  'Pool Bar': { Stock: PoolbarStock,    Movement: PoolbarMovement,    event: 'poolbar:updated',    room: 'poolbar',    defaults: { category: 'Beverages', unit: 'bottle' } },
+};
+
+function escapeRegexLocal(s) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function creditOutletStock(dept, line, no) {
+  const cfg = OUTLET_DEPTS[dept];
+  if (!cfg) return null;
+
+  // Match order mirrors receiveRequisition: id(stockId) → storeId → name.
+  let out = null;
+  if (line.stockId) {
+    out = await cfg.Stock.findOne({ id: line.stockId }).catch(() => null)
+       || await cfg.Stock.findOne({ storeId: line.stockId }).catch(() => null);
+  }
+  if (!out) {
+    out = await cfg.Stock.findOne({ name: new RegExp('^' + escapeRegexLocal(line.name) + '$', 'i') }).catch(() => null);
+  }
+
+  if (out) {
+    out.qty = (Number(out.qty) || 0) + line.qty;
+    await out.save();
+  } else {
+    out = await cfg.Stock.create({
+      id: line.stockId,
+      storeId: line.stockId || '',
+      procurementId: line.procurementId || '',
+      name: line.name,
+      category: cfg.defaults.category,
+      unit: line.unit || cfg.defaults.unit,
+      qty: line.qty,
+      min: 10,
+      price: line.cost || 0,
+      cost: line.cost || 0,
+    });
+  }
+
+  try {
+    await cfg.Movement.create({
+      date: todayDisplay(),
+      item: out.name,
+      qtyIn: line.qty,
+      qtyOut: 0,
+      balance: out.qty,
+      reason: `Requisition Received (${no})`,
+    });
+  } catch (e) { /* ledger is best-effort, same as the store side */ }
+  return out;
+}
+
 // Active users in a direct-issue dept — powers the receiver dropdown on
 // the Dept Issues page. Returns id/name/email ONLY (never password hashes).
 exports.listDepartmentStaff = asyncHandler(async (req, res) => {
@@ -326,12 +393,14 @@ exports.listDepartmentStaff = asyncHandler(async (req, res) => {
 });
 
 /**
- * Record a direct store-counter issue to Housekeeping/Laundry.
+ * Record a direct store-counter issue to any department (except Store).
  * Order of operations (fraud control — nothing is written until the
  * receiver is authenticated):
  *   1. verifyReceiver() — 401 on bad credentials, 403 on wrong dept
  *   2. plan phase   — resolve every stockId, reject qty > available
- *   3. apply phase  — deduct StoreStock.qty + StoreMovement per line
+ *   3. apply phase  — deduct StoreStock.qty + StoreMovement per line;
+ *                     Kitchen/Restaurant/Pool Bar lines ALSO credit
+ *                     that outlet's own stock + movement (double-entry)
  *   4. record       — Requisition mode 'store_issue', status Completed,
  *                     collectedBy/collectedByEmail = authenticated user
  */
@@ -363,12 +432,24 @@ exports.createDepartmentIssue = asyncHandler(async (req, res) => {
 
   // 4. Apply phase — deduct + ledger, same movement reason shape as
   //    issueRequisition so Accounting's Daily Stock Sheet picks them up.
+  //    Outlet depts (Kitchen/Restaurant/Pool Bar) are credited on their
+  //    own stock in the same loop — double-entry, no divergence.
   const lineDocs = [];
   for (const entry of plan) {
     const { stockItem, qty } = entry;
     stockItem.qty = Math.max(0, stockItem.qty - qty);
     await stockItem.save();
     await logStoreMovement(stockItem.name, 0, qty, stockItem.qty, `Issued (${no} → ${dept})`);
+    if (OUTLET_DEPTS[dept]) {
+      await creditOutletStock(dept, {
+        stockId: stockItem.id,
+        name: stockItem.name,
+        unit: stockItem.unit,
+        qty,
+        cost: stockItem.cost || 0,
+        procurementId: stockItem.procurementId || '',
+      }, no);
+    }
     lineDocs.push({
       name: stockItem.name, stockId: stockItem.id, unit: stockItem.unit || 'unit',
       packSize: stockItem.packSize || 0, baseUnit: stockItem.baseUnit || '', qty,
@@ -397,6 +478,10 @@ exports.createDepartmentIssue = asyncHandler(async (req, res) => {
 
   console.log(`[Store] Dept issue ${no} → ${dept}: ${lineDocs.length} line(s), collected by ${receiver.name} <${receiver.email}>, recorded by ${actorName(req)}`);
   emit(req, 'store', 'store:updated', { action: 'createDepartmentIssue', data: row });
+  // Outlet depts' live pages listen for their own event — mirror the
+  // receiveRequisition emit so their stock views refresh immediately.
+  const outlet = OUTLET_DEPTS[dept];
+  if (outlet) emit(req, [outlet.room, 'store'], outlet.event, { action: 'receiveRequisition', data: row });
   res.status(201).json({ success: true, data: row });
 });
 

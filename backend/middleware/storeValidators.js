@@ -191,12 +191,16 @@ exports.validateRejectRequisition = (req, res, next) => {
   next();
 };
 
-/* ── Department Issues (Housekeeping / Laundry direct counter issue) ──
+/* ── Department Issues (direct counter issue, any dept except Store) ──
    The receiver authenticates with their OWN password here — identity is
    proven server-side in storeController.verifyReceiver(), so there is no
-   free-text "collected by" field to forge. */
+   free-text "collected by" field to forge. Keep in sync with
+   storeController.ISSUE_DEPTS (User.DEPARTMENTS minus Store). */
 
-const DIRECT_ISSUE_DEPTS = ['Housekeeping', 'Laundry'];
+const DIRECT_ISSUE_DEPTS = [
+  'Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant',
+  'Kitchen', 'Pool Bar', 'Gym', 'Procurement', 'Accounts',
+];
 
 function looksLikeEmail(v) {
   return typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());

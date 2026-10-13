@@ -92,6 +92,7 @@ tbody td.center { text-align: center; }
 .dept-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); font-weight: 600; }
 .dept-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .dot-hk { background: var(--purple); } .dot-ln { background: var(--amber); }
+.dot-blue { background: var(--blue); } .dot-green { background: var(--green); } .dot-red { background: var(--red); }
 .empty-row td, .state-row td { text-align: center; padding: 32px; color: var(--text3); font-weight: 600; cursor: default; }
 .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); flex-wrap: wrap; gap: 8px; font-weight: 600; }
 .page-btns { display: flex; gap: 4px; }
@@ -205,7 +206,7 @@ tbody td.center { text-align: center; }
         <div class="card-head">
           <div>
             <div class="card-title"><i class="fa-solid fa-hand-holding"></i> Record Department Issue</div>
-            <span class="card-sub">Housekeeping &amp; Laundry collect directly from the counter — stock is deducted the moment the receiving staff member confirms with their password.</span>
+            <span class="card-sub">Any department collects directly from the counter — stock is deducted (and outlet stock credited for Kitchen / Restaurant / Pool Bar) the moment the receiving staff member confirms with their password.</span>
           </div>
           <button class="btn btn-outline btn-sm" onclick="resetForm()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
         </div>
@@ -215,10 +216,7 @@ tbody td.center { text-align: center; }
         <div class="form-grid">
           <div class="field">
             <span class="field-label">Department <span class="req">*</span></span>
-            <select class="form-select" id="fIssueDept" onchange="onDeptChange()">
-              <option value="Housekeeping">Housekeeping</option>
-              <option value="Laundry">Laundry</option>
-            </select>
+            <select class="form-select" id="fIssueDept" onchange="onDeptChange()"></select>
           </div>
           <div class="field">
             <span class="field-label">Collected By <span class="req">*</span></span>
@@ -257,11 +255,7 @@ tbody td.center { text-align: center; }
         </div>
         <div class="flt-group">
           <span class="flt-label">Department</span>
-          <select class="filter-select" id="fHistDept" onchange="page=1;render()">
-            <option value="">All Departments</option>
-            <option value="Housekeeping">Housekeeping</option>
-            <option value="Laundry">Laundry</option>
-          </select>
+          <select class="filter-select" id="fHistDept" onchange="page=1;render()"></select>
         </div>
         <div class="flt-group">
           <span class="flt-label">From</span>
@@ -383,7 +377,7 @@ const shell = StoreShell.attach({
   topbarTarget:  '#topbarSlot',
   activeFile:    'department-issues.html',
   pageTitle:     'Dept Issues',
-  pageSubtitle:  'Direct store-counter issues to Housekeeping & Laundry',
+  pageSubtitle:  'Direct store-counter issues to any department',
 });
 window.shell = shell;
 
@@ -642,6 +636,15 @@ function rowDate(r){ return r.dateRaised || ''; }
 function lineValue(r){
   return (r.items || []).reduce((sum, i) => sum + (i.qty || 0) * (i.cost || 0), 0);
 }
+// Deterministic color per department name — cycles a small palette so
+// every dept gets a stable dot without maintaining a hardcoded map.
+const DOT_CYCLE = ['dot-hk', 'dot-ln', 'dot-blue', 'dot-green', 'dot-red'];
+function deptDot(dept){
+  let h = 0;
+  const s = String(dept || '');
+  for (let i = 0; i < s.length; i++) h = (h + s.charCodeAt(i)) % 997;
+  return DOT_CYCLE[h % DOT_CYCLE.length];
+}
 function itemsSummary(r){
   const names = (r.items || []).map(i => i.name);
   const head = names.slice(0, 2).join(', ');
@@ -672,13 +675,13 @@ function renderKPIs(){
   const d30s = ymdOf(d30);
   const todayRows = ISSUES.filter(r => rowDate(r).slice(0,10) === today);
   const linesToday = todayRows.reduce((n, r) => n + (r.items||[]).length, 0);
-  const hk30 = ISSUES.filter(r => r.dept === 'Housekeeping' && rowDate(r).slice(0,10) >= d30s).length;
-  const ln30 = ISSUES.filter(r => r.dept === 'Laundry' && rowDate(r).slice(0,10) >= d30s).length;
+  const rows30 = ISSUES.filter(r => rowDate(r).slice(0,10) >= d30s);
+  const value30 = rows30.reduce((s, r) => s + lineValue(r), 0);
   document.getElementById('kpiRow').innerHTML =
     kpi('ic-blue', 'fa-solid fa-inbox', "Today's Issues", todayRows.length, 'Recorded at the counter') +
     kpi('ic-green', 'fa-solid fa-boxes-stacked', 'Lines Issued Today', linesToday, 'Item lines handed over') +
-    kpi('ic-purple', 'fa-solid fa-broom', 'Housekeeping (30d)', hk30, 'Issues this month') +
-    kpi('ic-amber', 'fa-solid fa-shirts', 'Laundry (30d)', ln30, 'Issues this month');
+    kpi('ic-purple', 'fa-solid fa-calendar-days', 'Issues (30d)', rows30.length, 'All departments') +
+    kpi('ic-amber', 'fa-solid fa-coins', 'Value (30d)', fmtN(value30), 'Cost of goods issued');
 }
 function kpi(ic, icon, label, value, trend){
   return '<div class="kpi-card"><div class="kpi-top"><div class="kpi-ic ' + ic + '"><i class="' + icon + '"></i></div>' +
@@ -699,12 +702,11 @@ function render(){
     tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><i class="fa-solid fa-hand-holding-heart" style="display:block;font-size:22px;margin-bottom:8px;opacity:.4;"></i>No department issues recorded yet.</td></tr>';
   } else {
     tbody.innerHTML = slice.map(r => {
-      const dot = r.dept === 'Housekeeping' ? 'dot-hk' : 'dot-ln';
       const dsp = r.dateRaisedDisplay || fmtDate(rowDate(r));
       return '<tr onclick="openDetail(\'' + esc(r.no) + '\')">' +
         '<td><span class="req-link">' + esc(r.no) + '</span></td>' +
         '<td>' + esc(dsp) + '</td>' +
-        '<td><span class="dept-chip"><span class="dept-dot ' + dot + '"></span>' + esc(r.dept) + '</span></td>' +
+        '<td><span class="dept-chip"><span class="dept-dot ' + deptDot(r.dept) + '"></span>' + esc(r.dept) + '</span></td>' +
         '<td>' + esc(r.collectedBy || r.by || '—') + '</td>' +
         '<td class="center">' + (r.items||[]).length + '</td>' +
         '<td title="' + esc((r.items||[]).map(i=>i.name).join(', ')) + '">' + esc(itemsSummary(r)) + '</td>' +
@@ -782,6 +784,12 @@ document.getElementById('authPassword').addEventListener('keydown', function(e){
 });
 
 /* ═══════════ Init / live refresh ═══════════ */
+function populateDeptSelects(){
+  const opts = StoreService.DEPT_ISSUE_DEPTS.map(d => '<option value="' + esc(d) + '">' + esc(d) + '</option>').join('');
+  document.getElementById('fIssueDept').innerHTML = opts;
+  document.getElementById('fHistDept').innerHTML = '<option value="">All Departments</option>' + opts;
+}
+
 async function loadAll(){
   await loadStock();
   await loadHistory();
@@ -792,6 +800,7 @@ async function loadAll(){
 window.loadData = loadAll;
 
 (async function init(){
+  populateDeptSelects();
   addLine();
   await loadAll();
   await onDeptChange();
