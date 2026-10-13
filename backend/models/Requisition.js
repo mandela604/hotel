@@ -37,6 +37,12 @@ const requisitionSchema = new mongoose.Schema({
   // the IDENTITY OF THE RECEIVER, not free text typed by Store.
   collectedBy:      { type: String, default: '' },
   collectedByEmail: { type: String, default: '' },
+  // Store-side actor who processed the issue (session-verified identity
+  // of the store keeper) — set on both issue paths: createDepartmentIssue
+  // and issueRequisition. Together with collectedBy this is the full
+  // maker-checker audit trail: who handed out, who collected.
+  issuedBy:         { type: String, default: '' },
+  issuedByEmail:    { type: String, default: '' },
   dateRaised:    { type: Date, default: Date.now },
   // Set once a mode:'purchase' requisition has been pulled into
   // Procurement by POST /procurement/incoming-store-requests/:no/import.

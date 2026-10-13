@@ -123,6 +123,8 @@
       disputeReason: r.disputeReason || '',
       collectedBy: r.collectedBy || '',
       collectedByEmail: r.collectedByEmail || '',
+      issuedBy: r.issuedBy || '',
+      issuedByEmail: r.issuedByEmail || '',
       dateRaised: r.dateRaised || '',
       dateRaisedDisplay: r.dateRaisedDisplay || '',
       procurementPrId: r.procurementPrId || null,

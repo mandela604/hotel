@@ -526,6 +526,7 @@
               <div><div class="ghsa-flabel">Department</div><div class="ghsa-fvalue">${_esc(req.dept)}</div></div>
               <div><div class="ghsa-flabel">Priority</div><div class="ghsa-fvalue">${_esc(req.priority)}</div></div>
               <div><div class="ghsa-flabel">Kitchen/Fulfilling Store</div><div class="ghsa-fvalue">${_esc(req.fulfillStore || '—')}</div></div>
+              ${req.collectedBy ? `<div><div class="ghsa-flabel">Collected By (verified)</div><div class="ghsa-fvalue">${_esc(req.collectedBy)}${req.collectedByEmail ? ' · ' + _esc(req.collectedByEmail) : ''}</div></div>` : ''}
               <div></div>
               <div style="grid-column:1/-1;"><div class="ghsa-flabel">Purpose / Remark</div><div class="ghsa-fvalue">${_esc(req.remark || '—')}</div></div>
               ${req.status === 'Rejected' && req.rejectReason ? `<div style="grid-column:1/-1;"><div class="ghsa-flabel" style="color:var(--ghsa-red);">Rejection Reason</div><div class="ghsa-fvalue" style="color:var(--ghsa-red);">${_esc(req.rejectReason)}</div></div>` : ''}
@@ -535,7 +536,7 @@
           <div class="ghsa-card ghsa-delivery-panel">
             <div class="ghsa-card-header green"><i class="fa-solid fa-truck"></i> Delivery / Issue Details</div>
             <div class="ghsa-delivery-field"><div class="ghsa-flabel">Issue / Transfer Date</div><div class="ghsa-fvalue">${_todayDisplay()}</div></div>
-            <div class="ghsa-delivery-field"><div class="ghsa-flabel">Prepared By</div><div class="ghsa-fvalue">${_esc(options.preparedBy || 'Store Keeper')}</div></div>
+            <div class="ghsa-delivery-field"><div class="ghsa-flabel">Prepared By</div><div class="ghsa-fvalue">${_esc(req.issuedBy || options.preparedBy || 'Store Keeper')}${req.issuedByEmail ? ' · ' + _esc(req.issuedByEmail) : ''}</div></div>
             <div class="ghsa-delivery-field"><div class="ghsa-flabel">Delivery Note No.</div><div class="ghsa-fvalue">DN-${_esc(req.no.split('-').slice(1).join('-'))}</div></div>
             <div class="ghsa-delivery-field" style="margin-bottom:0;"><div class="ghsa-flabel">Remarks</div><div class="ghsa-fvalue small">${req.status === 'Rejected' ? 'Requisition rejected.' : req.status === 'Disputed' ? 'Requester reported an issue with this delivery.' : req.status === 'Completed' ? 'Requester confirmed receipt.' : `Items issued to ${_esc(req.fulfillStore || 'requesting department')}.`}</div></div>
           </div>

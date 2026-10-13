@@ -472,6 +472,8 @@ exports.createDepartmentIssue = asyncHandler(async (req, res) => {
     status: 'Completed',
     collectedBy: receiver.name,
     collectedByEmail: receiver.email,
+    issuedBy: actorName(req),
+    issuedByEmail: (req.user && req.user.email) || '',
     dateRaised: todayISO(),
     dateRaisedDisplay: todayDisplay(),
   });
@@ -570,6 +572,9 @@ exports.issueRequisition = asyncHandler(async (req, res) => {
   }
 
   row.status = totalIssued >= totalReq ? 'Full' : totalIssued > 0 ? 'Partial' : 'Pending';
+  // Maker side of the audit trail — latest store keeper to touch this issue.
+  row.issuedBy = actorName(req);
+  row.issuedByEmail = (req.user && req.user.email) || '';
   await row.save();
   {
     const _targetDept = row.dept || row.requestingDept || '';

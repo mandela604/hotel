@@ -604,7 +604,8 @@ async function confirmIssue(){
       items: validLines().map(l => ({ stockId: l.stockId, name: l.name, qty: parseFloat(l.qty) || 0 })),
     });
     closeReviewModal();
-    showToast('Issued ' + row.no + ' to ' + dept + ' — collected by ' + (row.collectedBy || email), 'success');
+    const issuer = row.issuedBy || (shell.getUser() && shell.getUser().name) || '';
+    showToast('Issued ' + row.no + ' to ' + dept + ' — collected by ' + (row.collectedBy || email) + (issuer ? ', recorded by ' + issuer : ''), 'success');
     resetForm();
     await loadHistory();
     renderKPIs();
@@ -750,8 +751,10 @@ window.openDetail = function(no){
   document.getElementById('detailTitle').innerHTML = '<span class="req-link">' + esc(r.no) + '</span> → ' + esc(r.dept);
   document.getElementById('detailSub').textContent = r.dateRaisedDisplay || fmtDate(rowDate(r));
   document.getElementById('detailSummary').innerHTML =
-    '<div class="summary-item"><div class="summary-lbl">Collected By</div><div class="summary-val">' + esc(r.collectedBy || '—') + '</div></div>' +
-    '<div class="summary-item"><div class="summary-lbl">Receiver Email (verified)</div><div class="summary-val">' + esc(r.collectedByEmail || '—') + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Collected By (verified)</div><div class="summary-val">' + esc(r.collectedBy || '—') + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Receiver Email</div><div class="summary-val">' + esc(r.collectedByEmail || '—') + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Issued By (Store)</div><div class="summary-val">' + esc(r.issuedBy || '—') + '</div></div>' +
+    '<div class="summary-item"><div class="summary-lbl">Issuer Email</div><div class="summary-val">' + esc(r.issuedByEmail || '—') + '</div></div>' +
     '<div class="summary-item"><div class="summary-lbl">Status</div><div class="summary-val">' + esc(r.status) + '</div></div>' +
     '<div class="summary-item"><div class="summary-lbl">Remark</div><div class="summary-val">' + esc(r.remark || '—') + '</div></div>';
   let total = 0;
