@@ -16,6 +16,9 @@ const Transfer = require('../models/Transfer');
 const KitchenCooOrder = require('../models/KitchenCooOrder');
 const Sale = require('../models/Sale');
 const Order = require('../models/Order');
+const MenuItem = require('../models/MenuItem');
+const FoodMenu = require('../models/FoodMenu');
+const Recipe = require('../models/Recipe');
 const { v4: uuidv4 } = require('uuid');
 const { emit } = require('../utils/emit');
 
@@ -742,11 +745,13 @@ exports.resetOutletData = asyncHandler(async (req, res) => {
 /**
  * Recovery: rebuild Restaurant + Pool Bar stock CATALOGS (qty 0).
  * Sources, in priority order:
- *   1. surviving Sales + Orders history (stock-linked lines only)
- *   2. surviving Store movement ledger — every line ever issued with a
- *      reason like "Issued (RREQ-… → Restaurant)" / "→ Pool Bar"
- *   3. ?mirror=1 — clone the ENTIRE Store catalog into both outlets
- *      (use when 1+2 found too little). qty always starts at 0.
+ *   1. surviving Menus — MenuItem (per department) + FoodMenu (shared)
+ *   2. surviving kitchen Recipes (dishes were pushed into restaurant
+ *      stock via /stock/from-recipe)
+ *   3. surviving Sales + Orders history (stock-linked lines)
+ *   4. surviving Store movement ledger (items issued → Restaurant/Pool Bar)
+ *   5. ?mirror=1 — clone the ENTIRE Store catalog into both outlets
+ *      (use when the above still finds too little). qty always starts 0.
  * GET previews, POST applies.
  */
 exports.rebuildOutletStock = asyncHandler(async (req, res) => {
@@ -773,6 +778,7 @@ exports.rebuildOutletStock = asyncHandler(async (req, res) => {
       if (prev) {
         if (!prev.cost && resolvedCost) prev.cost = resolvedCost;
         if (!prev.price && price) prev.price = price;
+        if (!prev.category && category) prev.category = category;
         return;
       }
       map.set(key, {
@@ -792,7 +798,19 @@ exports.rebuildOutletStock = asyncHandler(async (req, res) => {
       return map;
     }
 
-    // 1. Sales + Orders (stock-linked lines only)
+    // 1. Department menu + shared food menu (the biggest surviving source)
+    const [menuRows, foodRows, recipes] = await Promise.all([
+      MenuItem.find({ department: dept }).select('name price category').lean(),
+      FoodMenu.find({}).select('name price category').lean(),
+      Recipe.find({}).select('dish baseUnit').lean(),
+    ]);
+    for (const m of menuRows) add(m.name, { price: m.price, category: m.category });
+    for (const f of foodRows) add(f.name, { price: f.price, category: f.category });
+    // Restaurant stock historically received every kitchen recipe dish
+    // via /stock/from-recipe — pool bar too for shared bar food.
+    for (const r of recipes) add(r.dish, { unit: r.baseUnit });
+
+    // 2. Sales + Orders (stock-linked lines)
     const sources = await Promise.all([
       Sale.find({ department: dept }).select('items').lean(),
       Order.find({ department: dept }).select('items').lean(),
@@ -801,13 +819,12 @@ exports.rebuildOutletStock = asyncHandler(async (req, res) => {
       for (const d of docs) {
         for (const it of (d.items || [])) {
           if (!it || !it.name) continue;
-          if (!it.stockId && !it.procurementId) continue; // menu-only line, never stock
           add(it.name, { price: it.price, cost: it.cost, procurementId: it.procurementId });
         }
       }
     }
 
-    // 2. Store movement ledger — lines issued to this outlet dept
+    // 3. Store movement ledger — lines issued to this outlet dept
     const moves = await StoreMovement.find({ reason: deptRe }).select('item reason').lean();
     for (const mv of moves) add(mv.item);
 
