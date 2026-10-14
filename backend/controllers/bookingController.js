@@ -1261,10 +1261,13 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
     const guestLabel = b._guestName || b.guest || '';
 
     for (const p of payments) {
+      const isComp = String(p.mode || '').toLowerCase() === 'complimentary';
       const amtBefore = cumulative;
       cumulative += (p.amount || 0);
       let pType = 'Deposit';
-      if (cumulative >= total && total > 0) {
+      if (isComp) {
+        pType = 'Complimentary';
+      } else if (cumulative >= total && total > 0) {
         pType = amtBefore > 0 ? 'Balance Payment' : 'Full Payment';
       } else if (amtBefore > 0) {
         pType = 'Balance Payment';
