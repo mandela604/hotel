@@ -172,6 +172,20 @@
     }
   }
 
+  function fmtDateTime(v) {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return String(v);
+    try {
+      return d.toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      });
+    } catch (e) {
+      return d.toLocaleString();
+    }
+  }
+
   function itemsSummary(s) {
     const items = s.items || [];
     if (!items.length) return '—';
@@ -419,7 +433,7 @@
         }
         html += '<td class="st-nowrap" data-label="Staff">' + esc(s.staff || '—') + '</td>';
         html += '<td class="st-nowrap" data-label="Location">' + esc(s.table || '—') + '</td>';
-        html += '<td class="st-nowrap" data-label="Date &amp; Time">' + esc(s.date || '—') + '</td>';
+        html += '<td class="st-nowrap" data-label="Date &amp; Time">' + esc(fmtDateTime(s.date)) + '</td>';
         html += '<td class="st-center st-nowrap" data-label="Status"><span class="st-chip st-chip-' + esc(s.status || '') + '"><i class="fa-solid fa-circle"></i>' + esc(statusLabel(s.status)) + '</span></td>';
         if (showActions) {
           html += '<td class="st-nowrap" data-label="Actions" data-st-stop="1"><div class="st-acts">';

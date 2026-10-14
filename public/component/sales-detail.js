@@ -107,6 +107,20 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function _fmtDateTime(v) {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return String(v);
+    try {
+      return d.toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      });
+    } catch (e) {
+      return d.toLocaleString();
+    }
+  }
+
   let _counter = 0;
 
   function create(options) {
@@ -173,7 +187,7 @@
             '<div class="sd-meta-item"><div class="sd-ml">Table / Location</div><div class="sd-mv">' + _esc(sale.table || '—') + '</div></div>' +
             '<div class="sd-meta-item"><div class="sd-ml">Staff</div><div class="sd-mv">' + _esc(sale.staff || '—') + '</div></div>' +
             '<div class="sd-meta-item"><div class="sd-ml">Payment Method</div><div class="sd-mv">' + _esc(method) + '</div></div>' +
-            '<div class="sd-meta-item"><div class="sd-ml">Date &amp; Time</div><div class="sd-mv">' + _esc(sale.date || '—') + '</div></div>' +
+            '<div class="sd-meta-item"><div class="sd-ml">Date &amp; Time</div><div class="sd-mv">' + _esc(_fmtDateTime(sale.date)) + '</div></div>' +
           '</div>' +
           roomBlock +
           '<div class="sd-section-title">Items</div>' +
