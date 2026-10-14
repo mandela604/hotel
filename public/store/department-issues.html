@@ -409,12 +409,24 @@ function refreshPermission(){
   const user = shell.getUser();
   canIssue = !!(user && window.Permissions && Permissions.hasPermission(user, 'canRestock', 'store'));
   document.getElementById('permNotice').classList.toggle('show', !!user && !canIssue);
-  updateReviewBtn();
   return canIssue;
 }
-// Session resolves async inside the shell — check now and again shortly.
-refreshPermission();
-setTimeout(refreshPermission, 700);
+function updateReviewBtn(){
+  refreshPermission();  // session resolves async in the shell — always re-check at call time
+  const btn = document.getElementById('reviewBtn');
+  const receiverOk = !!document.getElementById('fReceiver').value;
+  btn.disabled = !(canIssue && validLines().length && receiverOk);
+}
+// fetchSession() resolves after first paint — poll until it lands (or
+// give up after ~8s) so the button unlocks on slow cold starts too.
+(function pollSession(){
+  let tries = 0;
+  const t = setInterval(function(){
+    updateReviewBtn();
+    const done = !!shell.getUser();
+    if (done || ++tries > 20) clearInterval(t);
+  }, 400);
+})();
 
 /* ═══════════ Form state ═══════════ */
 let stock = [];            // normalized stock list
@@ -519,12 +531,6 @@ function renderLines(){
 
 function validLines(){
   return lines.filter(l => l.stockId && (parseFloat(l.qty) || 0) > 0);
-}
-
-function updateReviewBtn(){
-  const btn = document.getElementById('reviewBtn');
-  const receiverOk = !!document.getElementById('fReceiver').value;
-  btn.disabled = !(canIssue && validLines().length && receiverOk);
 }
 
 function resetForm(){
