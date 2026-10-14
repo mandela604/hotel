@@ -49,4 +49,32 @@ const bookingSchema = new mongoose.Schema({
   history:     { type: [{ date: String, action: String, by: String, note: String, stage: String }], default: [] },
 }, { timestamps: false, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
+bookingSchema.pre('save', function(next) {
+  if (this.payStatus === 'Complimentary') {
+    const hasCompPayment = (this.payments || []).some(function(p){ return String(p.mode || '').toLowerCase() === 'complimentary'; });
+    if (!hasCompPayment && (this.payments || []).length) {
+      const firstPayment = this.payments[0];
+      if (firstPayment && String(firstPayment.mode || '').toLowerCase() !== 'complimentary') {
+        const note = (firstPayment.note || '').trim() || 'Corrected: complimentary stay';
+        this.payments = [{
+          id: firstPayment.id || 'PMT-COMP',
+          amount: 0,
+          mode: 'Complimentary',
+          date: firstPayment.date || '',
+          by: firstPayment.by || 'System',
+          ts: Date.now(),
+          note: note.slice(0, 300),
+        }];
+      }
+    }
+    if (hasCompPayment) {
+      this.rate = 0;
+      this.discount = 0;
+      this.paid = 0;
+      this.comped = 0;
+    }
+  }
+  next();
+});
+
 module.exports = mongoose.model('Booking', bookingSchema);
