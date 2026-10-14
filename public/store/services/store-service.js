@@ -481,14 +481,14 @@
 
   async function getDepartmentIssues(depts) {
     const list = (Array.isArray(depts) && depts.length ? depts : DEPT_ISSUE_DEPTS).map(function (d) { return d.trim(); }).filter(Boolean);
-    const data = await apiFetch('/requisitions?mode=store_issue&dept=' + encodeURIComponent(list.join(',')));
+    const data = await apiFetch('/requisitions?mode=store_issue&direct=1&dept=' + encodeURIComponent(list.join(',')));
     return (Array.isArray(data) ? data : []).map(normalizeRequisition);
   }
 
   async function createDepartmentIssue(opts) {
     opts = opts || {};
     const dept = opts.dept;
-    if (DEPT_ISSUE_DEPTS.indexOf(dept) === -1) throw new Error('Please choose Housekeeping or Laundry.');
+    if (DEPT_ISSUE_DEPTS.indexOf(dept) === -1) throw new Error('Please choose a valid department to issue to.');
     const receiverEmail = (opts.receiverEmail || '').trim();
     const receiverPassword = opts.receiverPassword || '';
     if (!receiverEmail) throw new Error('Please choose the staff member collecting the items.');

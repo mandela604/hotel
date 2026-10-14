@@ -248,6 +248,13 @@ exports.listRequisitions = asyncHandler(async (req, res) => {
     else if (depts.length > 1) filter.dept = { $in: depts };
   }
   if (req.query.status) filter.status = req.query.status;
+  // ?direct=1 — Dept Issues history only. Direct counter issues always
+  // carry the password-verified collector's email; regular dept-raised
+  // requisitions (same mode 'store_issue') never do, so this cleanly
+  // separates the two without a migration.
+  if (req.query.direct === '1' || req.query.direct === 'true') {
+    filter.collectedByEmail = { $exists: true, $ne: '' };
+  }
   const rows = await Requisition.find(filter).sort({ createdAt: -1 });
   res.json({ success: true, data: rows });
 });

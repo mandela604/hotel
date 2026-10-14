@@ -615,6 +615,7 @@ async function confirmIssue(){
     resetForm();
     await loadHistory();
     renderKPIs();
+    render();
   } catch(err) {
     showToast(err.message || 'Could not issue — check the receiver password.', 'error');
   } finally {
@@ -669,7 +670,7 @@ function filtered(){
     if (from && d < from) return false;
     if (to && d > to) return false;
     if (q) {
-      const hay = (r.no + ' ' + r.dept + ' ' + (r.collectedBy||'') + ' ' + (r.collectedByEmail||'') + ' ' + (r.items||[]).map(i=>i.name).join(' ')).toLowerCase();
+      const hay = (r.no + ' ' + r.dept + ' ' + (r.collectedBy||'') + ' ' + (r.collectedByEmail||'') + ' ' + (r.issuedBy||'') + ' ' + (r.issuedByEmail||'') + ' ' + (r.items||[]).map(i=>i.name).join(' ')).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -815,7 +816,11 @@ window.loadData = loadAll;
   await loadAll();
   await onDeptChange();
   StoreService.onChange(function(){
-    loadHistory().then(function(){ renderKPIs(); render(); renderLines(); });
+    // createDepartmentIssue already refreshed service stock — re-slice the
+    // page's local copy so "In stock" chips + review modal stay true.
+    stock = StoreService.state.stock.slice();
+    renderLines();
+    loadHistory().then(function(){ renderKPIs(); render(); });
   });
 })();
 </script>
