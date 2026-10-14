@@ -66,5 +66,9 @@ router.post('/migrate/reset-outlet-data', isAdmin, storeController.resetOutletDa
    mirror with ?mirror=1. GET previews, POST applies. Admin only. */
 router.get('/migrate/rebuild-outlet-stock', isAdmin, storeController.rebuildOutletStock);
 router.post('/migrate/rebuild-outlet-stock', isAdmin, storeController.rebuildOutletStock);
+/* Seed ONLY drink items from the Store catalog into Restaurant + Pool
+   Bar inventory at qty 0. GET previews, POST applies. Admin only. */
+router.get('/migrate/seed-outlet-drinks', isAdmin, storeController.seedOutletDrinks);
+router.post('/migrate/seed-outlet-drinks', isAdmin, storeController.seedOutletDrinks);
 
 module.exports = router;

@@ -742,6 +742,69 @@ exports.resetOutletData = asyncHandler(async (req, res) => {
   });
 });
 
+// Drink / bar signals in a Store item's category or name — used by
+// seedOutletDrinks to pick ONLY beverages, never food.
+const DRINK_RE = /drink|beverage|bar\b|bottle|alcohol|wine|beer|spirit|liqueur|whisky|whiskey|vodka|gin\b|rum\b|brandy|cognac|sherry|champagne|prosecco|cocktail|juice|soda|cola|sprite|fanta|malt|stout|lager|cider|shooter|tonic|mixer|aperitif|soft\s*drink/i;
+
+/**
+ * Seed ONLY drinks into Restaurant + Pool Bar inventory from the Store
+ * catalog, qty 0 on hand. Skips names that already exist. GET previews,
+ * POST applies. Admin only.
+ */
+exports.seedOutletDrinks = asyncHandler(async (req, res) => {
+  const dry = req.method === 'GET'
+    || req.query.dry === '1' || req.query.dry === 'true'
+    || (req.body && (req.body.dry === true || req.body.dry === '1'));
+
+  const storeItems = await StoreStock.find({}).lean();
+  const drinks = storeItems.filter(s =>
+    DRINK_RE.test(String(s.cat || s.category || '')) || DRINK_RE.test(String(s.name || '')));
+
+  const results = { storeCatalogSize: storeItems.length, drinkItemsFound: drinks.length };
+  for (const [dept, Model] of [['restaurant', RestaurantStock], ['poolbar', PoolbarStock]]) {
+    const existing = await Model.distinct('name');
+    const have = new Set(existing.map(n => String(n).toLowerCase()));
+    let toCreate = 0; let alreadyPresent = 0;
+    const sample = [];
+    for (const s of drinks) {
+      const key = String(s.name || '').toLowerCase();
+      if (have.has(key)) { alreadyPresent++; continue; }
+      if (!dry) {
+        await Model.create({
+          id: uuidv4(),
+          storeId: s.id || '',
+          procurementId: s.procurementId || '',
+          name: s.name,
+          category: s.cat || s.category || 'Beverages',
+          unit: s.unit || 'bottle',
+          qty: 0,
+          min: s.min || 10,
+          price: s.price || s.cost || 0,
+          cost: s.cost || 0,
+        });
+      }
+      toCreate++;
+      if (sample.length < 20) sample.push(s.name);
+    }
+    results[dept] = { toCreate, alreadyPresent, sample };
+  }
+
+  if (!dry) {
+    emit(req, ['restaurant', 'poolbar', 'store'], 'restaurant:updated', { action: 'seedOutletDrinks', data: results });
+    emit(req, ['restaurant', 'poolbar', 'store'], 'poolbar:updated',  { action: 'seedOutletDrinks', data: results });
+    console.log('[Store] Seed outlet drinks:', JSON.stringify(results));
+  }
+
+  res.json({
+    success: true,
+    dry,
+    results,
+    message: dry
+      ? 'Dry run — nothing created. POST (without dry) to seed drinks at qty 0.'
+      : 'Drinks seeded into Restaurant + Pool Bar at qty 0.',
+  });
+});
+
 /**
  * Recovery: rebuild Restaurant + Pool Bar stock CATALOGS (qty 0).
  * Sources, in priority order:
