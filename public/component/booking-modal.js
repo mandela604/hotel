@@ -484,6 +484,10 @@
                 '<option value="">Select…</option>' +
               '</select>' +
             '</div>' +
+            '<div class="bkm-fg" data-role="compNoteWrap" style="margin-top:8px;display:none;">' +
+              '<label class="bkm-label">Complimentary Note</label>' +
+              '<div class="bkm-input" data-role="compNote" style="background:var(--bkm-surface2);border:1px solid var(--bkm-border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--bkm-text);white-space:pre-wrap;"></div>' +
+            '</div>' +
           '</div>' +
         '</div>' +
 
@@ -1656,6 +1660,19 @@
       } else {
         setVal('createdAt', '');
         originalCreatedAt = null;
+      }
+
+      var compNoteWrap = $('[data-role="compNoteWrap"]');
+      var compNote = $('[data-role="compNote"]');
+      var compPayment = (booking.payments || []).find(function(p){ return String(p.mode || '').toLowerCase() === 'complimentary'; });
+      if (compNoteWrap && compNote) {
+        if (compPayment && compPayment.note) {
+          compNote.textContent = compPayment.note;
+          compNoteWrap.style.display = '';
+        } else {
+          compNote.textContent = '';
+          compNoteWrap.style.display = 'none';
+        }
       }
 
       var meta = $('[data-role="metaFoot"]');

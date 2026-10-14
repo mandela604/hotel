@@ -56,10 +56,11 @@ function calcBal(b) {
 }
 function payStatusFor(b) {
   const paid = calcPaid(b);
-  const comped = Number(b.comped) || 0;
   const total = calcTotal(b);
-  if (total > 0 && paid + comped >= total) return comped > 0 ? 'Complimentary' : 'Fully Paid';
-  if (paid <= 0 && comped <= 0) return 'Pending';
+  const hasCompPayment = (b.payments || []).some(function(p){ return String(p.mode || '').toLowerCase() === 'complimentary'; });
+  if (hasCompPayment) return 'Complimentary';
+  if (total > 0 && paid >= total) return 'Fully Paid';
+  if (paid <= 0) return 'Pending';
   return 'Deposit Paid';
 }
 
@@ -260,7 +261,7 @@ exports.addRoom = asyncHandler(async (req, res) => {
     await session.endSession();
   }
 
-  await logActivity('Booking', 'blue', `Room ${room.num} added (${room.type})`, 'booking-rooms.html');
+  await logActivity('Booking', 'blue', `Room ${room.num} added (${room.type})`, 'booking-rooms.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'addRoom', room: room.num, data: room });
   res.status(201).json({ success: true, data: room });
 });
@@ -394,7 +395,7 @@ exports.setRoomStatus = asyncHandler(async (req, res) => {
 
   console.log('[status] from->to', { from: booking.status, to: targetStatus, room: num, id: booking._id });
   await logActivity('Booking', targetStatus === 'maintenance' ? 'amber' : 'blue',
-    `Room ${num} → ${targetStatus}`, 'booking-rooms.html');
+    `Room ${num} → ${targetStatus}`, 'booking-rooms.html', req.user ? req.user.name : '');
 
   emit(req, 'booking', 'booking:updated', { action: 'setRoomStatus', room: num, status: targetStatus, data: booking });
   console.log('[status] saved', { room: num, status: booking.status });
@@ -549,7 +550,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
     await booking.save();
   }
 
-  await logActivity('Booking', 'gold', `${booking.guest} booked into Room ${room}`, 'booking-list.html');
+  await logActivity('Booking', 'gold', `${booking.guest} booked into Room ${room}`, 'booking-list.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'createBooking', room: booking.room, stayId: booking.stayId, data: booking });
   res.status(201).json({ success: true, data: booking });
 });
@@ -680,7 +681,7 @@ exports.transferBooking = asyncHandler(async (req, res) => {
   booking.updatedAt = now;
   await booking.save();
 
-  await logActivity('Booking', 'gold', `${booking.guest} transferred ${fromRoom}→${toRoom} by ${by}`, 'booking-rooms.html');
+  await logActivity('Booking', 'gold', `${booking.guest} transferred ${fromRoom}→${toRoom} by ${by}`, 'booking-rooms.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'transferBooking', room: booking.room, stayId: booking.stayId, data: booking, fromRoom, toRoom });
   res.json({ success: true, data: booking });
 });
@@ -712,7 +713,7 @@ exports.deleteBooking = asyncHandler(async (req, res) => {
     await booking.save();
   }
 
-  await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + roomNum} deleted — room marked available`, 'booking-list.html');
+  await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + roomNum} deleted — room marked available`, 'booking-list.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'deleteBooking', room: roomNum, stayId: booking.stayId });
   res.json({ success: true, message: 'Booking deleted. Room marked as Available.', data: booking });
 });
@@ -736,7 +737,7 @@ exports.checkinBooking = asyncHandler(async (req, res) => {
 
   await booking.save();
 
-  await logActivity('Booking', 'green', `${booking.guest} checked in — Room ${booking.room}`, 'booking-rooms.html');
+  await logActivity('Booking', 'green', `${booking.guest} checked in — Room ${booking.room}`, 'booking-rooms.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'checkin', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -784,7 +785,7 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
     }
   } catch (e) { /* history is best-effort, never block checkout */ }
 
-  await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html');
+  await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'checkout', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -801,7 +802,7 @@ exports.markNoShow = asyncHandler(async (req, res) => {
   // Keep guest PII so the no-show record still shows who it was booked for
   booking.updatedAt = Date.now();
   await booking.save();
-  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${booking.room} marked as no-show`, 'booking-rooms.html');
+  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${booking.room} marked as no-show`, 'booking-rooms.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'noShow', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -845,7 +846,7 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
   await booking.save();
 
   const label = refund > 0 ? ` (refund: ${refund})` : '';
-  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${roomNum} cancelled${label}`, 'booking-rooms.html');
+  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${roomNum} cancelled${label}`, 'booking-rooms.html', req.user ? req.user.name : '');
   emit(req, 'booking', 'booking:updated', { action: 'cancelRefund', room: roomNum, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -914,8 +915,10 @@ exports.addPayment = asyncHandler(async (req, res) => {
   };
   booking.payments.push(entry);
   if (isComp) {
-    // Complimentary covers the remaining balance at ₦0 collected
-    booking.comped = (Number(booking.comped) || 0) + bal;
+    booking.rate = 0;
+    booking.discount = 0;
+    booking.paid = 0;
+    booking.comped = 0;
   }
   booking.paid = calcPaid(booking);
   booking.payStatus = payStatusFor(booking);
