@@ -56,5 +56,10 @@ router.post('/department-issues', inDept, privilegeGuard('store', 'canRestock'),
 
 router.post('/stock/:id/adjust', isAdmin, storeController.adjustStock);
 router.post('/migrate/reset-all-stock', storeController.resetAllStock);
+/* Start-afresh wipe: Restaurant + Pool Bar stock/movements/requisitions/
+   transfers/COO + RREQ/BREQ counters. GET previews counts (dry run),
+   POST actually deletes. Admin only. */
+router.get('/migrate/reset-outlet-data', isAdmin, storeController.resetOutletData);
+router.post('/migrate/reset-outlet-data', isAdmin, storeController.resetOutletData);
 
 module.exports = router;

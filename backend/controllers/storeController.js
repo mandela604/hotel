@@ -12,6 +12,8 @@ const RestaurantStock = require('../models/RestaurantStock');
 const RestaurantMovement = require('../models/RestaurantMovement');
 const PoolbarStock = require('../models/PoolbarStock');
 const PoolbarMovement = require('../models/PoolbarMovement');
+const Transfer = require('../models/Transfer');
+const KitchenCooOrder = require('../models/KitchenCooOrder');
 const { emit } = require('../utils/emit');
 
 async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
@@ -667,6 +669,61 @@ exports.resetAllStock = asyncHandler(async (req, res) => {
   console.log(`[Store] Reset all stock qty/cost to 0 — ${result.modifiedCount} items`);
   emit(req, 'store', 'store:updated', { action: 'resetAllStock', data: { modifiedCount: result.modifiedCount } });
   res.json({ success: true, message: `Reset ${result.modifiedCount} store stock items to qty 0, cost 0` });
+});
+
+/**
+ * One-shot start-afresh wipe for Restaurant + Pool Bar:
+ *   stock balances, movement ledgers, their requisitions, kitchen→restaurant
+ *   transfers, COO orders — and the RREQ/BREQ numbering counters so fresh
+ *   requisitions restart at -00001. Central Store / Kitchen / Sales untouched.
+ * GET  /migrate/reset-outlet-data?dry=1  → preview counts, delete nothing
+ * POST /migrate/reset-outlet-data        → actually wipe (admin only)
+ */
+exports.resetOutletData = asyncHandler(async (req, res) => {
+  const dry = req.method === 'GET'
+    || req.query.dry === '1' || req.query.dry === 'true'
+    || (req.body && (req.body.dry === true || req.body.dry === '1'));
+
+  const poolRe = /pool/i;
+  const jobs = [
+    ['restaurantStock',         RestaurantStock,     {}],
+    ['restaurantMovements',     RestaurantMovement,  {}],
+    ['poolbarStock',            PoolbarStock,        {}],
+    ['poolbarMovements',        PoolbarMovement,     {}],
+    ['restaurantRequisitions',  Requisition,         { dept: 'Restaurant' }],
+    ['poolbarRequisitions',     Requisition,         { dept: poolRe }],
+    ['transfers',               Transfer,            {}],
+    ['cooOrders',               KitchenCooOrder,     {}],
+  ];
+
+  const counts = {};
+  for (const [key, Model, filter] of jobs) {
+    if (dry) {
+      counts[key] = await Model.countDocuments(filter);
+    } else {
+      const r = await Model.deleteMany(filter);
+      counts[key] = r.deletedCount;
+    }
+  }
+
+  if (dry) {
+    counts.countersReset = ['req:RREQ', 'req:BREQ']; // preview only — not deleted
+  } else {
+    await Counter.deleteMany({ key: { $in: ['req:RREQ', 'req:BREQ'] } });
+    counts.countersReset = ['req:RREQ', 'req:BREQ'];
+    console.log('[Store] Outlet start-afresh wipe:', JSON.stringify(counts));
+    emit(req, ['restaurant', 'poolbar', 'store', 'kitchen'], 'restaurant:updated', { action: 'resetOutletData', data: counts });
+    emit(req, ['restaurant', 'poolbar', 'store', 'kitchen'], 'poolbar:updated',  { action: 'resetOutletData', data: counts });
+  }
+
+  res.json({
+    success: true,
+    dry,
+    counts,
+    message: dry
+      ? 'Dry run — nothing deleted. Re-send without dry=1 (POST) to wipe.'
+      : `Wiped Restaurant + Pool Bar: ${JSON.stringify(counts)}`,
+  });
 });
 
 exports.adjustStock = asyncHandler(async (req, res) => {
