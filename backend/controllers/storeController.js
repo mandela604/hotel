@@ -14,6 +14,9 @@ const PoolbarStock = require('../models/PoolbarStock');
 const PoolbarMovement = require('../models/PoolbarMovement');
 const Transfer = require('../models/Transfer');
 const KitchenCooOrder = require('../models/KitchenCooOrder');
+const Sale = require('../models/Sale');
+const Order = require('../models/Order');
+const { v4: uuidv4 } = require('uuid');
 const { emit } = require('../utils/emit');
 
 async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
@@ -673,11 +676,12 @@ exports.resetAllStock = asyncHandler(async (req, res) => {
 
 /**
  * One-shot start-afresh wipe for Restaurant + Pool Bar:
- *   stock balances, movement ledgers, their requisitions, kitchen→restaurant
- *   transfers, COO orders — and the RREQ/BREQ numbering counters so fresh
- *   requisitions restart at -00001. Central Store / Kitchen / Sales untouched.
- * GET  /migrate/reset-outlet-data?dry=1  → preview counts, delete nothing
- * POST /migrate/reset-outlet-data        → actually wipe (admin only)
+ *   stock BALANCES (qty -> 0 — item catalog is NEVER deleted), movement
+ *   ledgers, their requisitions, kitchen→restaurant transfers, COO orders,
+ *   and the RREQ/BREQ numbering counters so fresh requisitions restart at
+ *   -00001. Central Store / Kitchen / Sales untouched.
+ * GET  /migrate/reset-outlet-data?dry=1  → preview counts, change nothing
+ * POST /migrate/reset-outlet-data        → actually reset (admin only)
  */
 exports.resetOutletData = asyncHandler(async (req, res) => {
   const dry = req.method === 'GET'
@@ -685,10 +689,20 @@ exports.resetOutletData = asyncHandler(async (req, res) => {
     || (req.body && (req.body.dry === true || req.body.dry === '1'));
 
   const poolRe = /pool/i;
+  const counts = {};
+
+  // Stock CATALOGS: zero the balance only — never delete item documents.
+  for (const [key, Model] of [['restaurantStockBalances', RestaurantStock], ['poolbarStockBalances', PoolbarStock]]) {
+    if (dry) {
+      counts[key] = await Model.countDocuments({ qty: { $ne: 0 } });
+    } else {
+      const r = await Model.updateMany({}, { $set: { qty: 0 } });
+      counts[key] = r.modifiedCount;
+    }
+  }
+
   const jobs = [
-    ['restaurantStock',         RestaurantStock,     {}],
     ['restaurantMovements',     RestaurantMovement,  {}],
-    ['poolbarStock',            PoolbarStock,        {}],
     ['poolbarMovements',        PoolbarMovement,     {}],
     ['restaurantRequisitions',  Requisition,         { dept: 'Restaurant' }],
     ['poolbarRequisitions',     Requisition,         { dept: poolRe }],
@@ -696,7 +710,6 @@ exports.resetOutletData = asyncHandler(async (req, res) => {
     ['cooOrders',               KitchenCooOrder,     {}],
   ];
 
-  const counts = {};
   for (const [key, Model, filter] of jobs) {
     if (dry) {
       counts[key] = await Model.countDocuments(filter);
@@ -711,7 +724,7 @@ exports.resetOutletData = asyncHandler(async (req, res) => {
   } else {
     await Counter.deleteMany({ key: { $in: ['req:RREQ', 'req:BREQ'] } });
     counts.countersReset = ['req:RREQ', 'req:BREQ'];
-    console.log('[Store] Outlet start-afresh wipe:', JSON.stringify(counts));
+    console.log('[Store] Outlet start-afresh reset:', JSON.stringify(counts));
     emit(req, ['restaurant', 'poolbar', 'store', 'kitchen'], 'restaurant:updated', { action: 'resetOutletData', data: counts });
     emit(req, ['restaurant', 'poolbar', 'store', 'kitchen'], 'poolbar:updated',  { action: 'resetOutletData', data: counts });
   }
@@ -721,8 +734,133 @@ exports.resetOutletData = asyncHandler(async (req, res) => {
     dry,
     counts,
     message: dry
-      ? 'Dry run — nothing deleted. Re-send without dry=1 (POST) to wipe.'
-      : `Wiped Restaurant + Pool Bar: ${JSON.stringify(counts)}`,
+      ? 'Dry run — nothing changed. Re-send without dry=1 (POST) to reset balances.'
+      : `Reset Restaurant + Pool Bar: ${JSON.stringify(counts)}`,
+  });
+});
+
+/**
+ * Recovery: rebuild Restaurant + Pool Bar stock CATALOGS (qty 0).
+ * Sources, in priority order:
+ *   1. surviving Sales + Orders history (stock-linked lines only)
+ *   2. surviving Store movement ledger — every line ever issued with a
+ *      reason like "Issued (RREQ-… → Restaurant)" / "→ Pool Bar"
+ *   3. ?mirror=1 — clone the ENTIRE Store catalog into both outlets
+ *      (use when 1+2 found too little). qty always starts at 0.
+ * GET previews, POST applies.
+ */
+exports.rebuildOutletStock = asyncHandler(async (req, res) => {
+  const dry = req.method === 'GET'
+    || req.query.dry === '1' || req.query.dry === 'true'
+    || (req.body && (req.body.dry === true || req.body.dry === '1'));
+  const mirror = req.query.mirror === '1' || req.query.mirror === 'true'
+    || (req.body && (req.body.mirror === true || req.body.mirror === '1'));
+
+  // Store catalog by lowercase name — gives unit/cost/category back to clones.
+  const storeItems = await StoreStock.find({}).lean();
+  const storeByName = new Map(storeItems.map(s => [String(s.name || '').toLowerCase(), s]));
+
+  async function harvest(dept, Model, deptRe) {
+    const map = new Map(); // lowercase name -> item
+
+    function add(name, { price = 0, cost = 0, unit = '', category = '', procurementId = '' } = {}) {
+      const n = String(name || '').trim();
+      if (!n) return;
+      const key = n.toLowerCase();
+      const st = storeByName.get(key);
+      const prev = map.get(key);
+      const resolvedCost = cost || Number(st && st.cost) || 0;
+      if (prev) {
+        if (!prev.cost && resolvedCost) prev.cost = resolvedCost;
+        if (!prev.price && price) prev.price = price;
+        return;
+      }
+      map.set(key, {
+        name: n,
+        cost: resolvedCost,
+        price: price || resolvedCost,
+        unit: unit || (st && st.unit) || '',
+        category: category || (st && (st.cat || st.category)) || '',
+        procurementId: procurementId || (st && st.procurementId) || '',
+      });
+    }
+
+    if (mirror) {
+      for (const s of storeItems) {
+        add(s.name, { cost: s.cost, unit: s.unit, category: s.cat || s.category, procurementId: s.procurementId });
+      }
+      return map;
+    }
+
+    // 1. Sales + Orders (stock-linked lines only)
+    const sources = await Promise.all([
+      Sale.find({ department: dept }).select('items').lean(),
+      Order.find({ department: dept }).select('items').lean(),
+    ]);
+    for (const docs of sources) {
+      for (const d of docs) {
+        for (const it of (d.items || [])) {
+          if (!it || !it.name) continue;
+          if (!it.stockId && !it.procurementId) continue; // menu-only line, never stock
+          add(it.name, { price: it.price, cost: it.cost, procurementId: it.procurementId });
+        }
+      }
+    }
+
+    // 2. Store movement ledger — lines issued to this outlet dept
+    const moves = await StoreMovement.find({ reason: deptRe }).select('item reason').lean();
+    for (const mv of moves) add(mv.item);
+
+    return map;
+  }
+
+  const targets = [
+    ['restaurant', RestaurantStock, { category: 'General',   unit: 'portion' }, /RREQ|→\s*Restaurant/i],
+    ['poolbar',    PoolbarStock,    { category: 'Beverages', unit: 'bottle' },  /BREQ|→\s*Pool\s?Bar/i],
+  ];
+
+  const results = { mirror };
+  for (const [dept, Model, defaults, deptRe] of targets) {
+    const map = await harvest(dept, Model, deptRe);
+    const existing = await Model.distinct('name');
+    const have = new Set(existing.map(n => String(n).toLowerCase()));
+    let toCreate = 0; let alreadyPresent = 0;
+    const sample = [];
+    for (const it of map.values()) {
+      if (have.has(it.name.toLowerCase())) { alreadyPresent++; continue; }
+      if (!dry) {
+        await Model.create({
+          id: uuidv4(),
+          storeId: '',
+          procurementId: it.procurementId,
+          name: it.name,
+          category: it.category || defaults.category,
+          unit: it.unit || defaults.unit,
+          qty: 0,
+          min: 10,
+          price: it.price,
+          cost: it.cost,
+        });
+      }
+      toCreate++;
+      if (sample.length < 12) sample.push(it.name);
+    }
+    results[dept] = { recovered: map.size, toCreate, alreadyPresent, sample };
+  }
+
+  if (!dry) {
+    emit(req, ['restaurant', 'poolbar', 'store'], 'restaurant:updated', { action: 'rebuildOutletStock', data: results });
+    emit(req, ['restaurant', 'poolbar', 'store'], 'poolbar:updated',  { action: 'rebuildOutletStock', data: results });
+    console.log('[Store] Rebuild outlet stock:', JSON.stringify(results));
+  }
+
+  res.json({
+    success: true,
+    dry,
+    results,
+    message: dry
+      ? 'Dry run — nothing created. POST (without dry) to recreate stock catalogs at qty 0.'
+      : 'Stock catalogs recreated at qty 0.',
   });
 });
 

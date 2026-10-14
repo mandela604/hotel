@@ -56,10 +56,15 @@ router.post('/department-issues', inDept, privilegeGuard('store', 'canRestock'),
 
 router.post('/stock/:id/adjust', isAdmin, storeController.adjustStock);
 router.post('/migrate/reset-all-stock', storeController.resetAllStock);
-/* Start-afresh wipe: Restaurant + Pool Bar stock/movements/requisitions/
-   transfers/COO + RREQ/BREQ counters. GET previews counts (dry run),
-   POST actually deletes. Admin only. */
+/* Start-afresh wipe: Restaurant + Pool Bar stock BALANCES (qty→0, catalog
+   kept), movements/requisitions/transfers/COO + RREQ/BREQ counters. GET
+   previews counts (dry run), POST actually runs. Admin only. */
 router.get('/migrate/reset-outlet-data', isAdmin, storeController.resetOutletData);
 router.post('/migrate/reset-outlet-data', isAdmin, storeController.resetOutletData);
+/* Recovery: rebuild Restaurant + Pool Bar item catalogs (qty 0) from
+   surviving Sales/Orders + Store movement ledger, or full Store catalog
+   mirror with ?mirror=1. GET previews, POST applies. Admin only. */
+router.get('/migrate/rebuild-outlet-stock', isAdmin, storeController.rebuildOutletStock);
+router.post('/migrate/rebuild-outlet-stock', isAdmin, storeController.rebuildOutletStock);
 
 module.exports = router;
