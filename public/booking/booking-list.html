@@ -327,7 +327,8 @@ var guestColumn = {
   id: 'guest',
   label: 'Guest',
   cell: function (b) {
-    return '<div class="ft-guest-name">' + esc(b.guest || '—') + '</div>';
+    var badge = b._history ? '<span style="display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;vertical-align:middle;">History</span>' : '';
+    return '<div class="ft-guest-name">' + esc(b.guest || '—') + badge + '</div>';
   }
 };
 
@@ -366,6 +367,7 @@ function mountTable() {
     sortDir: 'desc',
     getRowPerm: function (b, session) {
       var s = session || getSession();
+      if (b._history) return { canView: true, canEdit: false, canDelete: false };
       return {
         canView: false,
         canEdit: canEdit(s, 'booking', b),
@@ -374,6 +376,7 @@ function mountTable() {
     },
     onView: function (b) { bookingModal.openView(b); },
     onEdit: function (b) {
+      if (b._history) { bookingModal.openView(b); return; }
       if (canEdit(getSession(), 'booking', b)) {
         bookingModal.openEdit(b);
       } else {
@@ -381,6 +384,7 @@ function mountTable() {
       }
     },
     onDelete: function (b) {
+      if (b._history) { showToast("Historical stays cannot be deleted.", 'error'); return; }
       if (canDelete(getSession(), 'booking', b)) {
         openDelete(b);
       } else {
@@ -409,7 +413,7 @@ function getRoomStatus(num) {
 /* ═══ KPIs ═══ */
 function renderKPIs() {
   var checkedIn = allRooms.filter(function (r) { return getRoomStatus(r.num) === 'checkedin'; }).length;
-  var reserved = bookings.filter(function (b) { return b.status === 'reserved'; }).length;
+  var reserved = bookings.filter(function (b) { return b.status === 'reserved' && !b._history; }).length;
   var available = allRooms.filter(function (r) { return getRoomStatus(r.num) === 'available'; }).length;
   var maintenance = allRooms.filter(function (r) { return getRoomStatus(r.num) === 'maintenance'; }).length;
 
