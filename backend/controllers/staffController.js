@@ -4,7 +4,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 
 const USER_DEPARTMENTS = [
   'Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant',
-  'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
+  'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts', 'Barbeque',
 ];
 
 function sanitizeDept(raw) {

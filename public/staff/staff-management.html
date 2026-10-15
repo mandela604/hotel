@@ -534,14 +534,17 @@ window.onFormRoleChange = onFormRoleChange;
 
 /* ── Privilege → Department auto-select ── */
 const PRIVILEGE_DEPT = {
-  front_desk: 'booking',
-  accountant: 'accounting',
-  procurement_manager: 'procurement',
-  store_keeper: 'store',
-  chef: 'kitchen',
-  gym_attendant: 'gym',
-  pool_bar_staff: 'poolbar',
-  restaurant_staff: 'restaurant',
+  front_desk: 'Front Desk',
+  accountant: 'Accounts',
+  procurement_manager: 'Procurement',
+  store_keeper: 'Store',
+  chef: 'Kitchen',
+  gym_attendant: 'Gym',
+  pool_bar_staff: 'Pool Bar',
+  restaurant_staff: 'Restaurant',
+  housekeeping_staff: 'Housekeeping',
+  laundry_staff: 'Laundry',
+  barbeque_staff: 'Barbeque',
 };
 function onPrivilegeChange(){
   const p = document.getElementById('fsPrivilege').value;

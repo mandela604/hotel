@@ -16,13 +16,13 @@
     STOCK: 'store-stock',
   };
 
-  const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', Restaurant: 'RREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR' };
+  const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', Restaurant: 'RREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR', Barbeque: 'BBQ' };
 
   // Depts that can collect directly at the store counter — see
   // createDepartmentIssue(): the receiving dept staff member authenticates
   // with their own password before stock is deducted. Mirrors
   // storeController.ISSUE_DEPTS (User.DEPARTMENTS minus Store).
-  const DEPT_ISSUE_DEPTS = ['Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant', 'Kitchen', 'Pool Bar', 'Gym', 'Procurement', 'Accounts'];
+  const DEPT_ISSUE_DEPTS = ['Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant', 'Kitchen', 'Pool Bar', 'Gym', 'Procurement', 'Accounts', 'Barbeque'];
 
   function fmtN(n) { return '\u20A6' + Math.round(n || 0).toLocaleString('en-NG'); }
   function todayISO() { return new Date().toISOString().split('T')[0]; }

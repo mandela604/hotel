@@ -124,6 +124,9 @@
           canVoid: false, canGiveDiscount: false, canManageOrders: true,
         },
       },
+      housekeeping_staff: {},
+      laundry_staff: {},
+      barbeque_staff: {},
     },
 
     modules: {

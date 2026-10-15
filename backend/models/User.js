@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const DEPARTMENTS = [
   'Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant',
-  'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts',
+  'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts', 'Barbeque',
 ];
 
 const userSchema = new mongoose.Schema({
@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   password:   { type: String, default: '' },
   role:       { type: String, enum: ['admin', 'manager', 'supervisor', 'staff'], default: 'staff', trim: true },
   privileges: {
-    type:      { type: String, enum: ['front_desk','accountant','procurement_manager','sales_rep','store_keeper','chef','gym_attendant','pool_bar_staff','restaurant_staff','waiter', null], default: null },
+    type:      { type: String, enum: ['front_desk','accountant','procurement_manager','sales_rep','store_keeper','chef','gym_attendant','pool_bar_staff','restaurant_staff','waiter','housekeeping_staff','laundry_staff','barbeque_staff', null], default: null },
     overrides: { type: mongoose.Schema.Types.Mixed, default: {} },
     supervisorScopes: { type: [String], default: [] },
   },

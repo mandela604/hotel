@@ -199,7 +199,7 @@ exports.validateRejectRequisition = (req, res, next) => {
 
 const DIRECT_ISSUE_DEPTS = [
   'Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant',
-  'Kitchen', 'Pool Bar', 'Gym', 'Procurement', 'Accounts',
+  'Kitchen', 'Pool Bar', 'Gym', 'Procurement', 'Accounts', 'Barbeque',
 ];
 
 function looksLikeEmail(v) {

@@ -113,6 +113,9 @@ const PERMISSIONS = {
         canVoid: false, canGiveDiscount: false, canManageOrders: true,
       },
     },
+    housekeeping_staff: {},
+    laundry_staff: {},
+    barbeque_staff: {},
   },
 
   modules: {
@@ -177,6 +180,7 @@ const MODULE_KEY_MAP = {
   'Store':       'store',
   'Procurement': 'procurement',
   'Accounts':    'accounting',
+  'Barbeque':    null,
 };
 
 const PRIVILEGE_KEYS = Object.keys(PERMISSIONS.privileges);
