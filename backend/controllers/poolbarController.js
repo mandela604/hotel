@@ -761,6 +761,21 @@ exports.receiveRequisition = asyncHandler(async (req, res) => {
   const reqDoc = await Requisition.findOne({ $or: [{ id: req.params.id }, { requisitionNo: req.params.id }] });
   if (!reqDoc) return res.status(404).json({ success: false, error: 'Requisition not found' });
 
+  // Double-credit guard: atomic claim — only ONE request can move this out
+  // of Full/Partial, so a second click/tab gets 409 instead of double-crediting.
+  const claim = await Requisition.updateOne(
+    { _id: reqDoc._id, status: { $in: ['Full', 'Partial'] } },
+    { $set: { status: 'Completed' } }
+  );
+  if (claim.matchedCount === 0) {
+    return res.status(409).json({
+      success: false,
+      error: reqDoc.status === 'Completed'
+        ? 'This requisition has already been received — stock was credited exactly once.'
+        : `Cannot receive ${reqDoc.requisitionNo || reqDoc.id} while its status is "${reqDoc.status}".`,
+    });
+  }
+
   /* credit issued items to stock + log movements */
   for (const it of (reqDoc.items || [])) {
     const addQty = Number(it.issuedQty > 0 ? it.issuedQty : (it.issuedQty !== 0 ? it.qty : 0)) || 0;

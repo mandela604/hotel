@@ -681,7 +681,18 @@
     }
 
     // ── Requester actions ──
+    let confirmInFlight = false;
     async function confirmReq() {
+      // In-flight guard: this POST takes seconds on a full requisition
+      // (stock save + movement write per item). Without it a quick second
+      // click fires /receive again before the first response re-renders
+      // the button away — how BREQ-2026-00001 got credited twice.
+      if (confirmInFlight) return;
+      confirmInFlight = true;
+      const contentEl = document.getElementById(instId + '-content');
+      const btn = contentEl ? contentEl.querySelector('[data-act="confirm"]') : null;
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Receiving…'; }
       try {
         const actionSvc = (viewerSvc && typeof viewerSvc.confirmReceipt === 'function') ? viewerSvc : svc;
         const updated = await actionSvc.confirmReceipt(req.no);
@@ -692,6 +703,9 @@
         if (typeof options.onConfirm === 'function') options.onConfirm(req);
       } catch (err) {
         showToast((err && err.message) || 'Could not confirm receipt.', 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+      } finally {
+        confirmInFlight = false;
       }
     }
 
