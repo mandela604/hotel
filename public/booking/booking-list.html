@@ -242,6 +242,7 @@ var shell = BookingShell.attach({
 /* ═══ Globals ═══ */
 var allRooms = [];
 var bookings = [];
+var guestsData = [];
 var roomCategories = [];
 var currentSession = null;
 var filteredBk = [];
@@ -506,12 +507,51 @@ async function confirmDelete() {
   }
 }
 
+/* ═══ Merge guest stay history into bookings ═══ */
+function buildHistoryStays() {
+  var live = {};
+  bookings.forEach(function(b){ var k = b.stayId || b._id || b.id; if (k) live[k] = true; });
+  var hist = [];
+  (guestsData || []).forEach(function(g){
+    (g.stays || []).forEach(function(s){
+      if (!s || !s.room) return;
+      var k = s.stayId || '';
+      if (k && live[k]) return;
+      hist.push({
+        _history: true,
+        stayId: k, bookingNo: s.bookingNo || '',
+        room: s.room, type: s.type || '',
+        guest: g.name, guestId: g.id || g.guestId || '',
+        phone: s.phone || g.phone || '', email: s.email || g.email || '',
+        checkin: s.checkin || '', checkout: s.checkout || '',
+        rate: Number(s.rate) || 0, discount: Number(s.discount) || 0,
+        extraNights: Number(s.extraNights) || 0, extraRate: Number(s.extraRate) || 0,
+        payments: Array.isArray(s.payments) ? s.payments : [],
+        paid: Number(s.paid) || 0, payStatus: s.payStatus || '',
+        payMethod: s.payMethod || 'Cash', recordedBy: s.recordedBy || '',
+        status: 'checkout', checkedOutAt: s.checkedOutAt || 0,
+      });
+    });
+  });
+  return hist;
+}
+
+function sortBookingsDesc(list) {
+  return list.slice().sort(function(a,b){
+    var da = a.checkedOutAt || a.createdAt || 0;
+    var db = b.checkedOutAt || b.createdAt || 0;
+    if (da !== db) return db - da;
+    return String(b.checkin||'').localeCompare(String(a.checkin||''));
+  });
+}
+
 /* ═══ Refresh data ═══ */
 async function refreshAndRender() {
   try {
     var data = await BookingData.getBookingData();
     allRooms = data.rooms || [];
-    bookings = data.bookings || [];
+    guestsData = data.guests || [];
+    bookings = sortBookingsDesc(data.bookings.concat(buildHistoryStays()));
     bookingModal.setSession(getSession());
     applyPermissionsUI();
     filterBookings();
@@ -549,7 +589,9 @@ async function init() {
     await loadRoomCategories();
     var data = await BookingData.getBookingData();
     allRooms = data.rooms || [];
-    bookings = data.bookings || [];    bookingModal.setSession(getSession());
+    guestsData = data.guests || [];
+    bookings = sortBookingsDesc(data.bookings.concat(buildHistoryStays()));
+    bookingModal.setSession(getSession());
 
     mountTable();
     filterBookings();
