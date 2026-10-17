@@ -1055,6 +1055,8 @@
     getLowStockItems,
     getRequisition,
     normalizeRequisition,
+    submitRequisition,
+    receiveRequisition,
     confirmReceipt,
   };
 })(window);
