@@ -265,9 +265,10 @@
   }
 
   async function deleteStaff(id) {
-    await apiFetch('/' + id, { method: 'DELETE' });
+    const res = await apiFetch('/' + id, { method: 'DELETE' });
     state.staff = state.staff.filter(s => s.id !== id);
     emitChange('staff:delete');
+    return res || {};
   }
 
   /* ── KPIs ── */

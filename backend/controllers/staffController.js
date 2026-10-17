@@ -9,7 +9,11 @@ const USER_DEPARTMENTS = [
 
 function sanitizeDept(raw) {
   if (!raw) return 'Front Desk';
-  const match = USER_DEPARTMENTS.find(d => d.toLowerCase() === String(raw).toLowerCase());
+  // Match ignoring case AND spacing so 'poolbar' / 'pool bar' / 'Pool Bar'
+  // all resolve to the canonical department instead of silently dropping
+  // to the Front Desk fallback (which made HR and login records diverge).
+  const key = String(raw).toLowerCase().replace(/\s+/g, '');
+  const match = USER_DEPARTMENTS.find(d => d.toLowerCase().replace(/\s+/g, '') === key);
   return match || 'Front Desk';
 }
 
@@ -45,14 +49,20 @@ exports.createStaff = asyncHandler(async (req, res) => {
   const count = await Staff.countDocuments();
   const staffCode = `STF-${String(count + 1).padStart(4, '0')}`;
 
+  // Normalize ONCE and use for BOTH the HR record and the login account —
+  // the two documents must never diverge on email or department (a past
+  // bug wrote different values into each, making the login unreachable).
+  const normEmail = email ? email.toLowerCase().trim() : '';
+  const normDept = sanitizeDept(department || dept);
+
   const staff = await Staff.create({
     staffCode,
     name: name.trim(),
-    email: email ? email.toLowerCase().trim() : '',
+    email: normEmail,
     phone: phone || '',
     role: role.trim(),
-    department: department || dept || 'General',
-    dept: dept || department || 'General',
+    department: normDept,
+    dept: normDept,
     shift: shift || 'Morning',
     status: status || 'on_duty',
     salary: Number(salary) || 0,
@@ -61,9 +71,9 @@ exports.createStaff = asyncHandler(async (req, res) => {
   });
 
   let loginCreated = false, loginNote = '';
-  if (password && email) {
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
-    console.log('[staff] createStaff login check:', { email: email.toLowerCase().trim(), hasPassword: !!password, emailExists: !!existingUser });
+  if (password && normEmail) {
+    const existingUser = await User.findOne({ email: normEmail });
+    console.log('[staff] createStaff login check:', { email: normEmail, hasPassword: !!password, emailExists: !!existingUser });
     if (!existingUser) {
       const pType = (privileges && privileges.type) || null;
       const pOverrides = (privileges && privileges.overrides) || {};
@@ -73,23 +83,23 @@ exports.createStaff = asyncHandler(async (req, res) => {
       if (pScopes.length) priv.supervisorScopes = pScopes;
       await User.create({
         name: name.trim(),
-        email: email.toLowerCase().trim(),
+        email: normEmail,
         password,
         role: userRole,
         privileges: priv,
-        department: sanitizeDept(department || dept),
+        department: normDept,
         phone: phone || '',
         initials: name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
       });
       loginCreated = true;
-      console.log('[staff] login User created:', { email: email.toLowerCase().trim(), role: userRole });
+      console.log('[staff] login User created:', { email: normEmail, role: userRole });
     } else {
       loginNote = 'A login already exists for this email — staff saved, but sign-in still uses the OLD password.';
-      console.log('[staff] login NOT created (email already has a User):', email.toLowerCase().trim());
+      console.log('[staff] login NOT created (email already has a User):', normEmail);
     }
   } else {
     loginNote = 'No login created (email or password missing) — staff saved without sign-in access.';
-    console.log('[staff] login NOT created (missing email/password):', { hasEmail: !!email, hasPassword: !!password });
+    console.log('[staff] login NOT created (missing email/password):', { hasEmail: !!normEmail, hasPassword: !!password });
   }
 
   const out = staff.toObject();
@@ -165,9 +175,26 @@ exports.updateStaff = asyncHandler(async (req, res) => {
 });
 
 exports.deleteStaff = asyncHandler(async (req, res) => {
-  const staff = await Staff.findByIdAndDelete(req.params.id);
+  const staff = await Staff.findById(req.params.id);
   if (!staff) return res.status(404).json({ success: false, error: 'Staff member not found' });
-  res.json({ success: true, message: `Staff member "${staff.name}" removed` });
+
+  // Self-delete guard — deleting your own row would also kill the login
+  // you are currently using (below) and lock you out.
+  if (req.user && staff.email && String(staff.email).toLowerCase() === String(req.user.email || '').toLowerCase()) {
+    return res.status(400).json({ success: false, error: 'You cannot delete your own account.' });
+  }
+
+  await Staff.findByIdAndDelete(req.params.id);
+
+  // The login (User) lives in a separate collection — delete it too, or
+  // the account survives the "delete" and keeps the email reserved.
+  let loginRemoved = false;
+  if (staff.email) {
+    const r = await User.deleteOne({ email: String(staff.email).toLowerCase().trim() });
+    loginRemoved = r.deletedCount > 0;
+  }
+
+  res.json({ success: true, message: `Staff member "${staff.name}" removed`, data: { loginRemoved } });
 });
 
 exports.updateStatus = asyncHandler(async (req, res) => {

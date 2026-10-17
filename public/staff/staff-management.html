@@ -844,10 +844,10 @@ async function confirmDeleteYes(){
   if (!deleteTargetId) return closeConfirm();
   const s = STAFF.find(x=>x.id===deleteTargetId);
   try {
-    await StaffService.deleteStaff(deleteTargetId);
+    const del = await StaffService.deleteStaff(deleteTargetId);
     STAFF = StaffService.state.staff;
     closeConfirm();
-    showToast(`${s ? s.name : 'Staff member'} removed.`, 'success');
+    showToast(`${s ? s.name : 'Staff member'} removed${del && del.loginRemoved ? ' — login account deleted too' : ''}.`, 'success');
     renderStaff();
   } catch (e) {
     closeConfirm();
