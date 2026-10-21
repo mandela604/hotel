@@ -123,7 +123,15 @@
 .st-page-btn.st-on{ background:var(--st-gold-dim); border-color:var(--st-gold-border); color:var(--st-gold); font-weight:700; }
 .st-page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-@media (max-width:880px){
+/* Tablet (641–1024px): keep the real table with its header row instead of
+   the phone card layout, and tighten cell spacing so it fits the width. */
+@media (min-width:641px) and (max-width:1024px){
+  .st-table{ min-width:720px; }
+  .st-table thead th{ padding:9px 9px; font-size:8.5px; letter-spacing:1px; }
+  .st-table tbody td{ padding:10px 9px; font-size:12px; }
+  .st-items{ max-width:180px; }
+}
+@media (max-width:640px){
   .st-tbl-wrap{ overflow-x:visible; }
   .st-table{ min-width:0; width:100%; }
   .st-table thead{ display:none; }
