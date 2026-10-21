@@ -74,13 +74,14 @@ exports.createStaff = asyncHandler(async (req, res) => {
   if (password && normEmail) {
     const existingUser = await User.findOne({ email: normEmail });
     console.log('[staff] createStaff login check:', { email: normEmail, hasPassword: !!password, emailExists: !!existingUser });
+    const pType = (privileges && privileges.type) || null;
+    const pOverrides = (privileges && privileges.overrides) || {};
+    const pScopes = Array.isArray(privileges && privileges.supervisorScopes) ? privileges.supervisorScopes : [];
+    const userRole = ['admin','manager','supervisor'].includes(role) ? role : 'staff';
+    const priv = { type: pType, overrides: pOverrides };
+    if (pScopes.length) priv.supervisorScopes = pScopes;
+    const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
     if (!existingUser) {
-      const pType = (privileges && privileges.type) || null;
-      const pOverrides = (privileges && privileges.overrides) || {};
-      const pScopes = Array.isArray(privileges && privileges.supervisorScopes) ? privileges.supervisorScopes : [];
-      const userRole = ['admin','manager','supervisor'].includes(role) ? role : 'staff';
-      const priv = { type: pType, overrides: pOverrides };
-      if (pScopes.length) priv.supervisorScopes = pScopes;
       await User.create({
         name: name.trim(),
         email: normEmail,
@@ -89,13 +90,25 @@ exports.createStaff = asyncHandler(async (req, res) => {
         privileges: priv,
         department: normDept,
         phone: phone || '',
-        initials: name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
+        initials,
       });
       loginCreated = true;
       console.log('[staff] login User created:', { email: normEmail, role: userRole });
     } else {
-      loginNote = 'A login already exists for this email — staff saved, but sign-in still uses the OLD password.';
-      console.log('[staff] login NOT created (email already has a User):', normEmail);
+      // A login already exists for this email — update it so the password
+      // entered here actually works (previously the new password was dropped).
+      existingUser.name = name.trim();
+      existingUser.password = password;
+      existingUser.role = userRole;
+      existingUser.privileges = priv;
+      existingUser.department = normDept;
+      if (phone) existingUser.phone = phone;
+      if (initials) existingUser.initials = initials;
+      existingUser.status = 'active';
+      await existingUser.save();
+      loginCreated = true;
+      loginNote = 'An existing login for this email was updated with the new password.';
+      console.log('[staff] existing login User updated:', { email: normEmail, role: userRole });
     }
   } else {
     loginNote = 'No login created (email or password missing) — staff saved without sign-in access.';
@@ -129,26 +142,44 @@ exports.updateStaff = asyncHandler(async (req, res) => {
   await staff.save();
 
   if (password && staff.email) {
-    const user = await User.findOne({ email: staff.email.toLowerCase() });
-    if (user) {
-      user.password = password;
-      if (name) user.name = name.trim();
-      if (role) user.role = ['admin','manager','supervisor'].includes(role) ? role : 'staff';
-      if (privileges !== undefined) {
-        const pScopes = Array.isArray(privileges.supervisorScopes) ? privileges.supervisorScopes : undefined;
-        if (pScopes !== undefined) {
-          user.privileges = user.privileges || {};
-          user.privileges.supervisorScopes = pScopes;
-          if (privileges.type !== undefined) user.privileges.type = privileges.type;
-          if (privileges.overrides !== undefined) user.privileges.overrides = privileges.overrides;
-          user.markModified('privileges');
-        } else {
-          user.privileges = privileges;
-        }
-      }
-      if (department || dept) user.department = sanitizeDept(department || dept);
-      await user.save();
+    let user = await User.findOne({ email: staff.email.toLowerCase() });
+    if (!user) {
+      // Staff never had a login (e.g. created without a password) — create one now
+      // so "Change password" on an existing staff row actually grants sign-in.
+      const pType = (privileges && privileges.type) || (staff.privileges && staff.privileges.type) || null;
+      const pOverrides = (privileges && privileges.overrides) || (staff.privileges && staff.privileges.overrides) || {};
+      const pScopes = Array.isArray(privileges && privileges.supervisorScopes) ? privileges.supervisorScopes : ((staff.privileges && staff.privileges.supervisorScopes) || []);
+      const userRole = ['admin','manager','supervisor'].includes(role || staff.role) ? (role || staff.role) : 'staff';
+      const priv = { type: pType, overrides: pOverrides };
+      if (pScopes.length) priv.supervisorScopes = pScopes;
+      user = new User({
+        name: (name || staff.name).trim(),
+        email: staff.email.toLowerCase(),
+        role: userRole,
+        privileges: priv,
+        department: sanitizeDept(department || dept || staff.department),
+        phone: phone || staff.phone || '',
+      });
+      console.log('[staff] creating missing login during update:', staff.email.toLowerCase());
     }
+    user.password = password;
+    if (name) user.name = name.trim();
+    if (role) user.role = ['admin','manager','supervisor'].includes(role) ? role : 'staff';
+    if (privileges !== undefined) {
+      const pScopes = Array.isArray(privileges.supervisorScopes) ? privileges.supervisorScopes : undefined;
+      if (pScopes !== undefined) {
+        user.privileges = user.privileges || {};
+        user.privileges.supervisorScopes = pScopes;
+        if (privileges.type !== undefined) user.privileges.type = privileges.type;
+        if (privileges.overrides !== undefined) user.privileges.overrides = privileges.overrides;
+        user.markModified('privileges');
+      } else {
+        user.privileges = privileges;
+      }
+    }
+    if (department || dept) user.department = sanitizeDept(department || dept);
+    user.status = 'active';
+    await user.save();
   } else if (name || role || privileges !== undefined || department || dept) {
     const user = await User.findOne({ email: staff.email.toLowerCase() });
     if (user) {
