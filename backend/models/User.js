@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
     overrides: { type: mongoose.Schema.Types.Mixed, default: {} },
     supervisorScopes: { type: [String], default: [] },
   },
-  department: { type: String, enum: DEPARTMENTS, default: 'Front Desk', trim: true },
+  department: { type: String, default: 'Front Desk', trim: true },
   phone:      { type: String, default: '' },
   initials:   { type: String, default: '' },
   avatar:     { type: String, default: '' },

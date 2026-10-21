@@ -12,8 +12,17 @@ function sanitizeDept(raw) {
   // Match ignoring case AND spacing so 'poolbar' / 'pool bar' / 'Pool Bar'
   // all resolve to the canonical department instead of silently dropping
   // to the Front Desk fallback (which made HR and login records diverge).
-  const key = String(raw).toLowerCase().replace(/\s+/g, '');
-  const match = USER_DEPARTMENTS.find(d => d.toLowerCase().replace(/\s+/g, '') === key);
+  const norm = String(raw).toLowerCase().replace(/\s+/g, '');
+  // Multi-department staff (e.g. a waiter on both "Pool Bar, Restaurant"):
+  // keep every valid part instead of collapsing the whole string to Front Desk.
+  const parts = norm.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length > 1) {
+    const matched = parts
+      .map(p => USER_DEPARTMENTS.find(d => d.toLowerCase().replace(/\s+/g, '') === p))
+      .filter(Boolean);
+    if (matched.length) return matched.join(', ');
+  }
+  const match = USER_DEPARTMENTS.find(d => d.toLowerCase().replace(/\s+/g, '') === norm);
   return match || 'Front Desk';
 }
 

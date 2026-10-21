@@ -65,9 +65,14 @@ function departmentGuard(requiredDepartment) {
         error: `Access denied. Supervisor not allowed for "${requiredDepartment}".`,
       });
     }
-    if (userRole === 'staff' && userDept === required) {
-      req.actionLevel = 'staff';
-      return next();
+    if (userRole === 'staff') {
+      // department may be a single value or a comma-separated list
+      // (e.g. "Pool Bar, Restaurant") for staff who cover multiple modules
+      const depts = userDept.split(',').map(s => s.trim()).filter(Boolean);
+      if (depts.includes(required)) {
+        req.actionLevel = 'staff';
+        return next();
+      }
     }
 
     res.status(403).json({
