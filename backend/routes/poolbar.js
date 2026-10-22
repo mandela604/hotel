@@ -51,6 +51,9 @@ router.post('/sales/:id/void', inDept, privilegeGuard('poolbar', 'canVoid'), val
 router.get('/orders',  inDept, ctrl.listOrders);
 router.post('/orders', inDept, privilegeGuard('poolbar', 'canCreate'), validateOpenOrder, ctrl.openTab);
 router.put('/orders/:id', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.updateOrder);
+// The shared orders workspace saves tab edits with PATCH; restaurant already
+// exposes it, poolbar only had PUT, so every Pool Bar save 404'd.
+router.patch('/orders/:id', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.updateOrder);
 router.post('/orders/:id/serve', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.markServed);
 router.post('/orders/:id/pay', inDept, privilegeGuard('poolbar', 'canCreate'), validateObjectIdParam('id'), ctrl.payOrder);
 router.post('/orders/:id/cancel', inDept, privilegeGuard('poolbar', 'canManageOrders'), validateObjectIdParam('id'), validateCancelOrder, ctrl.cancelOrder);

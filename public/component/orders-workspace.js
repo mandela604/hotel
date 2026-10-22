@@ -513,12 +513,28 @@
       }
     }
     async function apiFetch(method, path, body) {
-      if (!CFG.API_BASE) throw new Error('No API_BASE');
+      // Paths arrive in two shapes: module-rooted ('/orders/x') and fully
+      // rooted ('/api/…'). Pages that never pass CFG.API_BASE — poolbar-orders
+      // doesn't — used to throw 'No API_BASE' the moment a tab was saved, so
+      // fall back to the current module's endpoint instead of failing.
+      let url;
+      if (/^https?:\/\//i.test(path) || path.indexOf('/api/') === 0) {
+        url = path;
+      } else {
+        const base = CFG.API_BASE || ('/api/' + moduleName);
+        url = base.replace(/\/+$/, '') + (path.charAt(0) === '/' ? path : '/' + path);
+      }
       const opts = { method, headers: { 'Content-Type': 'application/json' } };
       if (CFG.API_KEY) opts.headers.Authorization = 'Bearer ' + CFG.API_KEY;
       if (body) opts.body = JSON.stringify(body);
-      const res = await fetch(CFG.API_BASE + path, opts);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const res = await fetch(url, opts);
+      if (!res.ok) {
+        // Surface the server's message (ownership/privilege denials) rather
+        // than a bare status code.
+        let msg = 'HTTP ' + res.status;
+        try { const b = await res.json(); if (b && b.error) msg = b.error; } catch (e) {}
+        throw new Error(msg);
+      }
       return res.json();
     }
     function apiSave(method, path, body) {
