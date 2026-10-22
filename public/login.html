@@ -198,6 +198,16 @@ body {
     try { localStorage.removeItem('accounting-session'); } catch (e) {}
   })();
 
+  /* ── Idle timeout notice ──
+     /services/session-guard.js sends the device here with ?expired=1 after
+     signing an idle session out, so the next person knows why. */
+  if (/[?&]expired=1(?:&|$)/.test(location.search)) {
+    setTimeout(function () {
+      showToast('Signed out after a period of inactivity.', 'error');
+      try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    }, 300);
+  }
+
   /* ── No autofilled credentials ──
      The form opts out of the browser's password manager (autocomplete is
      set on the inputs), but the browser can still restore what it saved
@@ -340,16 +350,26 @@ body {
     u = u || {};
     const role = (u.role || '').toLowerCase();
     const dept = (u.department || '').toLowerCase();
-    const priv = (u.privileges && u.privileges.type) || '';
-    // supervisor must always land on index — menu filtered by supervisorScopes via aurum-shell, never front desk fallback
+    const priv = (u.privileges && u.privileges.type) || u.privilege || '';
+    // supervisor must always land on index - menu filtered by supervisorScopes via aurum-shell, never front desk fallback
     if (role === 'admin' || role === 'manager' || role === 'supervisor') return 'index.html';
-    if (dept === 'pool bar' || priv === 'pool_bar_staff' || (priv === 'waiter' && dept.indexOf('pool') >= 0)) return 'poolbar/poolbar-dashboard.html';
-    if (dept === 'restaurant' || priv === 'restaurant_staff' || (priv === 'waiter' && dept.indexOf('restaurant') >= 0)) return 'restaurant/restaurant-dashboard.html';
+    // A waiter works the sales counter only - they land on the module's Sales
+    // page and their menu shows nothing else.
+    const isWaiter = String(priv).toLowerCase() === 'waiter';
+    if (dept === 'pool bar' || priv === 'pool_bar_staff' || (isWaiter && dept.indexOf('pool') >= 0)) {
+      return isWaiter ? 'poolbar/poolbar-sales.html' : 'poolbar/poolbar-dashboard.html';
+    }
+    if (dept === 'restaurant' || priv === 'restaurant_staff' || (isWaiter && dept.indexOf('restaurant') >= 0)) {
+      return isWaiter ? 'restaurant/restaurant-sales.html' : 'restaurant/restaurant-dashboard.html';
+    }
     if (dept === 'kitchen' || priv === 'chef') return 'kitchen/kitchen-dashboard.html';
     if (dept === 'store' || priv === 'store_keeper') return 'store/store-dashboard.html';
     if (dept === 'procurement' || priv === 'procurement_manager') return 'procurement/procurement-dashboard.html';
     if (dept === 'accounts' || priv === 'accountant') return 'accounting/accounting-dashboard.html';
     if (dept === 'gym' || priv === 'gym_attendant') return 'gym/gym-dashboard.html';
+    // A waiter without a department set still belongs to a sales counter -
+    // default them to Pool Bar rather than the front desk.
+    if (isWaiter) return 'poolbar/poolbar-sales.html';
     // staff fallback is front desk, never index (index is admin-only)
     return 'booking/booking-rooms.html';
   }

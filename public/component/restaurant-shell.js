@@ -231,12 +231,28 @@
     }
   }
 
+  /* Menu visibility.
+     - managerOnly items stay hidden until the session confirms the role.
+     - A waiter only ever works the sales counter, so every other item is
+       hidden for them and a deep link to another page bounces them to the
+       sales page. Restaurant staff (and everyone above them) see the full
+       module menu. */
   function applyNavVisibility(sessionUser) {
     const role = ((sessionUser && sessionUser.role) || '').toLowerCase();
     const isManagerLike = role === 'admin' || role === 'manager';
+    const privilege = String((sessionUser && sessionUser.privilege) || '').toLowerCase();
+    const isWaiter = privilege === 'waiter';
     document.querySelectorAll('[data-manager-only]').forEach(function (el) {
       el.style.display = isManagerLike ? '' : 'none';
     });
+    if (isWaiter) {
+      document.querySelectorAll('#rst-nav .rst-navitem').forEach(function (el) {
+        var key = el.getAttribute('data-nav-key');
+        el.style.display = key === 'sales' ? '' : 'none';
+      });
+      var label = document.querySelector('.rst-navlabel');
+      if (label) label.style.display = 'none';
+    }
   }
 
   function attach(opts) {
@@ -401,8 +417,11 @@
 
     applyNavVisibility(user);
 
-    fetchSession().then(function (sessionUser) {
-      if (!sessionUser) return; // live fail → already redirected
+    /* Pages read the session through the shell. Expose the promise so they
+       can await the real session instead of polling with a short timeout -
+       a slow network used to make pages fail with "No session". */
+    const sessionReady = fetchSession().then(function (sessionUser) {
+      if (!sessionUser) return null; // live fail → already redirected
       user = sessionUser;
       initials = user.initials || (user.name || 'RM').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
       const avatar = document.getElementById('rst-avatar');
@@ -413,12 +432,32 @@
       handle.setApiMode('Live');
       applyNavVisibility(user);
       if (user.role !== 'admin' && user.role !== 'manager' && user.role !== 'supervisor') { var bb = document.getElementById('rst-backBtn'); if (bb) bb.style.display = 'none'; }
+      // A waiter works the sales counter only - send them there if they
+      // deep-linked into another part of the module. The POS itself stays
+      // reachable: it is where tabs are opened and paid for.
+      if (String(user.privilege || '').toLowerCase() === 'waiter'
+          && activeFile !== 'restaurant-sales.html' && activeFile !== 'restaurant-orders.html') {
+        window.location.href = 'restaurant-sales.html';
+        return user;
+      }
       try{ _bindRestaurantLive(); }catch(e){}
       fetch('/api/restaurant/pending-count', { credentials: 'include' })
         .then(function (r) { return r.json(); })
         .then(function (j) { if (j.success) handle.setXferHistBadge(j.count); })
         .catch(function () {});
+      return user;
     });
+    handle.sessionReady = sessionReady;
+
+    // ── Idle auto-logout: the window comes from Settings -> Session Timeout ──
+    (function () {
+      if (window.__hotelSessionGuard) return;
+      window.__hotelSessionGuard = 1;
+      var sg = document.createElement('script');
+      sg.src = '/services/session-guard.js';
+      sg.onerror = function () {};
+      document.head.appendChild(sg);
+    })();
 
     return handle;
   }
