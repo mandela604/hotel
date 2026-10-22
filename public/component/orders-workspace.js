@@ -428,7 +428,31 @@
       return options.currentUser || null;
     }
 
-    const isWaiter = resolveUserRole() === 'waiter';
+    // Evaluated on every use so a late-arriving session still applies.
+    // Must mirror the backend's ownOrdersFilter() exactly, otherwise the
+    // list shows tabs the API never sent (or hides tabs it did).
+    function isWaiter() {
+      var u = getSessionUser();
+      var sysRole = u ? String(u.role || '').toLowerCase() : '';
+      // Admins / managers / supervisors keep full department oversight.
+      if (sysRole === 'admin' || sysRole === 'manager' || sysRole === 'supervisor') return false;
+      // Session not loaded yet — fall back to the privilege type.
+      if (!sysRole) {
+        var role = resolveUserRole();
+        return ['waiter', 'pool_bar_staff', 'restaurant_staff', 'sales_rep'].indexOf(role) !== -1;
+      }
+      // Ordinary staff only ever see their own tabs.
+      return sysRole === 'staff';
+    }
+
+    // Waiters have no Quick Sale — Open Tab only. Re-runnable so it can be
+    // applied again once the session user finishes loading.
+    function applyWaiterMode() {
+      if (!isWaiter()) return;
+      const quickTab = root.querySelector('[data-mode="quick"]');
+      if (quickTab) quickTab.style.display = 'none';
+      if (orderType !== 'tab') setOrderType('tab');
+    }
 
     let stock = [];
     let sales = [];
@@ -605,6 +629,7 @@
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-weight:700;font-size:11px;color:var(--ow-gold);" data-role="orderEditLabel"></span>
                     <div style="display:flex;gap:6px;">
+                      <button type="button" class="ow-btn ow-btn-sm" data-act="printViewRecord" data-role="viewPrintBtn" style="display:none;font-size:11px;"><i class="fa-solid fa-print"></i> Print</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="saveEditOrder" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);font-size:11px;"><i class="fa-solid fa-check"></i> Save</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="cancelEditOrder" style="font-size:11px;"><i class="fa-solid fa-arrow-left"></i> Exit</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="deleteEditOrder" data-role="deleteBtn" style="display:none;color:var(--red);border-color:var(--red);font-size:11px;"><i class="fa-solid fa-trash"></i> Delete</button>
@@ -779,7 +804,7 @@
     function setOrderType(t) {
       if (t !== 'quick' && t !== 'tab' && t !== 'coo') t = 'quick';
       // Waiters can only use Open Tab
-      if (isWaiter && t === 'quick') t = 'tab';
+      if (isWaiter() && t === 'quick') t = 'tab';
       orderType = t;
       // Update toggle buttons
       $$('[data-order-type]').forEach(function (btn) {
@@ -1061,6 +1086,24 @@
       w.document.write(html);
       w.document.close();
       w.focus();
+    }
+
+    function ensureStationWatch() {
+      if (window.StationWatch || document.querySelector('script[data-station-watch]')) return;
+      var s = document.createElement('script');
+      s.setAttribute('data-station-watch', '1');
+      s.src = '/services/station-watch.js';
+      document.head.appendChild(s);
+    }
+
+    /* Post-payment receipt: hand off to the counter print station when one
+       is alive on this PC (shared PC must not print twice); else print here. */
+    function printReceiptVia(html) {
+      if (window.StationWatch && window.StationWatch.isAlive()) {
+        showToast('\u2713 Sent to counter printer', 'success');
+        return;
+      }
+      openPrintWindow(html);
     }
 
     function printCurrentCart() {
@@ -1483,7 +1526,7 @@
             if (!payRes.ok || !payBody.success) throw new Error(payBody.error || 'Payment failed');
           }
           if (payMethod !== 'Room Charge') {
-            openPrintWindow(generateReceipt({
+            printReceiptVia(generateReceipt({
               id: _editingOrderId, items: editItems, subtotal: editOrder.subtotal || 0, discount: editOrder.discount || 0, total: editOrder.total || 0,
               staff: editOrder.staff || '', table: editOrder.table || '—', notes: editOrder.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
@@ -1545,7 +1588,7 @@
             syncFromService();
             if (!isRoomCharge) {
               var saleId = sale && sale.id ? sale.id : nextSaleId();
-              openPrintWindow(generateReceipt({
+              printReceiptVia(generateReceipt({
                 id: saleId, items: items, subtotal: subtotal, discount: discount, total: total,
                 staff: staff, table: table || '—', notes: notes,
                 roomNumber: null, guestName: null, guestPhone: null,
@@ -1587,7 +1630,7 @@
             ]);
             apiSave('POST', apiPaths.sales, sale);
             if (!isRoomCharge) {
-              openPrintWindow(generateReceipt({
+              printReceiptVia(generateReceipt({
                 id: sale.id, items: items, subtotal: subtotal, discount: discount, total: total,
                 staff: staff, table: table || '—', notes: notes,
                 roomNumber: null, guestName: null, guestPhone: null,
@@ -1694,8 +1737,19 @@
       let rows = orders
         .filter(function (o) { return !statusFilter || o.status === statusFilter; })
         .sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
-      if (isWaiter) {
-        rows = rows.filter(function (o) { return (o.createdBy || o.staff) === staffName; });
+      if (isWaiter()) {
+        const me = getSessionUser();
+        const myName = String((me && (me.name || me.username)) || '').trim().toLowerCase();
+        // Only narrow the list once we actually know who is logged in —
+        // the API has already scoped the response, so an empty name must
+        // never be used as a filter or every row would disappear.
+        if (myName) {
+          rows = rows.filter(function (o) {
+            return [o.createdBy, o.staff].some(function (v) {
+              return String(v || '').trim().toLowerCase() === myName;
+            });
+          });
+        }
       }
       $('[data-role="ordCount"]').textContent = rows.length + ' order' + (rows.length !== 1 ? 's' : '');
       if (!rows.length) {
@@ -1965,6 +2019,8 @@
       if (deleteBtn) {
         deleteBtn.style.display = (isManager && !isCompleted) ? '' : 'none';
       }
+      var viewPrintBtn = $('[data-role="viewPrintBtn"]');
+      if (viewPrintBtn) viewPrintBtn.style.display = isCompleted ? '' : 'none';
 
       // Update submit button
       var submitBtn = $('[data-role="submitBtn"]');
@@ -2242,7 +2298,7 @@
           const saleId = result && result.sale ? result.sale.id : '';
           $('[data-role="payModal"]').classList.remove('show');
           if (!isRoomCharge) {
-            openPrintWindow(generateReceipt({
+            printReceiptVia(generateReceipt({
               id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
               staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
@@ -2305,7 +2361,7 @@
           });
           $('[data-role="payModal"]').classList.remove('show');
           if (!isRoomCharge) {
-            openPrintWindow(generateReceipt({
+            printReceiptVia(generateReceipt({
               id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
               staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
@@ -2488,6 +2544,7 @@
         else if (a === 'saveEditOrder') { saveEditOrderOnly(); }
         else if (a === 'cancelEditOrder') { exitEditMode(); setMode('active'); }
         else if (a === 'deleteEditOrder') { deleteOrderInView(); }
+        else if (a === 'printViewRecord') { if (_editingOrderId) printOrderById(_editingOrderId); }
         return;
       }
       const served = e.target.closest('[data-served]');
@@ -2589,6 +2646,7 @@
     async function init() {
       // Hotel brand + shared food menu load alongside — non-blocking
       try { prefetchBrand(); } catch (e) {}
+    try { ensureStationWatch(); } catch (e) {}
       loadFoodMenu().then(function () { try { renderPicker(); } catch (e) {} });
       try {
         if (global.LiveService && LiveService.on) {
@@ -2664,6 +2722,9 @@
         if (resolved && resolved !== demoStaffName) {
           const elStaff = $('[data-role="fStaff"]');
           if (elStaff) elStaff.value = resolved;
+          // Identity drives the own-orders filter — refresh once it lands
+          applyWaiterMode();
+          renderOrdersTable();
           clearInterval(staffPoll);
         } else if (Date.now() - pollStart > 2500) {
           clearInterval(staffPoll);
@@ -2675,14 +2736,15 @@
       renderCart();
       renderOrdersTable();
       fetchCooMenuItems();
-      if (isWaiter) {
-        const quickTab = root.querySelector('[data-mode="quick"]');
-        if (quickTab) quickTab.style.display = 'none';
-      }
+      applyWaiterMode();
       setMode('quick');
-      if (isWaiter) setOrderType('tab');
-      checkPendingCooTransfers();
-      setInterval(checkPendingCooTransfers, 30000);
+      if (isWaiter()) setOrderType('tab');
+      // Only Restaurant has COO kitchen transfers; polling this on a Pool Bar
+      // session just fires a guaranteed 403 in the console every 30s.
+      if (moduleName === 'restaurant') {
+        checkPendingCooTransfers();
+        setInterval(checkPendingCooTransfers, 30000);
+      }
       var urlParams = new URLSearchParams(window.location.search);
       var viewParam = urlParams.get('view') || urlParams.get('id');
       if (viewParam) {

@@ -116,6 +116,7 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/services/brand.js"></script>
+<script src="/services/station-watch.js"></script>
 <script id="station-js">
 (function () {
   'use strict';
@@ -128,6 +129,9 @@
   $('#soundToggle').checked = soundOn;
   $('#autoToggle').addEventListener('change', function () { autoPrint = this.checked; localStorage.setItem('boston.station.autoPrint', autoPrint ? '1' : '0'); });
   $('#soundToggle').addEventListener('change', function () { soundOn = this.checked; localStorage.setItem('boston.station.sound', soundOn ? '1' : '0'); });
+
+  /* answer same-PC POS tabs (BroadcastChannel handshake) so payments skip their own print dialog */
+  try { if (window.StationWatch) window.StationWatch.startAsStation(); } catch (e) {}
 
   /* ── helpers ──────────────────────────────────────────────── */
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

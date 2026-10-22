@@ -118,6 +118,7 @@ body{
 <script src="services/poolbar-service.js"></script>
 <script src="../component/poolbar-shell.js"></script>
 <script src="../component/sales-detail.js"></script>
+<script src="../component/receipt-print.js"></script>
 <script src="../component/sales-filter-bar.js"></script>
 <script src="../component/sales-table.js"></script>
 <script>
@@ -319,7 +320,10 @@ async function init() {
     applyPermissionGate();
     if (!canViewReports) return;
     await svc.loadAll();
-    salesDetail = SalesDetail.create({ theme: 'light' });
+    salesDetail = SalesDetail.create({
+      theme: 'light',
+      onPrint: function (saleShape) { ReceiptPrint.sale(saleShape); },
+    });
     mountTable();
     mountFilterBar();
     applyFilters(filterBar.getState());

@@ -130,6 +130,7 @@
 <script src="services/poolbar-service.js"></script>
 <script src="../component/poolbar-shell.js"></script>
 <script src="../component/sales-detail.js"></script>
+<script src="../component/receipt-print.js"></script>
 <script src="../component/void-sale.js"></script>
 <script src="../component/sales-filter-bar.js"></script>
 <script src="../component/sales-table.js"></script>
@@ -316,6 +317,7 @@ async function init() {
 
     salesDetail = SalesDetail.create({
       theme: currentShellTheme(),
+      onPrint: function (saleShape) { ReceiptPrint.sale(saleShape); },
       ...(canVoid ? { onVoid: function (saleShape) { voidSale.open(saleShape); } } : {}),
     });
     voidSale = VoidSale.create({
