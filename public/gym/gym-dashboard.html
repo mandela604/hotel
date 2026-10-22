@@ -1212,7 +1212,7 @@ async function init() {
     checkins = state.checkins || [];
     guests = state.guests || [];
 
-    session = await waitForSession(800);
+    session = await (shell.sessionReady || waitForSession(800));
     if (window.Permissions) {
       canEdit = Permissions.hasPermission(session, 'canEdit', 'gym');
       canDelete = Permissions.hasPermission(session, 'canDelete', 'gym');

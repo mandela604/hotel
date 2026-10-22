@@ -1413,7 +1413,7 @@ async function init() {
   document.getElementById('skeletonLoader').style.display = '';
   document.getElementById('mainContent').style.display = 'none';
 
-  session = await waitForSession(800);
+  session = await (shell.sessionReady || waitForSession(800));
   canAccept = canAcceptFromSession(session);
   canReject = canRejectFromSession(session);
   canRaiseReq = canRaiseFromSession(session);

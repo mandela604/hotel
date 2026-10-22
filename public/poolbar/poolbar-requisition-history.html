@@ -740,7 +740,7 @@ document.querySelectorAll('th[data-sortkey="date"]').forEach(function (th) {
 
 /* ── Init ──────────────────────────────────────────────────────────── */
 async function init() {
-  session = await waitForSession(800);
+  session = await (shell.sessionReady || waitForSession(800));
   canRaiseReq = canRaiseFromSession(session);
   const btnReq = document.getElementById('btnNewReq');
   if (btnReq && !canRaiseReq) btnReq.style.display = 'none';

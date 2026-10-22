@@ -412,7 +412,7 @@ async function init() {
     return;
   }
   try {
-    session = await waitForSession(1000);
+    session = await (shell.sessionReady || waitForSession(1000));
     if (!session) throw new Error('No session — please sign in again.');
     canViewReports = svc.can ? svc.can(session, 'canViewReports') : true;
     applyPermissionGate();

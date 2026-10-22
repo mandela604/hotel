@@ -345,7 +345,7 @@ function showToast(msg, type) {
 }
 
 async function init() {
-  session = await waitForSession(800);
+  session = await (shell.sessionReady || waitForSession(800));
   canVoid = canVoidFromSession(session);
 
   const note = document.getElementById('shiftNote');

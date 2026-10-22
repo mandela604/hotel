@@ -308,7 +308,7 @@ async function init() {
 
     applyModuleBranding();
 
-    session = await waitForSession(800);
+    session = await (shell.sessionReady || waitForSession(800));
     if (!session) throw new Error('No session — please sign in again.');
     canVoid = !!svc.canVoidSale(session);
 

@@ -437,7 +437,7 @@ async function init() {
     return;
   }
   try {
-    session = await waitForSession(800);
+    session = await (shell.sessionReady || waitForSession(800));
     if (!session) throw new Error('No session – redirecting to login');
     canViewReports = svc.can(session, 'canViewReports');
     canVoid = svc.canVoidSale(session);
