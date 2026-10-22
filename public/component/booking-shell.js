@@ -387,8 +387,11 @@
       },
     };
 
-    fetchSession().then(function (sessionUser) {
-      if (!sessionUser) return; // live fail → already redirected
+    /* Pages read the session through the shell. Expose the promise so they
+       can await the real session instead of polling with a short timeout -
+       a slow network used to make pages fail with "No session". */
+    const sessionReady = fetchSession().then(function (sessionUser) {
+      if (!sessionUser) return null; // live fail → already redirected
       user = sessionUser;
       _readyResolve(user);
       initials = user.initials || (user.name || 'FD').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('');
@@ -463,7 +466,20 @@
       }
       pollGuestBadge();
       setInterval(pollGuestBadge, 5000);
+      return user;
     });
+
+    handle.sessionReady = sessionReady;
+
+    // ── Idle auto-logout: the window comes from Settings -> Session Timeout ──
+    (function () {
+      if (window.__hotelSessionGuard) return;
+      window.__hotelSessionGuard = 1;
+      var sg = document.createElement('script');
+      sg.src = '/services/session-guard.js';
+      sg.onerror = function () {};
+      document.head.appendChild(sg);
+    })();
 
     return handle;
   }

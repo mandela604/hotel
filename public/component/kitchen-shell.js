@@ -379,8 +379,11 @@
     // ── Fetch the real session. A missing/invalid token redirects to
     // LOGIN_URL from inside fetchSession() — nothing below runs in
     // that case since the page is navigating away. ──
-    fetchSession().then(sessionUser => {
-      if (!sessionUser) return;
+    /* Pages read the session through the shell. Expose the promise so they
+       can await the real session instead of polling with a short timeout -
+       a slow network used to make pages fail with "No session". */
+    const sessionReady = fetchSession().then(sessionUser => {
+      if (!sessionUser) return null;
       user = Object.assign({}, user, sessionUser);
       const avatar = document.getElementById('khs-avatar');
       if (avatar) {
@@ -390,7 +393,19 @@
       shellApi.setApiMode('Live');
       if (user.role !== 'admin' && user.role !== 'manager' && user.role !== 'supervisor') { var bb = document.getElementById('khs-backBtn'); if (bb) bb.style.display = 'none'; }
       try{ _bindKitchenLive(); }catch(e){}
+      return user;
     });
+    shellApi.sessionReady = sessionReady;
+
+    // ── Idle auto-logout: the window comes from Settings -> Session Timeout ──
+    (function () {
+      if (window.__hotelSessionGuard) return;
+      window.__hotelSessionGuard = 1;
+      var sg = document.createElement('script');
+      sg.src = '/services/session-guard.js';
+      sg.onerror = function () {};
+      document.head.appendChild(sg);
+    })();
 
     return shellApi;
   }

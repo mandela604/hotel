@@ -13,8 +13,10 @@ const configSchema = new mongoose.Schema({
   mdApprovalThreshold:  { type: Number, default: 100000 },
   shiftStartHour:       { type: Number, default: 9 },
   shiftEndHour:         { type: Number, default: 8 },
+  /* Idle auto-logout for shared devices: minutes without user activity
+     before the session is ended. 0 disables it. */
+  sessionTimeoutMinutes:{ type: Number, default: 60 },
   paymentMethods:      { type: [String], default: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'] },
-  paymentMethods:       { type: [String], default: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'] },
   disabledDepartments:  { type: [String], default: [] },
   accentColor:          { type: String, default: '#2f6fed' },
   departments:          { type: mongoose.Schema.Types.Mixed, default: {} },

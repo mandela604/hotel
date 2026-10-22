@@ -398,7 +398,10 @@
     }
 
     // Fetch session and update avatar + user
-    fetchSession().then(sessionUser => {
+    /* Pages read the session through the shell. Expose the promise so they
+       can await the real session instead of polling with a short timeout -
+       a slow network used to make pages fail with "No session". */
+    const sessionReady = fetchSession().then(sessionUser => {
       if (sessionUser) {
         user = sessionUser;
         const initials = user.initials || (user.name || 'AC').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -411,7 +414,19 @@
         if (user.role !== 'admin' && user.role !== 'manager' && user.role !== 'supervisor') { var bb = document.getElementById('acc-backBtn'); if (bb) bb.style.display = 'none'; }
         try{ _bindAccountingLive(); }catch(e){}
       }
+      return sessionUser || null;
     });
+    handle.sessionReady = sessionReady;
+
+    // ── Idle auto-logout: the window comes from Settings -> Session Timeout ──
+    (function () {
+      if (window.__hotelSessionGuard) return;
+      window.__hotelSessionGuard = 1;
+      var sg = document.createElement('script');
+      sg.src = '/services/session-guard.js';
+      sg.onerror = function () {};
+      document.head.appendChild(sg);
+    })();
 
     return handle;
   }

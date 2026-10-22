@@ -169,6 +169,24 @@
         </div>
       </div>
 
+      <!-- Session Timeout -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-hourglass-half"></i> Session Timeout</div>
+            <div class="panel-sub">Idle auto-logout for shared devices — staff are signed out after this much inactivity.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="field-row" style="margin-bottom:10px;">
+            <label for="sessionTimeoutSel">Sign out after</label>
+            <select id="sessionTimeoutSel"></select>
+          </div>
+          <button class="btn btn-outline" id="saveSessionTimeoutBtn"><i class="fa-solid fa-check"></i> Save Session Timeout</button>
+          <div class="hint">Applies to every module. Staff see a two-minute warning with a "Stay signed in" button before being logged out.</div>
+        </div>
+      </div>
+
       <!-- Approval Threshold -->
       <div class="panel">
         <div class="panel-head">
@@ -334,6 +352,20 @@ function renderShiftHourSelect() {
   endSel.value = settings.shiftEndHour != null ? settings.shiftEndHour : 8;
 }
 
+function renderSessionTimeoutSelect() {
+  const sel = document.getElementById('sessionTimeoutSel');
+  if (!sel) return;
+  const presets = [0, 15, 30, 45, 60, 90, 120, 180, 240];
+  const current = Number(settings.sessionTimeoutMinutes);
+  const mins = Number.isFinite(current) && current >= 0 ? current : 60;
+  if (presets.indexOf(mins) === -1) presets.push(mins);
+  presets.sort((a, b) => a - b);
+  sel.innerHTML = presets.map(function (m) {
+    return `<option value="${m}">${m === 0 ? 'Never (disabled)' : m + ' minutes'}</option>`;
+  }).join('');
+  sel.value = mins;
+}
+
 function applyEditPermission() {
   document.getElementById('permBanner').classList.toggle('show', !canEdit);
   document.getElementById('newMethodInput').disabled = !canEdit;
@@ -344,6 +376,10 @@ function applyEditPermission() {
   document.getElementById('shiftEndSel').disabled = !canEdit;
   ['hotelNameInput','hotelAddrInput','hotelPhoneInput','hotelEmailInput','saveBrandBtn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.disabled=!canEdit; });
   document.getElementById('saveShiftBtn').disabled = !canEdit;
+  var sessSel = document.getElementById('sessionTimeoutSel');
+  if (sessSel) sessSel.disabled = !canEdit;
+  var sessBtn = document.getElementById('saveSessionTimeoutBtn');
+  if (sessBtn) sessBtn.disabled = !canEdit;
   document.getElementById('thresholdInput').disabled = !canEdit;
   document.getElementById('saveThresholdBtn').disabled = !canEdit;
 }
@@ -426,6 +462,17 @@ document.getElementById('saveShiftBtn').addEventListener('click', async () => {
   }
 });
 
+document.getElementById('saveSessionTimeoutBtn').addEventListener('click', async () => {
+  const mins = Number(document.getElementById('sessionTimeoutSel').value);
+  if (!Number.isFinite(mins) || mins < 0) { showToast('Pick a valid timeout.', 'error'); return; }
+  try {
+    settings = await PlatformSettings.updateSettings({ sessionTimeoutMinutes: mins });
+    showToast(mins === 0 ? 'Idle auto-logout disabled.' : `Staff will be signed out after ${mins} minutes idle.`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+});
+
 document.getElementById('saveThresholdBtn').addEventListener('click', async () => {
   const val = Number(document.getElementById('thresholdInput').value) || 0;
   if (val <= 0) { showToast('Please enter a valid threshold amount.', 'error'); return; }
@@ -452,7 +499,7 @@ function waitForShellSession(maxMs){
 }
 async function init() {
   settings = await PlatformSettings.getSettings();
-  var sess = await waitForShellSession(2000);
+  var sess = await (shell.sessionReady || waitForShellSession(2000));
   // try shell session first, then localStorage fallback inside service
   canEdit = await PlatformSettings.canEditSettings(sess);
   // admin/manager must never be read-only — explicit fallback if Permissions not loaded
@@ -460,6 +507,7 @@ async function init() {
   renderPaymentChips();
   renderDeptList();
   renderShiftHourSelect();
+  renderSessionTimeoutSelect();
   document.getElementById('thresholdInput').value = settings.mdApprovalThreshold || 100000;
   document.getElementById('hotelNameInput').value = settings.hotelName || '';
   document.getElementById('hotelAddrInput').value = settings.hotelAddress || '';

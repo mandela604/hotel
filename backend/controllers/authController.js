@@ -1,7 +1,25 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Config = require('../models/Config');
 const asyncHandler = require('../middleware/asyncHandler');
 const { revoke: revokeToken } = require('../utils/tokenRevoke');
+
+/* The idle-logout window is a hotel-wide setting, not a per-user one, so a
+   short shared cache keeps GET /api/auth/session (called by every shell on
+   every page) from hitting Mongo each time. */
+let timeoutCache = { value: 60, at: 0 };
+async function sessionTimeoutMinutes() {
+  if (Date.now() - timeoutCache.at < 60000) return timeoutCache.value;
+  try {
+    const cfg = await Config.findOne().lean();
+    const raw = cfg && cfg.sessionTimeoutMinutes;
+    const mins = Number.isFinite(Number(raw)) && Number(raw) >= 0 ? Number(raw) : 60;
+    timeoutCache = { value: mins, at: Date.now() };
+    return mins;
+  } catch (e) {
+    return timeoutCache.value;
+  }
+}
 
 function getSecret() {
   const s = process.env.JWT_SECRET;
@@ -141,6 +159,7 @@ exports.session = asyncHandler(async (req, res) => {
     role: req.user.role,
     privileges: req.user.privileges || { type: null, overrides: {} },
     department: req.user.department || 'General',
+    sessionTimeoutMinutes: await sessionTimeoutMinutes(),
   });
 });
 

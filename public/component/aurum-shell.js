@@ -407,7 +407,10 @@
     bindEvents();
 
     // ── Fetch real session and update avatar + filter nav for supervisor ──
-    fetchSession().then(sessionUser => {
+    /* Pages read the session through the shell. Expose the promise so they
+       can await the real session instead of polling with a short timeout -
+       a slow network used to make pages fail with "No session". */
+    const sessionReady = fetchSession().then(sessionUser => {
       if (sessionUser) {
         user = Object.assign({}, user, sessionUser);
         // re-render nav for supervisor allowlist
@@ -450,9 +453,21 @@
           })
           .catch(() => {});
       }
+      return sessionUser || null;
     });
 
-    return {
+    // ── Idle auto-logout: the window comes from Settings -> Session Timeout ──
+    (function () {
+      if (window.__hotelSessionGuard) return;
+      window.__hotelSessionGuard = 1;
+      var sg = document.createElement('script');
+      sg.src = '/services/session-guard.js';
+      sg.onerror = function () {};
+      document.head.appendChild(sg);
+    })();
+
+    const api = {
+      sessionReady,
       setActive(file) {
         activeFile = file;
         const navEl = document.getElementById(instId + '-nav');
@@ -481,6 +496,7 @@
         if (topbarEl) topbarEl.innerHTML = '';
       },
     };
+    return api;
   }
 
   window.AurumShell = { attach, DEFAULT_NAV, CONFIG };
