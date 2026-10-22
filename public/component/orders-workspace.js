@@ -1086,6 +1086,46 @@
       return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:10mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:380px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px} .h p{margin:2px 0 0;font-size:10px;color:#555} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#666;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#666;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>' + esc(hbName) + ' — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(orderType) + ' Receipt</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(orderData.date || nowStamp()) + '</p><p style="font-size:10px;">' + esc(hbAddr) + '</p><p style="font-size:10px;">' + esc(hbContact) + '</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
     }
 
+    /* A receipt must be built from what was ACTUALLY paid, not from the
+       order copy the cart was loaded from. `editOrder` is the order as it
+       looked when the tab was opened, so its subtotal/total are stale once
+       items are added to the tab — printing those produced a receipt whose
+       lines added up to more than the printed total.
+       The sale the server created during payment is authoritative, but the
+       subtotal is always re-derived from the lines that get printed so the
+       receipt can never contradict itself. */
+    function paidReceiptShape(payRes, items, discountPct) {
+      var sale = null, doc = null;
+      if (payRes) {
+        if (payRes.sale && (payRes.sale.items || []).length) sale = payRes.sale;
+        else if (payRes.order && payRes.order.sale && (payRes.order.sale.items || []).length) sale = payRes.order.sale;
+        else if (payRes.data && payRes.data.sale && (payRes.data.sale.items || []).length) sale = payRes.data.sale;
+        if (!sale) {
+          if (payRes.order && (payRes.order.items || []).length) doc = payRes.order;
+          else if (payRes.data && (payRes.data.items || []).length) doc = payRes.data;
+          else if (payRes.items && payRes.items.length) doc = payRes;
+        }
+      }
+      var list = (sale && sale.items && sale.items.length) ? sale.items
+               : (items && items.length) ? items
+               : (doc && doc.items) ? doc.items
+               : [];
+      var subtotal = list.reduce(function (s, i) { return s + (Number(i.price) || 0) * (Number(i.qty) || 0); }, 0);
+      var discount = (sale && sale.discount != null) ? Number(sale.discount)
+                   : (doc && doc.discount != null) ? Number(doc.discount)
+                   : (Number(discountPct) || 0);
+      var total = (sale && sale.total != null) ? Number(sale.total) : subtotal * (1 - discount / 100);
+      return {
+        items: list,
+        subtotal: subtotal,
+        discount: discount,
+        total: total,
+        staff: (sale && sale.staff) || (doc && doc.staff) || '',
+        table: (sale && sale.table) || (doc && doc.table) || '',
+        notes: (sale && sale.notes) || (doc && doc.notes) || '',
+      };
+    }
+
     function openPrintWindow(html) {
       var w = window.open('', '_blank', 'width=420,height=640');
       if (!w) { showToast('Pop-up blocked — allow pop-ups to print.', 'error'); return; }
@@ -1498,6 +1538,9 @@
 
         try {
           // 1) Save/patch items only if changed and not locked
+          const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
+          const edTable = ($('[data-role="fTable"]').value || '').trim();
+          const edNotes = ($('[data-role="fNotes"]').value || '').trim();
           if (isCooEdit && itemsChanged && cooLocked) {
             throw new Error('Kitchen has already started — item changes cannot be saved. Reload the order to pay the original amount.');
           } else if (isCooEdit && itemsChanged && !cooLocked && (editOrder.status || '').toLowerCase() === 'open') {
@@ -1505,9 +1548,6 @@
             const body = await res.json().catch(() => null);
             if (!res.ok) throw new Error((body && body.error) || 'Failed to update');
           } else if (!isCooEdit && itemsChanged) {
-            const edDiscount = parseFloat($('[data-role="cartDisc"]').value) || 0;
-            const edTable = ($('[data-role="fTable"]').value || '').trim();
-            const edNotes = ($('[data-role="fNotes"]').value || '').trim();
             await apiFetch('PATCH', '/orders/' + encodeURIComponent(_editingOrderId), {
               items: editItems, discount: edDiscount, table: edTable || '—', notes: edNotes,
             });
@@ -1521,8 +1561,9 @@
           const payPayload = payMethod === 'Room Charge'
             ? { method: payMethod, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
             : (isCompPay ? { method: payMethod, note: compNoteDirect } : payMethod);
+          let payResult = null;
           if (typeof service !== 'undefined' && service && typeof service.payOrder === 'function') {
-            await service.payOrder(_editingOrderId, payPayload);
+            payResult = await service.payOrder(_editingOrderId, payPayload);
           } else {
             const payRes = await fetch('/api/' + moduleName + '/orders/' + encodeURIComponent(_editingOrderId) + '/pay', {
               method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -1530,11 +1571,15 @@
             });
             const payBody = await payRes.json().catch(() => ({}));
             if (!payRes.ok || !payBody.success) throw new Error(payBody.error || 'Payment failed');
+            payResult = payBody;
           }
           if (payMethod !== 'Room Charge') {
+            // Print what was paid — `editOrder` is the pre-edit copy, so its
+            // subtotal/total exclude anything added after the tab was opened.
+            const paid = paidReceiptShape(payResult, editItems, edDiscount);
             printReceiptVia(generateReceipt({
-              id: _editingOrderId, items: editItems, subtotal: editOrder.subtotal || 0, discount: editOrder.discount || 0, total: editOrder.total || 0,
-              staff: editOrder.staff || '', table: editOrder.table || '—', notes: editOrder.notes || '',
+              id: _editingOrderId, items: paid.items, subtotal: paid.subtotal, discount: paid.discount, total: paid.total,
+              staff: paid.staff || editOrder.staff || '', table: paid.table || editOrder.table || '—', notes: paid.notes || editOrder.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
               date: editOrder.date || nowStamp(), method: payMethod,
             }, true));
@@ -2304,9 +2349,10 @@
           const saleId = result && result.sale ? result.sale.id : '';
           $('[data-role="payModal"]').classList.remove('show');
           if (!isRoomCharge) {
+            const paid = paidReceiptShape(result, o.items || [], o.discount || 0);
             printReceiptVia(generateReceipt({
-              id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
-              staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
+              id: o.id, items: paid.items, subtotal: paid.subtotal, discount: paid.discount, total: paid.total,
+              staff: paid.staff || o.staff || '', table: paid.table || o.table || '—', notes: paid.notes || o.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
               date: o.date || nowStamp(), method: method,
             }, true));
@@ -2367,9 +2413,10 @@
           });
           $('[data-role="payModal"]').classList.remove('show');
           if (!isRoomCharge) {
+            const paid = paidReceiptShape(null, o.items || [], o.discount || 0);
             printReceiptVia(generateReceipt({
-              id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
-              staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
+              id: o.id, items: paid.items, subtotal: paid.subtotal, discount: paid.discount, total: paid.total,
+              staff: paid.staff || o.staff || '', table: paid.table || o.table || '—', notes: paid.notes || o.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
               date: o.date || nowStamp(), method: method,
             }, true));
