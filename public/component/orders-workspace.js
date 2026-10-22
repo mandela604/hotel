@@ -444,6 +444,35 @@
       return sysRole === 'staff';
     }
 
+    /* Identity of the signed-in staff member, used to scope the workspace
+       stats (completed today, units sold, ...) to their OWN records. It
+       matches on the staff name recorded on the record — the staff field on
+       a sale/tab is prefilled read-only from the session, so it is the same
+       key the backend's ownOrdersFilter() matches on. */
+    function myStaffKey() {
+      var u = getSessionUser();
+      if (!u) return '';
+      return String(u.name || u.username || '').trim().toLowerCase();
+    }
+
+    /* Managers, supervisors and admins keep full oversight of the whole
+       department; floor staff only ever count their own work. Until the
+       session identity resolves we don't hide anything — the KPIs refresh
+       as soon as it lands. */
+    function isOwnRecord(rec) {
+      if (!seesOwnOrdersOnly()) return true;
+      var me = myStaffKey();
+      if (!me) return true;
+      var keys = [rec && rec.staff, rec && rec.createdBy];
+      for (var i = 0; i < keys.length; i++) {
+        if (String(keys[i] || '').trim().toLowerCase() === me) return true;
+      }
+      return false;
+    }
+
+    function mySales() { return sales.filter(isOwnRecord); }
+    function myOrders() { return orders.filter(isOwnRecord); }
+
     let stock = [];
     let sales = [];
     let orders = [];
@@ -915,7 +944,7 @@
     }
 
     function unitsSoldToday() {
-      return sales
+      return mySales()
         .filter(function (s) { return s.status === 'completed' && isTodayDate(s.date); })
         .reduce(function (sum, s) {
           return sum + (s.items || []).reduce(function (a, i) { return a + (i.qty || 0); }, 0);
@@ -923,13 +952,17 @@
     }
 
     function renderKPIs() {
-      const completedToday = sales.filter(function (s) {
+      // Floor staff see only their own numbers; managers see the department.
+      const ownScope = seesOwnOrdersOnly();
+      const mySaleList = mySales();
+      const myOrderList = myOrders();
+      const completedToday = mySaleList.filter(function (s) {
         return s.status === 'completed' && isTodayDate(s.date);
       });
-      const cancelledToday = orders.filter(function (o) {
+      const cancelledToday = myOrderList.filter(function (o) {
         return o.status === 'cancelled' && isTodayDate(o.date);
       });
-      const activeTabs = orders.filter(function (o) {
+      const activeTabs = myOrderList.filter(function (o) {
         return o.status === 'open' || o.status === 'served';
       }).length;
       const revenue = completedToday.reduce(function (s, x) { return s + (x.total || 0); }, 0);
@@ -939,20 +972,20 @@
         '<div class="ow-kpi acc-green">' +
         '<div class="ow-kpi-top"><div class="ow-kpi-ic ow-ic-green"><i class="fa-solid fa-circle-check"></i></div><div class="ow-kpi-label">Completed Today</div></div>' +
         '<div class="ow-kpi-value">' + completedToday.length + '</div>' +
-        '<div class="ow-kpi-trend up">' + fmtN(revenue) + ' in sales</div></div>' +
+        '<div class="ow-kpi-trend up">' + fmtN(revenue) + (ownScope ? ' in your sales' : ' in sales') + '</div></div>' +
         '<div class="ow-kpi acc-blue">' +
         '<div class="ow-kpi-top"><div class="ow-kpi-ic ow-ic-blue"><i class="fa-solid fa-clipboard-list"></i></div><div class="ow-kpi-label">Active Tabs</div></div>' +
         '<div class="ow-kpi-value">' + activeTabs + '</div>' +
-        '<div class="ow-kpi-trend neutral">' + (activeTabs ? 'Open or served' : 'None open') + '</div></div>' +
+        '<div class="ow-kpi-trend neutral">' + (activeTabs ? (ownScope ? 'Your open or served tabs' : 'Open or served') : 'None open') + '</div></div>' +
         '<div class="ow-kpi acc-red">' +
         '<div class="ow-kpi-top"><div class="ow-kpi-ic ow-ic-red"><i class="fa-solid fa-ban"></i></div><div class="ow-kpi-label">Cancelled Today</div></div>' +
         '<div class="ow-kpi-value">' + cancelledToday.length + '</div>' +
         '<div class="ow-kpi-trend ' + (cancelledToday.length ? 'down' : 'up') + '">' +
-        (cancelledToday.length ? 'Tabs cancelled' : 'None cancelled') + '</div></div>' +
+        (cancelledToday.length ? (ownScope ? 'Your tabs cancelled' : 'Tabs cancelled') : 'None cancelled') + '</div></div>' +
         '<div class="ow-kpi acc-purple">' +
         '<div class="ow-kpi-top"><div class="ow-kpi-ic ow-ic-purple"><i class="fa-solid fa-boxes-stacked"></i></div><div class="ow-kpi-label">Units Sold</div></div>' +
         '<div class="ow-kpi-value">' + units + '</div>' +
-        '<div class="ow-kpi-trend neutral">Sold this shift (today)</div></div>';
+        '<div class="ow-kpi-trend neutral">' + (ownScope ? 'Sold by you this shift (today)' : 'Sold this shift (today)') + '</div></div>';
 
       const badge = $('[data-role="activeBadge"]');
       if (badge && activeTabs > 0) {
@@ -2775,8 +2808,10 @@
         if (resolved && resolved !== demoStaffName) {
           const elStaff = $('[data-role="fStaff"]');
           if (elStaff) elStaff.value = resolved;
-          // Identity drives the own-orders filter — refresh once it lands
+          // Identity drives the own-orders filter and the own-stats KPIs —
+          // refresh both once it lands
           renderOrdersTable();
+          renderKPIs();
           clearInterval(staffPoll);
         } else if (Date.now() - pollStart > 2500) {
           clearInterval(staffPoll);
