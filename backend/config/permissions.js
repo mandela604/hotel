@@ -93,13 +93,13 @@ const PERMISSIONS = {
     },
     pool_bar_staff: {
       poolbar: {
-        canView: true, canCreate: true, canEdit: false, canDelete: false,
+        canView: true, canCreate: true, canEdit: true, canDelete: false,
         canVoid: false, canGiveDiscount: false, canManageOrders: true,
       },
     },
     restaurant_staff: {
       restaurant: {
-        canView: true, canCreate: true, canEdit: false, canDelete: false,
+        canView: true, canCreate: true, canEdit: true, canDelete: false,
         canVoid: false, canGiveDiscount: false, canManageOrders: true,
       },
     },

@@ -16,6 +16,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { ApiError } = require('../middleware/errorHandler');
 const { emit } = require('../utils/emit');
 const { hasPermission } = require('../config/permissions');
+const { ownOrdersFilter, ownsOrder, denyOrderAccess } = require('../middleware/orderScope');
 
 function discountAllowed(user, module) {
   return hasPermission(user, module, 'canGiveDiscount');
@@ -77,7 +78,7 @@ exports.addMenuItem = asyncHandler(async (req, res) => {
     available: avail !== undefined ? avail : true,
   });
 
-  await logActivity('gold', `Menu item "${item.name}" added`, 'restaurant-menu.html');
+  await logActivity('gold', `Menu item "${item.name}" added`, 'restaurant-menu.html', req.user ? req.user.name : '');
   emit(req, 'restaurant', 'restaurant:updated', { action: 'addMenuItem', data: item });
   res.status(201).json({ success: true, data: item });
 });
@@ -366,11 +367,11 @@ exports.createSale = asyncHandler(async (req, res) => {
       });
       await guest.save();
     } else {
-      await logActivity('amber', `Room Charge sale ${id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-sales.html');
+      await logActivity('amber', `Room Charge sale ${id} could not be matched to a guest folio (${guestName || 'unknown guest'})`, 'restaurant-sales.html', req.user ? req.user.name : '');
     }
   }
 
-  await logActivity('green', `Sale ${id} — ${total} (${method || 'Cash'})`, 'restaurant-sales.html');
+  await logActivity('green', `Sale ${id} — ${total} (${method || 'Cash'})`, 'restaurant-sales.html', req.user ? req.user.name : '');
   emit(req, 'restaurant', 'restaurant:updated', { action: 'createSale', data: sale });
   res.status(201).json({ success: true, data: sale });
 });
@@ -417,7 +418,7 @@ exports.voidSale = asyncHandler(async (req, res) => {
     });
   }
 
-  await logActivity('red', `Sale ${sale.id} voided — ${reason}`, 'restaurant-sales.html');
+  await logActivity('red', `Sale ${sale.id} voided — ${reason}`, 'restaurant-sales.html', req.user ? req.user.name : '');
   emit(req, 'restaurant', 'restaurant:updated', { action: 'voidSale', data: sale });
   res.json({ success: true, data: sale });
 });
@@ -492,7 +493,7 @@ exports.acceptTransfer = asyncHandler(async (req, res) => {
     console.log(`[acceptTransfer] Skipped stock for paid COO transfer ${transfer.transferNo} — order already paid`);
   }
 
-  await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html');
+  await logActivity('green', `Transfer ${transfer.transferNo} accepted — ${transfer.quantity} ${transfer.unit} ${transfer.meal}`, 'restaurant-transfer-history.html', req.user ? req.user.name : '');
 
   if (transfer.cooId) {
     const KitchenCooOrder = require('../models/KitchenCooOrder');
@@ -530,7 +531,7 @@ exports.rejectTransfer = asyncHandler(async (req, res) => {
   transfer.rejectReason = rejectReason;
   await transfer.save();
 
-  await logActivity('red', `Transfer ${transfer.transferNo} rejected — ${rejectReason}`, 'restaurant-transfer-history.html');
+  await logActivity('red', `Transfer ${transfer.transferNo} rejected — ${rejectReason}`, 'restaurant-transfer-history.html', req.user ? req.user.name : '');
   emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'rejectTransfer', data: transfer });
   res.json({ success: true, data: transfer });
 });
@@ -583,7 +584,7 @@ exports.submitRequisition = asyncHandler(async (req, res) => {
     dateRaisedDisplay,
   });
 
-  await logActivity('blue', `Requisition ${requisitionNo} sent to Store`, 'restaurant-transfer-history.html');
+  await logActivity('blue', `Requisition ${requisitionNo} sent to Store`, 'restaurant-transfer-history.html', req.user ? req.user.name : '');
   emit(req, ['restaurant', 'store'], 'restaurant:updated', { action: 'submitRequisition', data: requisition });
   res.status(201).json({ success: true, data: requisition });
 });
@@ -667,6 +668,10 @@ exports.listOrders = asyncHandler(async (req, res) => {
   const filter = { department: DEPT };
   if (status) filter.status = status;
 
+  // Floor staff only ever receive their own tabs.
+  const scope = ownOrdersFilter(req);
+  if (scope) Object.assign(filter, scope);
+
   const list = await Order.find(filter).sort({ date: -1 });
   res.json({ success: true, count: list.length, data: list });
 });
@@ -710,9 +715,10 @@ exports.openTab = asyncHandler(async (req, res) => {
     guestName: guestName || null,
     guestPhone: guestPhone || null,
     createdBy: createdBy || (req.user ? req.user.name : ''),
+    ownerId: req.user ? String(req.user.id || '') : '',
   });
 
-  await logActivity('gold', `Tab ${id} opened — ${items.length} item(s)`, 'restaurant-orders.html');
+  await logActivity('gold', `Tab ${id} opened — ${items.length} item(s)`, 'restaurant-orders.html', req.user ? req.user.name : '');
   emit(req, 'restaurant', 'restaurant:updated', { action: 'openTab', data: order });
   res.status(201).json({ success: true, data: order });
 });
@@ -720,6 +726,7 @@ exports.openTab = asyncHandler(async (req, res) => {
 exports.markOrderServed = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status !== 'open') {
     return res.status(400).json({ success: false, error: `Cannot mark a '${order.status}' order as served` });
   }
@@ -787,7 +794,7 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
   order.pendingSaleId = pendingSaleId;
   await order.save();
 
-  await logActivity('green', `Tab ${order.id} marked as served`, 'restaurant-orders.html');
+  await logActivity('green', `Tab ${order.id} marked as served`, 'restaurant-orders.html', req.user ? req.user.name : '');
   emit(req, 'restaurant', 'restaurant:updated', { action: 'markOrderServed', data: order });
   res.json({ success: true, data: order, sale });
 });
@@ -797,6 +804,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
   if (!order) { console.log('[tab-trace] payOrder 404 — order not found:', req.params.id); return res.status(404).json({ success: false, error: 'Order not found' }); }
   console.log('[tab-trace] payOrder order found', { id: order.id, status: order.status });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
   if (order.status !== 'open' && order.status !== 'served') {
@@ -918,7 +926,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
       });
       await guest.save();
     } else {
-      await logActivity('amber', `Room Charge tab ${order.id} could not be matched to a guest folio (${effectiveGuest || 'unknown guest'})`, 'restaurant-orders.html');
+      await logActivity('amber', `Room Charge tab ${order.id} could not be matched to a guest folio (${effectiveGuest || 'unknown guest'})`, 'restaurant-orders.html', req.user ? req.user.name : '');
     }
   }
 
@@ -954,7 +962,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
     }
   }
 
-  await logActivity('green', `Tab ${order.id} paid — ${order.total} (${payMethod})`, 'restaurant-orders.html');
+  await logActivity('green', `Tab ${order.id} paid — ${order.total} (${payMethod})`, 'restaurant-orders.html', req.user ? req.user.name : '');
   emit(req, 'restaurant', 'restaurant:updated', { action: 'payOrder', data: order });
   res.json({ success: true, data: order, sale });
 });
@@ -962,6 +970,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
 exports.updateOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status !== 'open') {
     return res.status(400).json({ success: false, error: 'Only an open order can be edited' });
   }
@@ -996,6 +1005,7 @@ exports.updateOrder = asyncHandler(async (req, res) => {
 exports.cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status === 'paid') {
     return res.status(400).json({ success: false, error: 'Cannot cancel a paid order' });
   }
@@ -1036,7 +1046,7 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   order.status = 'cancelled';
   await order.save();
 
-  await logActivity('red', `Tab ${order.id} cancelled`, 'restaurant-orders.html');
+  await logActivity('red', `Tab ${order.id} cancelled`, 'restaurant-orders.html', req.user ? req.user.name : '');
   emit(req, 'restaurant', 'restaurant:updated', { action: 'cancelOrder', data: order });
   res.json({ success: true, data: order });
 });
@@ -1183,6 +1193,7 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
     guestPhone: guestPhone || null,
     guestId: guestId || null,
     createdBy: createdBy || (req.user ? req.user.name : ''),
+    ownerId: req.user ? String(req.user.id || '') : '',
   });
 
   let coo = null;
@@ -1213,7 +1224,7 @@ exports.createCooOrder = asyncHandler(async (req, res) => {
   let activityText = `COO ${id} — ${orderItems.length} item(s)`;
   if (kitchenCount && regularCount) activityText += ` (${kitchenCount} kitchen, ${regularCount} regular)`;
   else if (kitchenCount) activityText += ` sent to Kitchen`;
-  await logActivity('gold', activityText, 'restaurant-orders.html');
+  await logActivity('gold', activityText, 'restaurant-orders.html', req.user ? req.user.name : '');
   emit(req, ['restaurant', 'kitchen'], 'restaurant:updated', { action: 'createCooOrder', data: { order, coo } });
   res.status(201).json({ success: true, data: { order, coo } });
 });
@@ -1249,6 +1260,7 @@ exports.getPendingCooTransfers = asyncHandler(async (req, res) => {
 exports.getOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id, department: DEPT });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
 
   // Include Kitchen COO status so frontend knows if items are locked
   let cooStatus = null;

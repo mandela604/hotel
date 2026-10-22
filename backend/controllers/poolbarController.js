@@ -12,6 +12,7 @@ const Counter        = require('../models/Counter');
 const asyncHandler   = require('../middleware/asyncHandler');
 const { ApiError }   = require('../middleware/errorHandler');
 const { hasPermission } = require('../config/permissions');
+const { ownOrdersFilter, ownsOrder, denyOrderAccess } = require('../middleware/orderScope');
 
 function discountAllowed(user, module) {
   return hasPermission(user, module, 'canGiveDiscount');
@@ -510,6 +511,10 @@ exports.listOrders = asyncHandler(async (req, res) => {
   const filter = { department: 'poolbar' };
   if (status) filter.status = status;
 
+  // Floor staff only ever receive their own tabs.
+  const scope = ownOrdersFilter(req);
+  if (scope) Object.assign(filter, scope);
+
   const orders = await Order.find(filter).sort({ date: -1 });
   res.json({ success: true, count: orders.length, data: orders });
 });
@@ -547,6 +552,7 @@ exports.openTab = asyncHandler(async (req, res) => {
     guestName: guestName || null,
     guestPhone: guestPhone || null,
     createdBy: createdBy || (req.user ? req.user.name : ''),
+    ownerId: req.user ? String(req.user.id || '') : '',
   });
 
   emit(req, 'poolbar', 'poolbar:updated', { action: 'openTab', data: order });
@@ -561,6 +567,7 @@ exports.openTab = asyncHandler(async (req, res) => {
 exports.updateOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status !== 'open') {
     return res.status(400).json({ success: false, error: 'Only an open order can be edited' });
   }
@@ -587,6 +594,7 @@ exports.updateOrder = asyncHandler(async (req, res) => {
 exports.markServed = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status !== 'open') {
     return res.status(400).json({ success: false, error: `Cannot mark "${order.status}" order as served` });
   }
@@ -600,6 +608,7 @@ exports.markServed = asyncHandler(async (req, res) => {
 exports.payOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status === 'paid') return res.status(400).json({ success: false, error: 'Order is already paid' });
   if (order.status === 'cancelled') return res.status(400).json({ success: false, error: 'Cannot pay a cancelled order' });
 
@@ -690,6 +699,7 @@ exports.payOrder = asyncHandler(async (req, res) => {
 exports.cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findOne({ id: req.params.id });
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  if (!ownsOrder(req, order)) return denyOrderAccess(res);
   if (order.status === 'paid') {
     return res.status(400).json({ success: false, error: 'Cannot cancel a paid order' });
   }

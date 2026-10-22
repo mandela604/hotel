@@ -32,6 +32,9 @@ const orderSchema = new mongoose.Schema({
   pendingSaleId:  { type: String, default: null },
   createdBy:      { type: String, default: '' },
   processedBy:    { type: String, default: '' },
+  // Login id of the staff member who opened this tab — used to keep each
+  // waiter/waitress scoped to her own open tabs.
+  ownerId:        { type: String, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

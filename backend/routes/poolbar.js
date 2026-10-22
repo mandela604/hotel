@@ -52,7 +52,7 @@ router.get('/orders',  inDept, ctrl.listOrders);
 router.post('/orders', inDept, privilegeGuard('poolbar', 'canCreate'), validateOpenOrder, ctrl.openTab);
 router.put('/orders/:id', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.updateOrder);
 router.post('/orders/:id/serve', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.markServed);
-router.post('/orders/:id/pay', inDept, privilegeGuard('poolbar', 'canEdit'), validateObjectIdParam('id'), ctrl.payOrder);
+router.post('/orders/:id/pay', inDept, privilegeGuard('poolbar', 'canCreate'), validateObjectIdParam('id'), ctrl.payOrder);
 router.post('/orders/:id/cancel', inDept, privilegeGuard('poolbar', 'canManageOrders'), validateObjectIdParam('id'), validateCancelOrder, ctrl.cancelOrder);
 
 /* ── Requisitions (Pool Bar → Store) ─────────── */
