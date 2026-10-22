@@ -102,13 +102,13 @@ body {
       <div id="signinForm">
         <div class="form-group">
           <label class="form-label">Email</label>
-          <input class="form-input" id="loginEmail" type="email" placeholder="you@aurumhotel.com" autocomplete="username">
+          <input class="form-input" id="loginEmail" type="email" placeholder="you@aurumhotel.com" autocomplete="off">
           <div class="form-error" id="loginEmailErr">Please enter your email.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
           <div class="pw-wrap">
-            <input class="form-input" id="loginPass" type="password" placeholder="Enter password" autocomplete="current-password">
+            <input class="form-input" id="loginPass" type="password" placeholder="Enter password" autocomplete="new-password">
             <button type="button" class="pw-toggle" id="loginPwToggle" tabindex="-1"><i class="fa-regular fa-eye"></i></button>
           </div>
           <div class="form-error" id="loginPassErr">Invalid credentials.</div>
@@ -182,6 +182,37 @@ body {
 
   const $ = id => document.getElementById(id);
 
+  /* ── Fresh device ──
+     A shared device must start clean. If a session is still alive here the
+     previous sign-out never reached the server (or the tab was simply
+     closed), so end it now — the logout route no longer needs a valid
+     token, so it always clears the cookie. Awaited before the login
+     request so this call can never wipe the cookie we are about to set. */
+  const freshDevice = (async () => {
+    try {
+      const res = await fetch('/api/auth/session', { credentials: 'include' });
+      if (res.ok) await apiCall('/logout', undefined, 'POST');
+    } catch (e) { /* offline or no session - nothing to clear */ }
+    // Any identity cached from a previous session must not survive either.
+    try { localStorage.removeItem('aurum_user'); } catch (e) {}
+    try { localStorage.removeItem('accounting-session'); } catch (e) {}
+  })();
+
+  /* ── No autofilled credentials ──
+     The form opts out of the browser's password manager (autocomplete is
+     set on the inputs), but the browser can still restore what it saved
+     for this site — e.g. when the page is loaded again after a sign-out.
+     These sweeps clear anything it put back, without touching a field the
+     user is actually typing in. */
+  function clearRestoredCredentials() {
+    const email = $('loginEmail');
+    const pass = $('loginPass');
+    if (email && email.value && document.activeElement !== email) email.value = '';
+    if (pass && pass.value && document.activeElement !== pass) pass.value = '';
+  }
+  window.addEventListener('pageshow', clearRestoredCredentials);
+  setTimeout(clearRestoredCredentials, 500);
+
   /* ── Tab switching ── */
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
@@ -226,6 +257,7 @@ body {
     setBusy($('loginBtn'), 'Signing in...');
 
     try {
+      await freshDevice; // the device is clean before the new cookie is set
       const payload = await apiCall('/login', { email, password: pass });
       storeAuth(payload.token, payload.user);
       showToast('Signed in' + (payload.user && payload.user.name ? ' as ' + payload.user.name : ''), 'success');
