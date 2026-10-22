@@ -353,6 +353,11 @@
     const logoutBtn = document.getElementById('rst-logout');
     if (logoutBtn) logoutBtn.addEventListener('click', async () => {
       try { await fetch(CONFIG.API_BASE + '/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+      // The session cookie is gone, but the cached identity is not - drop it
+      // so the next person on this device does not inherit the previous
+      // user's name, role and supervisor scopes.
+      try { localStorage.removeItem('aurum_user'); } catch(e) {}
+      try { localStorage.removeItem('accounting-session'); } catch(e) {}
       window.location.href = '/login.html';
     });
 

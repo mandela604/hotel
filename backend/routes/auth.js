@@ -9,7 +9,10 @@ router.post('/signup', authController.signup);
 router.post('/login', authController.login);
 router.get('/session', auth, authController.session);
 router.get('/me', auth, authController.session);
-router.post('/logout', auth, authController.logout);
+/* Logout is intentionally NOT behind `auth`: it must always run so the
+   cookie is cleared, even when the token is already expired or revoked.
+   A guarded logout would 401 and leave the device signed in. */
+router.post('/logout', authController.logout);
 
 /* Admin-only user management — the only way to create accounts once
    the first (admin) account exists. */

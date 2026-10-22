@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { isRevoked } = require('../utils/tokenRevoke');
 
 function getSecret() {
   const s = process.env.JWT_SECRET;
@@ -15,6 +16,11 @@ async function auth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, getSecret());
+    // A logged-out token is dead even if its JWT is still within its expiry
+    // window — clearing the cookie alone never ended it everywhere.
+    if (isRevoked(token)) {
+      return res.status(401).json({ success: false, error: 'Session ended - please sign in again' });
+    }
     // The token carries the user's UUID `id` field (not the Mongo _id).
     // findById would try to cast it as an ObjectId and fail — so look up
     // by the custom `id` field instead.

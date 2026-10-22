@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const asyncHandler = require('../middleware/asyncHandler');
+const { revoke: revokeToken } = require('../utils/tokenRevoke');
 
 function getSecret() {
   const s = process.env.JWT_SECRET;
@@ -144,6 +145,17 @@ exports.session = asyncHandler(async (req, res) => {
 });
 
 exports.logout = asyncHandler(async (req, res) => {
+  /* Logout must ALWAYS succeed — even for an expired or already-revoked
+     token — otherwise the cookie survives and the device stays signed in.
+     Revoke the presented token so a copy taken before logout is dead too. */
+  const token = req.cookies && req.cookies.token;
+  if (token) {
+    try {
+      const decoded = jwt.decode(token);
+      const exp = decoded && decoded.exp ? decoded.exp * 1000 : null;
+      revokeToken(token, exp);
+    } catch (e) { /* undecodable token - nothing to revoke */ }
+  }
   clearTokenCookie(res);
   res.json({ success: true, message: 'Logged out successfully' });
 });
