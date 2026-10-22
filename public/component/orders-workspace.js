@@ -428,30 +428,20 @@
       return options.currentUser || null;
     }
 
-    // Evaluated on every use so a late-arriving session still applies.
-    // Must mirror the backend's ownOrdersFilter() exactly, otherwise the
-    // list shows tabs the API never sent (or hides tabs it did).
-    function isWaiter() {
+    const isWaiter = resolveUserRole() === 'waiter';
+
+    // Own-orders scoping — separate from `isWaiter` on purpose: it must NOT
+    // drive UI mode (Quick Sale stays available), it only mirrors the
+    // backend's ownOrdersFilter() so the table agrees with the API.
+    function seesOwnOrdersOnly() {
       var u = getSessionUser();
       var sysRole = u ? String(u.role || '').toLowerCase() : '';
-      // Admins / managers / supervisors keep full department oversight.
       if (sysRole === 'admin' || sysRole === 'manager' || sysRole === 'supervisor') return false;
-      // Session not loaded yet — fall back to the privilege type.
       if (!sysRole) {
         var role = resolveUserRole();
         return ['waiter', 'pool_bar_staff', 'restaurant_staff', 'sales_rep'].indexOf(role) !== -1;
       }
-      // Ordinary staff only ever see their own tabs.
       return sysRole === 'staff';
-    }
-
-    // Waiters have no Quick Sale — Open Tab only. Re-runnable so it can be
-    // applied again once the session user finishes loading.
-    function applyWaiterMode() {
-      if (!isWaiter()) return;
-      const quickTab = root.querySelector('[data-mode="quick"]');
-      if (quickTab) quickTab.style.display = 'none';
-      if (orderType !== 'tab') setOrderType('tab');
     }
 
     let stock = [];
@@ -804,7 +794,7 @@
     function setOrderType(t) {
       if (t !== 'quick' && t !== 'tab' && t !== 'coo') t = 'quick';
       // Waiters can only use Open Tab
-      if (isWaiter() && t === 'quick') t = 'tab';
+      if (isWaiter && t === 'quick') t = 'tab';
       orderType = t;
       // Update toggle buttons
       $$('[data-order-type]').forEach(function (btn) {
@@ -1737,7 +1727,7 @@
       let rows = orders
         .filter(function (o) { return !statusFilter || o.status === statusFilter; })
         .sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
-      if (isWaiter()) {
+      if (seesOwnOrdersOnly()) {
         const me = getSessionUser();
         const myName = String((me && (me.name || me.username)) || '').trim().toLowerCase();
         // Only narrow the list once we actually know who is logged in —
@@ -2723,7 +2713,6 @@
           const elStaff = $('[data-role="fStaff"]');
           if (elStaff) elStaff.value = resolved;
           // Identity drives the own-orders filter — refresh once it lands
-          applyWaiterMode();
           renderOrdersTable();
           clearInterval(staffPoll);
         } else if (Date.now() - pollStart > 2500) {
@@ -2736,9 +2725,12 @@
       renderCart();
       renderOrdersTable();
       fetchCooMenuItems();
-      applyWaiterMode();
+      if (isWaiter) {
+        const quickTab = root.querySelector('[data-mode="quick"]');
+        if (quickTab) quickTab.style.display = 'none';
+      }
       setMode('quick');
-      if (isWaiter()) setOrderType('tab');
+      if (isWaiter) setOrderType('tab');
       // Only Restaurant has COO kitchen transfers; polling this on a Pool Bar
       // session just fires a guaranteed 403 in the console every 30s.
       if (moduleName === 'restaurant') {
