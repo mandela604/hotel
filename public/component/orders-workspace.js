@@ -127,6 +127,13 @@
 
     .ow-builder{ display:grid; grid-template-columns:1fr 340px; gap:14px; align-items:start; }
     @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
+    @media (min-width:768px) and (max-width:1024px){
+      .ow-builder{ grid-template-columns:1fr 320px; gap:12px; }
+      .ow-mi-grid{ grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+      .ow-mi-tile{ padding:10px; }
+      .ow-mi-name{ font-size:12px; }
+      .ow-mi-price{ font-size:11.5px; }
+    }
 
     .ow-menu{ background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:14px; box-shadow:var(--ow-shadow); overflow:hidden; }
     .ow-mp-header{ padding:14px 16px; border-bottom:1px solid var(--ow-border); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -162,7 +169,7 @@
 
     .ow-cart{
       background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:14px; box-shadow:var(--ow-shadow);
-      display:flex; flex-direction:column; position:sticky; top:16px;
+      display:flex; flex-direction:column; position:sticky; top:16px; max-height:calc(100vh - 32px);
     }
     .ow-cart-head{ padding:14px 16px; border-bottom:1px solid var(--ow-border); display:flex; align-items:center; justify-content:space-between; }
     .ow-cart-title{ font-size:13px; font-weight:800; color:var(--ow-text); }
@@ -438,15 +445,17 @@
     // Own-orders scoping — separate from `isWaiter` on purpose: it must NOT
     // drive UI mode (Quick Sale stays available), it only mirrors the
     // backend's ownOrdersFilter() so the table agrees with the API.
+    // Waitresses see own orders only. Pool bar/restaurant staff see all.
     function seesOwnOrdersOnly() {
       var u = getSessionUser();
       var sysRole = u ? String(u.role || '').toLowerCase() : '';
       if (sysRole === 'admin' || sysRole === 'manager' || sysRole === 'supervisor') return false;
       if (!sysRole) {
         var role = resolveUserRole();
-        return ['waiter', 'pool_bar_staff', 'restaurant_staff', 'sales_rep'].indexOf(role) !== -1;
+        // Only waitresses see own orders; pool bar/restaurant staff see all
+        return role === 'waiter';
       }
-      return sysRole === 'staff';
+      return sysRole === 'staff' && isWaiter;
     }
 
     /* Identity of the signed-in staff member, used to scope the workspace
@@ -2119,6 +2128,9 @@
       var ft = $('[data-role="fTable"]'); if (ft) { ft.value = o.table || ''; ft.disabled = isCompleted; }
       var fn = $('[data-role="fNotes"]'); if (fn) { fn.value = o.notes || ''; fn.disabled = isCompleted; }
       var fd = $('[data-role="cartDisc"]'); if (fd) { fd.value = o.discount || 0; fd.disabled = isCompleted; }
+      // Keep original staff name when viewing/editing, don't overwrite with current user
+      var fStaff = $('[data-role="fStaff"]');
+      if (fStaff) { fStaff.value = o.staff || o.createdBy || ''; fStaff.disabled = true; }
 
       // Set payment method
       var methodSel = $('[data-role="fMethod"]');
