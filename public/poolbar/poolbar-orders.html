@@ -75,6 +75,7 @@ body{
      shell + orders-workspace components. -->
 
 <script src="../services/permissions.js"></script>
+<script src="../settings/services/platform-settings-service.js"></script>
 <script src="../booking/services/booking-service.js"></script>
 <script src="data/poolbar-seed.js"></script>
 <script src="services/poolbar-service.js"></script>
@@ -94,6 +95,15 @@ function showGuestWarn(message) {
 }
 
 async function init() {
+  // Load platform settings first for payment methods and shift hours
+  if (window.PlatformSettings) {
+    try {
+      await PlatformSettings.loadAll();
+    } catch (err) {
+      console.error('[poolbar-orders] Failed to load platform settings', err);
+    }
+  }
+
   // PoolBarService owns all persistence — this page never touches
   // localStorage or BookingData directly.
   try {

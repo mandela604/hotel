@@ -108,6 +108,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../services/permissions.js"></script>
+<script src="../settings/services/platform-settings-service.js"></script>
 <script src="services/restaurant-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script src="../component/sales-detail.js"></script>
@@ -345,6 +346,15 @@ function showToast(msg, type) {
 }
 
 async function init() {
+  // Load platform settings first for payment methods and shift hours
+  if (window.PlatformSettings) {
+    try {
+      await PlatformSettings.loadAll();
+    } catch (err) {
+      console.error('[restaurant-sales] Failed to load platform settings', err);
+    }
+  }
+
   session = await (shell.sessionReady || waitForSession(800));
   canVoid = canVoidFromSession(session);
 

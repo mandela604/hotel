@@ -327,24 +327,9 @@ function applyFilters(state) {
 
 function openSaleModal(saleOrId) {
   const id = typeof saleOrId === 'string' ? saleOrId : (saleOrId && saleOrId.id);
-  const s = (svc.state.sales || []).find(x => x.id === id || x._id === id);
-  if (!s || !salesDetail) return;
-  salesDetail.open({
-    id: s.id || s._id,
-    dept: 'Restaurant',
-    table: s.table,
-    staff: s.staff,
-    date: s.date,
-    method: s.method || s.payment,
-    items: (s.items || []).map(i => ({ name: i.name || i.meal || '—', qty: i.qty || 0, price: i.price || 0 })),
-    discount: (s.subtotal || 0) * (s.discount || 0) / 100,
-    total: s.total,
-    status: s.status,
-    voidReason: s.voidReason,
-    notes: s.notes,
-    roomNumber: s.roomNumber || null,
-    guestName: s.guestName || null,
-  });
+  if (!id) return;
+  // Redirect to orders page to view the sale/order
+  window.location.href = 'restaurant-orders.html?view=' + encodeURIComponent(id);
 }
 
 function printReport() {

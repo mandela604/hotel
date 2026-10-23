@@ -126,6 +126,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../services/permissions.js"></script>
+<script src="../settings/services/platform-settings-service.js"></script>
 <script src="data/poolbar-seed.js"></script>
 <script src="services/poolbar-service.js"></script>
 <script src="../component/poolbar-shell.js"></script>
@@ -303,6 +304,15 @@ function showFatal(message) {
 }
 
 async function init() {
+  // Load platform settings first for payment methods and shift hours
+  if (window.PlatformSettings) {
+    try {
+      await PlatformSettings.loadAll();
+    } catch (err) {
+      console.error('[poolbar-sales] Failed to load platform settings', err);
+    }
+  }
+
   try {
     if (!svc) throw new Error('PoolBarService not loaded.');
 

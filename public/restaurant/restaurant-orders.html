@@ -52,6 +52,7 @@
 </div>
 
 <script src="../services/permissions.js"></script>
+<script src="../settings/services/platform-settings-service.js"></script>
 <script src="services/restaurant-service.js"></script>
 <script src="../component/restaurant-shell.js"></script>
 <script src="../component/orders-workspace.js?v=2"></script>
@@ -109,6 +110,15 @@ function showGuestLoadError(msg) {
     return;
   }
 
+  // Load platform settings first for payment methods and shift hours
+  if (window.PlatformSettings) {
+    try {
+      await PlatformSettings.loadAll();
+    } catch (err) {
+      console.error('[restaurant-orders] Failed to load platform settings', err);
+    }
+  }
+
   await RestaurantService.loadAll();
 
   var guests = [];
@@ -127,7 +137,6 @@ function showGuestLoadError(msg) {
     shellHandle: shell,
     guests: guests,
     allowRoomCharge: true,
-    paymentMethods: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'],
     idPrefixes: { sale: 'RST-', order: 'RSO-' },
     keys: {
       stock: RestaurantService.KEYS.STOCK,

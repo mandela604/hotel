@@ -306,10 +306,15 @@
     return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(-2);
   }
   function nowStamp() {
-    return new Date().toLocaleString('en-GB', {
-      day: '2-digit', month: '2-digit', year: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-    }).replace(',', '');
+    const d = new Date();
+    return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(-2) + ' ' +
+           pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function formatDateTime(isoString) {
+    if (!isoString) return nowStamp();
+    const d = new Date(isoString);
+    return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(-2) + ' ' +
+           pad2(d.getHours()) + ':' + pad2(d.getMinutes());
   }
   function stockLevel(i) {
     return i.qty <= 0 ? 'out' : (i.qty <= (i.min || 0) ? 'low' : 'ok');
@@ -664,7 +669,6 @@
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-weight:700;font-size:11px;color:var(--ow-gold);" data-role="orderEditLabel"></span>
                     <div style="display:flex;gap:6px;">
-                      <button type="button" class="ow-btn ow-btn-sm" data-act="printViewRecord" data-role="viewPrintBtn" style="font-size:11px;"><i class="fa-solid fa-print"></i> Print Slip</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="saveEditOrder" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);font-size:11px;"><i class="fa-solid fa-check"></i> Save</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="cancelEditOrder" style="font-size:11px;"><i class="fa-solid fa-arrow-left"></i> Exit</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="deleteEditOrder" data-role="deleteBtn" style="display:none;color:var(--red);border-color:var(--red);font-size:11px;"><i class="fa-solid fa-trash"></i> Delete</button>
@@ -1117,7 +1121,7 @@
       var methodInfo = orderData.method ? '<div style="font-size:11px;color:#444;">Payment: ' + esc(orderData.method) + '</div>' : '';
       var notesInfo = orderData.notes ? '<div style="font-size:11px;color:#444;margin-top:6px;">Notes: ' + esc(orderData.notes) + '</div>' : '';
       var discAmt = orderData.discount ? (orderData.subtotal * orderData.discount / 100) : 0;
-      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:10mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:380px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px} .h p{margin:2px 0 0;font-size:10px;color:#555} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#666;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#666;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>' + esc(hbName) + ' — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(orderType) + ' Receipt</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(orderData.date || nowStamp()) + '</p><p style="font-size:10px;">' + esc(hbAddr) + '</p><p style="font-size:10px;">' + esc(hbContact) + '</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
+      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:10mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:380px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px} .h p{margin:2px 0 0;font-size:10px;color:#555} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#666;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#666;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>' + esc(hbName) + ' — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(orderType) + ' Receipt</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(formatDateTime(orderData.date)) + '</p><p style="font-size:10px;">' + esc(hbAddr) + '</p><p style="font-size:10px;">' + esc(hbContact) + '</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
     }
 
     /* A receipt must be built from what was ACTUALLY paid, not from the
@@ -1261,7 +1265,7 @@
         '<p style="font-size:14px;font-weight:800;">' + esc(o.id) + '</p>' +
         (tableInfo ? '<p style="font-size:14px;font-weight:700;">Table: ' + esc(tableInfo) + '</p>' : '') +
         '<p>Staff: ' + esc(o.staff || o.createdBy || '—') + '</p>' +
-        '<p>' + esc(o.date || nowStamp()) + '</p></div>' +
+        '<p>' + esc(formatDateTime(o.date)) + '</p></div>' +
         '<table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table>' +
         totalsHtml +
         notesInfo +
@@ -2157,8 +2161,6 @@
       if (deleteBtn) {
         deleteBtn.style.display = (isManager && !isCompleted) ? '' : 'none';
       }
-      var viewPrintBtn = $('[data-role="viewPrintBtn"]');
-      if (viewPrintBtn) viewPrintBtn.style.display = '';
       var printSlipBtn = $('[data-role="printSlipBtn"]');
       if (printSlipBtn) printSlipBtn.style.display = '';
 

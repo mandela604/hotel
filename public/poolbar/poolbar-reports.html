@@ -258,9 +258,9 @@ function applyFilters(state) {
 }
 function openSaleModal(saleOrId) {
   const id = typeof saleOrId === 'string' ? saleOrId : (saleOrId && saleOrId.id);
-  const s = svc.state.sales.find(x => x.id === id);
-  if (!s || !salesDetail) return;
-  salesDetail.open(svc.buildSaleDetailShape(s));
+  if (!id) return;
+  // Redirect to orders page to view the sale/order
+  window.location.href = 'poolbar-orders.html?view=' + encodeURIComponent(id);
 }
 function printReport() {
   window.print();
