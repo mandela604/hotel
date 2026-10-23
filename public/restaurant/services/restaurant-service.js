@@ -209,13 +209,32 @@ function getCategories() {
   }
 
   function getTodaysCompletedSales() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return (state.sales || []).filter(function (s) {
-    const d = parseStamp(s.date);
-    return d && d >= today && s.status === 'completed';
-  });
-}
+    // Read shift hours from PlatformSettings if available, fall back to calendar midnight
+    var shiftStart = -1, shiftEnd = -1;
+    try {
+      if (global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings) {
+        var ps = PlatformSettings.state.settings;
+        if (typeof ps.shiftStartHour === 'number') shiftStart = ps.shiftStartHour;
+        if (typeof ps.shiftEndHour === 'number') shiftEnd = ps.shiftEndHour;
+      }
+    } catch (e) {}
+    var windowStart, windowEnd;
+    if (shiftStart >= 0 && shiftEnd >= 0) {
+      var now = new Date();
+      var shiftStartToday = new Date(now); shiftStartToday.setHours(shiftStart, 0, 0, 0);
+      var shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
+      var windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 86400000;
+      windowStart = (now >= shiftStartToday) ? shiftStartToday : shiftStartYesterday;
+      windowEnd = new Date(windowStart.getTime() + windowMs);
+    } else {
+      windowStart = new Date(); windowStart.setHours(0, 0, 0, 0);
+      windowEnd = new Date(windowStart.getTime() + 86400000);
+    }
+    return (state.sales || []).filter(function (s) {
+      const d = parseStamp(s.date);
+      return d && d >= windowStart && d < windowEnd && s.status === 'completed';
+    });
+  }
 
 function dashboardKPIs() {
     const pendingN = (state.pending || []).length;

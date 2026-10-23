@@ -6,6 +6,15 @@ exports.get = asyncHandler(async (req, res) => {
   if (!config) {
     config = await Config.create({});
   }
+  // Back-fill fields that may be missing from documents created before the schema was updated
+  let dirty = false;
+  if (!config.paymentMethods || !config.paymentMethods.length) {
+    config.paymentMethods = ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'];
+    dirty = true;
+  }
+  if (typeof config.shiftStartHour !== 'number') { config.shiftStartHour = 9; dirty = true; }
+  if (typeof config.shiftEndHour !== 'number') { config.shiftEndHour = 8; dirty = true; }
+  if (dirty) await config.save();
   res.json({ success: true, data: config });
 });
 

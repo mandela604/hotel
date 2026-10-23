@@ -78,6 +78,7 @@
       hotelAddress: cfg.hotelAddress || '',
       hotelPhone: cfg.hotelPhone || '',
       hotelEmail: cfg.hotelEmail || '',
+      paymentMethods: Array.isArray(cfg.paymentMethods) && cfg.paymentMethods.length ? cfg.paymentMethods : ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'],
     };
   }
 

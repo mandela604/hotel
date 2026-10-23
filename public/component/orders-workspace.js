@@ -664,14 +664,15 @@
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-weight:700;font-size:11px;color:var(--ow-gold);" data-role="orderEditLabel"></span>
                     <div style="display:flex;gap:6px;">
-                      <button type="button" class="ow-btn ow-btn-sm" data-act="printViewRecord" data-role="viewPrintBtn" style="display:none;font-size:11px;"><i class="fa-solid fa-print"></i> Print</button>
+                      <button type="button" class="ow-btn ow-btn-sm" data-act="printViewRecord" data-role="viewPrintBtn" style="font-size:11px;"><i class="fa-solid fa-print"></i> Print Slip</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="saveEditOrder" style="background:var(--ow-gold);color:#fff;border-color:var(--ow-gold);font-size:11px;"><i class="fa-solid fa-check"></i> Save</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="cancelEditOrder" style="font-size:11px;"><i class="fa-solid fa-arrow-left"></i> Exit</button>
                       <button type="button" class="ow-btn ow-btn-sm" data-act="deleteEditOrder" data-role="deleteBtn" style="display:none;color:var(--red);border-color:var(--red);font-size:11px;"><i class="fa-solid fa-trash"></i> Delete</button>
                     </div>
                   </div>
                 </div>
-                <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:10px;" data-act="submit" disabled data-role="submitBtn">
+                <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:10px;" data-act="printSlip" data-role="printSlipBtn"><i class="fa-solid fa-print"></i> Print Order Slip (Bill)</button>
+                <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:6px;" data-act="submit" disabled data-role="submitBtn">
                   <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>
                 </button>
               </div>
@@ -1209,13 +1210,65 @@
     function printOrderById(id) {
       var o = orders.find(function(x){ return x.id === id; }) || sales.find(function(x){ return x.id === id; });
       if (!o) { showToast('Order not found.', 'error'); return; }
-      var data = {
-        id: o.id, items: o.items || [], subtotal: o.subtotal || 0, discount: o.discount || 0, total: o.total || 0,
-        staff: o.staff || '', table: o.table || '—', notes: o.notes || '',
-        roomNumber: o.roomNumber || null, guestName: o.guestName || null, guestPhone: o.guestPhone || null,
-        date: o.date || nowStamp(), method: o.method || o.payMethod || '—'
-      };
-      openPrintWindow(generateReceipt(data, o.status === 'completed' || !!o.method));
+
+      // Always print order slip with prices (serves as both bill and kitchen slip)
+      // This works for ALL order statuses: open, served, paid, cancelled
+      var hb = receiptBrand || ((global.HotelBrand && HotelBrand.fallback) || null) || {};
+      var hbName = hb.hotelNameUpper || hb.hotelName || 'BOSTON LEISURE HOTEL AND APARTMENTS';
+      var brand = moduleName === 'restaurant' ? 'RESTAURANT' : 'POOL BAR';
+      var st = (o.status || 'open').toLowerCase();
+
+      // Build items table with prices
+      var itemsHtml = (o.items || []).map(function(i) {
+        var lineTotal = (i.price || 0) * (i.qty || 0);
+        return '<tr><td style="padding:8px 4px;border-bottom:1px solid #ddd;font-size:13px;font-weight:600;">' + esc(i.name) + '</td>' +
+               '<td style="text-align:center;padding:8px 4px;border-bottom:1px solid #ddd;font-size:13px;font-weight:700;">' + esc(i.qty) + '</td>' +
+               '<td style="text-align:right;padding:8px 4px;border-bottom:1px solid #ddd;font-size:13px;">' + fmtN(i.price || 0) + '</td>' +
+               '<td style="text-align:right;padding:8px 4px;border-bottom:1px solid #ddd;font-size:13px;font-weight:700;">' + fmtN(lineTotal) + '</td></tr>';
+      }).join('');
+
+      var tableInfo = o.table && o.table !== '—' ? o.table : '';
+      var notesInfo = o.notes ? '<div style="margin-top:10px;padding:8px;background:#fff8e1;border:1px solid #f0c000;border-radius:6px;font-size:12px;font-weight:700;">NOTE: ' + esc(o.notes) + '</div>' : '';
+
+      // Calculate totals
+      var subtotal = o.subtotal || 0;
+      var discount = o.discount || 0;
+      var discAmt = discount ? (subtotal * discount / 100) : 0;
+      var total = o.total || (subtotal - discAmt);
+
+      // Build totals section
+      var totalsHtml = '<div style="margin-top:12px;border-top:2px solid #000;padding-top:8px;">' +
+        '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span>Subtotal</span><span>' + fmtN(subtotal) + '</span></div>' +
+        (discount ? '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span>Discount (' + discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px;font-weight:800;border-top:1px solid #ccc;margin-top:6px;"><span>TOTAL</span><span>' + fmtN(total) + '</span></div>' +
+        '</div>';
+
+      // Status indicator
+      var statusInfo = st === 'paid' ? '<div style="text-align:center;margin-top:8px;font-size:12px;font-weight:700;color:#12b76a;">PAID</div>' :
+                         st === 'cancelled' ? '<div style="text-align:center;margin-top:8px;font-size:12px;font-weight:700;color:#f04438;">CANCELLED</div>' :
+                         st === 'served' ? '<div style="text-align:center;margin-top:8px;font-size:12px;font-weight:700;color:#2f6fed;">SERVED</div>' :
+                         '<div style="text-align:center;margin-top:8px;font-size:12px;font-weight:700;color:#f79009;">UNPAID</div>';
+
+      var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Order Slip ' + esc(o.id) + '</title>' +
+        '<style>@media print{@page{margin:6mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:13px;color:#000;background:#fff}' +
+        '.r{max-width:380px;margin:0 auto;padding:14px} .h{text-align:center;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:12px}' +
+        '.h h1{margin:0;font-size:16px;letter-spacing:1px} .h h2{margin:4px 0 0;font-size:20px;font-weight:900;letter-spacing:2px}' +
+        '.h p{margin:4px 0 0;font-size:12px} table{width:100%;border-collapse:collapse;margin-top:8px}' +
+        'th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#555;border-bottom:2px solid #000;padding:5px 4px}' +
+        '.foot{text-align:center;margin-top:14px;font-size:10px;color:#555;border-top:1px dashed #ccc;padding-top:8px}</style></head><body>' +
+        '<div class="r"><div class="h"><h1>' + esc(hbName) + ' — ' + brand + '</h1>' +
+        '<h2>ORDER SLIP</h2>' +
+        '<p style="font-size:14px;font-weight:800;">' + esc(o.id) + '</p>' +
+        (tableInfo ? '<p style="font-size:14px;font-weight:700;">Table: ' + esc(tableInfo) + '</p>' : '') +
+        '<p>Staff: ' + esc(o.staff || o.createdBy || '—') + '</p>' +
+        '<p>' + esc(o.date || nowStamp()) + '</p></div>' +
+        '<table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table>' +
+        totalsHtml +
+        notesInfo +
+        statusInfo +
+        '<div class="foot">Printed: ' + esc(nowStamp()) + '</div></div>' +
+        '<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
+      openPrintWindow(html);
     }
 
     function renderCooCart(){
@@ -1873,6 +1926,7 @@
             ? '<span style="font-size:10px;color:var(--amber);font-weight:600;margin-right:4px;"><i class="fa-solid fa-fire"></i> Kitchen</span>'
             : '') +
           '<button type="button" class="ow-act-btn" data-view-order="' + esc(o.id) + '" style="font-weight:700;">View</button>' +
+          '<button type="button" class="ow-act-btn" data-print="' + esc(o.id) + '" title="Print Order Slip" style="padding:4px 8px;"><i class="fa-solid fa-print"></i> Print</button>' +
           '</div></td></tr>';
       }).join('');
       var pag = $('[data-role="ordPagination"]');
@@ -2104,7 +2158,9 @@
         deleteBtn.style.display = (isManager && !isCompleted) ? '' : 'none';
       }
       var viewPrintBtn = $('[data-role="viewPrintBtn"]');
-      if (viewPrintBtn) viewPrintBtn.style.display = isCompleted ? '' : 'none';
+      if (viewPrintBtn) viewPrintBtn.style.display = '';
+      var printSlipBtn = $('[data-role="printSlipBtn"]');
+      if (printSlipBtn) printSlipBtn.style.display = '';
 
       // Update submit button
       var submitBtn = $('[data-role="submitBtn"]');
@@ -2136,6 +2192,8 @@
       // Reset submit button
       var submitBtn = $('[data-role="submitBtn"]');
       if (submitBtn) { submitBtn.disabled = true; submitBtn.style.display = ''; }
+      var printSlipBtn = $('[data-role="printSlipBtn"]');
+      if (printSlipBtn) printSlipBtn.style.display = 'none';
       // Reset title
       setOrderType(orderType);
       // Clear cart
@@ -2631,6 +2689,7 @@
         else if (a === 'cancelEditOrder') { exitEditMode(); setMode('active'); }
         else if (a === 'deleteEditOrder') { deleteOrderInView(); }
         else if (a === 'printViewRecord') { if (_editingOrderId) printOrderById(_editingOrderId); }
+        else if (a === 'printSlip') { if (_editingOrderId) printOrderById(_editingOrderId); }
         return;
       }
       const served = e.target.closest('[data-served]');
@@ -2744,13 +2803,34 @@
         try {
           if (typeof service.loadAll === 'function') await service.loadAll();
           syncFromService();
-          const fromSvc = resolvePaymentMethodsFromService();
-          if (fromSvc) applyPaymentMethods(fromSvc);
+          // Payment methods: prefer /api/settings (user-configured) over seed file
+          try {
+            var settingsRes = await fetch('/api/settings', { credentials: 'include' });
+            var settingsJson = settingsRes.ok ? await settingsRes.json() : null;
+            if (settingsJson && settingsJson.data && Array.isArray(settingsJson.data.paymentMethods) && settingsJson.data.paymentMethods.length) {
+              applyPaymentMethods(settingsJson.data.paymentMethods);
+              // Also push into PlatformSettings state so shift functions can read shiftStartHour/shiftEndHour
+              if (global.PlatformSettings && PlatformSettings.state) {
+                PlatformSettings.state.settings = Object.assign(PlatformSettings.state.settings || {}, settingsJson.data);
+                PlatformSettings.state.ready = true;
+              }
+            } else {
+              const fromSvc = resolvePaymentMethodsFromService();
+              if (fromSvc) applyPaymentMethods(fromSvc);
+            }
+          } catch (e) {
+            const fromSvc = resolvePaymentMethodsFromService();
+            if (fromSvc) applyPaymentMethods(fromSvc);
+          }
           if (typeof service.onChange === 'function') {
             unsubService = service.onChange(function () {
               syncFromService();
-              const pm = resolvePaymentMethodsFromService();
-              if (pm) applyPaymentMethods(pm);
+              // Keep payment methods from settings; only fall back to service if settings not loaded
+              if (!(global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings &&
+                    Array.isArray(PlatformSettings.state.settings.paymentMethods) && PlatformSettings.state.settings.paymentMethods.length)) {
+                const pm = resolvePaymentMethodsFromService();
+                if (pm) applyPaymentMethods(pm);
+              }
               renderKPIs();
               renderPicker();
               renderCart();

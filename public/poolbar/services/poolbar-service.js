@@ -781,16 +781,37 @@
 
   function getShiftSales(session) {
     const todayStr = todayDDMMYY();
+    // Read shift hours from PlatformSettings if available, fall back to midnight
+    var shiftStart = -1, shiftEnd = -1;
+    try {
+      if (global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings) {
+        var ps = PlatformSettings.state.settings;
+        if (typeof ps.shiftStartHour === 'number') shiftStart = ps.shiftStartHour;
+        if (typeof ps.shiftEndHour === 'number') shiftEnd = ps.shiftEndHour;
+      }
+    } catch (e) {}
     const isToday = (d) => {
       if (!d) return false;
       const dt = new Date(d);
-      if (!isNaN(dt.getTime())) {
-        const today = new Date();
-        return dt.getDate() === today.getDate() &&
-               dt.getMonth() === today.getMonth() &&
-               dt.getFullYear() === today.getFullYear();
+      if (isNaN(dt.getTime())) return String(d).startsWith(todayStr);
+      if (shiftStart >= 0 && shiftEnd >= 0) {
+        // shift-aware: sale belongs to current shift window
+        const now = new Date();
+        // determine current shift start wall-clock
+        var shiftStartToday = new Date(now);
+        shiftStartToday.setHours(shiftStart, 0, 0, 0);
+        var shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
+        var windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 86400000;
+        // current window: started today if now >= shiftStartToday, else yesterday
+        var windowStart = (now >= shiftStartToday) ? shiftStartToday : shiftStartYesterday;
+        var windowEnd = new Date(windowStart.getTime() + windowMs);
+        return dt >= windowStart && dt < windowEnd;
       }
-      return String(d).startsWith(todayStr);
+      // fallback: calendar day
+      const today = new Date();
+      return dt.getDate() === today.getDate() &&
+             dt.getMonth() === today.getMonth() &&
+             dt.getFullYear() === today.getFullYear();
     };
     const me = ((session && session.name) || '').toLowerCase();
     const allStaff = isManagerLike(session);
