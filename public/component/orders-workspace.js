@@ -2765,7 +2765,7 @@
         else if (a === 'cancelEditOrder') { exitEditMode(); setMode('active'); }
         else if (a === 'deleteEditOrder') { deleteOrderInView(); }
         else if (a === 'printViewRecord') { if (_editingOrderId) printOrderById(_editingOrderId); }
-        else if (a === 'printSlip') { if (_editingOrderId) printOrderById(_editingOrderId); }
+        else if (a === 'printSlip') { if (_editingOrderId) printOrderById(_editingOrderId); else printCurrentCart(); }
         return;
       }
       const served = e.target.closest('[data-served]');

@@ -133,6 +133,7 @@ async function init() {
   try {
     OrdersWorkspace.attach('#ordersSlot', {
       module: 'poolbar',
+      showCookOnOrder: false,
       service: PoolBarService,
       shell: PoolBarShell,
       shellOptions: {
