@@ -139,9 +139,16 @@
   function two(n) { return String(n).padStart(2, '0'); }
   function fmtDate(v) {
     var d = v ? new Date(v) : new Date();
-    if (isNaN(d.getTime())) d = new Date();
-    return two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(-2) +
-      ' ' + two(d.getHours()) + ':' + two(d.getMinutes());
+    if (isNaN(d.getTime())) {
+      d = new Date();
+    }
+    var day = d.getDate();
+    var month = d.getMonth() + 1;
+    var year = d.getFullYear();
+    var hours = d.getHours();
+    var mins = d.getMinutes();
+    return two(day) + '/' + two(month) + '/' + String(year).slice(-2) +
+      ' ' + two(hours) + ':' + two(mins);
   }
   function nowStamp() { return fmtDate(Date.now()); }
 

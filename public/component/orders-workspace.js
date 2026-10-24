@@ -280,10 +280,9 @@
     .ow-modal-title{ font-size:17px; font-weight:800; color:var(--ow-text); }
     .ow-modal-close{ background:none; border:none; color:var(--ow-text3); font-size:16px; cursor:pointer; padding:4px; line-height:1; }
     .ow-modal-close:hover{ color:var(--ow-text); }
-    .ow-val-note{ font-size:12px; color:var(--ow-text2); margin-bottom:14px; line-height:1.5; font-weight:600; }
-    .ow-val-note strong{ color:var(--ow-text); }
-    .ow-val-total{ font-size:22px; font-weight:800; color:var(--ow-gold); margin-bottom:14px; }
+    .ow-modal-content{ max-height:60vh; overflow-y:auto; margin-bottom:16px; }
     .ow-modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--ow-border); }
+    .ow-receipt-preview{ background:#fff; padding:16px; border:1px solid #ddd; border-radius:8px; max-height:50vh; overflow-y:auto; font-size:11px; }
 
     .ow-toast{ position:fixed; bottom:24px; right:24px; background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:12px; padding:13px 20px; font-size:13.5px; color:var(--ow-text); box-shadow:0 8px 30px rgba(0,0,0,0.25); z-index:999999; display:flex; align-items:center; gap:10px; animation:owToastIn .3s cubic-bezier(0.18, 0.89, 0.32, 1.28); max-width:calc(100vw - 40px); font-weight:600; }
     .ow-toast.success{ background:#12b76a !important; color:#ffffff !important; border:1px solid #0e9355 !important; font-weight:700 !important; box-shadow:0 10px 30px rgba(18,183,106,0.4) !important; }
@@ -320,6 +319,7 @@
   function formatDateTime(isoString) {
     if (!isoString) return nowStamp();
     const d = new Date(isoString);
+    if (isNaN(d.getTime())) return nowStamp(); // Fallback if date is invalid
     return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(-2) + ' ' +
            pad2(d.getHours()) + ':' + pad2(d.getMinutes());
   }
@@ -1174,11 +1174,73 @@
     }
 
     function openPrintWindow(html) {
-      var w = window.open('', '_blank', 'width=420,height=640');
-      if (!w) { showToast('Pop-up blocked — allow pop-ups to print.', 'error'); return; }
-      w.document.write(html);
-      w.document.close();
-      w.focus();
+      // Use a modal preview instead of window.open for better tablet support
+      showPrintPreview(html);
+    }
+
+    function showPrintPreview(html) {
+      var modal = document.createElement('div');
+      modal.className = 'ow-modal-overlay show';
+      modal.innerHTML = `
+        <div class="ow-modal">
+          <div class="ow-modal-header">
+            <div class="ow-modal-title">Print Receipt</div>
+            <button type="button" class="ow-modal-close"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="ow-modal-content">
+            <div class="ow-receipt-preview">${html}</div>
+          </div>
+          <div class="ow-modal-footer">
+            <button type="button" class="ow-btn ow-btn-outline" id="cancelPrintBtn">Cancel</button>
+            <button type="button" class="ow-btn ow-btn-primary" id="confirmPrintBtn"><i class="fa-solid fa-print"></i> Print</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      modal.querySelector('.ow-modal-close').addEventListener('click', function() {
+        modal.remove();
+      });
+      
+      modal.querySelector('#cancelPrintBtn').addEventListener('click', function() {
+        modal.remove();
+      });
+      
+      modal.querySelector('#confirmPrintBtn').addEventListener('click', function() {
+        // Create an iframe to print from
+        var iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.opacity = '0';
+        iframe.style.pointerEvents = 'none';
+        document.body.appendChild(iframe);
+        
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(html);
+        iframe.contentDocument.close();
+        
+        setTimeout(function() {
+          try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          } catch(e) {
+            console.error('Print failed:', e);
+            showToast('Print failed. Please try again.', 'error');
+          }
+          setTimeout(function() {
+            document.body.removeChild(iframe);
+          }, 1000);
+        }, 300);
+        
+        modal.remove();
+      });
+      
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.remove();
+      });
     }
 
     function ensureStationWatch() {
