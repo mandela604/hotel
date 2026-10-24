@@ -236,6 +236,71 @@ function getCategories() {
     });
   }
 
+  function getShiftSales(session) {
+    session = session || null;
+    var shiftStart = -1, shiftEnd = -1;
+    try {
+      if (global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings) {
+        var ps = PlatformSettings.state.settings;
+        if (typeof ps.shiftStartHour === 'number') shiftStart = ps.shiftStartHour;
+        if (typeof ps.shiftEndHour === 'number') shiftEnd = ps.shiftEndHour;
+      }
+    } catch (e) {}
+    var windowStart, windowEnd;
+    if (shiftStart >= 0 && shiftEnd >= 0) {
+      var now = new Date();
+      var shiftStartToday = new Date(now); shiftStartToday.setHours(shiftStart, 0, 0, 0);
+      var shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
+      var windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 86400000;
+      windowStart = (now >= shiftStartToday) ? shiftStartToday : shiftStartYesterday;
+      windowEnd = new Date(windowStart.getTime() + windowMs);
+    } else {
+      windowStart = new Date(); windowStart.setHours(0, 0, 0, 0);
+      windowEnd = new Date(windowStart.getTime() + 86400000);
+    }
+    var isToday = function (d) {
+      if (!d) return false;
+      var dt = parseStamp(d);
+      return dt && dt >= windowStart && dt < windowEnd;
+    };
+    var me = ((session && session.name) || '').toLowerCase();
+    var allStaff = isManagerLike(session);
+    return (state.sales || []).filter(function (s) {
+      if (!isToday(s.date)) return false;
+      if (!allStaff) {
+        if (!me) return true;
+        if ((s.staff || '').toLowerCase() !== me) return false;
+      }
+      return true;
+    });
+  }
+
+  function filterShiftSales(session, filterState) {
+    filterState = filterState || {};
+    var q = (filterState.search || '').trim().toLowerCase();
+    return getShiftSales(session).filter(function (s) {
+      if (filterState.status && s.status !== filterState.status) return false;
+      if (filterState.payment && s.method !== filterState.payment) return false;
+      if (q) {
+        var items = s.items || [];
+        var mq = (s.id || '').toLowerCase().includes(q)
+          || (s.staff || '').toLowerCase().includes(q)
+          || (s.table || '').toLowerCase().includes(q)
+          || items.some(function (i) { return (i.name || '').toLowerCase().includes(q); });
+        if (!mq) return false;
+      }
+      return true;
+    });
+  }
+
+  function getShiftTableTitle(session) {
+    return isManagerLike(session) ? 'Today — All staff' : 'Today — ' + ((session && session.name) || 'My sales');
+  }
+
+  function getShiftNoteText(session) {
+    return isManagerLike(session) ? 'Today only · all restaurant staff' : ('Today only · ' + ((session && session.name) || 'your') + ' sales');
+  }
+
 function dashboardKPIs() {
     const pendingN = (state.pending || []).length;
     const lowStock = (state.stock || []).filter(function (i) { return stockLevel(i) !== 'ok'; }).length;
@@ -617,6 +682,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     acceptTransfer, rejectTransfer, transferKPIs,
     getRequisitions, submitRequisition, receiveRequisition, confirmReceipt,
     dashboardKPIs, salesKPIs, getFilteredSales, getRevenueBreakdown, getTodaysCompletedSales,
+    getShiftSales, filterShiftSales, getShiftTableTitle, getShiftNoteText,
     can, canVoidSale, canDiscount,
     getInHouseGuests,
     getSession,

@@ -226,31 +226,6 @@ function itemsQty(s) {
   return (s.items || []).reduce(function (sum, i) { return sum + (i.qty || 0); }, 0);
 }
 
-function getSales() {
-  return (svc && svc.state && svc.state.sales) || [];
-}
-
-function isTodayDate(d){
-  if(!d) return false;
-  var dt=new Date(d);
-  if(!isNaN(dt.getTime())){
-    var t=new Date(); return dt.getDate()===t.getDate()&&dt.getMonth()===t.getMonth()&&dt.getFullYear()===t.getFullYear();
-  }
-  return String(d).startsWith(todayDDMMYY());
-}
-function scopeShiftSales() {
-  const me = staffName().toLowerCase();
-  const allStaff = isManagerLike();
-  return getSales().filter(function (s) {
-    if (!isTodayDate(s.date)) return false;
-    if (!allStaff) {
-      if (!me) return true;
-      if ((s.staff || '').toLowerCase() !== me) return false;
-    }
-    return true;
-  });
-}
-
 function renderKPIs(rows) {
   const completed = rows.filter(function (s) { return s.status === 'completed'; });
   const voided = rows.filter(function (s) { return s.status === 'voided'; });
@@ -286,27 +261,10 @@ function renderKPIs(rows) {
 function applyFilters(state) {
   if (!salesTable) return;
   filterState = state || filterState || {};
-  const q = (filterState.search || '').trim().toLowerCase();
-
-  let rows = scopeShiftSales().filter(function (s) {
-    if (filterState.status && s.status !== filterState.status) return false;
-    if (filterState.payment && s.method !== filterState.payment) return false;
-    if (q) {
-      const items = s.items || [];
-      const mq = (s.id || '').toLowerCase().indexOf(q) !== -1
-        || (s.staff || '').toLowerCase().indexOf(q) !== -1
-        || (s.table || '').toLowerCase().indexOf(q) !== -1
-        || items.some(function (i) {
-          return ((i.name || i.meal || '').toLowerCase().indexOf(q) !== -1);
-        });
-      if (!mq) return false;
-    }
-    return true;
-  });
-
+  const rows = svc.filterShiftSales(session, filterState);
   const tableRows = rows.map(normalizeSaleForTable);
   renderKPIs(tableRows);
-  salesTable.setTitle(isManagerLike() ? 'Today — All staff' : 'Today — ' + (staffName() || 'My sales'));
+  salesTable.setTitle(svc.getShiftTableTitle(session));
   salesTable.setRows(tableRows);
 }
 
@@ -361,9 +319,7 @@ async function init() {
 
   const note = document.getElementById('shiftNote');
   if (note) {
-    note.querySelector('span').textContent = isManagerLike()
-      ? 'Today only · all restaurant staff'
-      : ('Today only · ' + (staffName() || 'your') + ' sales');
+    note.querySelector('span').textContent = svc.getShiftNoteText(session);
   }
 
   if (!svc) {

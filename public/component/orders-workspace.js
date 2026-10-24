@@ -1189,13 +1189,9 @@
       document.head.appendChild(s);
     }
 
-    /* Post-payment receipt: hand off to the counter print station when one
-       is alive on this PC (shared PC must not print twice); else print here. */
+    /* Post-payment receipt: always show print dialog. If station is alive,
+       the user can still print locally or the station will handle it. */
     function printReceiptVia(html) {
-      if (window.StationWatch && window.StationWatch.isAlive()) {
-        showToast('\u2713 Sent to counter printer', 'success');
-        return;
-      }
       openPrintWindow(html);
     }
 
