@@ -309,6 +309,14 @@ async function init() {
   if (window.PlatformSettings) {
     try {
       await PlatformSettings.loadAll();
+      // Sync settings to RestaurantService state so shift functions can read them
+      if (PlatformSettings.state && PlatformSettings.state.settings) {
+        try {
+          if (svc.state) {
+            svc.state.settings = Object.assign(svc.state.settings || {}, PlatformSettings.state.settings);
+          }
+        } catch (e) {}
+      }
     } catch (err) {
       console.error('[restaurant-sales] Failed to load platform settings', err);
     }
