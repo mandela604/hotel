@@ -281,6 +281,14 @@ function getCategories() {
     return getShiftSales(session).filter(function (s) {
       if (filterState.status && s.status !== filterState.status) return false;
       if (filterState.payment && s.method !== filterState.payment) return false;
+      if (filterState.dateRange && filterState.dateRange.start && filterState.dateRange.end) {
+        var d = parseStamp(s.date);
+        if (!d) return false;
+        var start = new Date(filterState.dateRange.start);
+        var end = new Date(filterState.dateRange.end);
+        end.setHours(23, 59, 59, 999);
+        if (d < start || d > end) return false;
+      }
       if (q) {
         var items = s.items || [];
         var mq = (s.id || '').toLowerCase().includes(q)

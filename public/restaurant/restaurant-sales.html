@@ -357,6 +357,8 @@ async function init() {
     onVoid: openVoidDirect,
   });
 
+  await svc.loadAll();
+
   filterBar = SalesFilterBar.create({
     target: '#filterSlot',
     show: {
@@ -399,7 +401,6 @@ async function init() {
     },
   });
 
-  await svc.loadAll();
   applyFilters(filterBar.getState());
 
   if (svc.onChange) {
