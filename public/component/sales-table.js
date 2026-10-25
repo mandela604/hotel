@@ -75,15 +75,11 @@
 .st-table tbody td{ padding:11px 14px; color:var(--st-text); vertical-align:middle; }
 
 @media (min-width:768px) and (max-width:1024px){
-  .st-tbl-wrap{ overflow-x:visible; }
-  .st-table{ min-width:auto; }
-  .st-table thead{ display:none; }
-  .st-table tbody tr{ display:flex; flex-direction:column; border:1px solid var(--st-border); border-radius:10px; padding:12px; margin-bottom:10px; background:var(--st-bg); }
-  .st-table tbody tr:last-child{ margin-bottom:0; }
-  .st-table tbody td{ padding:6px 0; border:none; display:flex; justify-content:space-between; width:100%; }
-  .st-table tbody td::before{ content:attr(data-label); font-weight:700; color:var(--st-text3); margin-right:12px; }
-  .st-table tbody td.st-nowrap{ white-space:normal; }
-  .st-items{ max-width:none; white-space:normal; }
+  .st-tbl-wrap{ overflow-x:auto; }
+  .st-table{ min-width:600px; font-size:11.5px; }
+  .st-table thead th{ padding:8px 10px; font-size:8px; }
+  .st-table tbody td{ padding:8px 10px; }
+  .st-items{ max-width:180px; }
 }
 .st-table tbody td.st-nowrap{ white-space:nowrap; }
 .st-table tbody td.st-center{ text-align:center; }
