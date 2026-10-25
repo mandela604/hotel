@@ -3,16 +3,14 @@
  *
  * Load order: this file, then services/poolbar-service.js.
  *
- * Every value services/poolbar-service.js and component/orders-workspace.js
- * treat as "no hardcoded default — must be configured" lives here. If a key
- * below is missing, the page fails loudly rather than quietly falling back
- * to a guessed value.
+ * Payment methods are now loaded from Platform Settings (/api/settings).
+ * Seed data removed for production.
  */
 (function (global) {
   'use strict';
 
-  // Payment methods available at the Pool Bar — single source of truth.
-  const PAYMENT_METHODS = ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'];
+  // Payment methods now loaded from Platform Settings (/api/settings)
+  const PAYMENT_METHODS = [];
 
   // Which PAYMENT_METHODS value means "charge to the guest's room".
   const ROOM_CHARGE_METHOD = 'Room Charge';

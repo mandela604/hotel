@@ -301,6 +301,18 @@ function getCategories() {
     return isManagerLike(session) ? 'Today only · all restaurant staff' : ('Today only · ' + ((session && session.name) || 'your') + ' sales');
   }
 
+  function getPaymentMethods() {
+    try {
+      if (global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings) {
+        var ps = PlatformSettings.state.settings;
+        if (Array.isArray(ps.paymentMethods) && ps.paymentMethods.length) {
+          return ps.paymentMethods;
+        }
+      }
+    } catch (e) {}
+    return ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'];
+  }
+
 function dashboardKPIs() {
     const pendingN = (state.pending || []).length;
     const lowStock = (state.stock || []).filter(function (i) { return stockLevel(i) !== 'ok'; }).length;
@@ -684,6 +696,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
     dashboardKPIs, salesKPIs, getFilteredSales, getRevenueBreakdown, getTodaysCompletedSales,
     getShiftSales, filterShiftSales, getShiftTableTitle, getShiftNoteText,
     can, canVoidSale, canDiscount,
+    getPaymentMethods,
     getInHouseGuests,
     getSession,
   };

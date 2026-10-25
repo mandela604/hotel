@@ -129,7 +129,7 @@
     @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
     @media (min-width:768px) and (max-width:1024px){
       .ow-builder{ grid-template-columns:1fr 320px; gap:12px; }
-      .ow-mi-grid{ grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+      .ow-mi-grid{ grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; max-height:280px; overflow-y:auto; }
       .ow-mi-tile{ padding:10px; }
       .ow-mi-name{ font-size:12px; }
       .ow-mi-price{ font-size:11.5px; }

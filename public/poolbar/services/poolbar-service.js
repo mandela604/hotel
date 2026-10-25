@@ -200,6 +200,14 @@
   function emitChange(reason) { listeners.forEach(fn => { try { fn(state, reason); } catch (e) { console.warn('[PoolBarService] listener error', e); } }); }
 
   function getPaymentMethods() {
+    try {
+      if (global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings) {
+        var ps = PlatformSettings.state.settings;
+        if (Array.isArray(ps.paymentMethods) && ps.paymentMethods.length) {
+          return ps.paymentMethods;
+        }
+      }
+    } catch (e) {}
     const s = global.PoolBarSeed || {};
     return Array.isArray(s.PAYMENT_METHODS) ? s.PAYMENT_METHODS : [];
   }

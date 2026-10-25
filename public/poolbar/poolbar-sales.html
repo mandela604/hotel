@@ -265,8 +265,8 @@ function applyFilters(state) {
 }
 
 function openDetail(s) {
-  if (!s || !salesDetail) return;
-  salesDetail.open(svc.buildSaleDetailShape(s));
+  if (!s) return;
+  window.location.href = 'poolbar-orders.html?view=' + encodeURIComponent(s.id);
 }
 function openVoidDirect(s) {
   if (!canVoid) { showToast("You don't have permission to void sales.", 'error'); return; }

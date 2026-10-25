@@ -375,7 +375,7 @@ async function init() {
       { value: 'pending', label: 'Pending', tone: 'pending', color: '#f79009' },
       { value: 'voided', label: 'Voided', tone: 'voided', color: '#f04438' },
     ],
-    paymentOptions: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'],
+    paymentOptions: (typeof svc.getPaymentMethods === 'function' ? svc.getPaymentMethods() : []),
     searchPlaceholder: 'Sale #, meal, table…',
     defaultPeriod: 'today',
     actions: [
