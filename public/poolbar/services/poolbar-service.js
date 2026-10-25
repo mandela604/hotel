@@ -858,11 +858,11 @@
     return getShiftSales(session).filter(s => {
       if (filterState.status && s.status !== filterState.status) return false;
       if (filterState.payment && s.method !== filterState.payment) return false;
-      if (filterState.dateRange && filterState.dateRange.start && filterState.dateRange.end) {
+      if (filterState.rangeStart && filterState.rangeEnd) {
         const d = parseStamp(s.date);
         if (!d) return false;
-        const start = new Date(filterState.dateRange.start);
-        const end = new Date(filterState.dateRange.end);
+        const start = new Date(filterState.rangeStart);
+        const end = new Date(filterState.rangeEnd);
         end.setHours(23, 59, 59, 999);
         if (d < start || d > end) return false;
       }
