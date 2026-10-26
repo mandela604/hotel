@@ -237,11 +237,27 @@ body {
 </div>
 
 <script src="../services/permissions.js"></script>
+<script src="../settings/services/platform-settings-service.js"></script>
 
 <script src="services/accounting-service.js"></script>
 <script src="../component/accounting-shell.js"></script>
 <script>
 'use strict';
+
+// Load platform settings and log shift hours
+if (window.PlatformSettings) {
+  PlatformSettings.loadAll().then(function() {
+    if (PlatformSettings.state && PlatformSettings.state.settings) {
+      console.log('[accounting-dashboard] PlatformSettings loaded:', PlatformSettings.state.settings);
+      console.log('[accounting-dashboard] Shift hours:', {
+        shiftStartHour: PlatformSettings.state.settings.shiftStartHour,
+        shiftEndHour: PlatformSettings.state.settings.shiftEndHour
+      });
+    }
+  }).catch(function(err) {
+    console.error('[accounting-dashboard] Failed to load platform settings', err);
+  });
+}
 
 const shell = AccountingShell.attach({
   sidebarTarget: '#sidebarSlot',

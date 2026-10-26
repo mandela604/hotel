@@ -129,7 +129,7 @@
     @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
     @media (min-width:768px) and (max-width:1024px){
       .ow-builder{ grid-template-columns:1fr 320px; gap:12px; }
-      .ow-mi-grid{ grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; max-height:280px; overflow-y:auto; }
+      .ow-mi-grid{ grid-template-columns:repeat(2,1fr); gap:8px; max-height:280px; overflow-y:auto; }
       .ow-mi-tile{ padding:10px; }
       .ow-mi-name{ font-size:12px; }
       .ow-mi-price{ font-size:11.5px; }
@@ -823,6 +823,11 @@
 
     function showToast(msg, type) {
       type = type || 'success';
+      // Delegate to UIUtils if loaded on the page, otherwise own impl
+      if (global.UIUtils && typeof UIUtils.toast === 'function') {
+        UIUtils.toast(msg, type);
+        return;
+      }
       const t = document.createElement('div');
       t.className = 'ow-toast ' + type;
       const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
@@ -1279,7 +1284,7 @@
         roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null,
         date: nowStamp(), method: method || '—'
       };
-      openPrintWindow(generateReceipt(orderData, mode === 'quick'));
+      printReceiptVia(generateReceipt(orderData, mode === 'quick'));
     }
 
     function printOrderById(id) {
@@ -1630,8 +1635,13 @@
 
     function setBtnLoading(btn, loading, originalHtml) {
       if (!btn) return;
-      if (loading) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...'; }
-      else { btn.disabled = false; if (originalHtml) btn.innerHTML = originalHtml; }
+      if (loading) {
+        if (global.UIUtils && typeof UIUtils.btnStart === 'function') { UIUtils.btnStart(btn); }
+        else { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...'; }
+      } else {
+        if (global.UIUtils && typeof UIUtils.btnStop === 'function') { UIUtils.btnStop(btn); }
+        else { btn.disabled = false; if (originalHtml) btn.innerHTML = originalHtml; }
+      }
     }
 
     async function saveEditOrderOnly() {

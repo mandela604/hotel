@@ -170,9 +170,27 @@ body {
 </div>
 
 <script src="../services/permissions.js"></script>
+<script src="../settings/services/platform-settings-service.js"></script>
 <script src="services/booking-service.js"></script>
 <script src="../component/booking-shell.js"></script>
 <script>
+/* ═══════════════════════════════════════════════
+   Load PlatformSettings and log shift hours
+═══════════════════════════════════════════════ */
+if (window.PlatformSettings) {
+  PlatformSettings.loadAll().then(function() {
+    if (PlatformSettings.state && PlatformSettings.state.settings) {
+      console.log('[booking-dashboard] PlatformSettings loaded:', PlatformSettings.state.settings);
+      console.log('[booking-dashboard] Shift hours:', {
+        shiftStartHour: PlatformSettings.state.settings.shiftStartHour,
+        shiftEndHour: PlatformSettings.state.settings.shiftEndHour
+      });
+    }
+  }).catch(function(err) {
+    console.error('[booking-dashboard] Failed to load platform settings', err);
+  });
+}
+
 /* ═══════════════════════════════════════════════
    Shell
 ═══════════════════════════════════════════════ */

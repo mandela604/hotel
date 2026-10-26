@@ -315,6 +315,11 @@ async function init() {
           if (svc.state) {
             svc.state.settings = Object.assign(svc.state.settings || {}, PlatformSettings.state.settings);
           }
+          console.log('[restaurant-sales] PlatformSettings loaded:', PlatformSettings.state.settings);
+          console.log('[restaurant-sales] Shift hours:', {
+            shiftStartHour: PlatformSettings.state.settings.shiftStartHour,
+            shiftEndHour: PlatformSettings.state.settings.shiftEndHour
+          });
         } catch (e) {}
       }
     } catch (err) {
