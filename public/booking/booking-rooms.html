@@ -437,7 +437,13 @@ function hasPermission(session, permission, module) {
   }
   return !!(session && String(session.role).toLowerCase() === 'admin');
 }
-function btnLoad(id, on){ if (global.UIUtils) { var b=document.getElementById(id); if(on) UIUtils.btnStart(b); else UIUtils.btnStop(b); return; } const b=document.getElementById(id); if(!b) return; if(on){ b.dataset.orig=b.innerHTML; b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...'; b.disabled=true; } else { if(b.dataset.orig) b.innerHTML=b.dataset.orig; b.disabled=false; } }
+function btnLoad(id, on) {
+  const b = document.getElementById(id);
+  if (!b) return;
+  if (window.UIUtils) { if (on) UIUtils.btnStart(b); else UIUtils.btnStop(b); return; }
+  if (on) { b.dataset.orig = b.innerHTML; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...'; b.disabled = true; }
+  else { if (b.dataset.orig) b.innerHTML = b.dataset.orig; b.disabled = false; }
+}
 
 /* ═══════════════════════════════════════════════
    Global state
@@ -1034,7 +1040,7 @@ function handleModalBackdrop(e, id) {
 
 function showToast(msg, type) {
   type = type || 'success';
-  if (global.UIUtils && typeof UIUtils.toast === 'function') { UIUtils.toast(msg, type); return; }
+  if (window.UIUtils && typeof UIUtils.toast === 'function') { UIUtils.toast(msg, type); return; }
   const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
   const t = document.createElement('div');
   t.className = 'toast ' + type;
@@ -1081,7 +1087,7 @@ function openRefundModal(roomOrStay) {
   refundRoom = rbk ? (rbk.stayId || rbk._id || rbk.id || roomOrStay) : roomOrStay;
   var bk = rbk;
   if (!bk) return;
-  document.getElementById('rfRoomNum').textContent = room;
+  document.getElementById('rfRoomNum').textContent = rbk.room || roomOrStay;
   document.getElementById('rfGuestName').textContent = bk.guest || '—';
   var totalPaid = (bk.payments || []).reduce(function(s,p){ return s + (Number(p.amount)||0); }, 0) || Number(bk.paid) || 0;
   document.getElementById('rfTotalPaid').textContent = '₦' + totalPaid.toLocaleString();
