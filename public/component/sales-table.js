@@ -131,44 +131,14 @@
 .st-page-btn.st-on{ background:var(--st-gold-dim); border-color:var(--st-gold-border); color:var(--st-gold); font-weight:700; }
 .st-page-btn:disabled{ opacity:.35; cursor:default; pointer-events:none; }
 
-/* Tablet (641–1024px): keep the real table with its header row instead of
-   the phone card layout, and tighten cell spacing so it fits the width. */
-@media (min-width:641px) and (max-width:1024px){
+/* Rows at every width (matching the Active Orders table): narrow screens
+   scroll horizontally instead of converting rows into cards. */
+@media (max-width:640px){
   .st-tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .st-table{ min-width:680px; font-size:11.5px; }
   .st-table thead th{ padding:8px 9px; font-size:8.5px; letter-spacing:1px; }
   .st-table tbody td{ padding:8px 9px; font-size:11.5px; }
   .st-items{ max-width:160px; }
-}
-@media (max-width:640px){
-  .st-tbl-wrap{ overflow-x:visible; }
-  .st-table{ min-width:0; width:100%; }
-  .st-table thead{ display:none; }
-  .st-table, .st-table tbody, .st-table tr, .st-table td{ display:block; width:100%; }
-  .st-table tbody tr{
-    background:var(--st-bg2); border:1px solid var(--st-border); border-radius:12px;
-    margin:0 0 10px; padding:6px 14px;
-  }
-  .st-table tbody tr:last-child{ margin-bottom:0; }
-  .st-table tbody td{
-    border:none; padding:8px 0; white-space:normal !important;
-    display:flex; align-items:flex-start; justify-content:space-between; gap:10px; text-align:right;
-  }
-  .st-table tbody td:not(:last-child){ border-bottom:1px dashed var(--st-border); }
-  .st-table tbody td::before{
-    content:attr(data-label); font-size:9px; text-transform:uppercase; letter-spacing:1px;
-    color:var(--st-text3); font-weight:700; flex-shrink:0; text-align:left; padding-top:1px;
-  }
-  .st-table tbody td.st-items{ max-width:none; text-align:right; white-space:normal; }
-  .st-table tbody td .st-acts{ justify-content:flex-end; flex-wrap:wrap; }
-  .st-table .st-empty{ display:block; }
-  .st-table .st-empty td{ display:block; text-align:center; }
-  .st-table .st-empty td::before{ content:none; }
-}
-@media (max-width:420px){
-  .st-table tbody tr{ padding:4px 10px; }
-  .st-table tbody td{ font-size:12px; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; }
-  .st-table tbody td::before{ padding-top:0; }
 }
 `;
     document.head.appendChild(s);

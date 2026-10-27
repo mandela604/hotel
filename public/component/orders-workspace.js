@@ -131,13 +131,12 @@
 
     .ow-builder{ display:grid; grid-template-columns:1fr 340px; gap:14px; align-items:start; }
     @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
-    @media (min-width:768px) and (max-width:1024px){
+    @media (max-width:1024px){
       .ow-builder{ grid-template-columns:1fr 320px; gap:12px; }
       .ow-mi-grid{ gap:8px; }
       .ow-mi-tile{ padding:10px; }
       .ow-mi-name{ font-size:12px; }
       .ow-mi-price{ font-size:11.5px; }
-      .ow-pager{ display:flex; }
     }
 
     .ow-menu{ background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:14px; box-shadow:var(--ow-shadow); overflow:hidden; }
@@ -157,7 +156,7 @@
     .ow-search input{ background:none; border:none; outline:none; color:var(--ow-text); font-family:inherit; font-size:13px; width:100%; }
     .ow-search input::placeholder{ color:var(--ow-text3); }
     .ow-mi-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:14px; }
-    .ow-pager{ display:none; align-items:center; justify-content:center; gap:12px; padding:2px 14px 12px; }
+    .ow-pager{ display:flex; align-items:center; justify-content:center; gap:12px; padding:2px 14px 12px; }
     .ow-pager .ow-pg-btn{
       background:var(--ow-surface2); border:1px solid var(--ow-border); border-radius:8px; padding:6px 14px;
       font-family:inherit; font-size:12px; font-weight:700; color:var(--ow-text2); cursor:pointer;
@@ -1039,8 +1038,20 @@
       return ['All'].concat(Array.from(new Set(stock.map(function (i) { return i.category || 'Other'; }))));
     }
 
-    // Items are paged 3x3 (ITEMS_PER_PAGE) so the menu card keeps a fixed
-    // height; the pager itself only shows at tablet widths (see CSS).
+    // Items are paged 3x3 (ITEMS_PER_PAGE) on tablet-and-narrower viewports so
+    // the order form never sits far below a long item list; desktop shows all.
+    function compactViewport() {
+      try { return window.matchMedia('(max-width:1024px)').matches; } catch (e) { return false; }
+    }
+
+    function pageSlice(list, pageVar, setPage) {
+      if (!compactViewport()) return { items: list, page: 1, totalPages: 1 };
+      var totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
+      var page = Math.max(1, Math.min(pageVar(), totalPages));
+      setPage(page);
+      return { items: list.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE), page: page, totalPages: totalPages };
+    }
+
     function renderPager(target, page, totalPages) {
       const el = $(target);
       if (!el) return;
@@ -1071,21 +1082,15 @@
         return (activeCategory === 'All' || (i.category || '') === activeCategory) &&
           (!q || (i.name || '').toLowerCase().includes(q));
       });
-      const totalMatches = matched.length;
-      let items = matched;
       const grid = orderType === 'coo' ? $('[data-role="cooItemGrid"]') : $('[data-role="itemGrid"]');
-      if (!items.length) {
+      if (!matched.length) {
         grid.innerHTML = '<div class="ow-empty-note">No items match.</div>';
         renderPager(orderType === 'coo' ? '[data-role="cooItemPager"]' : '[data-role="itemPager"]', 0, 0);
         return;
       }
-      if (orderType === 'coo') {
-        cooItemPage = Math.max(1, Math.min(cooItemPage, Math.ceil(items.length / ITEMS_PER_PAGE)));
-        items = items.slice((cooItemPage - 1) * ITEMS_PER_PAGE, cooItemPage * ITEMS_PER_PAGE);
-      } else {
-        itemPage = Math.max(1, Math.min(itemPage, Math.ceil(items.length / ITEMS_PER_PAGE)));
-        items = items.slice((itemPage - 1) * ITEMS_PER_PAGE, itemPage * ITEMS_PER_PAGE);
-      }
+      var pg = pageSlice(matched, function () { return orderType === 'coo' ? cooItemPage : itemPage; },
+        function (p) { if (orderType === 'coo') cooItemPage = p; else itemPage = p; });
+      const items = pg.items;
       grid.innerHTML = items.map(function (i) {
         const lvl = stockLevel(i);
         const inCart = cart.find(function (c) { return c.key === i.name; });
@@ -1105,8 +1110,7 @@
             : '<div class="ow-mi-stock ' + lvl + '">' + (i.qty || 0) + ' ' + esc(i.unit || '') + ' on hand</div>') +
           '</button>';
       }).join('');
-      const totalPages = Math.max(1, Math.ceil(totalMatches / ITEMS_PER_PAGE));
-      renderPager(orderType === 'coo' ? '[data-role="cooItemPager"]' : '[data-role="itemPager"]', orderType === 'coo' ? cooItemPage : itemPage, totalPages);
+      renderPager(orderType === 'coo' ? '[data-role="cooItemPager"]' : '[data-role="itemPager"]', pg.page, pg.totalPages);
     }
 
     function renderCart() {
@@ -1337,12 +1341,23 @@
 
     function printViaStation(o, rtype) {
       ensureStationWatch();
+      var sent = false;
+      /* BroadcastChannel reaches a station open in this same browser
+         (fast path); the socket relay reaches the printer PC when the
+         request comes from another device. Emit both — the station
+         collapses the duplicate. */
       if (window.StationWatch && window.StationWatch.isAlive()) {
-        window.StationWatch.print(stationPrintPayload(o, rtype));
-        showToast('\u2713 Sent to counter printer', 'success');
-        return true;
+        try { window.StationWatch.print(stationPrintPayload(o, rtype)); sent = true; } catch (e) {}
       }
-      return false;
+      try {
+        if (global.LiveService && typeof global.LiveService.emit === 'function') {
+          global.LiveService.emit('manualPrint', stationPrintPayload(o, rtype));
+          sent = true;
+        }
+      } catch (e) {}
+      if (!sent) return false;
+      showToast('\u2713 Sent to counter printer', 'success');
+      return true;
     }
 
     function printRecordReceipt(id, rtype) {
@@ -1516,9 +1531,8 @@
       var grid=$('[data-role="cooItemGrid"]');
       if(!grid) return;
       if(!items.length){ grid.innerHTML='<div class="ow-empty-note">No items match.</div>'; renderPager('[data-role="cooItemPager"]',0,0); return; }
-      var cooTotalPages=Math.max(1,Math.ceil(items.length/ITEMS_PER_PAGE));
-      cooItemPage=Math.max(1,Math.min(cooItemPage,cooTotalPages));
-      items=items.slice((cooItemPage-1)*ITEMS_PER_PAGE,cooItemPage*ITEMS_PER_PAGE);
+      var pg=pageSlice(items,function(){return cooItemPage;},function(p){cooItemPage=p;});
+      items=pg.items;
       grid.innerHTML=items.map(function(i){
         var inCart=cooCart.find(function(c){return c.name===i.name;});
         var isKitchen=i.source==='kitchen';
@@ -1531,7 +1545,7 @@
           '<div class="ow-mi-price">'+fmtN(i.price)+'</div>'+
           '<div class="ow-mi-stock">'+(isKitchen?'Made to order':(i.qty>0?(i.qty||0)+' '+esc(i.unit)+' on hand':'Out of stock'))+'</div></button>';
       }).join('');
-      renderPager('[data-role="cooItemPager"]',cooItemPage,cooTotalPages);
+      renderPager('[data-role="cooItemPager"]',pg.page,pg.totalPages);
     }
 
     function addCooItem(name, source){
@@ -3107,6 +3121,13 @@
       renderCart();
       renderOrdersTable();
       fetchCooMenuItems();
+      /* Crossing the 1024px breakpoint changes how the item grids render
+         (desktop: full list, compact: paged) — re-render on resize/rotate. */
+      var resizeTimer = null;
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () { renderPicker(); renderCooPicker(); }, 150);
+      });
       if (isWaiter) {
         const quickTab = root.querySelector('[data-mode="quick"]');
         if (quickTab) quickTab.style.display = 'none';

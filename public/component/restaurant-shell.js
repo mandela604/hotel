@@ -20,7 +20,6 @@
     { key: 'sales',      label: 'Sales',                href: 'restaurant-sales.html',           icon: 'fa-solid fa-file-invoice-dollar' },
     { key: 'reports',    label: 'Reports',              href: 'restaurant-reports.html',         icon: 'fa-solid fa-chart-column', managerOnly: true },
     { key: 'printstation', label: 'Print Station',      href: '../print-station.html',           icon: 'fa-solid fa-print' },
-    { key: 'printbill',  label: 'Print Customer Bill',  href: '../print-station.html',       icon: 'fa-solid fa-receipt' },
   ];
 
   const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif";

@@ -63,6 +63,19 @@ io.on('connection', (socket) => {
     const r = String(room||'').toLowerCase().trim();
     if (ALLOWED_DEPTS.has(r)) socket.join(r);
   });
+  /* Manual print relay: any dept page asks the server to broadcast a
+     manual print (captain/bill/receipt); the print station page listens
+     for it. BroadcastChannel only reaches same-browser tabs, so this is
+     how prints cross devices (tablet → printer PC). */
+  socket.on('manualPrint', (msg) => {
+    if (!msg || typeof msg !== 'object') return;
+    const clean = {
+      receiptType: String(msg.receiptType || 'receipt').slice(0, 20),
+      dept: String(msg.dept || '').slice(0, 40),
+      data: msg.data || {},
+    };
+    io.to('global').emit('manualPrint', clean);
+  });
   socket.on('disconnect', () => {});
 });
 io.engine.on('connection_error', (err) => {

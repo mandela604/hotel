@@ -478,6 +478,20 @@
   }
 
   window.__onManualPrint = manualPrintReceipt;
+
+  /* ── manual print relay (socket, cross-device) ────────────── */
+  /* Same message shape as the BroadcastChannel path: the backend
+     re-broadcasts 'manualPrint' to 'global', so prints requested on a
+     tablet/other PC reach this station. The 1s guard collapses the
+     duplicate that arrives via BroadcastChannel when both paths fire. */
+  var lastManual = '';
+  socket.on('manualPrint', function (msg) {
+    var d = msg && msg.data || {};
+    var key = (msg.receiptType || '') + ':' + d.id + ':' + (d.total || '') + ':' + Math.floor(Date.now() / 1000);
+    if (key === lastManual) return;
+    lastManual = key;
+    manualPrintReceipt(msg);
+  });
 })();
 </script>
 </body>

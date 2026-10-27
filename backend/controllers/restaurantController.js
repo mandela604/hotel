@@ -238,7 +238,7 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
    Sales (Quick Sale / Open Tab checkout, POS)
 ═══════════════════════════════════════════════ */
 exports.listSales = asyncHandler(async (req, res) => {
-  const search = req.query.search;
+  const { search, status, method, table, start, end } = req.query;
   const filter = { department: DEPT };
   const scope = ownSalesFilter(req);
   if (scope) Object.assign(filter, scope);
@@ -265,6 +265,7 @@ exports.listSales = asyncHandler(async (req, res) => {
 });
 
 // Creates a completed sale, deducts RestaurantStock for each item sold
+
 // (best-effort — sale still completes for items with no matching stock
 // record, e.g. plain menu-only items with nothing tracked in inventory),
 // and posts a room charge onto the guest's folio when paid via Room Charge.
