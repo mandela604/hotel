@@ -467,7 +467,7 @@ const shell = AccountingShell.attach({
 const CONFIG = { API_BASE: '', API_KEY: '' };
 shell.setApiMode('Live');
 
-const INCOME_DEPARTMENTS = ['Pool Bar', 'Restaurant', 'Pool Bar, Restaurant', 'Front Desk', 'Gym', 'Other'];
+let INCOME_DEPARTMENTS = [];
 const EXPENSE_CATEGORIES = ['Salaries & Wages', 'Utilities', 'Maintenance & Repairs', 'Marketing & Advertising', 'Supplies & Inventory', 'Insurance', 'Transport & Logistics', 'Miscellaneous'];
 
 const KEY_INCOME   = 'accounting-income';
@@ -1203,7 +1203,7 @@ async function reload() {
   }
 }
 async function init() {
-  // Load platform settings for shift hours and payment methods
+  // Load platform settings for shift hours, payment methods, and departments
   if (window.PlatformSettings) {
     try {
       await PlatformSettings.loadAll();
@@ -1212,9 +1212,20 @@ async function init() {
         shiftStartHour: PlatformSettings.state.settings.shiftStartHour,
         shiftEndHour: PlatformSettings.state.settings.shiftEndHour
       });
+      
+      // Load departments from PlatformSettings
+      const deptList = PlatformSettings.state.settings.departments || [];
+      const disabledDepts = PlatformSettings.state.settings.disabledDepartments || [];
+      INCOME_DEPARTMENTS = deptList.filter(d => !disabledDepts.includes(d));
+      console.log('[accounting-pnl] Income departments:', INCOME_DEPARTMENTS);
     } catch (err) {
       console.error('[accounting-pnl] Failed to load platform settings', err);
+      // Fallback if settings fail
+      INCOME_DEPARTMENTS = ['Pool Bar', 'Restaurant', 'Pool Bar, Restaurant', 'Front Desk', 'Gym', 'Other'];
     }
+  } else {
+    // Fallback if PlatformSettings not available
+    INCOME_DEPARTMENTS = ['Pool Bar', 'Restaurant', 'Pool Bar, Restaurant', 'Front Desk', 'Gym', 'Other'];
   }
   
   initSelects();

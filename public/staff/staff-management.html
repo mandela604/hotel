@@ -342,7 +342,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeStaffModal()">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveStaff()"><i class="fa-solid fa-check"></i> <span id="fsSaveLabel">Save Staff</span></button>
+      <button class="btn btn-primary btn-sm" id="fsSaveBtn" onclick="saveStaff()"><i class="fa-solid fa-check"></i> <span id="fsSaveLabel">Save Staff</span></button>
     </div>
   </div>
 </div>
@@ -384,7 +384,10 @@
   </div>
 </div>
 
+<script src="../services/ui-utils.js"></script>
 <script src="../component/staff-shell.js?v=2"></script><script src="services/staff-service.js?v=2"></script><script>
+/* Safety alias — if ui-utils.js failed to load, no-op so nothing crashes */
+if (typeof UIUtils === 'undefined') { window.UIUtils = { toast: function(m,t){ console.warn('[UIUtils fallback]', t, m); }, btnStart: function(){}, btnStop: function(){} }; }
 /* ── Pull shared constants from StaffService ── */
 const { PERMISSIONS, ALL_MODULES, ALL_ACTIONS, ROLE_KEYS, PRIVILEGE_KEYS } = StaffService;
 const labelize = StaffService.labelize;
@@ -783,7 +786,7 @@ async function saveStaffForm(){
   const existing = id ? STAFF.find(s=>s.id===id) : null;
   const supervisorScopes = role === 'supervisor' ? getSupervisorScopesFromForm() : undefined;
   if (role === 'supervisor' && (!supervisorScopes || supervisorScopes.length===0)) {
-    showToast('Pick at least one module for supervisor.', 'error');
+    UIUtils.toast('Pick at least one module for supervisor.', 'error');
     return;
   }
   // discount toggle → per-module overrides (booking/restaurant/poolbar), merged so other overrides survive
@@ -806,25 +809,30 @@ async function saveStaffForm(){
     password: changingPw ? pw : undefined,
     overrides: baseOverrides,
   };
+  const saveBtn = document.getElementById('fsSaveBtn');
+  if (saveBtn && global.UIUtils) UIUtils.btnStart(saveBtn);
   try {
     if (id) {
       await StaffService.editStaff(id, data);
     } else {
       if (STAFF.some(s=>s.email.toLowerCase()===email.toLowerCase())) {
-        showToast('A staff member with that email already exists.', 'error');
+        UIUtils.toast('A staff member with that email already exists.', 'error');
+        if (saveBtn && global.UIUtils) UIUtils.btnStop(saveBtn);
         return;
       }
       var created = await StaffService.addStaff(data);
       if (created && created._login && !created._login.created && created._login.note) {
-        showToast(created._login.note, 'error');
+        UIUtils.toast(created._login.note, 'error');
       }
     }
     STAFF = StaffService.state.staff;
     closeStaffModal();
-    showToast(id ? `${name} updated.` : `${name} added to staff directory.`, 'success');
+    UIUtils.toast(id ? `${name} updated.` : `${name} added to staff directory.`, 'success');
     renderStaff();
   } catch (e) {
-    showToast(e.message || 'Save failed.', 'error');
+    UIUtils.toast(e.message || 'Save failed.', 'error');
+  } finally {
+    if (saveBtn && global.UIUtils) UIUtils.btnStop(saveBtn);
   }
 }
 window.saveStaff = saveStaffForm;
@@ -847,11 +855,11 @@ async function confirmDeleteYes(){
     const del = await StaffService.deleteStaff(deleteTargetId);
     STAFF = StaffService.state.staff;
     closeConfirm();
-    showToast(`${s ? s.name : 'Staff member'} removed${del && del.loginRemoved ? ' — login account deleted too' : ''}.`, 'success');
+    UIUtils.toast(`${s ? s.name : 'Staff member'} removed${del && del.loginRemoved ? ' — login account deleted too' : ''}.`, 'success');
     renderStaff();
   } catch (e) {
     closeConfirm();
-    showToast(e.message || 'Delete failed.', 'error');
+    UIUtils.toast(e.message || 'Delete failed.', 'error');
   }
 }
 window.confirmDeleteYes = confirmDeleteYes;
@@ -916,14 +924,18 @@ window.resetPermOverrides = resetPermOverrides;
 async function savePermOverrides(){
   const s = STAFF.find(x=>x.id===permTargetId);
   if (!s) return;
+  const saveBtn = document.querySelector('#permModal .btn-primary');
+  if (saveBtn && global.UIUtils) UIUtils.btnStart(saveBtn);
   try {
     await StaffService.saveOverrides(permTargetId, workingOverrides);
     STAFF = StaffService.state.staff;
-    showToast(`Permissions updated for ${s.name}.`, 'success');
+    UIUtils.toast(`Permissions updated for ${s.name}.`, 'success');
     closePermModal();
     renderStaff();
   } catch (e) {
-    showToast(e.message || 'Save failed.', 'error');
+    UIUtils.toast(e.message || 'Save failed.', 'error');
+  } finally {
+    if (saveBtn && global.UIUtils) UIUtils.btnStop(saveBtn);
   }
 }
 window.savePermOverrides = savePermOverrides;
@@ -963,14 +975,6 @@ function renderPrivilegeMatrix(){
       </tr>`).join('')}</tbody></table>`;
 }
 
-function showToast(msg, type='success'){
-  const icon = type==='success' ? 'fa-circle-check' : 'fa-circle-xmark';
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${msg}`;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3400);
-}
 
 /* ── Init (async — loads from API in prod mode) ── */
 (async function init(){

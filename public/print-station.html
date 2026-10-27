@@ -110,7 +110,7 @@
   </section>
 </main>
 
-<footer>Socket receives <code>payOrder</code> + <code>createSale</code> from Pool Bar &amp; Restaurant · leave this page open on the printer PC</footer>
+<footer>Sockets: <code>openTab</code> → Captain Order · <code>payOrder</code>/<code>createSale</code> → Receipt · leave this page open on the printer PC</footer>
 
 <iframe id="printFrame" title="print"></iframe>
 
@@ -139,16 +139,9 @@
   function two(n) { return String(n).padStart(2, '0'); }
   function fmtDate(v) {
     var d = v ? new Date(v) : new Date();
-    if (isNaN(d.getTime())) {
-      d = new Date();
-    }
-    var day = d.getDate();
-    var month = d.getMonth() + 1;
-    var year = d.getFullYear();
-    var hours = d.getHours();
-    var mins = d.getMinutes();
-    return two(day) + '/' + two(month) + '/' + String(year).slice(-2) +
-      ' ' + two(hours) + ':' + two(mins);
+    if (isNaN(d.getTime())) d = new Date();
+    return two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(-2) +
+      ' ' + two(d.getHours()) + ':' + two(d.getMinutes());
   }
   function nowStamp() { return fmtDate(Date.now()); }
 
@@ -187,14 +180,22 @@
     } catch (e) {}
   }
 
-  /* ── receipt builder (same layout as POS receipts) ─────────── */
-  function buildReceipt(d, dept, action) {
-    var brand = dept;                                   /* 'Pool Bar' | 'Restaurant' */
-    var header = 'Boston Leisure ' + brand;
-    var kind = action === 'payOrder' ? 'Tab' : 'Sale';
-    var hbName = hb.hotelNameUpper || hb.hotelName || 'BOSTON LEISURE HOTEL AND APARTMENTS';
-    var hbAddr = hb.hotelAddress || 'Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State';
-    var hbContact = hb.contactLine || '09039391464 / hr.bostonleisurehotel@gmail.com';
+  /* ── receipt builders ───────────────────────────────────────
+     Three types: 'captain' (order slip, no payment), 'bill'
+     (customer bill) and 'receipt' (paid receipt). Titles shown
+     at the top of each slip are set in TITLES.                   */
+  var TITLES = {
+    captain: 'CAPTAIN ORDER / ORDER SLIP',
+    bill: 'CUSTOMER BILL',
+    receipt: 'RECEIPT',
+  };
+  var sessionUserName = '';
+
+  function receiptTypeOf(action) {
+    return action === 'openTab' ? 'captain' : 'receipt';
+  }
+
+  function baseParts(d) {
     var items = d.items || [];
     var itemsHtml = items.map(function (i) {
       return '<tr><td style="padding:6px 0;border-bottom:1px solid #eee;font-weight:600;">' + esc(i.name) + '</td>' +
@@ -206,31 +207,65 @@
     var discPct = Number(d.discount) || 0;
     var discAmt = sub * discPct / 100;
     var total = Number(d.total) || 0;
-    var tableInfo = d.table && d.table !== '\u2014' ? '<div style="font-size:11px;color:#111;font-weight:600;">Table: ' + esc(d.table) + '</div>' : '';
-    var roomInfo = d.roomNumber ? '<div style="font-size:11px;color:#111;margin-top:4px;font-weight:600;">Room ' + esc(d.roomNumber) +
-      (d.guestName ? ' \u2014 ' + esc(d.guestName) : '') + (d.guestPhone ? ' \u00B7 ' + esc(d.guestPhone) : '') + '</div>' : '';
-    var method = d.method || d.payMethod;
-    var methodInfo = method ? '<div style="font-size:11px;color:#111;font-weight:600;">Payment: ' + esc(method) + '</div>' : '';
-    var staffInfo = d.staff ? '<div style="margin-top:8px;font-size:11px;font-weight:600;">Staff: ' + esc(d.staff) + '</div>' : '';
-    var notesInfo = d.notes ? '<div style="font-size:11px;color:#111;margin-top:6px;font-weight:600;">Notes: ' + esc(d.notes) + '</div>' : '';
+    return { itemsHtml: itemsHtml, sub: sub, discPct: discPct, discAmt: discAmt, total: total, staff: sessionUserName || d.staff || '' };
+  }
 
-    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(d.id) + '</title>' +
-      '<style>@media print{@page{margin:8mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:420px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px;font-weight:800} .h p{margin:2px 0 0;font-size:11px;color:#111;font-weight:600} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#111;font-weight:700;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;font-weight:600} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#111;font-weight:600;border-top:1px dashed #ccc;padding-top:8px}</style></head>' +
-      '<body><div class="r"><div class="h"><h2>' + esc(hbName) + ' \u2014 ' + esc(brand.toUpperCase()) + '</h2>' +
-      '<p>' + esc(header) + ' \u00B7 ' + kind + ' Receipt</p>' +
-      '<p style="font-weight:700;margin-top:6px;">' + esc(d.id) + '</p>' +
-      '<p>' + esc(fmtDate(d.date)) + '</p>' +
-      '<p style="font-size:11px;">' + esc(hbAddr) + '</p>' +
-      '<p style="font-size:11px;">' + esc(hbContact) + '</p>' +
-      tableInfo + roomInfo + methodInfo + '</div>' +
+  function wrapHtml(opts) {
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(opts.title) + ' - ' + esc(opts.id) + '</title>' +
+      '<style>@media print{@page{margin:8mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:420px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px;font-weight:800} .h .type{font-size:13px;font-weight:800;letter-spacing:2px;margin:4px 0 0;color:#111} .h p{margin:2px 0 0;font-size:11px;color:#111;font-weight:600} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#111;font-weight:700;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;font-weight:600} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#111;font-weight:600;border-top:1px dashed #ccc;padding-top:8px}</style></head>' +
+      '<body><div class="r"><div class="h"><h2>' + esc(opts.hbName) + ' \u2014 ' + esc(opts.dept.toUpperCase()) + '</h2>' +
+      '<div class="type">' + esc(opts.title) + '</div>' +
+      '<p>' + esc(opts.headLabel) + ': ' + esc(opts.id) + '</p>' +
+      '<p>' + esc(opts.stamp) + '</p>' +
+      (opts.table ? '<p>Table: ' + esc(opts.table) + '</p>' : '') +
+      (opts.room ? '<p>Room: ' + esc(opts.room) + (opts.guest ? ' \u2014 ' + esc(opts.guest) : '') + '</p>' : '') +
+      (opts.staff ? '<p>Staff: ' + esc(opts.staff) + '</p>' : '') +
+      (opts.payment ? '<p>Payment: ' + esc(opts.payment) + '</p>' : '') +
+      (opts.to ? '<p>To: ' + esc(opts.to) + '</p>' : '') +
+      '</div>' +
       '<table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' +
-      itemsHtml + '</tbody></table>' +
-      '<div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(sub) + '</span></div>' +
-      (discPct ? '<div class="row"><span>Discount (' + discPct + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') +
-      '<div class="row total"><span>TOTAL</span><span>' + fmtN(total) + '</span></div></div>' +
-      staffInfo + notesInfo +
-      '<div style="margin-top:12px;padding-top:8px;border-top:1px dashed #ccc;font-size:10px;color:#111;font-weight:600;"><div>Bank Transfer / Opay:</div><div style="margin-top:2px;">Opay: 6594621426</div><div style="margin-top:2px;">Zenith Bank: 1990229585</div></div>' +
-      '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div></body></html>';
+      opts.itemsHtml + '</tbody></table>' +
+      '<div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(opts.sub) + '</span></div>' +
+      (opts.discPct ? '<div class="row"><span>Discount (' + opts.discPct + '%)</span><span>-' + fmtN(opts.discAmt) + '</span></div>' : '') +
+      '<div class="row total"><span>TOTAL</span><span>' + fmtN(opts.total) + '</span></div></div>' +
+      (opts.notes ? '<div style="margin-top:8px;font-size:11px;font-weight:600;">Notes: ' + esc(opts.notes) + '</div>' : '') +
+      (opts.footerExtra || '') +
+      '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(opts.stamp) + '</div></div></body></html>';
+  }
+
+  function buildReceipt(d, dept, action, rtype) {
+    rtype = rtype || receiptTypeOf(action);
+    var p = baseParts(d);
+    var deptUpper = (dept === 'Pool Bar' || dept === 'poolbar') ? 'POOL BAR' : 'RESTAURANT';
+    var hbName = hb.hotelNameUpper || hb.hotelName || 'BOSTON LEISURE HOTEL AND APARTMENTS';
+    var common = {
+      hbName: hbName, dept: deptUpper, id: d.id,
+      stamp: nowStamp(), table: d.table && d.table !== '\u2014' ? d.table : '',
+      room: d.roomNumber || '', guest: d.guestName || '', staff: p.staff,
+      itemsHtml: p.itemsHtml, sub: p.sub, discPct: p.discPct, discAmt: p.discAmt, total: p.total,
+      notes: d.notes || '',
+    };
+    if (rtype === 'captain') {
+      return wrapHtml(Object.assign({}, common, {
+        title: TITLES.captain,
+        headLabel: 'Order',
+        to: (dept === 'Pool Bar' || dept === 'poolbar') ? 'Barman' : 'Chef',
+        footerExtra: '<div style="margin-top:8px;font-size:11px;color:#666;font-style:italic;">No payment method — kitchen/bar preparation slip only</div>',
+      }));
+    }
+    if (rtype === 'bill') {
+      return wrapHtml(Object.assign({}, common, {
+        title: TITLES.bill,
+        headLabel: 'Bill No',
+        payment: d.method || d.payMethod || '',
+        footerExtra: '<div style="margin-top:12px;padding-top:8px;border-top:1px dashed #ccc;font-size:10px;color:#111;font-weight:600;"><div>Bank Transfer / Opay:</div><div style="margin-top:2px;">Opay: 6594621426</div><div style="margin-top:2px;">Zenith Bank: 1990229585</div></div>',
+      }));
+    }
+    return wrapHtml(Object.assign({}, common, {
+      title: TITLES.receipt,
+      headLabel: 'Receipt No',
+      payment: d.method || d.payMethod || '',
+    }));
   }
 
   /* ── print pipeline (queued, iframe by default / popup window) ─ */
@@ -311,11 +346,11 @@
     row.className = 'row';
     row.innerHTML =
       '<span class="t">' + esc(entry.timeStr) + '</span>' +
-      '<span class="dept ' + (entry.deptKey) + '">' + esc(entry.dept.toUpperCase()) + '</span>' +
+      '<span class="dept ' + esc(entry.deptKey) + '">' + esc(entry.dept.toUpperCase()) + '</span>' +
       '<span class="id">' + esc(entry.id) + '</span>' +
       '<span>' + esc(entry.kind) + '</span>' +
       '<span class="amt">' + fmtN(entry.total) + '</span>' +
-      '<span class="st ' + (entry.auto ? 'wait' : 'wait') + '">' + (entry.auto ? 'Queued…' : 'Manual') + '</span>' +
+      '<span class="st wait">' + (entry.auto ? 'Queued…' : 'Manual') + '</span>' +
       '<button class="btn sm" type="button">Print</button>';
     row.__st = row.querySelector('.st');
     row.querySelector('button').addEventListener('click', function () { enqueuePrint(entry.receipt, row); });
@@ -330,6 +365,34 @@
     lastBox.className = 'empty';
     lastBox.textContent = 'Waiting for the first paid sale…';
   });
+
+  function handle(payload, dept) {
+    var d = payload.data || {};
+    if (!d || !d.id) return;
+    var key = payload.action + ':' + d.id;
+    var now = Date.now();
+    if (recent[key] && now - recent[key] < 15 * 60 * 1000) return;   /* every emit reaches 'global' once; guard reconnects */
+    recent[key] = now;
+    for (var k in recent) { if (now - recent[k] > 15 * 60 * 1000) delete recent[k]; }
+
+    var rtype = receiptTypeOf(payload.action);
+    var html = buildReceipt(d, dept, payload.action, rtype);
+    var entry = {
+      timeStr: fmtDate(now).slice(11),
+      dept: dept, deptKey: dept === 'Pool Bar' ? 'poolbar' : 'restaurant',
+      id: d.id,
+      kind: rtype === 'captain' ? 'Captain Order' : (payload.action === 'payOrder' ? 'Tab paid' : 'Sale'),
+      total: d.total, receipt: html, auto: autoPrint
+    };
+    addLog(entry);
+    lastBox.className = 'last';
+    lastBox.innerHTML =
+      '<div><div class="id">' + esc(d.id) + '</div><div class="sub">' + esc(dept) + ' · ' +
+      esc(entry.kind) + ' · ' + esc(fmtDate(d.date)) + ' · ' + esc(rtype === 'captain' ? '—' : (d.method || d.payMethod || '')) + '</div></div>' +
+      '<div class="amt">' + fmtN(d.total) + '</div>';
+    if (autoPrint) enqueuePrint(html, logRows[logRows.length - 1]);
+    beep();
+  }
 
   /* ── socket ───────────────────────────────────────────────── */
   var badge = $('#connBadge'), badgeText = $('#connText');
@@ -353,35 +416,9 @@
 
   socket.onAny(function (event, payload) {
     if (event !== 'poolbar:updated' && event !== 'restaurant:updated') return;
-    if (!payload || (payload.action !== 'payOrder' && payload.action !== 'createSale')) return;
+    if (!payload || (payload.action !== 'payOrder' && payload.action !== 'createSale' && payload.action !== 'openTab')) return;
     handle(payload, event === 'restaurant:updated' ? 'Restaurant' : 'Pool Bar');
   });
-
-  function handle(payload, dept) {
-    var d = payload.data || {};
-    if (!d || !d.id) return;
-    var key = payload.action + ':' + d.id;
-    var now = Date.now();
-    if (recent[key] && now - recent[key] < 15 * 60 * 1000) return;   /* every emit reaches 'global' once; guard reconnects */
-    recent[key] = now;
-    for (var k in recent) { if (now - recent[k] > 15 * 60 * 1000) delete recent[k]; }
-
-    var html = buildReceipt(d, dept, payload.action);
-    var entry = {
-      timeStr: fmtDate(now).slice(11),
-      dept: dept, deptKey: dept === 'Pool Bar' ? 'poolbar' : 'restaurant',
-      id: d.id, kind: payload.action === 'payOrder' ? 'Tab paid' : 'Sale',
-      total: d.total, receipt: html, auto: autoPrint
-    };
-    addLog(entry);
-    lastBox.className = 'last';
-    lastBox.innerHTML =
-      '<div><div class="id">' + esc(d.id) + '</div><div class="sub">' + esc(dept) + ' · ' +
-      esc(entry.kind) + ' · ' + esc(fmtDate(d.date)) + ' · ' + esc(d.method || d.payMethod || '') + '</div></div>' +
-      '<div class="amt">' + fmtN(d.total) + '</div>';
-    if (autoPrint) enqueuePrint(html, logRows[logRows.length - 1]);
-    beep();
-  }
 
   /* ── test print ───────────────────────────────────────────── */
   $('#testBtn').addEventListener('click', function () {
@@ -392,7 +429,7 @@
       method: 'Cash', staff: 'Print Station', table: '\u2014',
       date: new Date().toISOString()
     };
-    enqueuePrint(buildReceipt(sample, 'Pool Bar', 'createSale'), null);
+    enqueuePrint(buildReceipt(sample, 'Pool Bar', 'createSale', 'receipt'), null);
   });
 
   /* ── session badge + clock ────────────────────────────────── */
@@ -402,6 +439,7 @@
       if (!j) { showLoginHint(); return; }
       var u = j.data || j.user || j;
       var name = u && u.name;
+      sessionUserName = name || '';
       if (name) {
         var b = $('#userBadge');
         b.style.display = '';
@@ -415,7 +453,38 @@
     $('#clock').textContent = two(d.getHours()) + ':' + two(d.getMinutes()) + ':' + two(d.getSeconds());
   }
   tick(); setInterval(tick, 1000);
+
+  /* ── manual print from order pages (BroadcastChannel) ─────── */
+  /* Message: { type:'manualPrint', receiptType:'captain'|'bill'|'receipt',
+                dept:'Pool Bar'|'Restaurant', data:{...order fields} }  */
+  function manualPrintReceipt(msg) {
+    var d = msg.data || {};
+    if (!d || !d.id) return;
+    var rtype = msg.receiptType || 'receipt';
+    var dept = msg.dept || 'Restaurant';
+    var html = buildReceipt(d, dept, rtype === 'captain' ? 'openTab' : 'payOrder', rtype);
+    var entry = {
+      timeStr: fmtDate(Date.now()).slice(11),
+      dept: dept, deptKey: (dept === 'Pool Bar') ? 'poolbar' : 'restaurant',
+      id: d.id, kind: 'Manual · ' + rtype, total: d.total, receipt: html, auto: false
+    };
+    addLog(entry);
+    lastBox.className = 'last';
+    lastBox.innerHTML =
+      '<div><div class="id">' + esc(d.id) + '</div><div class="sub">Manual · ' + esc(entry.kind) + ' · ' + esc(dept) + '</div></div>' +
+      '<div class="amt">' + fmtN(d.total) + '</div>';
+    enqueuePrint(html, logRows[logRows.length - 1]);
+    beep();
+  }
+
+  window.__onManualPrint = manualPrintReceipt;
 })();
 </script>
 </body>
 </html>
+
+
+
+
+
+

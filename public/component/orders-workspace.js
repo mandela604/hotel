@@ -45,6 +45,10 @@
   'use strict';
 
   if (global.OrdersWorkspace) return;
+  
+  /* ── BroadcastChannel for manual print to print station ──────────────── */
+  var printChannel = new BroadcastChannel('boston_print_station');
+  /* ───────────────────────────────────────────────────────────────────── */
 
   const CSS = `
     .ow-root{
@@ -129,10 +133,11 @@
     @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
     @media (min-width:768px) and (max-width:1024px){
       .ow-builder{ grid-template-columns:1fr 320px; gap:12px; }
-      .ow-mi-grid{ grid-template-columns:repeat(2,1fr); gap:8px; max-height:280px; overflow-y:auto; }
+      .ow-mi-grid{ gap:8px; }
       .ow-mi-tile{ padding:10px; }
       .ow-mi-name{ font-size:12px; }
       .ow-mi-price{ font-size:11.5px; }
+      .ow-pager{ display:flex; }
     }
 
     .ow-menu{ background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:14px; box-shadow:var(--ow-shadow); overflow:hidden; }
@@ -151,7 +156,15 @@
     .ow-search i{ color:var(--ow-text3); font-size:12px; }
     .ow-search input{ background:none; border:none; outline:none; color:var(--ow-text); font-family:inherit; font-size:13px; width:100%; }
     .ow-search input::placeholder{ color:var(--ow-text3); }
-    .ow-mi-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; padding:14px; }
+    .ow-mi-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:14px; }
+    .ow-pager{ display:none; align-items:center; justify-content:center; gap:12px; padding:2px 14px 12px; }
+    .ow-pager .ow-pg-btn{
+      background:var(--ow-surface2); border:1px solid var(--ow-border); border-radius:8px; padding:6px 14px;
+      font-family:inherit; font-size:12px; font-weight:700; color:var(--ow-text2); cursor:pointer;
+    }
+    .ow-pager .ow-pg-btn:hover:not(:disabled){ border-color:var(--ow-gold-border); color:var(--ow-gold); }
+    .ow-pager .ow-pg-btn:disabled{ opacity:.4; cursor:not-allowed; }
+    .ow-pager .ow-pg-info{ font-size:11.5px; font-weight:700; color:var(--ow-text3); white-space:nowrap; }
     .ow-mi-tile{
       background:var(--ow-surface2); border:1px solid var(--ow-border); border-radius:10px; padding:12px;
       cursor:pointer; transition:all .15s; text-align:left; width:100%; font-family:inherit; position:relative; overflow:hidden;
@@ -470,11 +483,12 @@
     }
 
     /* Managers, supervisors and admins keep full oversight of the whole
-       department; floor staff only ever count their own work. Until the
-       session identity resolves we don't hide anything — the KPIs refresh
-       as soon as it lands. */
+       department for the Active Orders TABLE, but the ORDERS PAGE KPIs
+       (Completed Today, Active Tabs, Cancelled Today, Units Sold) must
+       ALWAYS reflect only the signed-in user's own work — every role.
+       Until the session identity resolves we don't hide anything — the KPIs
+       refresh as soon as it lands. */
     function isOwnRecord(rec) {
-      if (!seesOwnOrdersOnly()) return true;
       var me = myStaffKey();
       if (!me) return true;
       var keys = [rec && rec.staff, rec && rec.createdBy];
@@ -509,6 +523,9 @@
     let statusFilter = '';
     let ordersPage = 1;
     const ORDERS_PER_PAGE = 10;
+    let itemPage = 1;      // itemGrid page (3 cols x 3 rows)
+    let cooItemPage = 1;   // cooItemGrid page
+    const ITEMS_PER_PAGE = 9;
     let payOrderId = null;
     let unsubService = null;
     const uid = 'ow' + Math.random().toString(36).slice(2, 8);
@@ -620,6 +637,7 @@
                 </div>
               </div>
               <div class="ow-mi-grid" data-role="itemGrid"></div>
+              <div class="ow-pager" data-role="itemPager"></div>
             </div>
 
             <div class="ow-cart">
@@ -685,6 +703,7 @@
                   </div>
                 </div>
                 <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:10px;" data-act="printSlip" data-role="printSlipBtn"><i class="fa-solid fa-print"></i> Print Order Slip (Bill)</button>
+                <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:6px;" data-act="printBill"><i class="fa-solid fa-receipt"></i> Print Customer Bill</button>
                 <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:6px;" data-act="submit" disabled data-role="submitBtn">
                   <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>
                 </button>
@@ -774,6 +793,7 @@
                 </div>
               </div>
               <div class="ow-mi-grid" data-role="cooItemGrid"></div>
+              <div class="ow-pager" data-role="cooItemPager"></div>
             </div>
 
             <div class="ow-cart">
@@ -971,8 +991,8 @@
     }
 
     function renderKPIs() {
-      // Floor staff see only their own numbers; managers see the department.
-      const ownScope = seesOwnOrdersOnly();
+      // ALL ROLES NOW ONLY SEE THEIR OWN STATS ON THE ORDERS PAGE KPIs, as per user request.
+      const ownScope = true;
       const mySaleList = mySales();
       const myOrderList = myOrders();
       const completedToday = mySaleList.filter(function (s) {
@@ -1019,6 +1039,18 @@
       return ['All'].concat(Array.from(new Set(stock.map(function (i) { return i.category || 'Other'; }))));
     }
 
+    // Items are paged 3x3 (ITEMS_PER_PAGE) so the menu card keeps a fixed
+    // height; the pager itself only shows at tablet widths (see CSS).
+    function renderPager(target, page, totalPages) {
+      const el = $(target);
+      if (!el) return;
+      if (totalPages <= 1) { el.innerHTML = ''; return; }
+      el.innerHTML =
+        '<button type="button" class="ow-pg-btn" data-page="prev"' + (page <= 1 ? ' disabled' : '') + '><i class="fa-solid fa-chevron-left"></i> Prev</button>' +
+        '<span class="ow-pg-info">Page ' + page + ' of ' + totalPages + '</span>' +
+        '<button type="button" class="ow-pg-btn" data-page="next"' + (page >= totalPages ? ' disabled' : '') + '>Next <i class="fa-solid fa-chevron-right"></i></button>';
+    }
+
     function renderPicker() {
       var useItems = showFoodMenu ? stock.concat(foodTiles()) : stock;
       var activeCategory = activeCat;
@@ -1035,14 +1067,24 @@
         }).join('');
       }
       const q = ($('[data-role="itemSearch"]').value || '').toLowerCase();
-      const items = useItems.filter(function (i) {
+      const matched = useItems.filter(function (i) {
         return (activeCategory === 'All' || (i.category || '') === activeCategory) &&
           (!q || (i.name || '').toLowerCase().includes(q));
       });
-      const grid = $('[data-role="itemGrid"]');
+      const totalMatches = matched.length;
+      let items = matched;
+      const grid = orderType === 'coo' ? $('[data-role="cooItemGrid"]') : $('[data-role="itemGrid"]');
       if (!items.length) {
         grid.innerHTML = '<div class="ow-empty-note">No items match.</div>';
+        renderPager(orderType === 'coo' ? '[data-role="cooItemPager"]' : '[data-role="itemPager"]', 0, 0);
         return;
+      }
+      if (orderType === 'coo') {
+        cooItemPage = Math.max(1, Math.min(cooItemPage, Math.ceil(items.length / ITEMS_PER_PAGE)));
+        items = items.slice((cooItemPage - 1) * ITEMS_PER_PAGE, cooItemPage * ITEMS_PER_PAGE);
+      } else {
+        itemPage = Math.max(1, Math.min(itemPage, Math.ceil(items.length / ITEMS_PER_PAGE)));
+        items = items.slice((itemPage - 1) * ITEMS_PER_PAGE, itemPage * ITEMS_PER_PAGE);
       }
       grid.innerHTML = items.map(function (i) {
         const lvl = stockLevel(i);
@@ -1063,6 +1105,8 @@
             : '<div class="ow-mi-stock ' + lvl + '">' + (i.qty || 0) + ' ' + esc(i.unit || '') + ' on hand</div>') +
           '</button>';
       }).join('');
+      const totalPages = Math.max(1, Math.ceil(totalMatches / ITEMS_PER_PAGE));
+      renderPager(orderType === 'coo' ? '[data-role="cooItemPager"]' : '[data-role="itemPager"]', orderType === 'coo' ? cooItemPage : itemPage, totalPages);
     }
 
     function renderCart() {
@@ -1266,6 +1310,60 @@
       openPrintWindow(html);
     }
 
+    /* Manual prints (order slip / bill / receipt) go to the print station
+       over BroadcastChannel when it is alive on this PC; returns false so
+       the caller can fall back to a local print. */
+    function stationPrintPayload(o, rtype) {
+      return {
+        receiptType: rtype,
+        dept: moduleName === 'restaurant' ? 'Restaurant' : 'Pool Bar',
+        data: {
+          id: o.id,
+          items: (o.items || []).map(function (i) { return { name: i.name || i.meal || 'Item', qty: i.qty || 1, price: i.price || 0 }; }),
+          subtotal: o.subtotal || 0,
+          discount: o.discount || 0,
+          total: o.total || 0,
+          staff: o.staff || o.createdBy || '',
+          table: o.table || '',
+          notes: o.notes || '',
+          roomNumber: o.roomNumber || '',
+          guestName: o.guestName || '',
+          guestPhone: o.guestPhone || '',
+          method: o.method || o.payMethod || '',
+          date: o.date || ''
+        }
+      };
+    }
+
+    function printViaStation(o, rtype) {
+      ensureStationWatch();
+      if (window.StationWatch && window.StationWatch.isAlive()) {
+        window.StationWatch.print(stationPrintPayload(o, rtype));
+        showToast('\u2713 Sent to counter printer', 'success');
+        return true;
+      }
+      return false;
+    }
+
+    function printRecordReceipt(id, rtype) {
+      var o = orders.find(function (x) { return x.id === id; }) || sales.find(function (x) { return x.id === id; });
+      if (!o) { showToast('Order not found.', 'error'); return; }
+      if (printViaStation(o, rtype || 'bill')) return;
+      var room = getRoomFields('');
+      var orderData = {
+        id: o.id,
+        items: (o.items || []).map(function (i) { return { name: i.name || i.meal || 'Item', qty: i.qty || 1, price: i.price || 0 }; }),
+        subtotal: o.subtotal || 0, discount: o.discount || 0,
+        total: o.total || (o.subtotal || 0) * (1 - (o.discount || 0) / 100),
+        staff: o.staff || o.createdBy || '', table: o.table || '', notes: o.notes || '',
+        roomNumber: o.roomNumber || room.room || null,
+        guestName: o.guestName || room.guest || null,
+        guestPhone: o.guestPhone || room.phone || null,
+        date: o.date || nowStamp(), method: o.method || o.payMethod || ''
+      };
+      openPrintWindow(generateReceipt(orderData, true));
+    }
+
     function printCurrentCart() {
       if (!cart.length) { showToast('Add at least one item to print.', 'error'); return; }
       var subtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
@@ -1291,7 +1389,13 @@
       var o = orders.find(function(x){ return x.id === id; }) || sales.find(function(x){ return x.id === id; });
       if (!o) { showToast('Order not found.', 'error'); return; }
 
-      // Always print order slip with prices (serves as both bill and kitchen slip)
+      var st = (o.status || 'open').toLowerCase();
+      /* Paid/completed records reprint as a receipt; open/served records
+         print as a captain order slip for the barman/chef. */
+      var rtype = (st === 'paid' || st === 'completed' || st === 'voided') ? 'receipt' : 'captain';
+      if (printViaStation(o, rtype)) return;
+
+      // Local fallback: order slip with prices (serves as both bill and kitchen slip)
       // This works for ALL order statuses: open, served, paid, cancelled
       var hb = receiptBrand || ((global.HotelBrand && HotelBrand.fallback) || null) || {};
       var hbName = hb.hotelNameUpper || hb.hotelName || 'BOSTON LEISURE HOTEL AND APARTMENTS';
@@ -1411,7 +1515,10 @@
       });
       var grid=$('[data-role="cooItemGrid"]');
       if(!grid) return;
-      if(!items.length){ grid.innerHTML='<div class="ow-empty-note">No items match.</div>'; return; }
+      if(!items.length){ grid.innerHTML='<div class="ow-empty-note">No items match.</div>'; renderPager('[data-role="cooItemPager"]',0,0); return; }
+      var cooTotalPages=Math.max(1,Math.ceil(items.length/ITEMS_PER_PAGE));
+      cooItemPage=Math.max(1,Math.min(cooItemPage,cooTotalPages));
+      items=items.slice((cooItemPage-1)*ITEMS_PER_PAGE,cooItemPage*ITEMS_PER_PAGE);
       grid.innerHTML=items.map(function(i){
         var inCart=cooCart.find(function(c){return c.name===i.name;});
         var isKitchen=i.source==='kitchen';
@@ -1424,6 +1531,7 @@
           '<div class="ow-mi-price">'+fmtN(i.price)+'</div>'+
           '<div class="ow-mi-stock">'+(isKitchen?'Made to order':(i.qty>0?(i.qty||0)+' '+esc(i.unit)+' on hand':'Out of stock'))+'</div></button>';
       }).join('');
+      renderPager('[data-role="cooItemPager"]',cooItemPage,cooTotalPages);
     }
 
     function addCooItem(name, source){
@@ -2736,7 +2844,15 @@
       if (cat) {
         if (orderType === 'coo') cooActiveCat = cat.dataset.cat;
         else activeCat = cat.dataset.cat;
+        itemPage = 1;
         renderPicker();
+        return;
+      }
+      const itemPg = e.target.closest('.ow-pager [data-page]');
+      if (itemPg && !itemPg.disabled) {
+        var delta = itemPg.dataset.page === 'next' ? 1 : -1;
+        if (orderType === 'coo') cooItemPage += delta; else itemPage += delta;
+        if (orderType === 'coo') renderCooPicker(); else renderPicker();
         return;
       }
       const add = e.target.closest('[data-add]');
@@ -2776,6 +2892,7 @@
         else if (a === 'deleteEditOrder') { deleteOrderInView(); }
         else if (a === 'printViewRecord') { if (_editingOrderId) printOrderById(_editingOrderId); }
         else if (a === 'printSlip') { if (_editingOrderId) printOrderById(_editingOrderId); else printCurrentCart(); }
+        else if (a === 'printBill') { if (_editingOrderId) printRecordReceipt(_editingOrderId, 'bill'); }
         return;
       }
       const served = e.target.closest('[data-served]');
@@ -2817,6 +2934,7 @@
       const cooCat = e.target.closest('[data-coo-cat]');
       if (cooCat) {
         cooActiveCat = cooCat.dataset.cooCat;
+        cooItemPage = 1;
         renderCooPicker();
         return;
       }
@@ -2851,7 +2969,7 @@
       if (cooRoomPick){ selectCooRoom(cooRoomPick.dataset.cooRoom, cooRoomPick.dataset.cooGuest, cooRoomPick.dataset.cooPhone, cooRoomPick.dataset.cooGid); return; }
     });
 
-    $('[data-role="itemSearch"]').addEventListener('input', function () { renderPicker(); });
+    $('[data-role="itemSearch"]').addEventListener('input', function () { itemPage = 1; renderPicker(); });
     $('[data-role="cartDisc"]').addEventListener('input', function () { updateTotals(); });
     if ($('[data-role="fMethod"]')) {
       $('[data-role="fMethod"]').addEventListener('change', toggleRoomChargeUI);
@@ -2869,7 +2987,7 @@
       if (e.target === this) this.classList.remove('show');
     });
     if ($('[data-role="cooItemSearch"]')) {
-      $('[data-role="cooItemSearch"]').addEventListener('input', function(){ renderCooPicker(); });
+      $('[data-role="cooItemSearch"]').addEventListener('input', function(){ cooItemPage = 1; renderCooPicker(); });
     }
     if ($('[data-role="cooMethod"]')) { $('[data-role="cooMethod"]').addEventListener('change', toggleCooRoomChargeUI); }
     if ($('[data-role="cooRoomSearch"]')) { $('[data-role="cooRoomSearch"]').addEventListener('input', onCooRoomSearch); }

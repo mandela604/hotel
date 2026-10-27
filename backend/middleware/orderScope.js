@@ -22,6 +22,7 @@ function escapeRe(s) {
 
 /**
  * ownOrdersFilter(req) → Mongo filter, or null when the user may list every order.
+ * Used for Orders (tabs) — matches on ownerId, createdBy, staff.
  */
 function ownOrdersFilter(req) {
   const user = req && req.user;
@@ -39,6 +40,22 @@ function ownOrdersFilter(req) {
   }
   if (!or.length) return null;
   return { $or: or };
+}
+
+/**
+ * ownSalesFilter(req) → Mongo filter, or null when the user may list every sale.
+ * Used for Sales — matches ONLY on staff field (sales don't have ownerId/createdBy).
+ */
+function ownSalesFilter(req) {
+  const user = req && req.user;
+  if (!user) return { _id: null };
+  if (isOversight(user)) return null;
+
+  const name = String(user.name || '').trim();
+  if (!name) return { _id: null }; // no name = no access
+
+  const re = new RegExp('^' + escapeRe(name) + '$', 'i');
+  return { staff: re };
 }
 
 /**
@@ -73,4 +90,4 @@ function denyOrderAccess(res) {
   });
 }
 
-module.exports = { ownOrdersFilter, ownsOrder, denyOrderAccess };
+module.exports = { ownOrdersFilter, ownSalesFilter, ownsOrder, denyOrderAccess };

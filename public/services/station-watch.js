@@ -2,6 +2,9 @@
    POS tabs periodically ask "who is alive?"; the print-station page
    answers. POS payments then skip the local print dialog when the
    station confirmed itself alive, so a shared PC prints exactly once.
+   Also carries manual print requests from order pages to the station:
+   { type:'manualPrint', receiptType:'captain'|'bill'|'receipt',
+     dept:'Pool Bar'|'Restaurant', data:{...} }
    Same-origin / same-browser only — other devices keep printing locally. */
 (function (global) {
   'use strict';
@@ -22,6 +25,9 @@
       if (m.type === 'hello') { if (!isStation) lastHello = Date.now(); }
       else if (m.type === 'who') { if (isStation) hello(); }
       else if (m.type === 'bye') { lastHello = 0; }
+      else if (m.type === 'manualPrint' && isStation) {
+        try { if (typeof global.__onManualPrint === 'function') global.__onManualPrint(m); } catch (err) {}
+      }
     };
     ask();
     global.setInterval(ask, 10000);
@@ -31,6 +37,7 @@
 
   global.StationWatch = {
     isAlive: function () { return !!bc && (Date.now() - lastHello) < 30000; },
+    print: function (msg) { post(Object.assign({ type: 'manualPrint' }, msg)); },
     startAsStation: function () {
       if (!bc || isStation) return;
       isStation = true;

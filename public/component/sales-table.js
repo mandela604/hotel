@@ -58,7 +58,7 @@
 .st-count{ font-size:11.5px; color:var(--st-text3); font-weight:600; }
 
 .st-tbl-wrap{ overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; }
-.st-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:840px; }
+.st-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
 .st-table thead th{
   text-align:left; padding:10px 14px; font-size:9px; text-transform:uppercase; letter-spacing:1.5px;
   color:var(--st-text3); font-weight:700; background:var(--st-bg2); border-bottom:1px solid var(--st-border);
@@ -134,10 +134,11 @@
 /* Tablet (641–1024px): keep the real table with its header row instead of
    the phone card layout, and tighten cell spacing so it fits the width. */
 @media (min-width:641px) and (max-width:1024px){
-  .st-table{ min-width:720px; }
-  .st-table thead th{ padding:9px 9px; font-size:8.5px; letter-spacing:1px; }
-  .st-table tbody td{ padding:10px 9px; font-size:12px; }
-  .st-items{ max-width:180px; }
+  .st-tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .st-table{ min-width:680px; font-size:11.5px; }
+  .st-table thead th{ padding:8px 9px; font-size:8.5px; letter-spacing:1px; }
+  .st-table tbody td{ padding:8px 9px; font-size:11.5px; }
+  .st-items{ max-width:160px; }
 }
 @media (max-width:640px){
   .st-tbl-wrap{ overflow-x:visible; }
