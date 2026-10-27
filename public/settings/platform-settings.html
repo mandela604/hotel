@@ -419,6 +419,11 @@ document.getElementById('newDeptInput').addEventListener('keydown', e => {
 });
 
 document.getElementById('saveAllBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveAllBtn');
+  const originalHtml = btn.innerHTML;
+  if (window.UIUtils && typeof UIUtils.btnStart === 'function') UIUtils.btnStart(btn);
+  else { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...'; }
+  
   const patch = {
     hotelName: document.getElementById('hotelNameInput').value.trim(),
     hotelAddress: document.getElementById('hotelAddrInput').value.trim(),
@@ -428,12 +433,20 @@ document.getElementById('saveAllBtn').addEventListener('click', async () => {
     shiftEndHour: Number(document.getElementById('shiftEndSel').value),
     mdApprovalThreshold: Number(document.getElementById('thresholdInput').value) || 0,
   };
-  if (!patch.hotelName) { showToast('Hotel name is required.', 'error'); return; }
+  if (!patch.hotelName) { 
+    if (window.UIUtils && typeof UIUtils.btnStop === 'function') UIUtils.btnStop(btn);
+    else { btn.disabled = false; btn.innerHTML = originalHtml; }
+    showToast('Hotel name is required.', 'error'); 
+    return; 
+  }
   try {
     settings = await PlatformSettings.updateSettings(patch);
     showToast('All settings saved.', 'success');
   } catch (err) {
     showToast(err.message, 'error');
+  } finally {
+    if (window.UIUtils && typeof UIUtils.btnStop === 'function') UIUtils.btnStop(btn);
+    else { btn.disabled = false; btn.innerHTML = originalHtml; }
   }
 });
 document.getElementById('saveBrandBtn').addEventListener('click', async () => {

@@ -798,28 +798,32 @@
         if (typeof ps.shiftEndHour === 'number') shiftEnd = ps.shiftEndHour;
       }
     } catch (e) {}
+    var windowStart, windowEnd;
+    if (shiftStart >= 0 && shiftEnd >= 0) {
+      const now = new Date();
+      const shiftStartToday = new Date(now); shiftStartToday.setHours(shiftStart, 0, 0, 0);
+      const shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
+      const windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 8640000;
+      // Find which shift window we're currently in: the one that ended most recently
+      const shiftEndToday = new Date(now); shiftEndToday.setHours(shiftEnd, 0, 0, 0);
+      const shiftEndYesterday = new Date(shiftEndToday.getTime() - 86400000);
+      if (now < shiftEndToday) {
+        // We're in the shift that started yesterday at shiftStart
+        windowStart = shiftStartYesterday;
+        windowEnd = shiftEndToday;
+      } else {
+        // We're in the shift that started today at shiftStart
+        windowStart = shiftStartToday;
+        windowEnd = new Date(shiftStartToday.getTime() + windowMs);
+      }
+    } else {
+      windowStart = new Date(); windowStart.setHours(0, 0, 0, 0);
+      windowEnd = new Date(windowStart.getTime() + 86400000);
+    }
     const isToday = (d) => {
       if (!d) return false;
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return String(d).startsWith(todayStr);
-      if (shiftStart >= 0 && shiftEnd >= 0) {
-        // shift-aware: sale belongs to current shift window
-        const now = new Date();
-        // determine current shift start wall-clock
-        var shiftStartToday = new Date(now);
-        shiftStartToday.setHours(shiftStart, 0, 0, 0);
-        var shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
-        var windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 86400000;
-        // current window: started today if now >= shiftStartToday, else yesterday
-        var windowStart = (now >= shiftStartToday) ? shiftStartToday : shiftStartYesterday;
-        var windowEnd = new Date(windowStart.getTime() + windowMs);
-        return dt >= windowStart && dt < windowEnd;
-      }
-      // fallback: calendar day
-      const today = new Date();
-      return dt.getDate() === today.getDate() &&
-             dt.getMonth() === today.getMonth() &&
-             dt.getFullYear() === today.getFullYear();
+      const dt = parseStamp(d);
+      return dt && dt >= windowStart && dt < windowEnd;
     };
     const me = ((session && session.name) || '').toLowerCase();
     const allStaff = isManagerLike(session);

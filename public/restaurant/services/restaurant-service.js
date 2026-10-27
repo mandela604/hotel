@@ -252,8 +252,18 @@ function getCategories() {
       var shiftStartToday = new Date(now); shiftStartToday.setHours(shiftStart, 0, 0, 0);
       var shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
       var windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 86400000;
-      windowStart = (now >= shiftStartToday) ? shiftStartToday : shiftStartYesterday;
-      windowEnd = new Date(windowStart.getTime() + windowMs);
+      // Find which shift window we're currently in: the one that ended most recently
+      var shiftEndToday = new Date(now); shiftEndToday.setHours(shiftEnd, 0, 0, 0);
+      var shiftEndYesterday = new Date(shiftEndToday.getTime() - 86400000);
+      if (now < shiftEndToday) {
+        // We're in the shift that started yesterday at shiftStart
+        windowStart = shiftStartYesterday;
+        windowEnd = shiftEndToday;
+      } else {
+        // We're in the shift that started today at shiftStart
+        windowStart = shiftStartToday;
+        windowEnd = new Date(shiftStartToday.getTime() + windowMs);
+      }
     } else {
       windowStart = new Date(); windowStart.setHours(0, 0, 0, 0);
       windowEnd = new Date(windowStart.getTime() + 86400000);
