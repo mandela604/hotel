@@ -448,6 +448,7 @@
   </div>
 </div>
 
+<script src="../settings/services/platform-settings-service.js"></script>
 <script src="../component/accounting-shell.js"></script>
 
 <script>
@@ -466,7 +467,7 @@ const shell = AccountingShell.attach({
 const CONFIG = { API_BASE: '', API_KEY: '' };
 shell.setApiMode('Live');
 
-const INCOME_DEPARTMENTS = ['Front Desk', 'Restaurant', 'Pool Bar', 'Gym', 'Other'];
+const INCOME_DEPARTMENTS = ['Pool Bar', 'Restaurant', 'Pool Bar, Restaurant', 'Front Desk', 'Gym', 'Other'];
 const EXPENSE_CATEGORIES = ['Salaries & Wages', 'Utilities', 'Maintenance & Repairs', 'Marketing & Advertising', 'Supplies & Inventory', 'Insurance', 'Transport & Logistics', 'Miscellaneous'];
 
 const KEY_INCOME   = 'accounting-income';
@@ -1202,9 +1203,31 @@ async function reload() {
   }
 }
 async function init() {
+  // Load platform settings for shift hours and payment methods
+  if (window.PlatformSettings) {
+    try {
+      await PlatformSettings.loadAll();
+      console.log('[accounting-pnl] PlatformSettings loaded:', PlatformSettings.state.settings);
+      console.log('[accounting-pnl] Shift hours:', {
+        shiftStartHour: PlatformSettings.state.settings.shiftStartHour,
+        shiftEndHour: PlatformSettings.state.settings.shiftEndHour
+      });
+    } catch (err) {
+      console.error('[accounting-pnl] Failed to load platform settings', err);
+    }
+  }
+  
   initSelects();
   updateTriggerLabel();
   await reload();
+  
+  // Subscribe to accounting service for live updates
+  if (window.AccountingData && typeof AccountingData.onChange === 'function') {
+    AccountingData.onChange(function () {
+      console.log('[accounting-pnl] Data changed, reloading...');
+      reload();
+    });
+  }
 }
 init();
 </script>
