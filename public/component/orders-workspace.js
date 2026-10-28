@@ -515,7 +515,7 @@
     let kitchenStockCache = [];
     let cooActiveCat = 'All';
     let mode = 'quick'; // quick | active
-    let orderType = 'quick'; // quick | tab | coo — sub-mode inside builder
+    let orderType = 'tab'; // tab | coo — sub-mode inside builder (quick removed)
     let _editingOrderId = null; // when viewing/editing an order from Active Orders
     let _viewOnly = false; // true when viewing a paid/completed/cancelled order
     let activeCat = 'All';
@@ -685,12 +685,11 @@
                 </div>
                 <div class="ow-ct-row total"><span>Total</span><span class="ow-ct-val" data-role="cartTotal">₦0</span></div>
                 <div class="ow-order-type-row" data-role="orderTypeRow" style="display:flex;gap:6px;margin-top:10px;">
-                  <button type="button" class="ow-btn ow-btn-sm ow-order-type-btn active" data-order-type="quick" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-bolt"></i> Quick Sale</button>
-                  <button type="button" class="ow-btn ow-btn-sm ow-order-type-btn" data-order-type="tab" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-receipt"></i> Open Tab</button>
+                  <button type="button" class="ow-btn ow-btn-sm ow-order-type-btn active" data-order-type="tab" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-receipt"></i> Open Tab</button>
                   ${options.showCookOnOrder !== false ?
                     '<button type="button" class="ow-btn ow-btn-sm ow-order-type-btn" data-order-type="coo" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-fire"></i> Cook</button>' : ''}
                 </div>
-                <div class="ow-order-type-hint" data-role="orderTypeHint" style="font-size:10px;color:var(--ow-text3);margin-top:4px;text-align:center;">Instant payment</div>
+                <div class="ow-order-type-hint" data-role="orderTypeHint" style="font-size:10px;color:var(--ow-text3);margin-top:4px;text-align:center;">Serve first, pay later</div>
                 <div id="orderEditBar" data-role="orderEditBar" style="display:none;margin-top:10px;padding:8px 10px;background:var(--ow-blue-bg);border-radius:8px;border:1px solid var(--ow-gold-border);">
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-weight:700;font-size:11px;color:var(--ow-gold);" data-role="orderEditLabel"></span>
@@ -875,9 +874,7 @@
     }
 
     function setOrderType(t) {
-      if (t !== 'quick' && t !== 'tab' && t !== 'coo') t = 'quick';
-      // Waiters can only use Open Tab
-      if (isWaiter && t === 'quick') t = 'tab';
+      if (t !== 'tab' && t !== 'coo') t = 'tab';
       orderType = t;
       // Update toggle buttons
       $$('[data-order-type]').forEach(function (btn) {
@@ -886,15 +883,13 @@
       // Update hints
       var hint = $('[data-role="orderTypeHint"]');
       if (hint) {
-        if (t === 'quick') hint.textContent = 'Instant payment';
-        else if (t === 'tab') hint.textContent = 'Serve first, pay later';
+        if (t === 'tab') hint.textContent = 'Serve first, pay later';
         else hint.textContent = 'Kitchen sends when ready';
       }
       // Update cart title
       var titleEl = $('[data-role="cartTitle"]');
       if (titleEl && !_editingOrderId) {
-        if (t === 'quick') titleEl.textContent = 'Quick Sale';
-        else if (t === 'tab') titleEl.textContent = 'Open Tab';
+        if (t === 'tab') titleEl.textContent = 'Open Tab';
         else titleEl.innerHTML = '<i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order';
       }
       // Payment: tab = optional, others = required
@@ -926,8 +921,7 @@
         const curMethod = (methodSel && methodSel.value) ? methodSel.value.trim() : '';
         const lbl = $('[data-role="submitLabel"]');
         if (lbl) {
-          if (t === 'quick') lbl.textContent = curMethod === 'Room Charge' ? 'Charge to Room' : 'Pay & Print Receipt';
-          else if (t === 'tab') lbl.textContent = 'Open Tab';
+          if (t === 'tab') lbl.textContent = 'Open Tab';
           else lbl.textContent = 'Send to Kitchen';
         }
       }
@@ -1387,8 +1381,8 @@
       var table = ($('[data-role="fTable"]').value || '').trim() || '—';
       var staff = ($('[data-role="fStaff"]').value || '').trim() || resolveStaffName();
       var room = getRoomFields('');
-      var method = ($('[data-role="fMethod"]').value || '').trim() || (orderType === 'tab' ? '' : 'Cash');
-      var previewId = orderType === 'tab' ? nextOrderId() + ' (Preview)' : nextSaleId() + ' (Preview)';
+      var method = ($('[data-role="fMethod"]').value || '').trim();
+      var previewId = nextOrderId() + ' (Preview)';
       var orderData = {
         id: previewId,
         items: cart.map(function (c) { return { name: c.key, qty: c.qty, price: c.price }; }),
@@ -1397,7 +1391,7 @@
         roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null,
         date: nowStamp(), method: method || '—'
       };
-      printReceiptVia(generateReceipt(orderData, mode === 'quick'));
+      printReceiptVia(generateReceipt(orderData, false));
     }
 
     function printOrderById(id) {
@@ -1900,101 +1894,14 @@
       const origHtml = btn ? btn.innerHTML : '';
       setBtnLoading(btn, true);
       try {
-        if (orderType === 'quick') {
-          // Payment required only for Quick Sale
-          const room = getRoomFields('');
-          let method = ($('[data-role="fMethod"]') || {}).value || 'Cash';
-          const isRoomCharge = method === 'Room Charge';
-          if (isRoomCharge && !room.room) {
-            showToast('Select a room for Room Charge.', 'error');
-            return;
-          }
-          if (method === 'Complimentary' && !notes.trim()) {
-            showToast('A note is required for complimentary sales (e.g. CEO order) — use the Notes field.', 'error');
-            return;
-          }
-          if (service && typeof service.recordSale === 'function') {
-            const rcPayload = {
-              items: items,
-              discount: discount,
-              method: method,
-              staff: staff,
-              table: table || '—',
-              notes: notes,
-              roomNumber: isRoomCharge ? (room.room || null) : null,
-              guestName: isRoomCharge ? (room.guest || null) : null,
-              guestPhone: isRoomCharge ? (room.phone || null) : null,
-              guestId: isRoomCharge ? (room.guestId || null) : null,
-            };
-            if (isRoomCharge) console.log('[RoomCharge] Quick Sale payload →', JSON.stringify(rcPayload, null, 2));
-            const sale = await service.recordSale(rcPayload);
-            if (isRoomCharge) console.log('[RoomCharge] Quick Sale response ←', JSON.stringify(sale, null, 2));
-            syncFromService();
-            if (!isRoomCharge) {
-              var saleId = sale && sale.id ? sale.id : nextSaleId();
-              printReceiptVia(generateReceipt({
-                id: saleId, items: items, subtotal: subtotal, discount: discount, total: total,
-                staff: staff, table: table || '—', notes: notes,
-                roomNumber: null, guestName: null, guestPhone: null,
-                date: stamp, method: method,
-              }, true));
-            }
-            showToast(
-              isRoomCharge
-                ? (sale && sale.id ? sale.id + ' ' : '') + 'charged to Room ' + room.room + ' — ' + fmtN(total) + '.'
-                : (sale && sale.id ? sale.id + ' recorded — ' : 'Sale recorded — ') + fmtN(total) + '.',
-              'success'
-            );
-          } else {
-            const sale = {
-              id: nextSaleId(),
-              items: items.map(function (c) { return { name: c.name, qty: c.qty, price: c.price }; }),
-              subtotal: subtotal, discount: discount, total: total,
-              method: method, staff: staff, table: table || '—', notes: notes,
-              date: stamp, status: isRoomCharge ? 'pending' : 'completed', source: 'quick',
-              roomNumber: isRoomCharge ? (room.room || null) : null,
-              guestName: isRoomCharge ? (room.guest || null) : null,
-              guestPhone: isRoomCharge ? (room.phone || null) : null,
-            };
-            cart.forEach(function (c) {
-              const inv = stock.find(function (i) { return i.name === c.key; });
-              if (inv) {
-                inv.qty = Math.max(0, inv.qty - c.qty);
-                movements.unshift({
-                  date: stamp, item: c.key, qtyIn: 0, qtyOut: c.qty, balance: inv.qty,
-                  reason: 'Sale (' + sale.id + ')',
-                });
-              }
-            });
-            sales.unshift(sale);
-            await Promise.all([
-              saveShared(keys.sales, sales),
-              saveShared(keys.stock, stock),
-              saveShared(keys.movements, movements),
-            ]);
-            apiSave('POST', apiPaths.sales, sale);
-            if (!isRoomCharge) {
-              printReceiptVia(generateReceipt({
-                id: sale.id, items: items, subtotal: subtotal, discount: discount, total: total,
-                staff: staff, table: table || '—', notes: notes,
-                roomNumber: null, guestName: null, guestPhone: null,
-                date: stamp, method: method,
-              }, true));
-            }
-            showToast(
-              isRoomCharge
-                ? sale.id + ' charged to Room ' + room.room + ' — ' + fmtN(total) + '.'
-                : sale.id + ' recorded — ' + fmtN(total) + '.',
-              'success'
-            );
-          }
-        } else if (orderType === 'coo') {
+        if (orderType === 'coo') {
           // Cook on Order — delegate to COO submit
           submitCooOrder();
           return;
-        } else {
-          // Open Tab — payment optional (can still pay later via Active Orders → Pay).
-          const room = getRoomFields('');
+        }
+
+        // Open Tab — payment optional (can still pay later via Active Orders → Pay).
+        const room = getRoomFields('');
           let method = (($('[data-role="fMethod"]') || {}).value || '').trim();
           const isRoomCharge = method === 'Room Charge';
           // Empty method = leave unset; Room Charge still needs a room if chosen
@@ -2050,7 +1957,6 @@
             apiSave('POST', apiPaths.orders, order);
             showToast('Tab ' + order.id + ' opened' + (table ? ' for ' + table : '') + '.', 'success');
           }
-        }
       } catch (err) {
         showToast((err && err.message) || 'Could not submit order.', 'error');
         return;
@@ -2577,10 +2483,7 @@
       const show = method === 'Room Charge';
       wrap.style.display = show ? '' : 'none';
       if (!show) clearSelectedRoom('');
-      if (!_editingOrderId && orderType === 'quick') {
-        const lbl = $('[data-role="submitLabel"]');
-        if (lbl) lbl.textContent = show ? 'Charge to Room' : 'Pay';
-      }
+      if (!_editingOrderId && orderType === 'quick') { /* quick removed — no label override */ }
     }
 
     function togglePayRoomChargeUI() {
@@ -2906,7 +2809,7 @@
         else if (a === 'deleteEditOrder') { deleteOrderInView(); }
         else if (a === 'printViewRecord') { if (_editingOrderId) printOrderById(_editingOrderId); }
         else if (a === 'printSlip') { if (_editingOrderId) printOrderById(_editingOrderId); else printCurrentCart(); }
-        else if (a === 'printBill') { if (_editingOrderId) printRecordReceipt(_editingOrderId, 'bill'); }
+        else if (a === 'printBill') { if (_editingOrderId) printRecordReceipt(_editingOrderId, 'bill'); else printCurrentCart(); }
         return;
       }
       const served = e.target.closest('[data-served]');
@@ -3099,22 +3002,22 @@
     function finish() {
       const staffInput = $('[data-role="fStaff"]');
       if (staffInput) staffInput.value = resolveStaffName();
-      // Continuously poll every 100ms up to 2.5s for session user to arrive from shell
-      const pollStart = Date.now();
-      const staffPoll = setInterval(function () {
-        const resolved = resolveStaffName();
-        if (resolved && resolved !== demoStaffName) {
+      // Session user may land after data load — await the shell's sessionReady
+      // promise, then refresh the staff identity everywhere it's shown/used.
+      // (The old 2.5s poll could give up before a slow /api/auth/session
+      // responded, leaving the demo manager name on the field and receipts.)
+      const sessionReady = shell && shell.sessionReady;
+      if (sessionReady && typeof sessionReady.then === 'function') {
+        sessionReady.then(function () {
+          const resolved = resolveStaffName();
           const elStaff = $('[data-role="fStaff"]');
-          if (elStaff) elStaff.value = resolved;
-          // Identity drives the own-orders filter and the own-stats KPIs —
-          // refresh both once it lands
-          renderOrdersTable();
-          renderKPIs();
-          clearInterval(staffPoll);
-        } else if (Date.now() - pollStart > 2500) {
-          clearInterval(staffPoll);
-        }
-      }, 100);
+          if (elStaff && resolved) elStaff.value = resolved;
+          if (resolved && resolved !== demoStaffName) {
+            renderOrdersTable();
+            renderKPIs();
+          }
+        }).catch(function () {});
+      }
       toggleRoomChargeUI();
       renderKPIs();
       renderPicker();
