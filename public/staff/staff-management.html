@@ -810,14 +810,14 @@ async function saveStaffForm(){
     overrides: baseOverrides,
   };
   const saveBtn = document.getElementById('fsSaveBtn');
-  if (saveBtn && global.UIUtils) UIUtils.btnStart(saveBtn);
+  if (saveBtn && window.UIUtils) UIUtils.btnStart(saveBtn);
   try {
     if (id) {
       await StaffService.editStaff(id, data);
     } else {
       if (STAFF.some(s=>s.email.toLowerCase()===email.toLowerCase())) {
         UIUtils.toast('A staff member with that email already exists.', 'error');
-        if (saveBtn && global.UIUtils) UIUtils.btnStop(saveBtn);
+        if (saveBtn && window.UIUtils) UIUtils.btnStop(saveBtn);
         return;
       }
       var created = await StaffService.addStaff(data);
@@ -832,7 +832,7 @@ async function saveStaffForm(){
   } catch (e) {
     UIUtils.toast(e.message || 'Save failed.', 'error');
   } finally {
-    if (saveBtn && global.UIUtils) UIUtils.btnStop(saveBtn);
+    if (saveBtn && window.UIUtils) UIUtils.btnStop(saveBtn);
   }
 }
 window.saveStaff = saveStaffForm;
@@ -925,7 +925,7 @@ async function savePermOverrides(){
   const s = STAFF.find(x=>x.id===permTargetId);
   if (!s) return;
   const saveBtn = document.querySelector('#permModal .btn-primary');
-  if (saveBtn && global.UIUtils) UIUtils.btnStart(saveBtn);
+  if (saveBtn && window.UIUtils) UIUtils.btnStart(saveBtn);
   try {
     await StaffService.saveOverrides(permTargetId, workingOverrides);
     STAFF = StaffService.state.staff;
@@ -935,7 +935,7 @@ async function savePermOverrides(){
   } catch (e) {
     UIUtils.toast(e.message || 'Save failed.', 'error');
   } finally {
-    if (saveBtn && global.UIUtils) UIUtils.btnStop(saveBtn);
+    if (saveBtn && window.UIUtils) UIUtils.btnStop(saveBtn);
   }
 }
 window.savePermOverrides = savePermOverrides;
