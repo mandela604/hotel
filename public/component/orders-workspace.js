@@ -130,14 +130,10 @@
     .ow-view.active{ display:block; }
 
     .ow-builder{ display:grid; grid-template-columns:1fr 340px; gap:14px; align-items:start; }
-    @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
     @media (max-width:1280px){
       .ow-builder{ grid-template-columns:1fr 290px; gap:12px; }
-      .ow-mi-grid{ grid-template-columns:repeat(2,1fr); gap:8px; }
-      .ow-mi-tile{ padding:10px; }
-      .ow-mi-name{ font-size:12px; }
-      .ow-mi-price{ font-size:11.5px; }
     }
+    @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
 
     .ow-menu{ background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:14px; box-shadow:var(--ow-shadow); overflow:hidden; }
     .ow-mp-header{ padding:14px 16px; border-bottom:1px solid var(--ow-border); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -178,6 +174,16 @@
     .ow-mi-stock.low{ color:var(--ow-amber); } .ow-mi-stock.out{ color:var(--ow-red); font-weight:700; }
     .ow-mi-badge{ position:absolute; top:8px; right:8px; font-size:8.5px; font-weight:700; text-transform:uppercase; padding:2px 6px; border-radius:20px; background:var(--ow-red-bg); color:var(--ow-red); }
     .ow-empty-note{ font-size:12.5px; color:var(--ow-text3); padding:24px; text-align:center; grid-column:1/-1; font-weight:600; }
+
+    /* Tablet: 2 item columns. Must come AFTER the base .ow-mi-* rules above —
+       same specificity, later source order wins (that ordering bug is why an
+       earlier attempt here never took effect). */
+    @media (max-width:1280px){
+      .ow-mi-grid{ grid-template-columns:repeat(2,1fr); gap:8px; padding:10px; }
+      .ow-mi-tile{ padding:10px; }
+      .ow-mi-name{ font-size:12px; }
+      .ow-mi-price{ font-size:11.5px; }
+    }
 
     .ow-cart{
       background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:14px; box-shadow:var(--ow-shadow);
