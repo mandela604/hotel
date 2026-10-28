@@ -132,8 +132,8 @@
     .ow-builder{ display:grid; grid-template-columns:1fr 340px; gap:14px; align-items:start; }
     @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
     @media (max-width:1024px){
-      .ow-builder{ grid-template-columns:1fr 320px; gap:12px; }
-      .ow-mi-grid{ gap:8px; }
+      .ow-builder{ grid-template-columns:1fr 290px; gap:12px; }
+      .ow-mi-grid{ grid-template-columns:repeat(2,1fr); gap:8px; }
       .ow-mi-tile{ padding:10px; }
       .ow-mi-name{ font-size:12px; }
       .ow-mi-price{ font-size:11.5px; }
@@ -524,7 +524,7 @@
     const ORDERS_PER_PAGE = 10;
     let itemPage = 1;      // itemGrid page (3 cols x 3 rows)
     let cooItemPage = 1;   // cooItemGrid page
-    const ITEMS_PER_PAGE = 9;
+    const ITEMS_PER_PAGE = 8; // 2 cols x 4 rows on the tablet grid
     let payOrderId = null;
     let unsubService = null;
     const uid = 'ow' + Math.random().toString(36).slice(2, 8);
@@ -615,8 +615,8 @@
 
         <div class="ow-mode-tabs">
           <button type="button" class="ow-mode-tab active" data-mode="quick">
-            <i class="fa-solid fa-bolt"></i>Quick Sale
-            <span class="sub">Charge & complete now</span>
+            <i class="fa-solid fa-plus"></i>New Order
+            <span class="sub">Open tabs &amp; live orders</span>
           </button>
           <button type="button" class="ow-mode-tab" data-mode="active">
             <i class="fa-solid fa-list-check"></i>Active Orders
@@ -674,10 +674,7 @@
                   <input type="hidden" data-role="fGuestPhone">
                   <input type="hidden" data-role="fGuestId">
                 </div>` : ''}
-                <div class="ow-fg">
-                  <label class="ow-label">Notes</label>
-                  <input class="ow-input" data-role="fNotes" placeholder="Optional">
-                </div>
+                <input type="hidden" data-role="fNotes">
                 <div class="ow-ct-row"><span>Subtotal</span><span data-role="cartSub">₦0</span></div>
                 <div class="ow-ct-row">
                   <span>Discount %</span>
@@ -689,7 +686,6 @@
                   ${options.showCookOnOrder !== false ?
                     '<button type="button" class="ow-btn ow-btn-sm ow-order-type-btn" data-order-type="coo" style="flex:1;justify-content:center;font-size:11px;"><i class="fa-solid fa-fire"></i> Cook</button>' : ''}
                 </div>
-                <div class="ow-order-type-hint" data-role="orderTypeHint" style="font-size:10px;color:var(--ow-text3);margin-top:4px;text-align:center;">Serve first, pay later</div>
                 <div id="orderEditBar" data-role="orderEditBar" style="display:none;margin-top:10px;padding:8px 10px;background:var(--ow-blue-bg);border-radius:8px;border:1px solid var(--ow-gold-border);">
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-weight:700;font-size:11px;color:var(--ow-gold);" data-role="orderEditLabel"></span>
@@ -1032,7 +1028,7 @@
       return ['All'].concat(Array.from(new Set(stock.map(function (i) { return i.category || 'Other'; }))));
     }
 
-    // Items are paged 3x3 (ITEMS_PER_PAGE) on tablet-and-narrower viewports so
+    // Items are paged 2x4 (ITEMS_PER_PAGE) on tablet-and-narrower viewports so
     // the order form never sits far below a long item list; desktop shows all.
     function compactViewport() {
       try { return window.matchMedia('(max-width:1024px)').matches; } catch (e) { return false; }
@@ -1844,7 +1840,7 @@
           const room = getRoomFields('');
           const isCompPay = payMethod === 'Complimentary';
           var compNoteDirect = (($('[data-role="fNotes"]') || {}).value || '').trim();
-          if (isCompPay && !compNoteDirect) { throw new Error('A note is required for complimentary payments (e.g. CEO order) — use the Notes field.'); }
+          if (isCompPay && !compNoteDirect) { throw new Error('Complimentary payments need a note — use Pay on the order to collect it.'); }
           const payPayload = payMethod === 'Room Charge'
             ? { method: payMethod, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
             : (isCompPay ? { method: payMethod, note: compNoteDirect } : payMethod);
@@ -2257,8 +2253,8 @@
       // Update title
       var titleEl = $('[data-role="cartTitle"]');
       if (titleEl) {
-        var typeLabel = isSale ? 'Sale Record' : (oType === 'coo' ? '<i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order' : oType === 'tab' ? 'Open Tab' : 'Quick Sale');
-        titleEl.innerHTML = esc(o.id) + ' — ' + typeLabel;
+        var typeLabel = isSale ? 'Sale Record' : (oType === 'coo' ? '<i class="fa-solid fa-fire" style="color:#f79009;"></i> Cook on Order' : 'Open Tab');
+        titleEl.innerHTML = 'Editing ' + esc(o.id) + ' — ' + typeLabel;
       }
 
       // Show edit bar
@@ -3031,10 +3027,6 @@
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () { renderPicker(); renderCooPicker(); }, 150);
       });
-      if (isWaiter) {
-        const quickTab = root.querySelector('[data-mode="quick"]');
-        if (quickTab) quickTab.style.display = 'none';
-      }
       setMode('quick');
       if (isWaiter) setOrderType('tab');
       // Only Restaurant has COO kitchen transfers; polling this on a Pool Bar
