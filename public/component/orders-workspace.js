@@ -131,7 +131,7 @@
 
     .ow-builder{ display:grid; grid-template-columns:1fr 340px; gap:14px; align-items:start; }
     @media (max-width:900px){ .ow-builder{ grid-template-columns:1fr; } }
-    @media (max-width:1024px){
+    @media (max-width:1280px){
       .ow-builder{ grid-template-columns:1fr 290px; gap:12px; }
       .ow-mi-grid{ grid-template-columns:repeat(2,1fr); gap:8px; }
       .ow-mi-tile{ padding:10px; }
@@ -696,8 +696,10 @@
                     </div>
                   </div>
                 </div>
-                <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:10px;" data-act="printSlip" data-role="printSlipBtn"><i class="fa-solid fa-print"></i> Print Order Slip (Bill)</button>
-                <button type="button" class="ow-btn ow-btn-outline" style="width:100%;justify-content:center;margin-top:6px;" data-act="printBill"><i class="fa-solid fa-receipt"></i> Print Customer Bill</button>
+                <div style="display:flex;gap:6px;margin-top:10px;">
+                  <button type="button" class="ow-btn ow-btn-outline" style="flex:1;justify-content:center;font-size:11.5px;padding:8px 6px;" data-act="printSlip" data-role="printSlipBtn"><i class="fa-solid fa-print"></i> Order Slip</button>
+                  <button type="button" class="ow-btn ow-btn-outline" style="flex:1;justify-content:center;font-size:11.5px;padding:8px 6px;" data-act="printBill"><i class="fa-solid fa-receipt"></i> Customer Bill</button>
+                </div>
                 <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:6px;" data-act="submit" disabled data-role="submitBtn">
                   <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>
                 </button>
@@ -1031,7 +1033,7 @@
     // Items are paged 2x4 (ITEMS_PER_PAGE) on tablet-and-narrower viewports so
     // the order form never sits far below a long item list; desktop shows all.
     function compactViewport() {
-      try { return window.matchMedia('(max-width:1024px)').matches; } catch (e) { return false; }
+      try { return window.matchMedia('(max-width:1280px)').matches; } catch (e) { return false; }
     }
 
     function pageSlice(list, pageVar, setPage) {
