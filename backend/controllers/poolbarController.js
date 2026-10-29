@@ -531,10 +531,14 @@ exports.openTab = asyncHandler(async (req, res) => {
   const total = subtotal * (1 - (Number(discount) || 0) / 100);
   const orderId = await nextId('PB', Order);
 
+  // Deduct stock immediately on open — validate first, then deduct
+  const resolved = await resolveStockForItems(items);
+  await deductResolvedStock(resolved, `Tab Open (${orderId})`, req.user ? req.user.name : '');
+
   const orderItems = [];
   for (const it of items) {
     const stockItem = await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
-    orderItems.push({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price), procurementId: stockItem ? (stockItem.procurementId || '') : '' });
+    orderItems.push({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price), procurementId: stockItem ? (stockItem.procurementId || '') : '', stockId: stockItem ? stockItem.id : '' });
   }
 
   const order = await Order.create({
@@ -550,6 +554,7 @@ exports.openTab = asyncHandler(async (req, res) => {
     date: new Date(),
     status: 'open',
     source: 'tab',
+    stockDeducted: true,
     roomNumber: roomNumber || null,
     guestName: guestName || null,
     guestPhone: guestPhone || null,
@@ -626,10 +631,13 @@ exports.payOrder = asyncHandler(async (req, res) => {
   const effectiveGuestId = guestId || order.guestId || null;
 
   // Validate stock is sufficient BEFORE any writes.
-  const resolved = await resolveStockForItems(order.items);
+  // Only deduct if stock was NOT already deducted when the tab was opened.
+  const resolved = await resolveStockForItems(order.stockDeducted ? [] : order.items);
+  if (!order.stockDeducted) {
+    await deductResolvedStock(resolved, `Tab Payment (${order.id})`, req.user ? req.user.name : '');
+  }
 
   const saleId = await nextId('PBS', Sale);
-  await deductResolvedStock(resolved, `Tab Payment (${order.id})`, req.user ? req.user.name : '');
 
   /* Room Charge → attach to active booking folio */
   const effectiveMethod = (effectiveRoom && payMethod === 'Room Charge') ? 'Room Charge' : payMethod;
@@ -710,6 +718,20 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   }
 
   const { reason } = req.body;
+
+  // Restore stock if it was deducted when the tab was opened
+  if (order.stockDeducted) {
+    for (const it of (order.items || [])) {
+      const stockItem = it.stockId
+        ? await PoolbarStock.findOne({ id: it.stockId })
+        : await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex(it.name.trim())}$`, 'i') });
+      if (!stockItem) continue;
+      stockItem.qty += Number(it.qty) || 0;
+      await stockItem.save();
+      await logMovement(stockItem.name, Number(it.qty) || 0, 0, stockItem.qty, `Tab ${order.id} cancelled — stock restored`);
+    }
+  }
+
   order.status = 'cancelled';
   order.notes = reason ? `${order.notes ? order.notes + ' — ' : ''}Cancelled: ${reason}` : order.notes;
   await order.save();

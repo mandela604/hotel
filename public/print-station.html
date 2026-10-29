@@ -189,7 +189,7 @@
     bill: 'CUSTOMER BILL',
     receipt: 'RECEIPT',
   };
-  var sessionUserName = '';
+
 
   function receiptTypeOf(action) {
     return action === 'openTab' ? 'captain' : 'receipt';
@@ -207,7 +207,10 @@
     var discPct = Number(d.discount) || 0;
     var discAmt = sub * discPct / 100;
     var total = Number(d.total) || 0;
-    return { itemsHtml: itemsHtml, sub: sub, discPct: discPct, discAmt: discAmt, total: total, staff: sessionUserName || d.staff || '' };
+    /* The staff on a printed slip is ONLY whoever made the sale (sent with
+       the record). The station's own login never appears on slips — blank
+       prints as an em dash. */
+    return { itemsHtml: itemsHtml, sub: sub, discPct: discPct, discAmt: discAmt, total: total, staff: d.staff || '\u2014' };
   }
 
   function wrapHtml(opts) {
@@ -272,6 +275,16 @@
   var printWin = null;
   var queue = [];
   var busy = false;
+  /* Last time each receipt (dept|type|id) was actually sent to the printer.
+     Used to collapse the BroadcastChannel/socket duplicate of one request
+     and to stop a second copy when a receipt already printed automatically. */
+  var printedAt = {};
+  function markPrinted(key) {
+    if (!key) return;
+    var now = Date.now();
+    printedAt[key] = now;
+    for (var k in printedAt) { if (now - printedAt[k] > 15 * 60 * 1000) delete printedAt[k]; }
+  }
 
   function pump() {
     if (busy || !queue.length) return;
@@ -315,7 +328,8 @@
     if (row && row.__st) { row.__st.className = 'st ' + cls; row.__st.textContent = text; }
   }
 
-  function enqueuePrint(html, row) {
+  function enqueuePrint(html, row, printKey) {
+    markPrinted(printKey);
     queue.push({ html: html, row: row });
     pump();
   }
@@ -390,7 +404,7 @@
       '<div><div class="id">' + esc(d.id) + '</div><div class="sub">' + esc(dept) + ' · ' +
       esc(entry.kind) + ' · ' + esc(fmtDate(d.date)) + ' · ' + esc(rtype === 'captain' ? '—' : (d.method || d.payMethod || '')) + '</div></div>' +
       '<div class="amt">' + fmtN(d.total) + '</div>';
-    if (autoPrint) enqueuePrint(html, logRows[logRows.length - 1]);
+    if (autoPrint) enqueuePrint(html, logRows[logRows.length - 1], dept + '|' + rtype + '|' + d.id);
     beep();
   }
 
@@ -439,7 +453,6 @@
       if (!j) { showLoginHint(); return; }
       var u = j.data || j.user || j;
       var name = u && u.name;
-      sessionUserName = name || '';
       if (name) {
         var b = $('#userBadge');
         b.style.display = '';
@@ -468,12 +481,22 @@
       dept: dept, deptKey: (dept === 'Pool Bar') ? 'poolbar' : 'restaurant',
       id: d.id, kind: 'Manual · ' + rtype, total: d.total, receipt: html, auto: false
     };
+    /* One request travels over BroadcastChannel AND the socket when both
+       paths are live — collapse it; then block a second copy if this exact
+       receipt already printed (e.g. the auto-print fired at payment time
+       and the user then clicks Print in the tablet preview). */
+    var printKey = dept + '|' + rtype + '|' + d.id;
+    var prev = printedAt[printKey];
+    var nowMs = Date.now();
+    if (prev && nowMs - prev < 5000) return;
+    var dup = !!(prev && nowMs - prev < 2 * 60 * 1000);
     addLog(entry);
     lastBox.className = 'last';
     lastBox.innerHTML =
       '<div><div class="id">' + esc(d.id) + '</div><div class="sub">Manual · ' + esc(entry.kind) + ' · ' + esc(dept) + '</div></div>' +
       '<div class="amt">' + fmtN(d.total) + '</div>';
-    enqueuePrint(html, logRows[logRows.length - 1]);
+    if (dup) { markRow(logRows[logRows.length - 1], 'fail', 'Duplicate'); beep(); return; }
+    enqueuePrint(html, logRows[logRows.length - 1], printKey);
     beep();
   }
 

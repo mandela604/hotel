@@ -680,7 +680,10 @@
                   <input type="hidden" data-role="fGuestPhone">
                   <input type="hidden" data-role="fGuestId">
                 </div>` : ''}
-                <input type="hidden" data-role="fNotes">
+                <div class="ow-fg" data-role="notesWrap" style="display:none;">
+                  <label class="ow-label">Complimentary note <span style="color:var(--ow-red);">*</span></label>
+                  <input class="ow-input" data-role="fNotes" placeholder="Required — e.g. CEO order">
+                </div>
                 <div class="ow-ct-row"><span>Subtotal</span><span data-role="cartSub">₦0</span></div>
                 <div class="ow-ct-row">
                   <span>Discount %</span>
@@ -1165,9 +1168,13 @@
         }
       } catch (e) {}
     }
-    function generateReceipt(orderData, isSale) {
+    /* Local print fallback. ptype mirrors the print station's three types:
+       'receipt' (paid), 'bill' (customer bill — the ONLY type that carries
+       the account/payment details), 'captain' (order slip for bar/kitchen). */
+    function generateReceipt(orderData, isSale, ptype) {
+      ptype = ptype || 'receipt';
+      var typeTitle = ptype === 'bill' ? 'CUSTOMER BILL' : ptype === 'captain' ? 'ORDER SLIP' : 'RECEIPT';
       var header = moduleName === 'restaurant' ? 'Boston Leisure Restaurant' : 'Boston Leisure Pool Bar';
-      var orderTypeLabel = isSale ? (orderType === 'tab' ? 'Tab' : 'Sale') : 'Order';
       var brand = moduleName === 'restaurant' ? 'Restaurant' : 'Pool Bar';
       var hb = receiptBrand || ((global.HotelBrand && HotelBrand.fallback) || null) || {};
       var hbName = hb.hotelNameUpper || hb.hotelName || 'BOSTON LEISURE HOTEL AND APARTMENTS';
@@ -1181,7 +1188,7 @@
       var methodInfo = orderData.method ? '<div style="font-size:11px;color:#111;font-weight:600;">Payment: ' + esc(orderData.method) + '</div>' : '';
       var notesInfo = orderData.notes ? '<div style="font-size:11px;color:#111;margin-top:6px;font-weight:600;">Notes: ' + esc(orderData.notes) + '</div>' : '';
       var discAmt = orderData.discount ? (orderData.subtotal * orderData.discount / 100) : 0;
-      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:8mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:420px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px;font-weight:800} .h p{margin:2px 0 0;font-size:11px;color:#111;font-weight:600} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#111;font-weight:700;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;font-weight:600} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#111;font-weight:600;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>' + esc(hbName) + ' — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(orderType) + ' Receipt</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(formatDateTime(orderData.date)) + '</p><p style="font-size:11px;">' + esc(hbAddr) + '</p><p style="font-size:11px;">' + esc(hbContact) + '</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;font-weight:600;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + '<div style="margin-top:12px;padding-top:8px;border-top:1px dashed #ccc;font-size:10px;color:#111;font-weight:600;"><div>Bank Transfer / Opay:</div><div style="margin-top:2px;">Opay: 6594621426</div><div style="margin-top:2px;">Zenith Bank: 1990229585</div></div><div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
+      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(orderData.id) + '</title><style>@media print{@page{margin:8mm} body{margin:0}} body{font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#111;line-height:1.4;background:#fff} .r{max-width:420px;margin:0 auto;padding:18px;border:1px solid #ddd} .h{text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px} .h h2{margin:0;font-size:16px;letter-spacing:.5px;font-weight:800} .h p{margin:2px 0 0;font-size:11px;color:#111;font-weight:600} table{width:100%;border-collapse:collapse;margin-top:8px} th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#111;font-weight:700;border-bottom:2px solid #111;padding:6px 0} .tot{margin-top:10px;border-top:2px solid #111;padding-top:8px} .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;font-weight:600} .row.total{font-weight:800;font-size:14px;border-top:1px solid #ccc;margin-top:6px;padding-top:6px} .foot{text-align:center;margin-top:14px;font-size:10px;color:#111;font-weight:600;border-top:1px dashed #ccc;padding-top:8px}</style></head><body><div class="r"><div class="h"><h2>' + esc(hbName) + ' — ' + esc(brand.toUpperCase()) + '</h2><p>' + esc(header) + ' · ' + esc(typeTitle) + '</p><p style="font-weight:700;margin-top:6px;">' + esc(orderData.id) + '</p><p>' + esc(formatDateTime(orderData.date)) + '</p><p style="font-size:11px;">' + esc(hbAddr) + '</p><p style="font-size:11px;">' + esc(hbContact) + '</p>' + tableInfo + roomInfo + methodInfo + '</div><table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="tot"><div class="row"><span>Subtotal</span><span>' + fmtN(orderData.subtotal) + '</span></div>' + (orderData.discount ? '<div class="row"><span>Discount (' + orderData.discount + '%)</span><span>-' + fmtN(discAmt) + '</span></div>' : '') + '<div class="row total"><span>TOTAL</span><span>' + fmtN(orderData.total) + '</span></div></div>' + (orderData.staff ? '<div style="margin-top:8px;font-size:11px;font-weight:600;">Staff: ' + esc(orderData.staff) + '</div>' : '') + notesInfo + (ptype === 'bill' ? '<div style="margin-top:12px;padding-top:8px;border-top:1px dashed #ccc;font-size:10px;color:#111;font-weight:600;"><div>Bank Transfer / Opay:</div><div style="margin-top:2px;">Opay: 6594621426</div><div style="margin-top:2px;">Zenith Bank: 1990229585</div></div>' : '') + '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
     }
 
     /* A receipt must be built from what was ACTUALLY paid, not from the
@@ -1224,12 +1231,12 @@
       };
     }
 
-    function openPrintWindow(html) {
+    function openPrintWindow(html, o, rtype) {
       // Use a modal preview instead of window.open for better tablet support
-      showPrintPreview(html);
+      showPrintPreview(html, o, rtype);
     }
 
-    function showPrintPreview(html) {
+    function showPrintPreview(html, o, rtype) {
       var modal = document.createElement('div');
       modal.className = 'ow-modal-overlay show';
       modal.innerHTML = `
@@ -1258,6 +1265,14 @@
       });
       
       modal.querySelector('#confirmPrintBtn').addEventListener('click', function() {
+        /* Send the real payload to the counter print station first. The
+           station prints it automatically (printer PC runs Chrome with
+           --kiosk-printing, so no dialog / no click over there). Falls
+           back to printing in this browser when no station is reachable. */
+        if (o && rtype && printViaStation(o, rtype)) {
+          modal.remove();
+          return;
+        }
         // Create an iframe to print from
         var iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
@@ -1302,9 +1317,12 @@
       document.head.appendChild(s);
     }
 
-    /* Post-payment receipt: hand off to the counter print station when one
-       is alive on this PC (shared PC must not print twice); else print here. */
-    function printReceiptVia(html) {
+    /* Post-payment receipt: show the preview so Print can be routed to the
+       counter print station (printCurrentCart / confirmPayOrder pass the
+       payload). Only falls back to the legacy shortcut when no payload is
+       available. */
+    function printReceiptVia(html, o, rtype) {
+      if (o && rtype) { openPrintWindow(html, o, rtype); return; }
       if (window.StationWatch && window.StationWatch.isAlive()) {
         showToast('\u2713 Sent to counter printer', 'success');
         return;
@@ -1361,7 +1379,9 @@
     function printRecordReceipt(id, rtype) {
       var o = orders.find(function (x) { return x.id === id; }) || sales.find(function (x) { return x.id === id; });
       if (!o) { showToast('Order not found.', 'error'); return; }
-      if (printViaStation(o, rtype || 'bill')) return;
+      /* Always show the preview first — its Print button routes the real
+         payload to the counter print station (local print is the fallback). */
+      var rt = rtype === 'captain' ? 'captain' : rtype === 'bill' ? 'bill' : 'receipt';
       var room = getRoomFields('');
       var orderData = {
         id: o.id,
@@ -1374,10 +1394,10 @@
         guestPhone: o.guestPhone || room.phone || null,
         date: o.date || nowStamp(), method: o.method || o.payMethod || ''
       };
-      openPrintWindow(generateReceipt(orderData, true));
+      openPrintWindow(generateReceipt(orderData, true, rt), o, rt);
     }
 
-    function printCurrentCart() {
+    function printCurrentCart(ptype) {
       if (!cart.length) { showToast('Add at least one item to print.', 'error'); return; }
       var subtotal = cart.reduce(function (s, c) { return s + c.price * c.qty; }, 0);
       var discount = parseFloat($('[data-role="cartDisc"]').value) || 0;
@@ -1395,7 +1415,10 @@
         roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null,
         date: nowStamp(), method: method || '—'
       };
-      printReceiptVia(generateReceipt(orderData, false));
+      var pt = ptype === 'bill' ? 'bill' : 'captain';
+      /* Pass the payload too: the preview's Print button sends it to the
+         print station (previously it claimed "Sent" without sending). */
+      printReceiptVia(generateReceipt(orderData, false, pt), orderData, pt);
     }
 
     function printOrderById(id) {
@@ -1406,7 +1429,7 @@
       /* Paid/completed records reprint as a receipt; open/served records
          print as a captain order slip for the barman/chef. */
       var rtype = (st === 'paid' || st === 'completed' || st === 'voided') ? 'receipt' : 'captain';
-      if (printViaStation(o, rtype)) return;
+      /* Preview always shows first; its Print button routes to the station. */
 
       // Local fallback: order slip with prices (serves as both bill and kitchen slip)
       // This works for ALL order statuses: open, served, paid, cancelled
@@ -1465,7 +1488,7 @@
         statusInfo +
         '<div class="foot">Printed: ' + esc(nowStamp()) + '</div></div>' +
         '<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
-      openPrintWindow(html);
+      openPrintWindow(html, o, rtype);
     }
 
     function renderCooCart(){
@@ -1848,7 +1871,7 @@
           const room = getRoomFields('');
           const isCompPay = payMethod === 'Complimentary';
           var compNoteDirect = (($('[data-role="fNotes"]') || {}).value || '').trim();
-          if (isCompPay && !compNoteDirect) { throw new Error('Complimentary payments need a note — use Pay on the order to collect it.'); }
+          if (isCompPay && !compNoteDirect) { throw new Error('A note is required for complimentary payments — enter it in the Complimentary note field.'); }
           const payPayload = payMethod === 'Room Charge'
             ? { method: payMethod, roomNumber: room.room || null, guestName: room.guest || null, guestPhone: room.phone || null, guestId: room.guestId || null }
             : (isCompPay ? { method: payMethod, note: compNoteDirect } : payMethod);
@@ -1868,12 +1891,14 @@
             // Print what was paid — `editOrder` is the pre-edit copy, so its
             // subtotal/total exclude anything added after the tab was opened.
             const paid = paidReceiptShape(payResult, editItems, edDiscount);
-            printReceiptVia(generateReceipt({
+            const paidDoc = {
               id: _editingOrderId, items: paid.items, subtotal: paid.subtotal, discount: paid.discount, total: paid.total,
               staff: paid.staff || editOrder.staff || '', table: paid.table || editOrder.table || '—', notes: paid.notes || editOrder.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
               date: editOrder.date || nowStamp(), method: payMethod,
-            }, true));
+            };
+            /* Preview first; Print routes paidDoc to the print station. */
+            printReceiptVia(generateReceipt(paidDoc, true), paidDoc, 'receipt');
           }
           showToast(_editingOrderId + ' paid — ' + payMethod + '.', 'success');
           if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
@@ -1911,6 +1936,10 @@
           // Empty method = leave unset; Room Charge still needs a room if chosen
           if (isRoomCharge && !room.room) {
             showToast('Select a room for Room Charge, or clear payment method.', 'error');
+            return;
+          }
+          if (method === 'Complimentary' && !notes) {
+            showToast('A note is required for complimentary orders (e.g. CEO order).', 'error');
             return;
           }
           if (!method) method = null;
@@ -2032,7 +2061,7 @@
           '<td style="font-weight:700;">' + esc(o.id) + '</td>' +
           '<td>' + esc(o.table) + '</td>' +
           '<td>' + (o.items || []).length + ' item' + ((o.items || []).length !== 1 ? 's' : '') + '</td>' +
-          '<td style="font-weight:700;color:var(--ow-gold);">' + fmtN(o.total) + '</td>' +
+          '<td style="font-weight:700;color:var(--ow-gold);">' + (st === 'cancelled' ? '—' : fmtN(o.total)) + '</td>' +
           '<td>' + payCell + '</td>' +
           '<td>' + esc(createdBy) + '</td>' +
           '<td>' + esc(o.date) + '</td>' +
@@ -2482,6 +2511,10 @@
 
     function toggleRoomChargeUI() {
       const method = ($('[data-role="fMethod"]') || {}).value || '';
+      /* Notes field only exists for Complimentary payments — no note,
+         no comp sale, and the rest of the form keeps the compact layout. */
+      const notesWrap = $('[data-role="notesWrap"]');
+      if (notesWrap) notesWrap.style.display = method === 'Complimentary' ? '' : 'none';
       const wrap = $('[data-role="roomChargeWrap"]');
       if (!wrap) return;
       const show = method === 'Room Charge';
@@ -2556,12 +2589,14 @@
           $('[data-role="payModal"]').classList.remove('show');
           if (!isRoomCharge) {
             const paid = paidReceiptShape(result, o.items || [], o.discount || 0);
-            printReceiptVia(generateReceipt({
+            const paidDoc = {
               id: o.id, items: paid.items, subtotal: paid.subtotal, discount: paid.discount, total: paid.total,
               staff: paid.staff || o.staff || '', table: paid.table || o.table || '—', notes: paid.notes || o.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
               date: o.date || nowStamp(), method: method,
-            }, true));
+            };
+            /* Preview first; Print routes paidDoc to the print station. */
+            printReceiptVia(generateReceipt(paidDoc, true), paidDoc, 'receipt');
           }
           showToast(
             isRoomCharge
@@ -2620,12 +2655,14 @@
           $('[data-role="payModal"]').classList.remove('show');
           if (!isRoomCharge) {
             const paid = paidReceiptShape(null, o.items || [], o.discount || 0);
-            printReceiptVia(generateReceipt({
+            const paidDoc = {
               id: o.id, items: paid.items, subtotal: paid.subtotal, discount: paid.discount, total: paid.total,
               staff: paid.staff || o.staff || '', table: paid.table || o.table || '—', notes: paid.notes || o.notes || '',
               roomNumber: null, guestName: null, guestPhone: null,
               date: o.date || nowStamp(), method: method,
-            }, true));
+            };
+            /* Preview first; Print routes paidDoc to the print station. */
+            printReceiptVia(generateReceipt(paidDoc, true), paidDoc, 'receipt');
           }
           showToast(
             isRoomCharge
@@ -2812,8 +2849,8 @@
         else if (a === 'cancelEditOrder') { exitEditMode(); setMode('active'); }
         else if (a === 'deleteEditOrder') { deleteOrderInView(); }
         else if (a === 'printViewRecord') { if (_editingOrderId) printOrderById(_editingOrderId); }
-        else if (a === 'printSlip') { if (_editingOrderId) printOrderById(_editingOrderId); else printCurrentCart(); }
-        else if (a === 'printBill') { if (_editingOrderId) printRecordReceipt(_editingOrderId, 'bill'); else printCurrentCart(); }
+        else if (a === 'printSlip') { if (_editingOrderId) printOrderById(_editingOrderId); else printCurrentCart('captain'); }
+        else if (a === 'printBill') { if (_editingOrderId) printRecordReceipt(_editingOrderId, 'bill'); else printCurrentCart('bill'); }
         return;
       }
       const served = e.target.closest('[data-served]');
