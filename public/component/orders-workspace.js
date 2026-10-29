@@ -506,6 +506,14 @@
     function mySales() { return sales.filter(isOwnRecord); }
     function myOrders() { return orders.filter(isOwnRecord); }
 
+    // A tab that has been emptied (every item removed) is no longer an order —
+    // it must not appear in Active Orders or inflate the badge/KPI counts.
+    function isBlankOrder(o) {
+      var st = String(o && o.status || 'open').toLowerCase();
+      if (st !== 'open' && st !== 'served') return false;
+      return !((o.items || []).length);
+    }
+
     let stock = [];
     let sales = [];
     let orders = [];
@@ -520,13 +528,14 @@
     let cooMenuItems = [];
     let kitchenStockCache = [];
     let cooActiveCat = 'All';
-    let mode = 'quick'; // quick | active
-    let orderType = 'tab'; // tab | coo — sub-mode inside builder (quick removed)
+    let mode = 'new'; // 'new' = the New Order builder, 'active' = Active Orders list
+    let orderType = 'tab'; // tab | coo — sub-mode inside the builder
     let _editingOrderId = null; // when viewing/editing an order from Active Orders
     let _viewOnly = false; // true when viewing a paid/completed/cancelled order
     let activeCat = 'All';
     let statusFilter = '';
     let ordersPage = 1;
+    let _ordTotalPages = 1;
     const ORDERS_PER_PAGE = 10;
     let itemPage = 1;      // itemGrid page (3 cols x 3 rows)
     let cooItemPage = 1;   // cooItemGrid page
@@ -620,7 +629,7 @@
         <div class="ow-kpi-row" data-role="kpiRow"></div>
 
         <div class="ow-mode-tabs">
-          <button type="button" class="ow-mode-tab active" data-mode="quick">
+          <button type="button" class="ow-mode-tab active" data-mode="new">
             <i class="fa-solid fa-plus"></i>New Order
             <span class="sub">Open tabs &amp; live orders</span>
           </button>
@@ -862,9 +871,12 @@
     }
 
     function setMode(m) {
-      if (m !== 'quick' && m !== 'active') m = 'quick';
-      // clear edit state if leaving builder
-      if (m === 'active' && _editingOrderId) {
+      if (m !== 'new' && m !== 'active') m = 'new';
+      /* The "New Order" tab ALWAYS opens a blank builder — Open Tab is the
+         action button, never the saved "Pay & Print Receipt" edit state. */
+      if (m === 'new') {
+        var payModal = $('[data-role="payModal"]');
+        if (payModal) payModal.classList.remove('show');
         exitEditMode();
       }
       mode = m;
@@ -1002,7 +1014,7 @@
         return o.status === 'cancelled' && isTodayDate(o.date);
       });
       const activeTabs = myOrderList.filter(function (o) {
-        return o.status === 'open' || o.status === 'served';
+        return (o.status === 'open' || o.status === 'served') && !isBlankOrder(o);
       }).length;
       const revenue = completedToday.reduce(function (s, x) { return s + (x.total || 0); }, 0);
       const units = unitsSoldToday();
@@ -1822,7 +1834,9 @@
           });
         }
         // Nothing changed — just refresh and exit
-        showToast(_editingOrderId + ' updated.', 'success');
+        showToast(editItems.length === 0
+          ? _editingOrderId + ' cleared — removed from Active Orders.'
+          : _editingOrderId + ' updated.', 'success');
         if (typeof service !== 'undefined' && service && typeof service.loadAll === 'function') { try { await service.loadAll(); syncFromService(); } catch (e) {} }
         exitEditMode();
         setMode('active');
@@ -2019,6 +2033,7 @@
     function renderOrdersTable() {
       const staffName = resolveStaffName();
       let rows = orders
+        .filter(function (o) { return !isBlankOrder(o); })
         .filter(function (o) { return !statusFilter || o.status === statusFilter; })
         .sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
       if (seesOwnOrdersOnly()) {
@@ -2040,9 +2055,11 @@
         $('[data-role="ordBody"]').innerHTML =
           '<tr class="ow-empty-row"><td colspan="10">No orders match this filter.</td></tr>';
         $('[data-role="ordPagination"]').innerHTML = '';
+        _ordTotalPages = 1;
         return;
       }
       const totalPages = Math.ceil(rows.length / ORDERS_PER_PAGE);
+      _ordTotalPages = totalPages;
       if (ordersPage > totalPages) ordersPage = totalPages;
       if (ordersPage < 1) ordersPage = 1;
       const start = (ordersPage - 1) * ORDERS_PER_PAGE;
@@ -2174,35 +2191,7 @@
     var _editCooCart = [];
     var _editCooOrderId = null;
     function openEditCoo(id) {
-      var o = orders.find(function (x) { return x.id === id; });
-      if (!o) return;
-      if (o.status !== 'open') { showToast('Only open orders can be edited.', 'error'); return; }
-      _editCooOrderId = id;
-      if (o.type === 'coo') {
-        _editCooCart = (o.items || []).map(function (it) {
-          return { name: it.name, id: it.id || '', unit: it.unit || 'portion', price: it.price || 0, qty: it.qty || 1, recipeId: it.recipeId || '' };
-        });
-        cooCart = _editCooCart.slice();
-        setMode('coo');
-        renderCooCart();
-        renderCooPicker();
-        var t = $('[data-role="cooTable"]'); if (t) t.value = o.table || '';
-        var c = $('[data-role="cooCovers"]'); if (c) c.value = o.covers || 1;
-        var n = $('[data-role="cooNotes"]'); if (n) n.value = o.notes || '';
-        var btn = $('[data-role="cooSubmitBtn"]'); if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes'; btn.disabled = false; }
-      } else {
-        cart = (o.items || []).map(function (it) {
-          return { key: it.name, name: it.name, qty: it.qty || 1, price: it.price || 0 };
-        });
-        setMode('quick');
-        renderCart();
-        renderPicker();
-        var ft = $('[data-role="fTable"]'); if (ft) ft.value = o.table || '';
-        var fn = $('[data-role="fNotes"]'); if (fn) fn.value = o.notes || '';
-        var fd = $('[data-role="cartDisc"]'); if (fd) fd.value = o.discount || 0;
-        var btn2 = $('[data-role="submitBtn"]'); if (btn2) { btn2.innerHTML = '<i class="fa-solid fa-check"></i> Save Changes'; btn2.disabled = false; }
-      }
-      showToast('Editing ' + id + ' — modify items and save.', 'info');
+      loadRecordInView(id);
     }
 
     /* ── Load order into sale form directly (replaces modal) ── */
@@ -2231,9 +2220,9 @@
       var session = getSessionUser(); var isManager = session && (session.role === 'admin' || session.role === 'manager' || session.role === 'Manager' || session.role === 'Admin');
 
       // Switch to builder view
-      mode = 'quick';
+      mode = 'new';
       $$('.ow-mode-tab').forEach(function (tab) {
-        tab.classList.toggle('active', tab.dataset.mode === 'quick');
+        tab.classList.toggle('active', tab.dataset.mode === 'new');
       });
       $('[data-view="builder"]').classList.add('active');
       $('[data-view="active"]').classList.remove('active');
@@ -2241,7 +2230,7 @@
       if (cooView) cooView.classList.remove('active');
 
       // Set order type from order
-      var oType = o.type === 'coo' ? 'coo' : (o.source === 'tab' || (!o.method && !o.payMethod)) ? 'tab' : 'quick';
+      var oType = o.type === 'coo' ? 'coo' : 'tab';
       setOrderType(oType);
 
       // Disable toggle buttons if viewing/editing
@@ -2333,6 +2322,10 @@
       var fn = $('[data-role="fNotes"]'); if (fn) fn.disabled = false;
       var fd = $('[data-role="cartDisc"]'); if (fd) fd.disabled = false;
       var methodSel = $('[data-role="fMethod"]'); if (methodSel) methodSel.disabled = false;
+      // Staff is forced to the order's own creator while viewing/editing —
+      // the fresh builder must go back to the signed-in user, editable.
+      var fStaffEl = $('[data-role="fStaff"]');
+      if (fStaffEl) { fStaffEl.disabled = false; fStaffEl.value = resolveStaffName(); }
       $$('[data-order-type]').forEach(function (btn) { btn.disabled = false; btn.style.opacity = ''; });
       // Hide edit bar
       var editBar = $('[data-role="orderEditBar"]');
@@ -2352,7 +2345,9 @@
       setOrderType('tab');
       var exitTable = $('[data-role="fTable"]'); if (exitTable) exitTable.value = '';
       var exitMethod = $('[data-role="fMethod"]');
-      if (exitMethod) exitMethod.value = paymentMethods[0] || '';
+      // A fresh Open Tab is pay-later by default — the blank option
+      // setOrderType('tab') just rebuilt.
+      if (exitMethod) exitMethod.value = '';
       var exitDisc = $('[data-role="cartDisc"]'); if (exitDisc) exitDisc.value = '0';
       toggleRoomChargeUI();
       clearSelectedRoom('');
@@ -2533,7 +2528,6 @@
       const show = method === 'Room Charge';
       wrap.style.display = show ? '' : 'none';
       if (!show) clearSelectedRoom('');
-      if (!_editingOrderId && orderType === 'quick') { /* quick removed — no label override */ }
     }
 
     function togglePayRoomChargeUI() {
@@ -2808,10 +2802,15 @@
     root.addEventListener('click', function (e) {
       const modeTab = e.target.closest('[data-mode]');
       if (modeTab && (modeTab.classList.contains('ow-mode-tab') || modeTab.dataset.mode)) {
-        /* "New Order" always means a FRESH form: leave any edit/view mode and
-           reset to the default Open Tab state, even mid-edit. */
-        if (modeTab.dataset.mode === 'quick' && (_editingOrderId || _viewOnly)) exitEditMode();
         setMode(modeTab.dataset.mode);
+        return;
+      }
+      const ordPg = e.target.closest('[data-ord-page]');
+      if (ordPg) {
+        if (ordPg.dataset.ordPage === 'prev' && ordersPage > 1) ordersPage--;
+        else if (ordPg.dataset.ordPage === 'next' && ordersPage < _ordTotalPages) ordersPage++;
+        else return;
+        renderOrdersTable();
         return;
       }
       const cat = e.target.closest('[data-cat]');
@@ -2881,14 +2880,6 @@
       if (viewOrder) { loadRecordInView(viewOrder.dataset.viewOrder); return; }
       const orderTypeBtn = e.target.closest('[data-order-type]');
       if (orderTypeBtn && !orderTypeBtn.disabled) { setOrderType(orderTypeBtn.dataset.orderType); return; }
-      const ordPage = e.target.closest('[data-ord-page]');
-      if (ordPage) {
-        var dir = ordPage.dataset.ordPage;
-        if (dir === 'prev') ordersPage--;
-        else if (dir === 'next') ordersPage++;
-        renderOrdersTable();
-        return;
-      }
       const editCoo = e.target.closest('[data-edit-coo]');
       if (editCoo) { openEditCoo(editCoo.dataset.editCoo); return; }
       const pick = e.target.closest('[data-pick-room]');
@@ -3088,7 +3079,7 @@
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () { renderPicker(); renderCooPicker(); }, 150);
       });
-      setMode('quick');
+      setMode('new');
       if (isWaiter) setOrderType('tab');
       // Only Restaurant has COO kitchen transfers; polling this on a Pool Bar
       // session just fires a guaranteed 403 in the console every 30s.
