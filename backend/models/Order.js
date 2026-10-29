@@ -7,6 +7,7 @@ const orderItemSchema = new mongoose.Schema({
   price:     { type: Number, required: true },
   recipeId:  { type: String, default: '' },
   procurementId: { type: String, default: '' },
+  stockId:   { type: String, default: '' },
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
@@ -32,9 +33,9 @@ const orderSchema = new mongoose.Schema({
   pendingSaleId:  { type: String, default: null },
   createdBy:      { type: String, default: '' },
   processedBy:    { type: String, default: '' },
-  // Login id of the staff member who opened this tab — used to keep each
-  // waiter/waitress scoped to her own open tabs.
   ownerId:        { type: String, default: '' },
+  // true once stock has been deducted on open-tab — prevents double-deduction on pay/serve
+  stockDeducted:  { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

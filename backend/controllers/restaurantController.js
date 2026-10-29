@@ -693,11 +693,28 @@ exports.openTab = asyncHandler(async (req, res) => {
   const count = await Order.countDocuments({ department: DEPT });
   const id = `RSO-${String(count + 1).padStart(5, '0')}`;
 
+  // Deduct stock immediately on open (skip COO and shared food items)
   const orderItems = [];
+  const foodSetOpen = await require('../utils/food').foodNameSet();
   for (const it of items) {
     const itemName = (it.name || it.key || '').trim();
-    const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
-    orderItems.push({ name: itemName, qty: Number(it.qty), price: Number(it.price), procurementId: stockItem ? (stockItem.procurementId || '') : '' });
+    let stockId = '';
+    if (!foodSetOpen.has(itemName.toLowerCase())) {
+      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
+      if (stockItem) {
+        stockId = stockItem.id;
+        const qty = Number(it.qty);
+        if (stockItem.qty < qty) {
+          const err = new Error(`Not enough ${stockItem.name} on hand. Have ${stockItem.qty}, need ${qty}`);
+          err.statusCode = 400;
+          throw err;
+        }
+        stockItem.qty -= qty;
+        await stockItem.save();
+        await RestaurantMovement.create({ date: nowStamp(), item: stockItem.name, qtyIn: 0, qtyOut: qty, balance: stockItem.qty, reason: `Tab ${id} opened` });
+      }
+    }
+    orderItems.push({ name: itemName, qty: Number(it.qty), price: Number(it.price), procurementId: '', stockId });
   }
 
   const order = await Order.create({
@@ -719,6 +736,7 @@ exports.openTab = asyncHandler(async (req, res) => {
     guestPhone: guestPhone || null,
     createdBy: createdBy || (req.user ? req.user.name : ''),
     ownerId: req.user ? String(req.user.id || '') : '',
+    stockDeducted: true,
   });
 
   await logActivity('gold', `Tab ${id} opened — ${items.length} item(s)`, 'restaurant-orders.html', req.user ? req.user.name : '');
@@ -734,11 +752,11 @@ exports.markOrderServed = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: `Cannot mark a '${order.status}' order as served` });
   }
 
-  /* ── Deduct RestaurantStock per item — skip for COO orders (Kitchen owns the stock) ── */
+  /* ── Deduct RestaurantStock per item — skip for COO or if already deducted on open ── */
   const stockIdMap = {};
   const procIdMap2 = {};
   const costMap2 = {};
-  if (!order.cooId) {
+  if (!order.cooId && !order.stockDeducted) {
     const foodSet2 = await require('../utils/food').foodNameSet();
     for (const it of order.items) {
       const itemName = (it.name || it.key || '').trim();
@@ -841,11 +859,11 @@ exports.payOrder = asyncHandler(async (req, res) => {
     }
   } else {
     /* ── Direct pay (skip serve) — deduct stock + create completed Sale ── */
-    /* Skip stock deduction for COO orders — Kitchen owns the stock */
+    /* Skip stock deduction for COO orders or if already deducted on open */
     const stockIdMap = {};
     const procIdMap2 = {};
     const costMap2 = {};
-    if (!order.cooId) {
+    if (!order.cooId && !order.stockDeducted) {
       const foodSet3 = await require('../utils/food').foodNameSet();
       for (const it of order.items) {
         const itemName = (it.name || it.key || '').trim();
@@ -1016,33 +1034,28 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Order already cancelled' });
   }
 
-  /* ── If served with pending sale: restore stock + void sale ── */
-  if (order.status === 'served' && order.pendingSaleId) {
+  /* ── Restore stock if deducted on open or serve, void pending sale if any ── */
+  if (order.stockDeducted || (order.status === 'served' && order.pendingSaleId)) {
     for (const it of order.items) {
       const itemName = (it.name || it.key || '').trim();
-      const stockItem = await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
+      const stockItem = it.stockId
+        ? await RestaurantStock.findOne({ id: it.stockId })
+        : await RestaurantStock.findOne({ name: new RegExp(`^${itemName}$`, 'i') });
       if (!stockItem) continue;
       const qty = Number(it.qty);
       stockItem.qty += qty;
       await stockItem.save();
-
-      await RestaurantMovement.create({
-        date: nowStamp(),
-        item: stockItem.name,
-        qtyIn: qty,
-        qtyOut: 0,
-        balance: stockItem.qty,
-        reason: `Tab ${order.id} cancelled — stock restored`,
-      });
+      await RestaurantMovement.create({ date: nowStamp(), item: stockItem.name, qtyIn: qty, qtyOut: 0, balance: stockItem.qty, reason: `Tab ${order.id} cancelled — stock restored` });
     }
-
-    const pendingSale = await Sale.findOne({ id: order.pendingSaleId });
-    if (pendingSale) {
-      pendingSale.status = 'voided';
-      pendingSale.voidReason = 'Order cancelled';
-      pendingSale.voidedBy = req.user ? req.user.name : '';
-      pendingSale.voidDate = new Date();
-      await pendingSale.save();
+    if (order.pendingSaleId) {
+      const pendingSale = await Sale.findOne({ id: order.pendingSaleId });
+      if (pendingSale) {
+        pendingSale.status = 'voided';
+        pendingSale.voidReason = 'Order cancelled';
+        pendingSale.voidedBy = req.user ? req.user.name : '';
+        pendingSale.voidDate = new Date();
+        await pendingSale.save();
+      }
     }
   }
 
