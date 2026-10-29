@@ -2095,10 +2095,17 @@
       }).join('');
       var pag = $('[data-role="ordPagination"]');
       if (totalPages <= 1) { pag.innerHTML = ''; return; }
+      var nums = '';
+      for (var p = 1; p <= totalPages; p++) {
+        nums += '<button type="button" class="ow-act-btn"' +
+          (p === ordersPage ? ' style="background:var(--ow-gold-dim);border-color:var(--ow-gold-border);color:var(--ow-gold);"' : '') +
+          ' data-ord-page="' + p + '">' + p + '</button>';
+      }
       pag.innerHTML =
-        '<button class="ow-act-btn" data-ord-page="prev"' + (ordersPage <= 1 ? ' disabled' : '') + '><i class="fa-solid fa-chevron-left"></i></button>' +
-        '<span>Page ' + ordersPage + ' of ' + totalPages + '</span>' +
-        '<button class="ow-act-btn" data-ord-page="next"' + (ordersPage >= totalPages ? ' disabled' : '') + '><i class="fa-solid fa-chevron-right"></i></button>';
+        '<button type="button" class="ow-act-btn" data-ord-page="prev"' + (ordersPage <= 1 ? ' disabled' : '') + '><i class="fa-solid fa-chevron-left"></i></button>' +
+        nums +
+        '<button type="button" class="ow-act-btn" data-ord-page="next"' + (ordersPage >= totalPages ? ' disabled' : '') + '><i class="fa-solid fa-chevron-right"></i></button>' +
+        '<span style="margin-left:6px;">Page ' + ordersPage + ' of ' + totalPages + ' · ' + (start + 1) + '–' + (start + pageRows.length) + ' of ' + rows.length + '</span>';
     }
 
     function showCooDetail(id) {
@@ -2798,19 +2805,29 @@
       }
     }
 
+    /* Active Orders pager. Bound to its own container instead of the big
+       delegated root handler: renderOrdersTable() only swaps the container's
+       innerHTML, so this listener survives every re-render and no other branch
+       of the root handler can consume the click first. */
+    (function bindOrderPager() {
+      var pag = $('[data-role="ordPagination"]');
+      if (!pag) return;
+      pag.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-ord-page]');
+        if (!btn || btn.disabled) return;
+        var v = btn.dataset.ordPage;
+        if (v === 'prev') ordersPage = Math.max(1, ordersPage - 1);
+        else if (v === 'next') ordersPage = Math.min(_ordTotalPages, ordersPage + 1);
+        else ordersPage = parseInt(v, 10) || 1;
+        renderOrdersTable();
+      });
+    })();
+
     // Events
     root.addEventListener('click', function (e) {
       const modeTab = e.target.closest('[data-mode]');
       if (modeTab && (modeTab.classList.contains('ow-mode-tab') || modeTab.dataset.mode)) {
         setMode(modeTab.dataset.mode);
-        return;
-      }
-      const ordPg = e.target.closest('[data-ord-page]');
-      if (ordPg) {
-        if (ordPg.dataset.ordPage === 'prev' && ordersPage > 1) ordersPage--;
-        else if (ordPg.dataset.ordPage === 'next' && ordersPage < _ordTotalPages) ordersPage++;
-        else return;
-        renderOrdersTable();
         return;
       }
       const cat = e.target.closest('[data-cat]');
