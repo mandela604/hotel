@@ -392,7 +392,7 @@
         LiveService.on('poll:tick', _accDebouncedRefresh);
       }
       if(typeof LiveService==='undefined'){
-        var s=document.createElement('script'); s.src='/services/live-service.js'; s.onload=doBind; document.head.appendChild(s);
+        var s=document.createElement('script'); s.src='/services/live-service.js?v=2'; s.onload=doBind; document.head.appendChild(s);
       } else doBind();
     }
 

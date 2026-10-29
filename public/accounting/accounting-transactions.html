@@ -328,7 +328,7 @@ tbody td.right{ text-align:right; }
   </div>
 </div>
 
-<script src="../services/live-service.js"></script>
+<script src="../services/live-service.js?v=2"></script>
 <script src="services/accounting-service.js"></script>
 <script src="../component/accounting-shell.js"></script>
 
@@ -645,7 +645,7 @@ function bindLive(){
 function loadLiveService(cb){
   if (window.LiveService) { cb(); return; }
   var s = document.createElement('script');
-  s.src = '../services/live-service.js';
+  s.src = '../services/live-service.js?v=2';
   s.onload = cb; s.onerror = cb;
   document.head.appendChild(s);
 }

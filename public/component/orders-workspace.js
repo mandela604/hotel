@@ -1357,6 +1357,21 @@
       document.head.appendChild(s);
     }
 
+    /* LiveService is injected asynchronously by the module shells, and every
+       other module uses the same URL now, so a page can briefly have no
+       LiveService at all. Without it the cross-device print relay is dead, so
+       request the script and report the station as unreachable rather than
+       claiming a job was sent. */
+    function ensureLiveService() {
+      if (global.LiveService && typeof global.LiveService.emit === 'function') return true;
+      if (!document.querySelector('script[src^="/services/live-service.js"]')) {
+        var s = document.createElement('script');
+        s.src = '/services/live-service.js?v=2';
+        document.head.appendChild(s);
+      }
+      return false;
+    }
+
     /* Post-payment receipt: show the preview so Print can be routed to the
        counter print station (printCurrentCart / confirmPayOrder pass the
        payload). Only falls back to the legacy shortcut when no payload is
@@ -1397,6 +1412,7 @@
 
     function printViaStation(o, rtype) {
       ensureStationWatch();
+      var liveReady = ensureLiveService();
       var payload = stationPrintPayload(o, rtype);
       var viaChannel = false;
       /* BroadcastChannel reaches a station open in this same browser
@@ -1415,7 +1431,9 @@
         }
       } catch (e) {}
       if (!viaChannel && !viaSocket) {
-        showToast('Print station not reachable — printing on this device.', 'error');
+        showToast(liveReady
+          ? 'Print station not reachable — printing on this device.'
+          : 'Live link still connecting — printing on this device.', 'error');
         return false;
       }
       showToast('\u2713 Sent to counter printer', 'success');

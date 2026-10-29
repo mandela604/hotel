@@ -185,8 +185,8 @@
     var dept='booking';
     function bind(){ try{ if(window.LiveService){ LiveService.on(dept+':updated', _bksDebouncedRefresh); LiveService.on('poll:tick', _bksDebouncedRefresh); } }catch(e){} }
     if(window.LiveService){ bind(); return; }
-    if(document.querySelector('script[src="/services/live-service.js"]')){ setTimeout(bind,600); return; }
-    var s=document.createElement('script'); s.src='/services/live-service.js'; s.onload=bind; s.onerror=function(){}; document.head.appendChild(s);
+    if(document.querySelector('script[src^="/services/live-service.js"]')){ setTimeout(bind,600); return; }
+    var s=document.createElement('script'); s.src='/services/live-service.js?v=2'; s.onload=bind; s.onerror=function(){}; document.head.appendChild(s);
   }
 
   function goLogin(reason) {
