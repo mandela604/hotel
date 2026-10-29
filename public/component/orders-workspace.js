@@ -710,7 +710,7 @@
                   <button type="button" class="ow-btn ow-btn-outline" style="flex:1;justify-content:center;font-size:11.5px;padding:8px 6px;" data-act="printBill"><i class="fa-solid fa-receipt"></i> Customer Bill</button>
                 </div>
                 <button type="button" class="ow-btn ow-btn-primary" style="width:100%;justify-content:center;margin-top:6px;" data-act="submit" disabled data-role="submitBtn">
-                  <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Complete Sale</span>
+                  <i class="fa-solid fa-check"></i> <span data-role="submitLabel">Open Tab</span>
                 </button>
               </div>
             </div>
@@ -2340,8 +2340,13 @@
       // Reset submit button
       var submitBtn = $('[data-role="submitBtn"]');
       if (submitBtn) { submitBtn.disabled = true; submitBtn.style.display = ''; }
+      // Restore normal builder footer after edit mode
       var printSlipBtn = $('[data-role="printSlipBtn"]');
-      if (printSlipBtn) printSlipBtn.style.display = 'none';
+      if (printSlipBtn) printSlipBtn.style.display = '';
+      var printBillBtn = $('[data-act="printBill"]');
+      if (printBillBtn) printBillBtn.style.display = '';
+      const exitLbl = $('[data-role="submitLabel"]');
+      if (exitLbl) exitLbl.textContent = 'Open Tab';
       // Reset title
       setOrderType(orderType);
       // Clear cart
