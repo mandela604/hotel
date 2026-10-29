@@ -2347,8 +2347,15 @@
       if (printBillBtn) printBillBtn.style.display = '';
       const exitLbl = $('[data-role="submitLabel"]');
       if (exitLbl) exitLbl.textContent = 'Open Tab';
-      // Reset title
-      setOrderType(orderType);
+      // Fresh-form reset: back to the default Open Tab state with clean fields
+      orderType = 'tab';
+      setOrderType('tab');
+      var exitTable = $('[data-role="fTable"]'); if (exitTable) exitTable.value = '';
+      var exitMethod = $('[data-role="fMethod"]');
+      if (exitMethod) exitMethod.value = paymentMethods[0] || '';
+      var exitDisc = $('[data-role="cartDisc"]'); if (exitDisc) exitDisc.value = '0';
+      toggleRoomChargeUI();
+      clearSelectedRoom('');
       // Clear cart
       clearCart();
     }
@@ -2801,6 +2808,9 @@
     root.addEventListener('click', function (e) {
       const modeTab = e.target.closest('[data-mode]');
       if (modeTab && (modeTab.classList.contains('ow-mode-tab') || modeTab.dataset.mode)) {
+        /* "New Order" always means a FRESH form: leave any edit/view mode and
+           reset to the default Open Tab state, even mid-edit. */
+        if (modeTab.dataset.mode === 'quick' && (_editingOrderId || _viewOnly)) exitEditMode();
         setMode(modeTab.dataset.mode);
         return;
       }

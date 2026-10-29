@@ -584,8 +584,46 @@ exports.updateOrder = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
   }
   if (items !== undefined) {
+    const oldItems = order.items || [];
     order.items = items.map(it => ({ name: it.name.trim(), qty: Number(it.qty), price: Number(it.price) }));
     order.subtotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);
+    /* Stock was deducted when the tab was opened — re-true it against the
+       edited item list: removed items return their qty to hand, added items
+       get deducted, qty changes adjust both ways. */
+    if (order.stockDeducted) {
+      for (const oldIt of oldItems) {
+        const stillThere = items.some(n => {
+          const nName = (n.name || '').trim().toLowerCase();
+          return nName === (oldIt.name || '').trim().toLowerCase() &&
+            (oldIt.stockId ? n.stockId === oldIt.stockId : true);
+        });
+        if (stillThere) continue;
+        const stockItem = oldIt.stockId
+          ? await PoolbarStock.findOne({ id: oldIt.stockId })
+          : await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex((oldIt.name || '').trim())}$`, 'i') });
+        if (!stockItem) continue;
+        stockItem.qty += Number(oldIt.qty) || 0;
+        await stockItem.save();
+        await logMovement(stockItem.name, Number(oldIt.qty) || 0, 0, stockItem.qty, `Tab ${order.id} edited — stock restored`);
+      }
+      for (const nIt of items) {
+        const oldIt = oldItems.find(o => {
+          if ((o.name || '').trim().toLowerCase() !== (nIt.name || '').trim().toLowerCase()) return false;
+          return !o.stockId || !nIt.stockId || o.stockId === nIt.stockId;
+        });
+        const oldQty = oldIt ? (Number(oldIt.qty) || 0) : 0;
+        const newQty = Number(nIt.qty) || 0;
+        const delta = newQty - oldQty;
+        if (delta === 0) continue;
+        const stockItem = nIt.stockId
+          ? await PoolbarStock.findOne({ id: nIt.stockId })
+          : await PoolbarStock.findOne({ name: new RegExp(`^${sanitizeRegex((nIt.name || '').trim())}$`, 'i') });
+        if (!stockItem) continue;
+        stockItem.qty -= delta;
+        await stockItem.save();
+        await logMovement(stockItem.name, delta < 0 ? -delta : 0, delta > 0 ? delta : 0, stockItem.qty, `Tab ${order.id} edited`);
+      }
+    }
   }
   if (discount !== undefined) order.discount = Number(discount);
   order.total = order.subtotal * (1 - (Number(order.discount) || 0) / 100);

@@ -1009,8 +1009,45 @@ exports.updateOrder = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
   }
   if (items !== undefined) {
+    const oldItems = order.items || [];
     order.items = items.map(it => ({ name: (it.name || '').trim(), qty: Number(it.qty), price: Number(it.price) }));
     order.subtotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);
+    /* Stock was deducted when the tab was opened (non-COO) — re-true it
+       against the edited item list so clearing an item returns its qty. */
+    if (order.stockDeducted && !order.cooId) {
+      for (const oldIt of oldItems) {
+        const stillThere = items.some(n => {
+          const nName = (n.name || '').trim().toLowerCase();
+          return nName === (oldIt.name || '').trim().toLowerCase() &&
+            (oldIt.stockId ? n.stockId === oldIt.stockId : true);
+        });
+        if (stillThere) continue;
+        const stockItem = oldIt.stockId
+          ? await RestaurantStock.findOne({ id: oldIt.stockId })
+          : await RestaurantStock.findOne({ name: new RegExp(`^${(oldIt.name || '').trim()}$`, 'i') });
+        if (!stockItem) continue;
+        stockItem.qty += Number(oldIt.qty) || 0;
+        await stockItem.save();
+        await RestaurantMovement.create({ date: nowStamp(), item: stockItem.name, qtyIn: Number(oldIt.qty) || 0, qtyOut: 0, balance: stockItem.qty, reason: `Tab ${order.id} edited — stock restored` });
+      }
+      for (const nIt of items) {
+        const oldIt = oldItems.find(o => {
+          if ((o.name || '').trim().toLowerCase() !== (nIt.name || '').trim().toLowerCase()) return false;
+          return !o.stockId || !nIt.stockId || o.stockId === nIt.stockId;
+        });
+        const oldQty = oldIt ? (Number(oldIt.qty) || 0) : 0;
+        const newQty = Number(nIt.qty) || 0;
+        const delta = newQty - oldQty;
+        if (delta === 0) continue;
+        const stockItem = nIt.stockId
+          ? await RestaurantStock.findOne({ id: nIt.stockId })
+          : await RestaurantStock.findOne({ name: new RegExp(`^${(nIt.name || '').trim()}$`, 'i') });
+        if (!stockItem) continue;
+        stockItem.qty -= delta;
+        await stockItem.save();
+        await RestaurantMovement.create({ date: nowStamp(), item: stockItem.name, qtyIn: delta < 0 ? -delta : 0, qtyOut: delta > 0 ? delta : 0, balance: stockItem.qty, reason: `Tab ${order.id} edited` });
+      }
+    }
   }
   if (discount !== undefined) order.discount = Number(discount);
   order.total = order.subtotal * (1 - (Number(order.discount) || 0) / 100);
