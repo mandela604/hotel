@@ -43,22 +43,6 @@ function ownOrdersFilter(req) {
 }
 
 /**
- * ownSalesFilter(req) → Mongo filter, or null when the user may list every sale.
- * Used for Sales — matches ONLY on staff field (sales don't have ownerId/createdBy).
- */
-function ownSalesFilter(req) {
-  const user = req && req.user;
-  if (!user) return { _id: null };
-  if (isOversight(user)) return null;
-
-  const name = String(user.name || '').trim();
-  if (!name) return { _id: null }; // no name = no access
-
-  const re = new RegExp('^' + escapeRe(name) + '$', 'i');
-  return { staff: re };
-}
-
-/**
  * ownsOrder(req, order) → boolean.
  * Orders that recorded no owner at all (legacy rows) stay accessible so
  * nothing gets frozen; orders owned by somebody else are rejected.
@@ -90,4 +74,4 @@ function denyOrderAccess(res) {
   });
 }
 
-module.exports = { ownOrdersFilter, ownSalesFilter, ownsOrder, denyOrderAccess };
+module.exports = { ownOrdersFilter, ownsOrder, denyOrderAccess };

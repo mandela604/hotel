@@ -96,12 +96,12 @@
 
       <div class="shift-note no-print" id="shiftNote">
         <i class="fa-solid fa-user-clock"></i>
-        <span>Today’s shift only · showing your sales</span>
+        <span>All staff in this department</span>
       </div>
 
       <div id="filterSlot" class="no-print"></div>
 
-      <div class="print-header"><h2>Boston Leisure Hotel — Restaurant Sales (My Shift)</h2><p id="printSub"></p></div>
+      <div class="print-header"><h2>Boston Leisure Hotel — Restaurant Sales</h2><p id="printSub"></p></div>
       <div id="tableSlot"></div>
     </div>
   </div>
@@ -110,12 +110,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../services/permissions.js"></script>
 <script src="../settings/services/platform-settings-service.js"></script>
-<script src="services/restaurant-service.js"></script>
+<script src="services/restaurant-service.js?v=2"></script>
 <script src="../component/restaurant-shell.js?v=5"></script>
 <script src="../component/sales-detail.js"></script>
 <script src="../component/void-sale.js"></script>
 <script src="../component/sales-filter-bar.js"></script>
-<script src="../component/sales-table.js?v=5"></script>
+<script src="../component/sales-table.js?v=6"></script>
 <script>
 /**
  * Sales page = TODAY + CURRENT STAFF only.
@@ -188,13 +188,6 @@ function staffName() {
   return (session && session.name) || '';
 }
 
-/** Managers/admins can see all staff today; floor staff only their own */
-function isManagerLike() {
-  if (!session) return false;
-  if (session.role === 'admin' || session.role === 'manager') return true;
-  return false;
-}
-
 function normalizeSaleForTable(s) {
   return Object.assign({}, s, {
     items: (s.items || []).map(function (i) {
@@ -231,7 +224,7 @@ function renderKPIs(rows) {
   const voided = rows.filter(function (s) { return s.status === 'voided'; });
   const revenue = completed.reduce(function (sum, s) { return sum + (s.total || 0); }, 0);
   const units = completed.reduce(function (sum, s) { return sum + itemsQty(s); }, 0);
-  const who = isManagerLike() ? 'Today' : 'Your shift';
+  const who = 'Today';
 
   document.getElementById('kpiRow').innerHTML =
     '<div class="kpi-card acc-blue">' +
@@ -264,7 +257,7 @@ function applyFilters(state) {
   const rows = svc.filterShiftSales(session, filterState);
   const tableRows = rows.map(normalizeSaleForTable);
   renderKPIs(tableRows);
-  salesTable.setTitle(svc.getShiftTableTitle(session));
+  salesTable.setTitle(svc.getShiftTableTitle(session, filterState));
   salesTable.setRows(tableRows);
 }
 
@@ -408,8 +401,7 @@ async function init() {
           'Printed: ' + new Date().toLocaleDateString('en-GB', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
           }) + ' · ' + st.rows.length + ' record' + (st.rows.length !== 1 ? 's' : '') +
-          ' · ' + (isManagerLike() ? 'All staff today' : staffName());
-        window.print();
+          ' · ' + ((filterBar.getState().bounds || {}).label || 'All time') + ' · all restaurant staff';        window.print();
       }
     },
   });

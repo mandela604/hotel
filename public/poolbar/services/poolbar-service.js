@@ -782,58 +782,22 @@
     return [...names].sort();
   }
 
-  function isManagerLike(session) {
-    if (!session) return false;
-    return session.role === 'admin' || session.role === 'manager';
-  }
-
-  function getShiftSales(session) {
-    const todayStr = todayDDMMYY();
-    // Read shift hours from PlatformSettings if available, fall back to midnight
-    var shiftStart = -1, shiftEnd = -1;
-    try {
-      if (global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings) {
-        var ps = PlatformSettings.state.settings;
-        if (typeof ps.shiftStartHour === 'number') shiftStart = ps.shiftStartHour;
-        if (typeof ps.shiftEndHour === 'number') shiftEnd = ps.shiftEndHour;
-      }
-    } catch (e) {}
-    var windowStart, windowEnd;
-    if (shiftStart >= 0 && shiftEnd >= 0) {
-      const now = new Date();
-      const shiftStartToday = new Date(now); shiftStartToday.setHours(shiftStart, 0, 0, 0);
-      const shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
-      const windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 8640000;
-      // Find which shift window we're currently in: the one that ended most recently
-      const shiftEndToday = new Date(now); shiftEndToday.setHours(shiftEnd, 0, 0, 0);
-      const shiftEndYesterday = new Date(shiftEndToday.getTime() - 86400000);
-      if (now < shiftEndToday) {
-        // We're in the shift that started yesterday at shiftStart
-        windowStart = shiftStartYesterday;
-        windowEnd = shiftEndToday;
-      } else {
-        // We're in the shift that started today at shiftStart
-        windowStart = shiftStartToday;
-        windowEnd = new Date(shiftStartToday.getTime() + windowMs);
-      }
-    } else {
-      windowStart = new Date(); windowStart.setHours(0, 0, 0, 0);
-      windowEnd = new Date(windowStart.getTime() + 86400000);
-    }
-    const isToday = (d) => {
-      if (!d) return false;
-      const dt = parseStamp(d);
-      return dt && dt >= windowStart && dt < windowEnd;
-    };
-    const me = ((session && session.name) || '').toLowerCase();
-    const allStaff = isManagerLike(session);
-    return (state.sales || []).filter(s => {
-      if (!isToday(s.date)) return false;
-      if (!allStaff) {
-        if (!me) return true;
-        if ((s.staff || '').toLowerCase() !== me) return false;
-      }
-      return true;
+  /* Sales-page scope: the WHOLE department, every staff member's sales.
+     A barman or supervisor has to see what their waiters sold — personal
+     scoping belongs to Active Orders, never to the sales list.
+     The window comes from the filter bar (today / 7d / 30d / custom dates);
+     'all' and a missing filter mean no date bound. */
+  function getShiftSales(session, filterState) {
+    const st = filterState || {};
+    const sales = (state.sales || []).slice();
+    const b = st.bounds || null;
+    const start = b ? b.start : (st.rangeStart ? new Date(st.rangeStart) : null);
+    const end = b ? b.end : (st.rangeEnd ? new Date(st.rangeEnd) : null);
+    if (!start || !end) return sales;   // 'All time' / no filter → everything
+    const endMax = new Date(end); endMax.setHours(23, 59, 59, 999);
+    return sales.filter(function (s) {
+      const d = parseStamp(s.date);
+      return !!d && d >= start && d <= endMax;
     });
   }
 
@@ -859,17 +823,9 @@
   function filterShiftSales(session, filterState) {
     filterState = filterState || {};
     const q = (filterState.search || '').trim().toLowerCase();
-    return getShiftSales(session).filter(s => {
+    return getShiftSales(session, filterState).filter(s => {
       if (filterState.status && s.status !== filterState.status) return false;
       if (filterState.payment && s.method !== filterState.payment) return false;
-      if (filterState.rangeStart && filterState.rangeEnd) {
-        const d = parseStamp(s.date);
-        if (!d) return false;
-        const start = new Date(filterState.rangeStart);
-        const end = new Date(filterState.rangeEnd);
-        end.setHours(23, 59, 59, 999);
-        if (d < start || d > end) return false;
-      }
       if (q) {
         const items = s.items || [];
         const mq = (s.id || '').toLowerCase().includes(q)
@@ -894,19 +850,24 @@
     return { total: rows.length, completed: completed.length, voided: voided.length, revenue, units, moneyReceived, notReceivedTotal };
   }
 
-  function getShiftLabel(session) { return isManagerLike(session) ? 'Today' : 'Your shift'; }
+  /* The sales page is department-wide for every role — a barman sees what the
+     whole bar sold, not only his own tabs. Only Active Orders is personal. */
+  function periodLabel(filterState) {
+    const b = (filterState || {}).bounds || null;
+    if (b && b.label) return b.label;
+    return 'All time';
+  }
+  function getShiftLabel(session, filterState) { return periodLabel(filterState); }
   function getShiftNoteText(session) {
-    return isManagerLike(session)
-      ? 'Today only · all ' + getDepartmentName().toLowerCase() + ' staff'
-      : ('Today only · ' + ((session && session.name) || 'your') + ' sales');
+    return 'All ' + getDepartmentName().toLowerCase() + ' staff';
   }
-  function getShiftTableTitle(session) {
-    return isManagerLike(session) ? 'Today — All staff' : 'Today — ' + ((session && session.name) || 'My sales');
+  function getShiftTableTitle(session, filterState) {
+    return periodLabel(filterState) + ' — All staff';
   }
-  function getPrintSummary(session, rows) {
+  function getPrintSummary(session, rows, filterState) {
     return 'Printed: ' + new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
       ' · ' + rows.length + ' record' + (rows.length !== 1 ? 's' : '') +
-      ' · ' + (isManagerLike(session) ? 'All staff today' : ((session && session.name) || ''));
+      ' · ' + periodLabel(filterState) + ' · all ' + getDepartmentName().toLowerCase() + ' staff';
   }
 
   function getSaleStatusOptions() {
@@ -1039,7 +1000,7 @@
     dashboardKPIs, salesKPIs, stockKPIs, ordersKPIs,
     can, canVoidSale, canDiscount,
     listStaffNames,
-    getShiftSales, isManagerLike,
+    getShiftSales,
     getInHouseGuests,
     getPaymentMethods,
     getRoomChargeMethodName,

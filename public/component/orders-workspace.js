@@ -50,6 +50,11 @@
      (channel 'boston-print-station') — this file must not open a second
      channel, and BroadcastChannel is missing on older tablet browsers. */
 
+  // Shown in the Orders panel so staff on a tablet can tell at a glance
+  // whether they are running the build we just shipped or a cached page.
+  const OW_BUILD = '18';
+  global.OW_BUILD = OW_BUILD;
+
   const CSS = `
     .ow-root{
       --ow-bg:#f4f6fb; --ow-surface:#ffffff; --ow-surface2:#f4f6fb; --ow-surface3:#eef0f6;
@@ -472,20 +477,16 @@
 
     const isWaiter = resolveUserRole() === 'waiter';
 
-    // Own-orders scoping — separate from `isWaiter` on purpose: it must NOT
-    // drive UI mode (Quick Sale stays available), it only mirrors the
-    // backend's ownOrdersFilter() so the table agrees with the API.
-    // Waitresses see own orders only. Pool bar/restaurant staff see all.
+    /* Active Orders is personal: an ordinary staff member (barman, waiter,
+       restaurant staff) only ever sees the tabs they opened. Admin, manager
+       and supervisor keep the whole department — mirrors the backend's
+       ownOrdersFilter. The SALES page is a different story: it is always
+       department-wide so a supervisor can see what their staff sold. */
     function seesOwnOrdersOnly() {
       var u = getSessionUser();
       var sysRole = u ? String(u.role || '').toLowerCase() : '';
-      if (sysRole === 'admin' || sysRole === 'manager' || sysRole === 'supervisor') return false;
-      if (!sysRole) {
-        var role = resolveUserRole();
-        // Only waitresses see own orders; pool bar/restaurant staff see all
-        return role === 'waiter';
-      }
-      return sysRole === 'staff' && isWaiter;
+      if (!sysRole) return resolveUserRole() !== 'manager' && resolveUserRole() !== 'admin';
+      return sysRole === 'staff';
     }
 
     /* Identity of the signed-in staff member, used to scope the workspace
@@ -2101,7 +2102,7 @@
           });
         }
       }
-      $('[data-role="ordCount"]').textContent = rows.length + ' order' + (rows.length !== 1 ? 's' : '');
+      $('[data-role="ordCount"]').textContent = rows.length + ' order' + (rows.length !== 1 ? 's' : '') + ' · build ' + OW_BUILD;
       if (!rows.length) {
         $('[data-role="ordBody"]').innerHTML =
           '<tr class="ow-empty-row"><td colspan="10">No orders match this filter.</td></tr>';
@@ -2856,24 +2857,6 @@
       }
     }
 
-    /* Active Orders pager. Bound to its own container instead of the big
-       delegated root handler: renderOrdersTable() only swaps the container's
-       innerHTML, so this listener survives every re-render and no other branch
-       of the root handler can consume the click first. */
-    (function bindOrderPager() {
-      var pag = $('[data-role="ordPagination"]');
-      if (!pag) return;
-      pag.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-ord-page]');
-        if (!btn || btn.disabled) return;
-        var v = btn.dataset.ordPage;
-        if (v === 'prev') ordersPage = Math.max(1, ordersPage - 1);
-        else if (v === 'next') ordersPage = Math.min(_ordTotalPages, ordersPage + 1);
-        else ordersPage = parseInt(v, 10) || 1;
-        renderOrdersTable();
-      });
-    })();
-
     // Events
     root.addEventListener('click', function (e) {
       const modeTab = e.target.closest('[data-mode]');
@@ -2953,6 +2936,15 @@
       const pick = e.target.closest('[data-pick-room]');
       if (pick) {
         selectRoom(pick.dataset.pickRoom, pick.dataset.pickGuest, pick.dataset.pickPhone || '', pick.dataset.pickWhich || '', pick.dataset.pickGuestId || '');
+        return;
+      }
+      const pagerBtn = e.target.closest('[data-ord-page]');
+      if (pagerBtn && !pagerBtn.disabled) {
+        var pv = pagerBtn.dataset.ordPage;
+        if (pv === 'prev') ordersPage = Math.max(1, ordersPage - 1);
+        else if (pv === 'next') ordersPage = Math.min(_ordTotalPages, ordersPage + 1);
+        else ordersPage = parseInt(pv, 10) || 1;
+        renderOrdersTable();
         return;
       }
       const pill = e.target.closest('.ow-status-pill');

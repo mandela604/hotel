@@ -236,69 +236,29 @@ function getCategories() {
     });
   }
 
-  function getShiftSales(session) {
-    session = session || null;
-    var shiftStart = -1, shiftEnd = -1;
-    try {
-      if (global.PlatformSettings && PlatformSettings.state && PlatformSettings.state.settings) {
-        var ps = PlatformSettings.state.settings;
-        if (typeof ps.shiftStartHour === 'number') shiftStart = ps.shiftStartHour;
-        if (typeof ps.shiftEndHour === 'number') shiftEnd = ps.shiftEndHour;
-      }
-    } catch (e) {}
-    var windowStart, windowEnd;
-    if (shiftStart >= 0 && shiftEnd >= 0) {
-      var now = new Date();
-      var shiftStartToday = new Date(now); shiftStartToday.setHours(shiftStart, 0, 0, 0);
-      var shiftStartYesterday = new Date(shiftStartToday.getTime() - 86400000);
-      var windowMs = (((shiftEnd - shiftStart) % 24) + 24) % 24 * 3600000 || 86400000;
-      // Find which shift window we're currently in: the one that ended most recently
-      var shiftEndToday = new Date(now); shiftEndToday.setHours(shiftEnd, 0, 0, 0);
-      var shiftEndYesterday = new Date(shiftEndToday.getTime() - 86400000);
-      if (now < shiftEndToday) {
-        // We're in the shift that started yesterday at shiftStart
-        windowStart = shiftStartYesterday;
-        windowEnd = shiftEndToday;
-      } else {
-        // We're in the shift that started today at shiftStart
-        windowStart = shiftStartToday;
-        windowEnd = new Date(shiftStartToday.getTime() + windowMs);
-      }
-    } else {
-      windowStart = new Date(); windowStart.setHours(0, 0, 0, 0);
-      windowEnd = new Date(windowStart.getTime() + 86400000);
-    }
-    var isToday = function (d) {
-      if (!d) return false;
-      var dt = parseStamp(d);
-      return dt && dt >= windowStart && dt < windowEnd;
-    };
-    var me = ((session && session.name) || '').toLowerCase();
-    var allStaff = isManagerLike(session);
-    return (state.sales || []).filter(function (s) {
-      if (!isToday(s.date)) return false;
-      if (!allStaff) {
-        if (!me) return true;
-        if ((s.staff || '').toLowerCase() !== me) return false;
-      }
-      return true;
+  /* Sales-page scope: the WHOLE department, every staff member's sales.
+     Personal scoping belongs to Active Orders only. The date window comes
+     from the filter bar (today / 7d / 30d / custom / all time). */
+  function getShiftSales(session, filterState) {
+    var st = filterState || {};
+    var sales = (state.sales || []).slice();
+    var b = st.bounds || null;
+    var start = b ? b.start : (st.rangeStart ? new Date(st.rangeStart) : null);
+    var end = b ? b.end : (st.rangeEnd ? new Date(st.rangeEnd) : null);
+    if (!start || !end) return sales;
+    var endMax = new Date(end); endMax.setHours(23, 59, 59, 999);
+    return sales.filter(function (s) {
+      var d = parseStamp(s.date);
+      return !!d && d >= start && d <= endMax;
     });
   }
 
   function filterShiftSales(session, filterState) {
     filterState = filterState || {};
     var q = (filterState.search || '').trim().toLowerCase();
-    return getShiftSales(session).filter(function (s) {
+    return getShiftSales(session, filterState).filter(function (s) {
       if (filterState.status && s.status !== filterState.status) return false;
       if (filterState.payment && s.method !== filterState.payment) return false;
-      if (filterState.rangeStart && filterState.rangeEnd) {
-        var d = parseStamp(s.date);
-        if (!d) return false;
-        var start = new Date(filterState.rangeStart);
-        var end = new Date(filterState.rangeEnd);
-        end.setHours(23, 59, 59, 999);
-        if (d < start || d > end) return false;
-      }
       if (q) {
         var items = s.items || [];
         var mq = (s.id || '').toLowerCase().includes(q)
@@ -311,12 +271,13 @@ function getCategories() {
     });
   }
 
-  function getShiftTableTitle(session) {
-    return isManagerLike(session) ? 'Today — All staff' : 'Today — ' + ((session && session.name) || 'My sales');
+  function getShiftTableTitle(session, filterState) {
+    var b = (filterState || {}).bounds || null;
+    return ((b && b.label) || 'All time') + ' — All staff';
   }
 
   function getShiftNoteText(session) {
-    return isManagerLike(session) ? 'Today only · all restaurant staff' : ('Today only · ' + ((session && session.name) || 'your') + ' sales');
+    return 'All restaurant staff';
   }
 
   function getPaymentMethods() {

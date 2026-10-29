@@ -477,7 +477,9 @@
     const api = {
       setRows: function (list) {
         rows = Array.isArray(list) ? list.slice() : [];
-        page = 1;
+        // Do NOT jump back to page 1 here: this runs on every live sync, so on
+        // a busy floor a tap on page 2 was instantly snapped back. renderPagination()
+        // clamps the page when the list shrinks.
         render();
       },
       getRows: function () { return rows.slice(); },

@@ -109,12 +109,12 @@
 
       <div class="shift-note no-print" id="shiftNote">
         <i class="fa-solid fa-user-clock"></i>
-        <span>Today's shift only · showing your sales</span>
+        <span>All staff in this department</span>
       </div>
 
       <div id="filterSlot" class="no-print"></div>
 
-      <div class="print-header"><h2 id="printHeaderTitle">Boston Leisure Hotel — Sales (My Shift)</h2><p id="printSub"></p></div>
+      <div class="print-header"><h2 id="printHeaderTitle">Boston Leisure Hotel — Sales</h2><p id="printSub"></p></div>
       <div id="tableSlot"></div>
 
       <div class="fatal-panel no-print" id="fatalPanel" style="display:none;">
@@ -129,17 +129,17 @@
 <script src="../services/permissions.js"></script>
 <script src="../settings/services/platform-settings-service.js"></script>
 <script src="data/poolbar-seed.js"></script>
-<script src="services/poolbar-service.js"></script>
+<script src="services/poolbar-service.js?v=2"></script>
 <script src="../component/poolbar-shell.js?v=6"></script>
 <script src="../component/sales-detail.js"></script>
 <script src="../component/receipt-print.js?v=2"></script>
 <script src="../component/void-sale.js"></script>
 <script src="../component/sales-filter-bar.js"></script>
-<script src="../component/sales-table.js?v=5"></script>
+<script src="../component/sales-table.js?v=6"></script>
 <script>
 /**
- * Sales page = TODAY + CURRENT STAFF only (via svc.getShiftSales).
- * Reports page keeps full history / all staff.
+ * Sales page = the WHOLE DEPARTMENT for every role (via svc.getShiftSales),
+ * inside the filter bar's date window. Personal scoping lives in Active Orders.
  *
  * 100% CALL-AND-RENDER — this page owns zero business logic. Every
  * filtering rule, KPI calculation, row/detail shape, and shift-copy
@@ -149,10 +149,10 @@
  *   svc.getShiftKpiSummary(rows)               — revenue/received/units math
  *   svc.normalizeSaleForTable(sale)            — row shape for SalesTable
  *   svc.buildSaleDetailShape(sale)             — shape for SalesDetail/VoidSale
- *   svc.getShiftLabel/getShiftNoteText/getShiftTableTitle/getPrintSummary(session, ...)
+ *   svc.getShiftLabel/getShiftNoteText/getShiftTableTitle/getPrintSummary(session, filterState)
  *   svc.getPaymentMethods() / getStatusOptions() / isMoneyReceived()
  *   svc.getDefaultPageSize() / getDepartmentName() / getOrderPageLink()
- *   svc.canVoidSale(session) / isManagerLike(session)
+ *   svc.canVoidSale(session)
  * If any of these change on the backend, only services/poolbar-service.js
  * (or data/poolbar-seed.js) needs editing — never this file.
  */
@@ -222,7 +222,7 @@ function fmtN(n) { return svc.fmtN(n); }
 
 function renderKPIs(rows) {
   const k = svc.getShiftKpiSummary(rows);
-  const who = svc.getShiftLabel(session);
+  const who = svc.getShiftLabel(session, filterState);
 
   document.getElementById('kpiRow').innerHTML =
     '<div class="kpi-card acc-blue">' +
@@ -260,7 +260,7 @@ function applyFilters(state) {
   const rows = svc.filterShiftSales(session, filterState);
   const tableRows = rows.map(svc.normalizeSaleForTable);
   renderKPIs(tableRows);
-  salesTable.setTitle(svc.getShiftTableTitle(session));
+  salesTable.setTitle(svc.getShiftTableTitle(session, filterState));
   salesTable.setRows(tableRows);
 }
 
@@ -398,7 +398,7 @@ async function init() {
         if (id === 'order') location.href = svc.getOrderPageLink();
         if (id === 'print') {
           const st = salesTable.getState();
-          document.getElementById('printSub').textContent = svc.getPrintSummary(session, st.rows);
+          document.getElementById('printSub').textContent = svc.getPrintSummary(session, st.rows, filterBar.getState());
           window.print();
         }
       },

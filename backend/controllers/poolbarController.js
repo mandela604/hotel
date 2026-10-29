@@ -12,7 +12,7 @@ const Counter        = require('../models/Counter');
 const asyncHandler   = require('../middleware/asyncHandler');
 const { ApiError }   = require('../middleware/errorHandler');
 const { hasPermission } = require('../config/permissions');
-const { ownOrdersFilter, ownSalesFilter, ownsOrder, denyOrderAccess } = require('../middleware/orderScope');
+const { ownOrdersFilter, ownsOrder, denyOrderAccess } = require('../middleware/orderScope');
 
 function discountAllowed(user, module) {
   return hasPermission(user, module, 'canGiveDiscount');
@@ -374,9 +374,9 @@ exports.produceComposite = asyncHandler(async (req, res) => {
 
 exports.listSales = asyncHandler(async (req, res) => {
   const { status, method, from, to } = req.query;
+  // Sales are department-wide on purpose: a barman/supervisor reads the whole
+  // bar's completed sales here. Only Open Tabs are personal (ownOrdersFilter).
   const filter = { department: 'poolbar' };
-  const scope = ownSalesFilter(req);
-  if (scope) Object.assign(filter, scope);
   if (status) filter.status = status;
   if (method) filter.method = method;
   if (from || to) {
