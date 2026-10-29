@@ -55,7 +55,11 @@
     if(socket) socket.off(event, cb);
   }
   function emit(event, data){
-    if(socket && connected) socket.emit(event, data);
+    if(socket && connected){ socket.emit(event, data); return true; }
+    /* Silently dropping outbound events used to let callers report success
+       for a print job that never left the device — say so explicitly. */
+    console.warn('[LiveService] emit dropped, socket not connected:', event);
+    return false;
   }
   // auto-connect when script loads
   try{ connect(); }catch(e){}
@@ -66,7 +70,7 @@
     s.onload=connect;
     document.head.appendChild(s);
   }
-  global.LiveService={ on:on, off:off, emit:emit, getDept:getDept };
+  global.LiveService={ on:on, off:off, emit:emit, getDept:getDept, isConnected:function(){ return !!(socket && connected); } };
   // ── auto-wire: debounced refresh on dept:updated + poll:tick ──
   function _doLiveRefresh(){
     try{

@@ -125,22 +125,44 @@
       '<div class="foot">Thank you for your patronage<br>Printed: ' + esc(nowStamp()) + '</div></div></body></html>';
   }
 
+  /* Local print. Android/iOS Chrome ignore window.print() called on a hidden
+     iframe (the old path here), so the receipt goes into a print-only
+     container and the PAGE prints with everything else hidden — that fires
+     the system dialog from the tap on both desktop and tablet. */
   function print(html) {
-    var f = document.createElement('iframe');
-    f.setAttribute('aria-hidden', 'true');
-    f.title = 'receipt-print';
-    f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
-    document.body.appendChild(f);
-    try {
-      var doc = f.contentWindow.document;
-      doc.open(); doc.write(html); doc.close();
-      setTimeout(function () {
-        try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) {}
-        setTimeout(function () { try { f.parentNode && f.parentNode.removeChild(f); } catch (e) {} }, 90000);
-      }, 400);
-    } catch (e) {
-      try { f.parentNode && f.parentNode.removeChild(f); } catch (e2) {}
+    if (!document.getElementById('ow-print-css')) {
+      var st = document.createElement('style');
+      st.id = 'ow-print-css';
+      st.textContent = '#ow-print-root{position:fixed;left:-10000px;top:0;width:420px;background:#fff;color:#000}' +
+        '@media print{body.ow-printing{background:#fff !important}' +
+        'body.ow-printing>*:not(#ow-print-root){display:none !important}' +
+        'body.ow-printing #ow-print-root{position:static !important;left:0 !important;width:100% !important}}';
+      document.head.appendChild(st);
     }
+    var prev = document.getElementById('ow-print-root');
+    if (prev) prev.remove();
+    var host = document.createElement('div');
+    host.id = 'ow-print-root';
+    host.innerHTML = html;
+    document.body.appendChild(host);
+    document.body.classList.add('ow-printing');
+
+    var cleaned = false;
+    var cleanup = function () {
+      if (cleaned) return;
+      cleaned = true;
+      document.body.classList.remove('ow-printing');
+      window.removeEventListener('afterprint', cleanup);
+      if (host.parentNode) host.parentNode.removeChild(host);
+    };
+    window.addEventListener('afterprint', cleanup);
+    try {
+      window.print();
+    } catch (e) {
+      cleanup();
+    }
+    /* Some browsers never fire afterprint — don't leave the page hidden. */
+    setTimeout(cleanup, 60000);
   }
 
   global.ReceiptPrint = {

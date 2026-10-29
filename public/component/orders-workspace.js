@@ -45,10 +45,10 @@
   'use strict';
 
   if (global.OrdersWorkspace) return;
-  
-  /* ── BroadcastChannel for manual print to print station ──────────────── */
-  var printChannel = new BroadcastChannel('boston_print_station');
-  /* ───────────────────────────────────────────────────────────────────── */
+
+  /* Manual print handshake lives in services/station-watch.js
+     (channel 'boston-print-station') — this file must not open a second
+     channel, and BroadcastChannel is missing on older tablet browsers. */
 
   const CSS = `
     .ow-root{
@@ -301,6 +301,18 @@
     .ow-modal-content{ max-height:60vh; overflow-y:auto; margin-bottom:16px; }
     .ow-modal-footer{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--ow-border); }
     .ow-receipt-preview{ background:#fff; padding:16px; border:1px solid #ddd; border-radius:8px; max-height:50vh; overflow-y:auto; font-size:11px; }
+
+    /* Local print on tablets. Android/iOS Chrome only open the system dialog
+       for window.print() fired on the page itself by a real tap — printing a
+       hidden iframe from another window is ignored. The receipt is therefore
+       copied into this off-screen root and the page prints with everything
+       else hidden. */
+    #ow-print-root{ position:fixed; left:-10000px; top:0; width:420px; background:#fff; color:#000; }
+    @media print{
+      body.ow-printing{ background:#fff !important; }
+      body.ow-printing > *:not(#ow-print-root){ display:none !important; }
+      body.ow-printing #ow-print-root{ position:static !important; left:0 !important; width:100% !important; }
+    }
 
     .ow-toast{ position:fixed; bottom:24px; right:24px; background:var(--ow-surface); border:1px solid var(--ow-border); border-radius:12px; padding:13px 20px; font-size:13.5px; color:var(--ow-text); box-shadow:0 8px 30px rgba(0,0,0,0.25); z-index:999999; display:flex; align-items:center; gap:10px; animation:owToastIn .3s cubic-bezier(0.18, 0.89, 0.32, 1.28); max-width:calc(100vw - 40px); font-weight:600; }
     .ow-toast.success{ background:#12b76a !important; color:#ffffff !important; border:1px solid #0e9355 !important; font-weight:700 !important; box-shadow:0 10px 30px rgba(18,183,106,0.4) !important; }
@@ -1248,10 +1260,43 @@
       showPrintPreview(html, o, rtype);
     }
 
+    /* Copies the receipt into #ow-print-root and prints the PAGE, because a
+       hidden iframe's contentWindow.print() is ignored on Android tablets.
+       Must be called straight from the tap handler — any await before
+       window.print() makes the browser treat it as an unrequested dialog. */
+    function printLocally(html) {
+      var prev = document.getElementById('ow-print-root');
+      if (prev) prev.remove();
+      var host = document.createElement('div');
+      host.id = 'ow-print-root';
+      host.innerHTML = html;
+      document.body.appendChild(host);
+      document.body.classList.add('ow-printing');
+
+      var cleanup = function () {
+        document.body.classList.remove('ow-printing');
+        window.removeEventListener('afterprint', cleanup);
+        setTimeout(function () { if (host.parentNode) host.remove(); }, 400);
+      };
+      window.addEventListener('afterprint', cleanup);
+      try {
+        window.print();
+      } catch (e) {
+        cleanup();
+        showToast('Print failed. Please try again.', 'error');
+        return;
+      }
+      // Safety net: some browsers never fire afterprint.
+      setTimeout(function () { if (document.body.classList.contains('ow-printing')) cleanup(); }, 60000);
+    }
+
     function showPrintPreview(html, o, rtype) {
       var modal = document.createElement('div');
       modal.className = 'ow-modal-overlay show';
       var previewTitle = rtype === 'bill' ? 'Print Customer Bill' : rtype === 'captain' ? 'Print Order Slip' : 'Print Receipt';
+      /* Station routing needs a real payload; without one the only option is
+         printing on this device, so a single button is shown. */
+      var canSendToStation = !!(o && rtype);
       modal.innerHTML = `
         <div class="ow-modal">
           <div class="ow-modal-header">
@@ -1263,7 +1308,8 @@
           </div>
           <div class="ow-modal-footer">
             <button type="button" class="ow-btn ow-btn-outline" id="cancelPrintBtn">Cancel</button>
-            <button type="button" class="ow-btn ow-btn-primary" id="confirmPrintBtn"><i class="fa-solid fa-print"></i> Print</button>
+            ${canSendToStation ? '<button type="button" class="ow-btn ow-btn-outline" id="devicePrintBtn"><i class="fa-solid fa-print"></i> Print on this Device</button>' : ''}
+            <button type="button" class="ow-btn ow-btn-primary" id="confirmPrintBtn"><i class="fa-solid fa-print"></i> ${canSendToStation ? 'Print at Counter' : 'Print'}</button>
           </div>
         </div>
       `;
@@ -1276,6 +1322,14 @@
       modal.querySelector('#cancelPrintBtn').addEventListener('click', function() {
         modal.remove();
       });
+
+      var deviceBtn = modal.querySelector('#devicePrintBtn');
+      if (deviceBtn) {
+        deviceBtn.addEventListener('click', function () {
+          modal.remove();
+          printLocally(html);
+        });
+      }
       
       modal.querySelector('#confirmPrintBtn').addEventListener('click', function() {
         /* Send the real payload to the counter print station first. The
@@ -1286,35 +1340,8 @@
           modal.remove();
           return;
         }
-        // Create an iframe to print from
-        var iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.top = '0';
-        iframe.style.left = '0';
-        iframe.style.width = '1px';
-        iframe.style.height = '1px';
-        iframe.style.opacity = '0';
-        iframe.style.pointerEvents = 'none';
-        document.body.appendChild(iframe);
-        
-        iframe.contentDocument.open();
-        iframe.contentDocument.write(html);
-        iframe.contentDocument.close();
-        
-        setTimeout(function() {
-          try {
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-          } catch(e) {
-            console.error('Print failed:', e);
-            showToast('Print failed. Please try again.', 'error');
-          }
-          setTimeout(function() {
-            document.body.removeChild(iframe);
-          }, 1000);
-        }, 300);
-        
         modal.remove();
+        printLocally(html);
       });
       
       modal.addEventListener('click', function(e) {
@@ -1326,7 +1353,7 @@
       if (window.StationWatch || document.querySelector('script[data-station-watch]')) return;
       var s = document.createElement('script');
       s.setAttribute('data-station-watch', '1');
-      s.src = '/services/station-watch.js';
+      s.src = '/services/station-watch.js?v=2';
       document.head.appendChild(s);
     }
 
@@ -1370,21 +1397,27 @@
 
     function printViaStation(o, rtype) {
       ensureStationWatch();
-      var sent = false;
+      var payload = stationPrintPayload(o, rtype);
+      var viaChannel = false;
       /* BroadcastChannel reaches a station open in this same browser
          (fast path); the socket relay reaches the printer PC when the
-         request comes from another device. Emit both — the station
-         collapses the duplicate. */
+         request comes from another device. */
       if (window.StationWatch && window.StationWatch.isAlive()) {
-        try { window.StationWatch.print(stationPrintPayload(o, rtype)); sent = true; } catch (e) {}
+        try { window.StationWatch.print(payload); viaChannel = true; } catch (e) {}
       }
+      var viaSocket = false;
       try {
         if (global.LiveService && typeof global.LiveService.emit === 'function') {
-          global.LiveService.emit('manualPrint', stationPrintPayload(o, rtype));
-          sent = true;
+          /* emit() returns false when the socket is down — that used to be
+             ignored, so a tablet reported "Sent to counter printer" for a job
+             that never left the device and skipped its own print dialog. */
+          viaSocket = global.LiveService.emit('manualPrint', payload) === true;
         }
       } catch (e) {}
-      if (!sent) return false;
+      if (!viaChannel && !viaSocket) {
+        showToast('Print station not reachable — printing on this device.', 'error');
+        return false;
+      }
       showToast('\u2713 Sent to counter printer', 'success');
       return true;
     }
