@@ -1239,10 +1239,11 @@
     function showPrintPreview(html, o, rtype) {
       var modal = document.createElement('div');
       modal.className = 'ow-modal-overlay show';
+      var previewTitle = rtype === 'bill' ? 'Print Customer Bill' : rtype === 'captain' ? 'Print Order Slip' : 'Print Receipt';
       modal.innerHTML = `
         <div class="ow-modal">
           <div class="ow-modal-header">
-            <div class="ow-modal-title">Print Receipt</div>
+            <div class="ow-modal-title">${esc(previewTitle)}</div>
             <button type="button" class="ow-modal-close"><i class="fa-solid fa-xmark"></i></button>
           </div>
           <div class="ow-modal-content">
