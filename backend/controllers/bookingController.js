@@ -108,9 +108,9 @@ function nowStamp() {
   return `${todayDDMMYY()} ${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`;
 }
 
-async function logActivity(dept, color, text, href) {
+async function logActivity(dept, color, text, href, by) {
   try {
-    await Activity.create({ dept, color, text, time: nowStamp(), href: href || '#' });
+    await Activity.create({ dept, color, text, time: nowStamp(), href: href || '#', by: by || '' });
   } catch (e) { /* activity log is best-effort, never block the request on it */ }
 }
 
@@ -972,7 +972,7 @@ exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
     { $set: { status: 'no-show', updatedAt: Date.now() } }
   );
   if (result.modifiedCount > 0) {
-    await logActivity('Booking', 'amber', `Auto-cancelled ${result.modifiedCount} expired reservation(s)`, 'booking-rooms.html');
+    await logActivity('Booking', 'amber', `Auto-cancelled ${result.modifiedCount} expired reservation(s)`, 'booking-rooms.html', req.user ? req.user.name : '');
   }
   if (res) res.json({ success: true, modified: result.modifiedCount });
 });
@@ -1038,7 +1038,7 @@ exports.addPayment = asyncHandler(async (req, res) => {
   await booking.save();
 
   const pmtBy = req.user ? req.user.name : '';
-  await logActivity('Booking', 'green', isComp ? `Complimentary stay recorded for Room ${booking.room} — ${String(note).trim().slice(0, 120)}` : `Payment of ${entry.amount} recorded for Room ${booking.room}`, 'booking-list.html');
+  await logActivity('Booking', 'green', isComp ? `Complimentary stay recorded for Room ${booking.room} — ${String(note).trim().slice(0, 120)}` : `Payment of ${entry.amount} recorded for Room ${booking.room}`, 'booking-list.html', pmtBy);
   
   // Audit: addPayment action
   await auditBooking(booking.room, 'addPayment', booking.recordedBy || '', pmtBy, pmtBy, {

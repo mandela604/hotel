@@ -42,6 +42,7 @@ tr:last-child td{border-bottom:none;}
 .page-btn{min-width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit;padding:0 7px;font-weight:600;}
 .page-btn.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);font-weight:700;}
 .page-btn:disabled{opacity:.3;pointer-events:none;}
+.green-fg{color:var(--green);}
 .toast{position:fixed;bottom:20px;right:20px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:12.5px;box-shadow:0 8px 28px rgba(15,20,40,.18);z-index:9999;font-weight:600;}
 .toast.error{border-left:3px solid var(--red);}
 </style>
@@ -54,7 +55,7 @@ tr:last-child td{border-bottom:none;}
 <div class="content">
 <div class="toolbar">
 <div class="flt-group"><span class="flt-label">Search</span><input class="form-input" type="search" id="q" placeholder="Who, what, room…" style="min-width:200px;"></div>
-<div class="flt-group"><span class="flt-label">Department</span><select class="form-select" id="dept"><option value="">All departments</option></select></div>
+<div class="flt-group"><span class="flt-label">Department</span><select class="form-select" id="dept"><option value="Booking">Front Desk</option></select></div>
 <div class="flt-group"><span class="flt-label">From</span><input class="form-input" type="date" id="from"></div>
 <div class="flt-group"><span class="flt-label">To</span><input class="form-input" type="date" id="to"></div>
 <button class="btn btn-primary" onclick="loadLog()"><i class="fa-solid fa-rotate"></i> Load</button>
@@ -86,10 +87,9 @@ function whoOf(text){
   return m ? m[1].trim() : '—';
 }
 function formatDetails(text){
-  // Replace payment amounts like "Payment of 1100000" with naira formatted
-  text = String(text||'');
-  text = text.replace(/Payment of (\d+)/g, function(m,n){ return 'Payment of ' + fmtNaira(n); });
-  return text;
+  // Escape first, then wrap amounts so the green styling survives.
+  var s = esc(String(text||''));
+  return s.replace(/Payment of (\d+)/g, function(m,n){ return 'Payment of <span class="green-fg">' + fmtNaira(n) + '</span>'; });
 }
 window.clearFilters = function(){
   document.getElementById('q').value='';
@@ -119,24 +119,15 @@ window.loadLog = async function(){
     if (!r.ok || !j.success) throw new Error((j && j.error) || ('Request failed (' + r.status + ')'));
     var rows = j.data || [];
     total = j.total || rows.length; pages = j.pages || 1;
-    // department options from data seen so far + current selection kept
-    var sel = document.getElementById('dept');
-    if (sel.options.length <= 1) {
-      var depts = {};
-      rows.forEach(function(x){ if (x.dept) depts[x.dept] = 1; });
-      Object.keys(depts).sort().forEach(function(d){
-        if (!sel.querySelector('option[value="' + d.replace(/"/g,'') + '"]')) {
-          var o = document.createElement('option'); o.value = d; o.textContent = d; sel.appendChild(o);
-        }
-      });
-    }
     document.getElementById('logSub').textContent = total + ' entr' + (total===1?'y':'ies');
     document.getElementById('paginLabel').textContent = total === 0 ? 'No records' : (((page-1)*PAGE_SIZE+1) + '–' + Math.min(page*PAGE_SIZE,total) + ' of ' + total);
     body.innerHTML = rows.length ? rows.map(function(x){
+      // First try 'by' field from enriched data (from AuditLog), fallback to regex on text
+      var who = x.by || whoOf(x.text);
       return '<tr><td style="white-space:nowrap;">' + fmtTime(x.createdAt) + '</td>' +
-        '<td style="font-weight:700;">' + esc(whoOf(x.text)) + '</td>' +
+        '<td style="font-weight:700;">' + esc(who) + '</td>' +
         '<td>' + deptChip(x.dept) + '</td>' +
-        '<td>' + esc(formatDetails(x.text)) + '</td></tr>';
+        '<td>' + formatDetails(x.text) + '</td></tr>';
     }).join('') : '<tr><td colspan="4" class="empty">No activity matches these filters.</td></tr>';
     renderPages();
   }catch(e){

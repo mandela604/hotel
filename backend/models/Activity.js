@@ -6,6 +6,7 @@ const activitySchema = new mongoose.Schema({
   text:  { type: String, default: '' },
   time:  { type: String, default: '' },
   href:  { type: String, default: '#' },
+  by:    { type: String, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Activity', activitySchema);

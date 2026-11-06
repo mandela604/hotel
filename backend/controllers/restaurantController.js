@@ -47,9 +47,9 @@ function nowStamp() {
   h = h % 12; if (h === 0) h = 12;
   return `${todayDDMMYY()} ${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`;
 }
-async function logActivity(color, text, href) {
+async function logActivity(color, text, href, by) {
   try {
-    await Activity.create({ dept: 'Restaurant', color, text, time: nowStamp(), href: href || '#' });
+    await Activity.create({ dept: 'Restaurant', color, text, time: nowStamp(), href: href || '#', by: by || '' });
   } catch (e) { /* activity log is best-effort, never block the request on it */ }
 }
 

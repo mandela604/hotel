@@ -18,7 +18,11 @@ exports.list = asyncHandler(async (req, res) => {
     Activity.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     Activity.countDocuments(filter),
   ]);
-  res.json({ success: true, count: rows.length, total, page, pages: Math.ceil(total / limit) || 1, data: rows });
+  
+  // WHO column: 'by' is stamped server-side by the acting user at write time.
+  const enriched = rows.map(row => Object.assign({}, row, { by: row.by || '' }));
+  
+  res.json({ success: true, count: enriched.length, total, page, pages: Math.ceil(total / limit) || 1, data: enriched });
 });
 
 exports.create = asyncHandler(async (req, res) => {
