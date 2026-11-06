@@ -782,10 +782,9 @@
     return [...names].sort();
   }
 
-  /* Sales-page scope: the WHOLE department, every staff member's sales.
-     A barman or supervisor has to see what their waiters sold — personal
-     scoping belongs to Active Orders, never to the sales list.
-     The window comes from the filter bar (today / 7d / 30d / custom dates);
+  /* Sales-page scope: waiter sees own sales only; staff/staff+ see whole dept sales.
+     Personal scoping happens in backend listSales filter.
+     The date window comes from the filter bar (today / 7d / 30d / custom dates);
      'all' and a missing filter mean no date bound. */
   function getShiftSales(session, filterState) {
     const st = filterState || {};
@@ -850,8 +849,8 @@
     return { total: rows.length, completed: completed.length, voided: voided.length, revenue, units, moneyReceived, notReceivedTotal };
   }
 
-  /* The sales page is department-wide for every role — a barman sees what the
-     whole bar sold, not only his own tabs. Only Active Orders is personal. */
+  /* Sales page shows: waiter sees own sales only; staff/staff+ sees whole dept sales.
+     Scoping happens in backend listSales filter based on user privilege. */
   function periodLabel(filterState) {
     const b = (filterState || {}).bounds || null;
     if (b && b.label) return b.label;
@@ -859,10 +858,15 @@
   }
   function getShiftLabel(session, filterState) { return periodLabel(filterState); }
   function getShiftNoteText(session) {
-    return 'All ' + getDepartmentName().toLowerCase() + ' staff';
+    // Show "Your sales" for waiters, "All staff" for managers/staff
+    const isWaiter = session && String(session.privilege || '').toLowerCase() === 'waiter';
+    return isWaiter ? 'Your sales' : 'All ' + getDepartmentName().toLowerCase() + ' staff';
   }
   function getShiftTableTitle(session, filterState) {
-    return periodLabel(filterState) + ' — All staff';
+    const b = (filterState || {}).bounds || null;
+    const isWaiter = session && String(session.privilege || '').toLowerCase() === 'waiter';
+    const who = isWaiter ? 'Your' : 'All staff';
+    return ((b && b.label) || 'All time') + ' — ' + who;
   }
   function getPrintSummary(session, rows, filterState) {
     return 'Printed: ' + new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +

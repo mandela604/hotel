@@ -374,9 +374,14 @@ exports.produceComposite = asyncHandler(async (req, res) => {
 
 exports.listSales = asyncHandler(async (req, res) => {
   const { status, method, from, to } = req.query;
-  // Sales are department-wide on purpose: a barman/supervisor reads the whole
-  // bar's completed sales here. Only Open Tabs are personal (ownOrdersFilter).
-  const filter = { department: 'poolbar' };
+  // Sales visibility by role: waiter sees own sales only; staff/staff+ see all dept sales
+  let filter = { department: 'poolbar' };
+  
+  // Filter by current user's staff if they're a waiter
+  if (req.user && String(req.user.privilege || '').toLowerCase() === 'waiter') {
+    filter.staff = req.user.name;
+  }
+  
   if (status) filter.status = status;
   if (method) filter.method = method;
   if (from || to) {

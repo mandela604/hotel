@@ -1365,6 +1365,11 @@ exports.getBookingAudit = asyncHandler(async (req, res) => {
   if (dateFrom) query.createdAt.$gte = new Date(dateFrom).getTime();
   if (dateTo) query.createdAt.$lte = new Date(dateTo).getTime() + 86400000 - 1;
   
+  // STAFF: only show their own audit trail. ADMIN/MANAGER/SUPERVISOR: all bookings for Front Desk.
+  if (req.user && (req.user.role === 'staff')) {
+    query.recordedBy = req.user.name; // narrow to their writes only
+  }
+  
   const logs = await AuditLog.find(query)
     .sort({ createdAt: -1 })
     .limit(Number(limit))

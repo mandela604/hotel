@@ -79,14 +79,21 @@ var shell = BookingShell.attach({ sidebarTarget:'#sidebarSlot', topbarTarget:'#t
 var page = 1, pages = 1, total = 0;
 var PAGE_SIZE = 20, timer = null;
 function esc(s){ var d=document.createElement('div'); d.textContent=(s==null?'':s); return d.innerHTML; }
+function fmtNaira(v){ v = Number(v)||0; return '₦' + v.toLocaleString(); }
 function fmtTime(ts){ try { var d=new Date(ts); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return '—'; } }
 function whoOf(text){
   var m = String(text||'').match(/(?:^|\s)by\s+([A-Z][A-Za-z .'\-]{1,60})\s*$/);
   return m ? m[1].trim() : '—';
 }
+function formatDetails(text){
+  // Replace payment amounts like "Payment of 1100000" with naira formatted
+  text = String(text||'');
+  text = text.replace(/Payment of (\d+)/g, function(m,n){ return 'Payment of ' + fmtNaira(n); });
+  return text;
+}
 window.clearFilters = function(){
   document.getElementById('q').value='';
-  document.getElementById('dept').value='';
+  document.getElementById('dept').value='Booking';
   document.getElementById('from').value='';
   document.getElementById('to').value='';
   page = 1; loadLog();
@@ -129,7 +136,7 @@ window.loadLog = async function(){
       return '<tr><td style="white-space:nowrap;">' + fmtTime(x.createdAt) + '</td>' +
         '<td style="font-weight:700;">' + esc(whoOf(x.text)) + '</td>' +
         '<td>' + deptChip(x.dept) + '</td>' +
-        '<td>' + esc(x.text) + '</td></tr>';
+        '<td>' + esc(formatDetails(x.text)) + '</td></tr>';
     }).join('') : '<tr><td colspan="4" class="empty">No activity matches these filters.</td></tr>';
     renderPages();
   }catch(e){

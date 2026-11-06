@@ -488,7 +488,7 @@
     var prev = printedAt[printKey];
     var nowMs = Date.now();
     if (prev && nowMs - prev < 5000) return;
-    var dup = !!(prev && nowMs - prev < 2 * 60 * 1000);
+    var dup = !!(prev && nowMs - prev < 60 * 1000);
     addLog(entry);
     lastBox.className = 'last';
     lastBox.innerHTML =

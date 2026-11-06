@@ -239,9 +239,13 @@ exports.adjustStockById = asyncHandler(async (req, res) => {
 ═══════════════════════════════════════════════ */
 exports.listSales = asyncHandler(async (req, res) => {
   const { search, status, method, table, start, end } = req.query;
-  // Sales are department-wide on purpose: staff read every waiter's completed
-  // sales here. Only Open Tabs are personal (ownOrdersFilter).
-  const filter = { department: DEPT };
+  // Sales visibility by role: waiter sees own sales only; staff/staff+ see all dept sales
+  let filter = { department: DEPT };
+  
+  // Filter by current user's staff if they're a waiter
+  if (req.user && String(req.user.privilege || '').toLowerCase() === 'waiter') {
+    filter.staff = req.user.name;
+  }
 
   if (status) filter.status = status;
   if (method) filter.method = method;
