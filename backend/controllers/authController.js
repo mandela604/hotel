@@ -59,7 +59,15 @@ function setTokenCookie(res, token) {
 }
 
 function clearTokenCookie(res) {
-  res.clearCookie('token', { path: '/' });
+  // Deletion has to match the attributes the cookie was set with, otherwise
+  // some browsers keep it — so this mirrors cookieOptions() rather than
+  // passing a bare path and hoping.
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isSecure(),
+    sameSite: 'lax',
+    path: '/',
+  });
 }
 
 /**

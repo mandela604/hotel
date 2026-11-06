@@ -129,6 +129,9 @@
   .sts-notif{ width:36px; height:36px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm);
     display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; position:relative; color:#6b7280; flex-shrink:0; }
   .sts-notifdot{ position:absolute; top:6px; right:6px; width:7px; height:7px; background:var(--gold); border-radius:50%; border:1.5px solid #f4f6fb; }
+  .sts-logout{ width:36px; height:36px; background:#ffffff; border:1px solid #eef0f6; border-radius:var(--radius-sm);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; color:#6b7280; flex-shrink:0; transition:all .2s; }
+  .sts-logout:hover{ background:#feecec; color:#f04438; border-color:rgba(240,68,56,.3); }
   .sts-avatar{ width:36px; height:36px; background:rgba(47,111,237,0.12); border:2px solid rgba(47,111,237,0.25); border-radius:50%;
     display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; color:#2f6fed; cursor:pointer; flex-shrink:0; }
   `;
@@ -248,11 +251,28 @@
           <div class="sts-date" id="sts-date"></div>
           <div class="sts-apibadge" id="sts-apiBadge"><span class="dot"></span><span id="sts-apiLabel">Live</span></div>
           <div class="sts-notif"><i class="fa-regular fa-bell"></i><div class="sts-notifdot"></div></div>
+          <button class="sts-logout" id="sts-logout" title="Log out"><i class="fa-solid fa-right-from-bracket"></i></button>
           <div class="sts-avatar" id="sts-avatar">${initials}</div>
         </div>
       </div>`;
 
     document.getElementById('sts-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    document.getElementById('sts-logout').addEventListener('click', () => {
+      if (window.HotelLogout) window.HotelLogout.end(CONFIG.API_BASE);
+      else location.replace('/login.html'); // helper not loaded yet - the login page ends any live session on arrival
+    });
+
+
+    // ── Shared sign-out: one logout implementation for every module ──
+    (function () {
+      if (window.__hotelAuthLogout) return;
+      window.__hotelAuthLogout = 1;
+      var ls = document.createElement('script');
+      ls.src = '/services/auth-logout.js';
+      document.head.appendChild(ls);
+    })();
+
 
     const sidebar     = document.getElementById('sts-sidebar');
     const overlay     = document.getElementById('sts-overlay');
@@ -344,14 +364,13 @@
     });
     handle.sessionReady = sessionReady;
 
-    // ── Idle auto-logout: the window comes from Settings -> Session Timeout ──
+    // ── Shared sign-out: one logout implementation for every module ──
     (function () {
-      if (window.__hotelSessionGuard) return;
-      window.__hotelSessionGuard = 1;
-      var sg = document.createElement('script');
-      sg.src = '/services/session-guard.js';
-      sg.onerror = function () {};
-      document.head.appendChild(sg);
+      if (window.__hotelAuthLogout) return;
+      window.__hotelAuthLogout = 1;
+      var ls = document.createElement('script');
+      ls.src = '/services/auth-logout.js';
+      document.head.appendChild(ls);
     })();
 
     return handle;

@@ -49,6 +49,9 @@ router.post('/bookings/:room/no-show', inDept, privilegeGuard('booking', 'canEdi
 router.post('/bookings/:room/cancel-refund', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('room'), bookingController.cancelRefund);
 router.post('/bookings/:stayId/transfer', inDept, privilegeGuard('booking', 'canEdit'), v.validateParam('stayId'), bookingController.transferBooking);
 
+/* Audit Trail */
+router.get('/audit', inDept, bookingController.getBookingAudit);
+
 /* Guests */
 router.get('/guests', bookingController.listGuests);
 router.get('/guests/:id', v.validateParam('id'), bookingController.getGuest);

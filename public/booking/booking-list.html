@@ -457,7 +457,6 @@ function filterBookings() {
   var statusChip = document.querySelector('.sc-btn.active') ? document.querySelector('.sc-btn.active').dataset.s : '';
 
   filteredBk = bookings.filter(function (b) {
-    if (!b.guest) return false;
     var mq = !q || String(b.room).toLowerCase().indexOf(q) !== -1 || (b.guest || '').toLowerCase().indexOf(q) !== -1 || (b.phone || '').toLowerCase().indexOf(q) !== -1 || (b.email||'').toLowerCase().indexOf(q)!==-1;
     var ms = !statusChip || b.status === statusChip;
     var mt = !t || b.type === t;

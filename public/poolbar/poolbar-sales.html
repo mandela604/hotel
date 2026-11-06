@@ -411,6 +411,16 @@ async function init() {
         applyFilters(filterBar.getState());
       });
     }
+
+    // Listen for live updates from shell (when waiter pays order, backend emits poolbar:updated)
+    window.addEventListener('live:update', function () {
+      console.log('[poolbar-sales] Live update received — reloading sales data');
+      svc.loadAll().then(function () {
+        applyFilters(filterBar.getState());
+      }).catch(function (e) {
+        console.error('[poolbar-sales] Failed to reload sales on live update:', e);
+      });
+    });
   } catch (err) {
     showFatal(err && err.message ? err.message : 'Failed to load sales.');
   }

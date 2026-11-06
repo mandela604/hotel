@@ -11,6 +11,11 @@ async function connectDB() {
 
   console.log(`[db] MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
 
+  // Revoked tokens live in Mongo but are checked from memory on every request.
+  // Reload them now, otherwise a restart forgets every logout and hands those
+  // old cookies back a live session for the rest of their 7-day validity.
+  require('../utils/tokenRevoke').hydrate();
+
   // Drop stale collection-level validator on bookings (enum on 'type' was
   // removed from the Mongoose schema but persists in MongoDB).
   try {

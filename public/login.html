@@ -194,19 +194,10 @@ body {
       if (res.ok) await apiCall('/logout', undefined, 'POST');
     } catch (e) { /* offline or no session - nothing to clear */ }
     // Any identity cached from a previous session must not survive either.
-    try { localStorage.removeItem('aurum_user'); } catch (e) {}
-    try { localStorage.removeItem('accounting-session'); } catch (e) {}
+    // The last two keys are leftovers from the old idle-logout feature.
+    ['aurum_user', 'accounting-session', 'aurum_last_active', 'aurum_session_expired']
+      .forEach(function (key) { try { localStorage.removeItem(key); } catch (e) {} });
   })();
-
-  /* ── Idle timeout notice ──
-     /services/session-guard.js sends the device here with ?expired=1 after
-     signing an idle session out, so the next person knows why. */
-  if (/[?&]expired=1(?:&|$)/.test(location.search)) {
-    setTimeout(function () {
-      showToast('Signed out after a period of inactivity.', 'error');
-      try { history.replaceState(null, '', location.pathname); } catch (e) {}
-    }, 300);
-  }
 
   /* ── No autofilled credentials ──
      The form opts out of the browser's password manager (autocomplete is

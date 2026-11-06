@@ -413,6 +413,16 @@ async function init() {
       applyFilters(filterBar.getState());
     });
   }
+
+  // Listen for live updates from shell (when waiter pays order, backend emits restaurant:updated)
+  window.addEventListener('live:update', function () {
+    console.log('[restaurant-sales] Live update received — reloading sales data');
+    svc.loadAll().then(function () {
+      applyFilters(filterBar.getState());
+    }).catch(function (e) {
+      console.error('[restaurant-sales] Failed to reload sales on live update:', e);
+    });
+  });
 }
 init();
 </script>

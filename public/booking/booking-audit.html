@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Audit Trail — Front Desk</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="../component/aurum-icons/css/all.min.css" rel="stylesheet" type="text/css" />
+  <style>
+    :root {
+      --bg: #f7f9fc; --surface: #fff; --border: #e3e8f0; --text: #1c2440; --text2: #6b7280;
+      --primary: #2f6fed; --gold: #f5af19; --red: #f04438; --green: #12b76a; --amber: #ffb900;
+      --radius-sm: 8px; --radius-md: 12px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+    
+    /* Layout */
+    .app-shell { display: flex; min-height: 100vh; }
+    aside { width: 240px; background: #0b0e16; color: #fff; position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 16px; }
+    main { flex: 1; padding: 24px; overflow: hidden; }
+    
+    /* Sidebar */
+    .brand { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 16px; }
+    .nav-item { display: block; padding: 10px 12px; color: #d1d5db; text-decoration: none; border-radius: var(--radius-sm); margin-bottom: 4px; }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .nav-item.active { background: var(--primary); color: #fff; }
+    
+    /* Header */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .page-title { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; }
+    .btn-group { display: flex; gap: 8px; }
+    .btn { background: var(--primary); color: #fff; border: none; padding: 10px 16px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn:hover { background: #265bd8; }
+    .btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    
+    /* Filter panel */
+    .filter-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+    .form-label { font-size: 12px; font-weight: 600; color: var(--text2); }
+    .form-input, .form-select { padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: #fff; }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(47,111,237,.1); }
+    
+    /* Table */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8fafc; text-align: left; padding: 12px 14px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    
+    /* Badge */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .badge.create { background: #dcfce7; color: #166534; }
+    .badge.update { background: #dbeafe; color: #1e40af; }
+    .badge.delete { background: #fee2e2; color: #991b1b; }
+    .badge.checkin { background: #d1fae5; color: #065f46; }
+    .badge.checkout { background: #ffedd5; color: #9a3412; }
+    .badge.transfer { background: #ede9fe; color: #5b21b6; }
+    .badge.addPayment { background: #fef3c7; color: #92400e; }
+    .badge.cancelRefund { background: #fce7f3; color: #9f1239; }
+    .badge.noShow { background: #f3f4f6; color: #374151; }
+    
+    /* Loading skeleton */
+    .skeleton { animation: shimmer 1.5s infinite linear; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    
+    .skeleton-line { height: 12px; background-color: #f0f0f0; margin-bottom: 8px; border-radius: 4px; }
+    .skeleton-table tr > td { padding-top: 8px; }
+    .skeleton-cell { min-height: 14px; margin-bottom: 6px; }
+    .skeleton-cell.short { width: 40%; }
+    .skeleton-cell.med { width: 60%; }
+    .skeleton-cell.long { width: 100%; }
+    
+    /* Empty state */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+    .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: .5; }
+    
+    /* Meta details */
+    .meta-detail { font-family: monospace; font-size: 11px; color: var(--text2); background: #f8fafc; padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside id="sidebar-target"></aside>
+  
+  <!-- Main -->
+  <main>
+    <div class="page-header">
+      <h1 class="page-title">Booking Audit Trail</h1>
+      <div class="btn-group">
+        <button class="btn secondary" id="btnRefresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        <button class="btn" id="btnExport"><i class="fa-solid fa-download"></i> Export CSV</button>
+      </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-panel">
+      <div class="filter-row">
+        <div class="form-group">
+          <label class="form-label">Room (optional)</label>
+          <input class="form-input" type="text" id="room" placeholder="e.g. 4059" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Action</label>
+          <select class="form-select" id="action">
+            <option value="all">All Actions</option>
+            <option value="create">Create</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+            <option value="checkin">Check-in</option>
+            <option value="checkout">Check-out</option>
+            <option value="transfer">Transfer</option>
+            <option value="addPayment">Add Payment</option>
+            <option value="cancelRefund">Cancel / Refund</option>
+            <option value="noShow">No-show</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Recorded By</label>
+          <input class="form-input" type="text" id="recordedBy" placeholder="Staff name filter" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date From</label>
+          <input class="form-input" type="date" id="dateFrom" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date To</label>
+          <input class="form-input" type="date" id="dateTo" />
+        </div>
+        <div class="form-group" style="flex: 0;">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn" id="btnApply"><i class="fa-solid fa-filter"></i> Apply Filters</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Table -->
+    <div class="table-wrap">
+      <table id="auditTable">
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Action</th>
+            <th>Room</th>
+            <th>Guest Name</th>
+            <th>Original Creator</th>
+            <th>Submitted By</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Loading skeleton will be inserted here -->
+        </tbody>
+      </table>
+      
+      <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="empty-icon"><i class="fa-solid fa-clipboard-question"></i></div>
+        <div>No audit records found for your filters.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../component/aurum-shell.js?v=3"></script>
+<script>
+(function () {
+  'use strict';
+  
+  const CONFIG = { API_BASE: '', SIDEBAR_TARGET: '#sidebar-target', TOPBAR_TARGET: null, PAGE_TITLE: 'Audit Trail' };
+  let session = null;
+  let allLogs = [];
+  
+  // ════════════════════════════════════════════════════════════
+  // Session handling
+  // ════════════════════════════════════════════════════════════
+  async function fetchSession() {
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/api/auth/session', { credentials: 'include' });
+      if (!res.ok) return null;
+      const d = await res.json();
+      session = (d && d.data) ? d.data : d;
+      return session;
+    } catch (e) {}
+    return null;
+  }
+  
+  async function checkSession() {
+    return new Promise((resolve) => {
+      (async () => {
+        while (!session) {
+          session = await fetchSession();
+          if (session) break;
+          await new Promise(r => setTimeout(r, 500));
+        }
+        resolve(session);
+      })();
+    });
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // UI helpers
+  // ════════════════════════════════════════════════════════════
+  function esc(s) {
+    const e = document.createElement('textarea');
+    e.textContent = s || '';
+    return e.innerHTML;
+  }
+  
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    return d.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+  
+  function showLoading() {
+    const tbody = document.getElementById('tableBody');
+    const empty = document.getElementById('emptyState');
+    empty.style.display = 'none';
+    const rows = [];
+    for (let i = 0; i < 10; i++) {
+      rows.push(
+        '<tr>',
+        '<td colspan="7"><div class="skeleton-table">',
+        '<div class="skeleton-cell long"></div><div class="skeleton-cell short"></div></div></td>',
+        '</tr>'
+      );
+    }
+    tbody.innerHTML = rows.join('\n');
+  }
+  
+  function hideLoading(logs) {
+    const tbody = document.getElementById('tableBody');
+    const empty = document.getElementById('emptyState');
+    if (!logs || logs.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = logs.map(l => renderRow(l)).join('\n');
+  }
+  
+  function renderRow(l) {
+    const actionClass = l.action || 'noShow';
+    const metaText = l.meta ? JSON.stringify(l.meta).slice(0, 150) : '';
+    return (
+      '<tr>',
+      '<td>' + esc(fmtDate(l.createdAt)) + '</td>',
+      '<td><span class="badge ' + esc(actionClass) + '">' + esc(l.action || 'Unknown') + '</span></td>',
+      '<td>' + esc(l.bookingId || '') + '</td>',
+      '<td>' + esc(l.meta?.guest || l.meta?.guests || '') + '</td>',
+      '<td>' + esc(l.createdBy || '') + '</td>',
+      '<td>' + esc(l.recordedBy || l.by || '') + '</td>',
+      '<td><span class="meta-detail">' + esc(metaText) + '</span></td>',
+      '</tr>'
+    ).join('');
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // Data fetching
+  // ════════════════════════════════════════════════════════════
+  async function fetchAudit() {
+    const params = new URLSearchParams({
+      limit: 500,
+      room: document.getElementById('room').value || '',
+      action: document.getElementById('action').value || 'all',
+      recordedBy: document.getElementById('recordedBy').value || '',
+      dateFrom: document.getElementById('dateFrom').value || '',
+      dateTo: document.getElementById('dateTo').value || '',
+    });
+    const res = await fetch(CONFIG.API_BASE + '/api/booking/audit?' + params.toString(), { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to fetch audit trail');
+    return await res.json();
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // Events & initialization
+  // ════════════════════════════════════════════════════════════
+  async function init() {
+    await checkSession();
+    
+    // Shell injection
+    window.aurumShell = require('../component/aurum-shell.js');
+    aurumShell.attach({
+      sidebarTarget: CONFIG.SIDEBAR_TARGET,
+      pageTitle: CONFIG.PAGE_TITLE,
+      activeFile: 'booking-audit.html'
+    });
+    
+    // Set today's date range default
+    const today = new Date();
+    const yest = new Date(today); yest.setDate(today.getDate() - 1);
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    document.getElementById('dateFrom').value = formatDate(yest);
+    document.getElementById('dateTo').value = formatDate(today);
+    
+    document.getElementById('btnApply').addEventListener('click', loadData);
+    document.getElementById('btnRefresh').addEventListener('click', loadData);
+    document.getElementById('btnExport').addEventListener('click', exportCSV);
+    
+    // Load initial data
+    await loadData();
+  }
+  
+  async function loadData() {
+    showLoading();
+    try {
+      const res = await fetchAudit();
+      allLogs = res.data || [];
+      hideLoading(allLogs);
+    } catch (err) {
+      console.error('[Audit] Fetch failed:', err);
+      document.getElementById('emptyState').innerHTML = 
+        '<div class="empty-icon"><i class="fa-solid fa-circle-exclamation"></i></div>' +
+        '<div>' + esc(err.message || 'Failed to load audit data.') + '</div>';
+      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('tableBody').innerHTML = '';
+    }
+  }
+  
+  function exportCSV() {
+    if (!allLogs.length) return alert('No data to export.');
+    const headers = ['createdAt', 'action', 'bookingId', 'createdBy', 'recordedBy', 'by', 'meta'];
+    const rows = allLogs.map(l => [
+      l.createdAt, l.action, l.bookingId, l.createdBy, l.recordedBy, l.by, JSON.stringify(l.meta || {})
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'audit-trail-' + Date.now() + '.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+  
+  // Start
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

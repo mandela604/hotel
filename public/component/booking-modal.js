@@ -965,6 +965,11 @@
       var roomNum = mode === 'edit' && editBooking
         ? editBooking.room
         : (roomVal ? roomVal.split('|')[0] : '');
+      var recordBy = val('recordedBy');
+      if (!recordBy) {
+        // No recordedBy value yet — use the current session name (server will stamp this anyway)
+        recordBy = (session && session.name) || '';
+      }
       return {
         room: roomNum,
         stayId: mode === 'edit' && editBooking ? (editBooking.stayId || editBooking._id || '') : '',
@@ -980,7 +985,7 @@
         rate: parseFloat(val('rate')) || 0,
         discount: parseFloat(val('discount')) || 0,
         payMethod: val('payMethod'),
-        recordedBy: (session && session.name) || '',
+        recordedBy: recordBy, // original author for session-binding + audit
         adults: parseInt(val('adults'), 10) || 1,
         children: parseInt(val('children'), 10) || 0,
         notes: val('notes').trim(),
@@ -1333,6 +1338,14 @@
     /* ── Print individual booking receipt (brand from Settings, hardcoded fallback) ── */
     function printBookingReceipt() {
       if (!editBooking) return;
+
+      // GATE: Only allow printing if booking is saved to database (has _id or stayId)
+      if (!editBooking._id && !editBooking.stayId) {
+        toast('Please save the booking first before printing the receipt.', 'error');
+        console.error('[BookingModal] Print attempted without saving booking', { room: editBooking.room, guest: editBooking.guest });
+        return;
+      }
+
       var fallbackBrand = { hotelName: 'BOSTON LEISURE HOTEL AND APARTMENTS', hotelAddress: 'Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State', contactLine: '09039391464 / hr.bostonleisurehotel@gmail.com' };
       if (global.HotelBrand && HotelBrand.get) {
         var done = false;
@@ -1456,18 +1469,22 @@
       var entry = collectEntry();
       if (!entry.guest || !entry.checkin || !entry.checkout) {
         toast('Please fill in guest name and dates.', 'error');
+        console.error('[BookingModal] Save failed: Missing required fields', { guest: entry.guest, checkin: entry.checkin, checkout: entry.checkout });
         return;
       }
       if (!entry.room) {
         toast('Please select a room.', 'error');
+        console.error('[BookingModal] Save failed: No room selected');
         return;
       }
       if (mode === 'new' && !canCreate(session)) {
         toast("You don't have permission to create bookings.", 'error');
+        console.error('[BookingModal] Save failed: No permission to create', { user: session?.name, role: session?.role });
         return;
       }
       if (mode === 'edit' && !canEditEntity(session, editBooking)) {
         toast("You don't have permission to edit this booking.", 'error');
+        console.error('[BookingModal] Save failed: No permission to edit', { user: session?.name, role: session?.role, bookingId: editBooking._id });
         return;
       }
       // Admin-only: confirm createdAt change
@@ -1477,6 +1494,7 @@
       }
       if ((entry.discount || 0) > 0 && !canDiscount(session)) {
         toast("You don't have permission to apply discounts.", 'error');
+        console.error('[BookingModal] Save failed: No permission to discount', { user: session?.name, role: session?.role, discount: entry.discount });
         return;
       }
 
@@ -1484,16 +1502,19 @@
 
       saving = true;
       applyEditability();
+      console.log('[BookingModal] Attempting to save booking', { mode, room: entry.room, guest: entry.guest, checkin: entry.checkin, checkout: entry.checkout });
       try {
         var row = await service.saveBooking(entry);
         if (mode === 'new' && initialDeposit > 0 && row && (row.stayId || row._id || row.room)) {
           var depStay = row.stayId || row._id || row.id || row.room;
           row = await service.addBookingPayment(depStay, { amount: initialDeposit, mode: entry.payMethod, stayId: row.stayId || '' });
         }
+        console.log('[BookingModal] Booking saved successfully', { stayId: row?.stayId, bookingNo: row?.bookingNo, room: row?.room });
         toast(mode === 'edit' ? 'Booking updated.' : 'Booking saved.', 'success');
         close();
         onSaved(row || entry);
       } catch (err) {
+        console.error('[BookingModal] Save booking FAILED', { error: err?.message, errorDetails: err, entry: { room: entry.room, guest: entry.guest, checkin: entry.checkin, checkout: entry.checkout } });
         toast((err && err.message) || 'Failed to save booking.', 'error');
       } finally {
         saving = false;
@@ -1707,6 +1728,7 @@
       mode = 'new';
       editBooking = null;
       currentGuest = null;
+      originalSessionName = (session && session.name) || ''; // capture original author for session-binding
       await loadContextSafe();
       clearForm();
       $('[data-role="title"]').innerHTML = 'New Booking';
@@ -1730,6 +1752,8 @@
     async function openEdit(booking) {
       if (!booking) return;
       mode = 'edit';
+      editBooking = null; // reset before we fetch fresh data
+      originalSessionName = (session && session.name) || ''; // capture original author for this session
       ensurePayMethods().then(paintPayMethodDropdowns, paintPayMethodDropdowns);
       await loadContextSafe();
       var key = booking.stayId || booking._id || booking.id || booking.room;

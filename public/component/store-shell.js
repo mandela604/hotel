@@ -340,13 +340,8 @@
 
     const logoutBtn = document.getElementById('gs-logout');
     if (logoutBtn) logoutBtn.addEventListener('click', async () => {
-      try { await fetch(CONFIG.API_BASE + '/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
-      // The session cookie is gone, but the cached identity is not - drop it
-      // so the next person on this device does not inherit the previous
-      // user's name, role and supervisor scopes.
-      try { localStorage.removeItem('aurum_user'); } catch(e) {}
-      try { localStorage.removeItem('accounting-session'); } catch(e) {}
-      window.location.href = '/login.html';
+      if (window.HotelLogout) window.HotelLogout.end(CONFIG.API_BASE);
+      else location.replace('/login.html'); // helper not loaded yet - the login page ends any live session on arrival
     });
 
     const handle = {
@@ -400,14 +395,13 @@
     });
     handle.sessionReady = sessionReady;
 
-    // ── Idle auto-logout: the window comes from Settings -> Session Timeout ──
+    // ── Shared sign-out: one logout implementation for every module ──
     (function () {
-      if (window.__hotelSessionGuard) return;
-      window.__hotelSessionGuard = 1;
-      var sg = document.createElement('script');
-      sg.src = '/services/session-guard.js';
-      sg.onerror = function () {};
-      document.head.appendChild(sg);
+      if (window.__hotelAuthLogout) return;
+      window.__hotelAuthLogout = 1;
+      var ls = document.createElement('script');
+      ls.src = '/services/auth-logout.js';
+      document.head.appendChild(ls);
     })();
 
     return handle;

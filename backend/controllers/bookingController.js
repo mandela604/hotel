@@ -114,6 +114,21 @@ async function logActivity(dept, color, text, href) {
   } catch (e) { /* activity log is best-effort, never block the request on it */ }
 }
 
+async function auditBooking(bookingId, action, createdBy, recordedBy, byName, meta = {}) {
+  try {
+    await AuditLog.create({
+      bookingId, action,
+      createdAt: Date.now(),
+      createdBy: createdBy || '',
+      recordedBy: recordedBy || byName || '',
+      updatedBy: action === 'update' ? recordedBy : null,
+      deletedBy: action === 'delete' ? recordedBy : null,
+      by: byName || recordedBy || '',
+      meta,
+    });
+  } catch (e) { /* audit is best-effort, never block requests */ }
+}
+
 async function nextGuestId() {
   const count = await Guest.countDocuments();
   return `GST-${String(count + 1).padStart(5, '0')}`;
@@ -461,8 +476,31 @@ exports.createBooking = asyncHandler(async (req, res) => {
   const {
     room, type, guest, phone, email, address, idType, idNum,
     checkin, checkout, rate, discount, payMethod, adults, children,
-    notes, status,
+    notes, status, recordedBy: clientRecordedBy,
   } = req.body;
+
+  console.log('[Booking] CREATE REQUEST', { room, guest, checkin, checkout, status, user: req.user?.name });
+
+  // GATE: Require guest name - do not save booking without a name
+  if (!guest || !guest.trim()) {
+    console.error('[Booking] CREATE FAILED: Guest name is required', { room, user: req.user?.name });
+    return res.status(400).json({ success: false, error: 'Guest name is required. Please enter a guest name before saving the booking.' });
+  }
+
+  // SESSION BINDING FIX A: reject if session changed after form opened
+  // The form captures its initial author in recordedBy/client-side field.
+  // When that differs from current request.user.name, block the write.
+  if (clientRecordedBy && clientRecordedBy !== '' && req.user && req.user.name !== clientRecordedBy) {
+    console.warn('[Booking] CREATE BLOCKED: Session mismatch during create', {
+      originalAuthor: clientRecordedBy,
+      currentSession: req.user.name,
+      room, guest
+    });
+    return res.status(409).json({
+      success: false,
+      error: 'Another account is signed in on this device — your entry was not saved.',
+    });
+  }
 
   if ((Number(discount) || 0) > 0 && !discountAllowed(req.user, 'booking')) {
     return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
@@ -479,80 +517,96 @@ exports.createBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const bookingNo = await nextBookingNo();
-  // Reuse a vacant placeholder if one exists, otherwise create a new stay doc
-  let booking = await Booking.findOne({ room, status: 'vacant' });
-  const isReuse = !!booking;
-  if (isReuse) {
-    // Start clean even if the placeholder was left dirty
-    clearStayFields(booking);
-    Object.assign(booking, {
-      stayId: uuidv4(),
-      bookingNo,
-      type: type || booking.type,
-      guest: guest.trim(),
-      phone: phone || '',
-      email: email || '',
-      address: address || '',
-      idType: idType || 'NIN',
-      idNum: idNum || '',
-      checkin: checkin || '',
-      checkout: checkout || '',
-      rate: rate !== undefined ? Number(rate) : booking.rate,
-      discount: discount !== undefined ? Number(discount) : 0,
-      payments: [],
-      paid: 0,
-      payMethod: payMethod || 'Cash',
-      payStatus: 'Pending',
-      recordedBy: req.user ? req.user.name : booking.recordedBy,
-      adults: adults !== undefined ? Number(adults) : 1,
-      children: children !== undefined ? Number(children) : 0,
-      status: status || 'reserved',
-      notes: notes || '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-    await booking.save();
-  } else {
-    booking = await Booking.create({
-      room,
-      stayId: uuidv4(),
-      bookingNo,
-      type: type || roomDoc.type || 'Standard',
-      guest: (guest || '').trim(),
-      phone: phone || '',
-      email: email || '',
-      address: address || '',
-      idType: idType || 'NIN',
-      idNum: idNum || '',
-      checkin: checkin || '',
-      checkout: checkout || '',
-      rate: rate !== undefined ? Number(rate) : roomDoc.rate || 0,
-      discount: discount !== undefined ? Number(discount) : 0,
-      payments: [],
-      paid: 0,
-      payMethod: payMethod || 'Cash',
-      payStatus: 'Pending',
-      recordedBy: req.user ? req.user.name : '',
-      adults: adults !== undefined ? Number(adults) : 1,
-      children: children !== undefined ? Number(children) : 0,
-      status: status || 'reserved',
-      notes: notes || '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
+  try {
+    const bookingNo = await nextBookingNo();
+    // Reuse a vacant placeholder if one exists, otherwise create a new stay doc
+    let booking = await Booking.findOne({ room, status: 'vacant' });
+    const isReuse = !!booking;
+    if (isReuse) {
+      // Start clean even if the placeholder was left dirty
+      clearStayFields(booking);
+      Object.assign(booking, {
+        stayId: uuidv4(),
+        bookingNo,
+        type: type || booking.type,
+        guest: guest.trim(),
+        phone: phone || '',
+        email: email || '',
+        address: address || '',
+        idType: idType || 'NIN',
+        idNum: idNum || '',
+        checkin: checkin || '',
+        checkout: checkout || '',
+        rate: rate !== undefined ? Number(rate) : booking.rate,
+        discount: discount !== undefined ? Number(discount) : 0,
+        payments: [],
+        paid: 0,
+        payMethod: payMethod || 'Cash',
+        payStatus: 'Pending',
+        recordedBy: req.user ? req.user.name : booking.recordedBy,
+        adults: adults !== undefined ? Number(adults) : 1,
+        children: children !== undefined ? Number(children) : 0,
+        status: status || 'reserved',
+        notes: notes || '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await booking.save();
+    } else {
+      booking = await Booking.create({
+        room,
+        stayId: uuidv4(),
+        bookingNo,
+        type: type || roomDoc.type || 'Standard',
+        guest: (guest || '').trim(),
+        phone: phone || '',
+        email: email || '',
+        address: address || '',
+        idType: idType || 'NIN',
+        idNum: idNum || '',
+        checkin: checkin || '',
+        checkout: checkout || '',
+        rate: rate !== undefined ? Number(rate) : roomDoc.rate || 0,
+        discount: discount !== undefined ? Number(discount) : 0,
+        payments: [],
+        paid: 0,
+        payMethod: payMethod || 'Cash',
+        payStatus: 'Pending',
+        recordedBy: req.user ? req.user.name : '',
+        adults: adults !== undefined ? Number(adults) : 1,
+        children: children !== undefined ? Number(children) : 0,
+        status: status || 'reserved',
+        notes: notes || '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
 
-  // Attach this stay to (or create) the guest's profile.
-  const guestProfile = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
-  if (guestProfile && guestProfile.id) {
-    booking.guestId = guestProfile.id;
-    await booking.save();
-  }
+    // Attach this stay to (or create) the guest's profile.
+    const guestProfile = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
+    if (guestProfile && guestProfile.id) {
+      booking.guestId = guestProfile.id;
+      await booking.save();
+    }
 
-  await logActivity('Booking', 'gold', `${booking.guest} booked into Room ${room}`, 'booking-list.html', req.user ? req.user.name : '');
-  emit(req, 'booking', 'booking:updated', { action: 'createBooking', room: booking.room, stayId: booking.stayId, data: booking });
-  res.status(201).json({ success: true, data: booking });
+    const byName = req.user ? req.user.name : '';
+    await logActivity('Booking', 'gold', `${booking.guest} booked into Room ${room}`, 'booking-list.html', byName);
+    
+    // Audit: create action — store original author (whoever server thinks wrote it) alongside current session name
+    await auditBooking(booking.room, 'create', byName, byName, byName, {
+      type: booking.type,
+      checkin: booking.checkin,
+      checkout: booking.checkout,
+      guests: booking.guest,
+    });
+    
+    emit(req, 'booking', 'booking:updated', { action: 'createBooking', room: booking.room, stayId: booking.stayId, data: booking });
+    console.log('[Booking] CREATE SUCCESS', { room, guest: booking.guest, stayId: booking.stayId, bookingNo: booking.bookingNo, recordedBy: req.user?.name });
+    res.status(201).json({ success: true, data: booking });
+  } catch (saveError) {
+    console.error('[Booking] CREATE SAVE ERROR', { error: saveError.message, stack: saveError.stack, room, guest });
+    throw saveError; // Re-throw to be caught by asyncHandler
+  }
 });
 
 // Full edit of an existing occupied/reserved booking — guest/date/rate/
@@ -561,6 +615,25 @@ exports.createBooking = asyncHandler(async (req, res) => {
 exports.updateBooking = asyncHandler(async (req, res) => {
   const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+
+  // SESSION BINDING FIX A for updates: reject if form author differs from current session
+  if (req.body.recordedBy && req.body.recordedBy !== '' && req.user && req.user.name !== req.body.recordedBy) {
+    console.warn('[Booking] UPDATE BLOCKED: Session mismatch during update', {
+      originalAuthor: req.body.recordedBy,
+      currentSession: req.user.name,
+      room: booking.room, guest: booking.guest
+    });
+    return res.status(409).json({
+      success: false,
+      error: 'Another account is signed in on this device — your entry was not saved.',
+    });
+  }
+
+  // GATE: Require guest name - do not allow clearing the guest name
+  if (req.body.guest !== undefined && (!req.body.guest || !req.body.guest.trim())) {
+    console.error('[Booking] UPDATE FAILED: Guest name cannot be empty', { room: booking.room, bookingId: booking._id, user: req.user?.name });
+    return res.status(400).json({ success: false, error: 'Guest name cannot be empty. Please enter a guest name.' });
+  }
 
   // If dates are being changed, ensure no overlap with other active stays for same room
   const newCheckin = req.body.checkin !== undefined ? req.body.checkin : booking.checkin;
@@ -646,6 +719,16 @@ exports.updateBooking = asyncHandler(async (req, res) => {
     await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
   }
 
+  // Audit: update action with original author (from booking's own createdBy or recordedBy)
+  const origCreator = booking.history?.[0]?.by || booking.recordedBy || '';
+  await auditBooking(booking.room, 'update', origCreator, req.user ? req.user.name : '', req.user ? req.user.name : '', {
+    changedFields: fields.filter(f => req.body[f] !== undefined),
+    oldCheckin: oldCheckin,
+    newCheckin: booking.checkin,
+    oldCheckout: oldCheckout,
+    newCheckout: booking.checkout,
+  });
+
   emit(req, 'booking', 'booking:updated', { action: 'updateBooking', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -682,6 +765,10 @@ exports.transferBooking = asyncHandler(async (req, res) => {
   await booking.save();
 
   await logActivity('Booking', 'gold', `${booking.guest} transferred ${fromRoom}→${toRoom} by ${by}`, 'booking-rooms.html', req.user ? req.user.name : '');
+  
+  // Audit: transfer action
+  await auditBooking(booking.room, 'transfer', booking.recordedBy || origCreator, by, by, { fromRoom, toRoom, note: req.body.note || '' });
+  
   emit(req, 'booking', 'booking:updated', { action: 'transferBooking', room: booking.room, stayId: booking.stayId, data: booking, fromRoom, toRoom });
   res.json({ success: true, data: booking });
 });
@@ -714,6 +801,11 @@ exports.deleteBooking = asyncHandler(async (req, res) => {
   }
 
   await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + roomNum} deleted — room marked available`, 'booking-list.html', req.user ? req.user.name : '');
+  
+  // Audit: delete action
+  const delUser = req.user ? req.user.name : '';
+  await auditBooking(roomNum, 'delete', booking.recordedBy || '', delUser, delUser, {});
+  
   emit(req, 'booking', 'booking:updated', { action: 'deleteBooking', room: roomNum, stayId: booking.stayId });
   res.json({ success: true, message: 'Booking deleted. Room marked as Available.', data: booking });
 });
@@ -737,7 +829,12 @@ exports.checkinBooking = asyncHandler(async (req, res) => {
 
   await booking.save();
 
-  await logActivity('Booking', 'green', `${booking.guest} checked in — Room ${booking.room}`, 'booking-rooms.html', req.user ? req.user.name : '');
+  const by = req.user ? req.user.name : '';
+  await logActivity('Booking', 'green', `${booking.guest} checked in — Room ${booking.room}`, 'booking-rooms.html', by);
+  
+  // Audit: checkin action
+  await auditBooking(booking.room, 'checkin', booking.recordedBy || '', by, by, {});
+  
   emit(req, 'booking', 'booking:updated', { action: 'checkin', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -785,7 +882,12 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
     }
   } catch (e) { /* history is best-effort, never block checkout */ }
 
-  await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html', req.user ? req.user.name : '');
+  const coBy = req.user ? req.user.name : '';
+  await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html', coBy);
+  
+  // Audit: checkout action
+  await auditBooking(booking.room, 'checkout', booking.recordedBy || '', coBy, coBy, {});
+  
   emit(req, 'booking', 'booking:updated', { action: 'checkout', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -846,7 +948,17 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
   await booking.save();
 
   const label = refund > 0 ? ` (refund: ${refund})` : '';
-  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${roomNum} cancelled${label}`, 'booking-rooms.html', req.user ? req.user.name : '');
+  const cfBy = req.user ? req.user.name : '';
+  await logActivity('Booking', 'amber', `${guestName || 'Guest'} — Room ${roomNum} cancelled${label}`, 'booking-rooms.html', cfBy);
+  
+  // Audit: cancelRefund action
+  await auditBooking(roomNum, 'cancelRefund', booking.recordedBy || '', cfBy, cfBy, {
+    refundType,
+    refundAmount,
+    refunded,
+    reason,
+  });
+  
   emit(req, 'booking', 'booking:updated', { action: 'cancelRefund', room: roomNum, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -925,7 +1037,17 @@ exports.addPayment = asyncHandler(async (req, res) => {
   booking.updatedAt = Date.now();
   await booking.save();
 
+  const pmtBy = req.user ? req.user.name : '';
   await logActivity('Booking', 'green', isComp ? `Complimentary stay recorded for Room ${booking.room} — ${String(note).trim().slice(0, 120)}` : `Payment of ${entry.amount} recorded for Room ${booking.room}`, 'booking-list.html');
+  
+  // Audit: addPayment action
+  await auditBooking(booking.room, 'addPayment', booking.recordedBy || '', pmtBy, pmtBy, {
+    amount: entry.amount,
+    mode: entry.mode,
+    note: entry.note,
+    by: entry.by,
+  });
+  
   emit(req, 'booking', 'booking:updated', { action: 'addPayment', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -1229,6 +1351,26 @@ exports.getReports = asyncHandler(async (req, res) => {
       },
     },
   });
+});
+
+/* ── AUDIT TRAIL ENDPOINT FOR FRONT DESK BOOKING AUDIT PAGE ── */
+exports.getBookingAudit = asyncHandler(async (req, res) => {
+  const { room, action, recordedBy, dateFrom, dateTo, limit = 500 } = req.query;
+  
+  let query = {};
+  if (room) query.bookingId = room;
+  if (action && action !== 'all') query.action = action;
+  if (recordedBy && recordedBy !== '') query.recordedBy = recordedBy;
+  if (dateFrom || dateTo) query.createdAt = {};
+  if (dateFrom) query.createdAt.$gte = new Date(dateFrom).getTime();
+  if (dateTo) query.createdAt.$lte = new Date(dateTo).getTime() + 86400000 - 1;
+  
+  const logs = await AuditLog.find(query)
+    .sort({ createdAt: -1 })
+    .limit(Number(limit))
+    .lean();
+    
+  res.json({ success: true, count: logs.length, data: logs });
 });
 
 /* ═══════════════════════════════════════════════
