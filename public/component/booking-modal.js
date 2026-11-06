@@ -381,6 +381,7 @@
     var guests = [];
     var originalCreatedAt = null;
     var session = externalSession;
+    var originalSessionName = ''; // capture original author for session-binding
     var saving = false;
     var addingPayment = false;
     var settlingIdx = null;
