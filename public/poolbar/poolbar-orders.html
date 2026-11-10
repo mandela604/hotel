@@ -54,7 +54,11 @@ body{
     <div class="content">
       <div class="pb-fatal-banner" id="fatalBanner">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <div><b>Orders workspace could not load.</b><div id="fatalMsg"></div></div>
+        <div>
+          <b>Orders workspace could not load.</b>
+          <div id="fatalMsg"></div>
+          <button type="button" onclick="location.reload()" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-weight:600;">&#8635; Reload</button>
+        </div>
       </div>
       <div class="pb-guest-warn" id="guestWarn">
         <i class="fa-solid fa-circle-info"></i>
@@ -74,6 +78,15 @@ body{
      and services/poolbar-service.js (local subfolders), then the shared
      shell + orders-workspace components. -->
 
+<script src="../component/ui-loading.js"></script>
+<script>
+  /* Shimmer skeleton — OrdersWorkspace.attach() replaces this whole slot. */
+  if (window.LoadingUI) {
+    document.getElementById('ordersSlot').innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">' +
+      LoadingUI.skKPIs(4) + '</div>' + LoadingUI.skTableRows(6, 7);
+  }
+</script>
 <script src="../services/ui-utils.js"></script>
 <script src="../services/permissions.js"></script>
 <script src="../settings/services/platform-settings-service.js"></script>
@@ -87,8 +100,15 @@ body{
 'use strict';
 
 function showFatal(message) {
-  document.getElementById('fatalMsg').textContent = message;
+  var m = String(message || '');
+  // Say what actually went wrong; explain auth failures in plain words.
+  if (/token required|invalid or expired|session ended|sign in again/i.test(m)) {
+    m = 'Your session has expired — sign in again, then press Reload. (' + m + ')';
+  }
+  document.getElementById('fatalMsg').textContent = m;
   document.getElementById('fatalBanner').classList.add('show');
+  var slot = document.getElementById('ordersSlot');
+  if (slot) slot.innerHTML = '';   // don't leave the skeleton shimmering under the error
 }
 function showGuestWarn(message) {
   if (message) document.getElementById('guestWarnMsg').textContent = message;
@@ -156,7 +176,9 @@ async function init() {
   }
 }
 
-init();
+init().catch(function (e) {
+  showFatal(e && e.message ? e.message : 'Orders page failed to start.');
+});
 </script>
 </body>
 </html>

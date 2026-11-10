@@ -107,6 +107,14 @@
   </div>
 </div>
 
+<script src="../component/ui-loading.js"></script>
+<script>
+  /* Shimmer skeleton — visible until renderKPIs()/SalesTable render over it. */
+  if (window.LoadingUI) {
+    document.getElementById('kpiRow').innerHTML = LoadingUI.skKPIs(4);
+    document.getElementById('tableSlot').innerHTML = LoadingUI.skTableRows(6, 7);
+  }
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../services/permissions.js"></script>
 <script src="../settings/services/platform-settings-service.js"></script>
@@ -432,7 +440,26 @@ async function init() {
     });
   });
 }
-init();
+init().catch(function (e) {
+  console.error('[restaurant-sales] init failed', e);
+  var msg = (e && e.message) || 'unknown error';
+  if (/token required|invalid or expired|session ended|sign in again/i.test(msg)) {
+    msg = 'Your session has expired — sign in again, then press Reload. (' + msg + ')';
+  }
+  var esc = String(msg).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+  var k = document.getElementById('kpiRow');
+  if (k) {
+    k.innerHTML = '<div style="grid-column:1/-1;padding:22px;text-align:center;">' +
+      '<b>Could not load this page.</b>' +
+      '<div style="font-size:13px;margin-top:8px;color:var(--text3);">' + esc + '</div>' +
+      '<button type="button" onclick="location.reload()" style="margin-top:12px;padding:7px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-weight:600;">&#8635; Reload</button>' +
+      '</div>';
+  }
+  var t = document.getElementById('tableSlot');
+  if (t) t.innerHTML = '';
+});
 </script>
 </body>
 </html>

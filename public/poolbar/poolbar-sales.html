@@ -120,11 +120,20 @@
       <div class="fatal-panel no-print" id="fatalPanel" style="display:none;">
         <b>Could not load this page.</b>
         <div id="fatalMsg"></div>
+        <button type="button" onclick="location.reload()" style="margin-top:10px;padding:7px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-weight:600;">&#8635; Reload</button>
       </div>
     </div>
   </div>
 </div>
 
+<script src="../component/ui-loading.js"></script>
+<script>
+  /* Shimmer skeleton — visible until renderKPIs()/SalesTable render over it. */
+  if (window.LoadingUI) {
+    document.getElementById('kpiRow').innerHTML = LoadingUI.skKPIs(4);
+    document.getElementById('tableSlot').innerHTML = LoadingUI.skTableRows(6, 7);
+  }
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script src="../services/permissions.js"></script>
 <script src="../settings/services/platform-settings-service.js"></script>
@@ -296,7 +305,12 @@ function showToast(msg, type) {
 }
 
 function showFatal(message) {
-  document.getElementById('fatalMsg').textContent = message;
+  var m = String(message || '');
+  // Say what actually went wrong; explain auth failures in plain words.
+  if (/token required|invalid or expired|session ended|sign in again/i.test(m)) {
+    m = 'Your session has expired — sign in again, then press Reload. (' + m + ')';
+  }
+  document.getElementById('fatalMsg').textContent = m;
   document.getElementById('fatalPanel').style.display = 'block';
   document.getElementById('filterSlot').style.display = 'none';
   document.getElementById('tableSlot').style.display = 'none';
