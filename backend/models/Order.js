@@ -38,4 +38,7 @@ const orderSchema = new mongoose.Schema({
   stockDeducted:  { type: Boolean, default: false },
 }, { timestamps: true });
 
+/* listOrders: { department, [status] } sorted by date desc. */
+orderSchema.index({ department: 1, date: -1 });
+
 module.exports = mongoose.model('Order', orderSchema);

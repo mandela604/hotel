@@ -14,4 +14,8 @@ const restaurantMovementSchema = new mongoose.Schema({
   reason:  { type: String, default: '' },
 }, { timestamps: true });
 
+/* Sorts by date desc on every restaurant page load (date is a string here
+   — index mirrors the existing sort behaviour exactly). */
+restaurantMovementSchema.index({ date: -1 });
+
 module.exports = mongoose.model('RestaurantMovement', restaurantMovementSchema);

@@ -9,4 +9,7 @@ const poolbarMovementSchema = new mongoose.Schema({
   reason:  { type: String, default: '' },
 }, { timestamps: true });
 
+/* listMovements: date-range filter + sort by date desc on every load. */
+poolbarMovementSchema.index({ date: -1 });
+
 module.exports = mongoose.model('PoolbarMovement', poolbarMovementSchema);

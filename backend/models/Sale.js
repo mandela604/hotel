@@ -32,4 +32,9 @@ const saleSchema = new mongoose.Schema({
   paidDate:       { type: Date, default: null },
 }, { timestamps: true });
 
+/* Hot paths: every page load sorts the dept's sales by date desc, and the
+   dashboard aggregates by department + createdAt range. */
+saleSchema.index({ department: 1, date: -1 });
+saleSchema.index({ department: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Sale', saleSchema);

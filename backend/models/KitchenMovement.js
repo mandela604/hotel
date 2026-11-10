@@ -9,4 +9,6 @@ const kitchenMovementSchema = new mongoose.Schema({
   reason:  { type: String, default: '' },
 }, { timestamps: true });
 
+kitchenMovementSchema.index({ date: -1 });
+
 module.exports = mongoose.model('KitchenMovement', kitchenMovementSchema);

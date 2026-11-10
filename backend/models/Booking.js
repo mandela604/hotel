@@ -77,4 +77,9 @@ bookingSchema.pre('save', function(next) {
   next();
 });
 
+/* Serves GET /api/booking/data's expiry write ({status:'reserved',
+   checkout < today}) and every {room, status:'checkedin'} guest lookup. */
+bookingSchema.index({ status: 1, checkout: 1 });
+bookingSchema.index({ room: 1, status: 1 });
+
 module.exports = mongoose.model('Booking', bookingSchema);
