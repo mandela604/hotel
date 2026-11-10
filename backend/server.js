@@ -5,6 +5,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+// Gzip large JSON payloads (sales/orders/movements lists are the biggest
+// responses the app sends). Data is identical — only the transfer shrinks.
+const compression = require('compression');
 
 const connectDB = require('./config/db');
 
@@ -82,6 +85,7 @@ io.engine.on('connection_error', (err) => {
   console.warn('[ws] connection_error', err.code, err.message);
 });
 app.use(cookieParser());
+app.use(compression());
 
 app.use(helmet(helmetConfig));
 app.use(express.json({ limit: '2mb' }));
