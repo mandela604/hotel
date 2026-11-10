@@ -4,8 +4,8 @@
   "description": "Aurum Hotel Management Suite — Express.js + MongoDB Backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node scripts/buildIndexes.js && node server.js",
+    "dev": "node scripts/buildIndexes.js && node server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
