@@ -144,7 +144,7 @@
   `;
 
   function ensureFontAwesome() {
-    if (document.getElementById('gs-fa-css')) return;
+    if (document.getElementById('gs-fa-css') || document.querySelector('link[href*="font-awesome"]')) return;
     const link = document.createElement('link');
     link.id = 'gs-fa-css';
     link.rel = 'stylesheet';

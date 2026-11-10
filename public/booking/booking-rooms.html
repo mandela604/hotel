@@ -120,6 +120,18 @@ body {
 .room-guest-empty { font-size: 11px; color: var(--text3); font-style: italic; }
 .room-dates { font-size: 10px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+.rc-more { display: inline-block; margin-left: 4px; padding: 1px 5px; border-radius: 5px; background: var(--purple-bg); color: var(--purple); font-size: 9.5px; font-weight: 700; cursor: pointer; vertical-align: middle; white-space: nowrap; }
+.rc-more:hover { text-decoration: underline; }
+.stay-pop { position: fixed; z-index: 9000; min-width: 200px; max-width: 290px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.18); padding: 8px 0; }
+.stay-pop-h { font-size: 9.5px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; padding: 0 11px 6px; }
+.stay-pop-i { padding: 5px 11px; border-top: 1px solid var(--border); }
+.stay-pop-n { font-size: 11.5px; font-weight: 700; color: var(--text); }
+.stay-pop-m { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.cip-row { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px; cursor: pointer; font-family: inherit; transition: all .15s; }
+.cip-row:hover { border-color: var(--gold-border); background: var(--gold-dim); }
+.cip-name { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.cip-meta { font-size: 10.5px; color: var(--text3); }
+
 .room-rate { font-size: 11px; color: var(--text2); font-weight: 700; margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--border); }
 .room-rate span { color: var(--text3); font-weight: 500; }
 
@@ -407,6 +419,25 @@ body {
   </div>
 </div>
 
+<!-- CHECK-IN PICKER MODAL -->
+<div class="modal-overlay" id="checkinPickerModal" onclick="handleModalBackdrop(event,'checkinPickerModal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Who is checking in?</div>
+      <button class="modal-close" onclick="closeModal('checkinPickerModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="padding:4px 0 14px;">
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:12px;">
+        Room <strong id="cipRoom" style="color:var(--text)"></strong> has more than one reservation due today. Pick the guest to check in.
+      </div>
+      <div id="cipList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('checkinPickerModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── SCRIPTS ─── -->
 <script src="../services/ui-utils.js"></script>
 <script src="../services/permissions.js"></script>
@@ -663,9 +694,19 @@ function roomCardHtml(r, st, bk, cands, p) {
       var todayStr2 = new Date().toISOString().split('T')[0];
       const isUpcoming = bk && bk.status === 'reserved' && bk.checkin !== todayStr2;
       const hasGuest = bk && bk.guest && (st !== 'available' || isUpcoming) && st !== 'maintenance' && st !== 'checkout' && st !== 'cleaning';
-      const upcomingCount = (cands || []).filter(b => b.status === 'reserved').length;
-      const upcomingBadge = (upcomingCount > 1) ? ' <span style="font-size:10px;color:#6b7280">+' + (upcomingCount - 1) + ' more</span>' : '';
+      // The card shows ONE name. Every other live stay on the room is
+      // counted here so the badge never under-reports what is booked.
+      const bkKey = bk ? (bk.stayId || bk._id || '') : '';
+      const otherActive = (cands || []).filter(function (b) {
+        if (b.status !== 'reserved' && b.status !== 'checkedin') return false;
+        if (bkKey && (String(b.stayId || '') === String(bkKey) || String(b._id) === String(bkKey))) return false;
+        return true;
+      });
+      const otherChecked = otherActive.filter(function (b) { return b.status === 'checkedin'; }).length;
       const upcomingLabel = isUpcoming ? '<span style="font-size:9px;color:#2f6fed;font-weight:700;margin-left:4px;">UPCOMING</span>' : '';
+      const upcomingBadge = otherActive.length
+        ? ' <span class="rc-more" title="Show the other stays in this room" onclick="event.stopPropagation();toggleStayPop(\'' + esc(r.num) + '\',\'' + bkKey + '\',this)">+' + otherActive.length + (otherChecked ? ' stay' + (otherActive.length > 1 ? 's' : '') : ' reserved') + '</span>'
+        : '';
 
       const guestBlock = hasGuest
         ? '<div class="room-guest-name">' + bk.guest.split(',')[0] + upcomingBadge + upcomingLabel + '</div><div class="room-dates">' + fmtDate(bk.checkin) + ' → ' + fmtDate(bk.checkout) + '</div>'
@@ -700,7 +741,50 @@ function roomCardHtml(r, st, bk, cands, p) {
       '</div>';
 }
 
+/* Lists the live stays of a room that the card is NOT showing, so the
+   desk can see who else is on that room without cluttering the card. */
+function closeStayPop() {
+  var pop = document.getElementById('stayPop');
+  if (pop) pop.remove();
+}
+function toggleStayPop(roomNum, primaryKey, anchor) {
+  var existing = document.getElementById('stayPop');
+  if (existing) { existing.remove(); return; }
+  var others = bookings.filter(function (b) {
+    if (b.room !== roomNum) return false;
+    if (b.status !== 'reserved' && b.status !== 'checkedin') return false;
+    if (primaryKey && (String(b.stayId || '') === String(primaryKey) || String(b._id) === String(primaryKey))) return false;
+    return true;
+  });
+  if (!others.length) return;
+  var pop = document.createElement('div');
+  pop.id = 'stayPop';
+  pop.className = 'stay-pop';
+  pop.innerHTML = '<div class="stay-pop-h">Other stays in Room ' + esc(roomNum) + '</div>' + others.map(function (b) {
+    var lbl = b.status === 'checkedin' ? 'Checked in' : 'Reserved';
+    return '<div class="stay-pop-i">' +
+      '<div class="stay-pop-n">' + esc(b.guest || 'Guest') + '</div>' +
+      '<div class="stay-pop-m">' + lbl + ' · ' + fmtDate(b.checkin) + ' → ' + fmtDate(b.checkout) + '</div>' +
+      '</div>';
+  }).join('');
+  document.body.appendChild(pop);
+  var rect = anchor.getBoundingClientRect();
+  var pw = pop.offsetWidth, ph = pop.offsetHeight;
+  var left = rect.right - pw;
+  var top = rect.bottom + 6;
+  if (left < 8) left = 8;
+  if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, rect.top - ph - 6);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+}
+document.addEventListener('click', function (e) {
+  var pop = document.getElementById('stayPop');
+  if (pop && !pop.contains(e.target)) pop.remove();
+});
+
 function renderRoomGrid(filter) {
+  closeStayPop();
   const p = applyPermissionUI();
   const typeF = document.getElementById('roomTypeFilter').value || '';
   const q     = document.getElementById('roomSearch').value.trim().toLowerCase();
@@ -996,7 +1080,18 @@ async function saveRoomStatus() {
     // transitions accordingly; everything else (vacant, maintenance,
     // cancel) still goes through the plain status change.
     if (newSt === 'checkedin') {
-      var ciBk = bookings.filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; }).sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || bookings.find(function(b){ return b.room === statusRoom; });
+      // Check in the reservation that is DUE TODAY. When a room carries
+      // two reservations due today the desk picks — guessing checked in
+      // the wrong guest.
+      var todayCI = new Date().toISOString().split('T')[0];
+      var ciReserved = bookings.filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; });
+      var ciDueToday = ciReserved.filter(function(b){ return b.checkin === todayCI; });
+      if (ciDueToday.length > 1) {
+        btnLoad('roomStatusSaveBtn', false);
+        openCheckinPicker(statusRoom, ciDueToday, note);
+        return;
+      }
+      var ciBk = ciDueToday[0] || ciReserved.sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || bookings.find(function(b){ return b.room === statusRoom; });
       var ciKey = ciBk ? (ciBk.stayId || ciBk._id || ciBk.id || statusRoom) : statusRoom;
       await BookingData.checkinBooking(ciKey, { notes: note });
     } else if (newSt === 'no-show') {
@@ -1033,6 +1128,33 @@ async function saveRoomStatus() {
 /* ═══════════════════════════════════════════════
    Utilities
 ═══════════════════════════════════════════════ */
+function openCheckinPicker(roomNum, list, note) {
+  document.getElementById('cipRoom').textContent = roomNum;
+  document.getElementById('cipList').innerHTML = list.map(function (b) {
+    var key = b.stayId || b._id || b.id || b.room;
+    return '<button class="cip-row" onclick="pickCheckin(\'' + key + '\')">' +
+      '<span class="cip-name">' + esc(b.guest || 'Guest') + '</span>' +
+      '<span class="cip-meta">' + fmtDate(b.checkin) + ' → ' + fmtDate(b.checkout) + (b.bookingNo ? ' · ' + esc(b.bookingNo) : '') + '</span>' +
+      '</button>';
+  }).join('');
+  document.getElementById('checkinPickerModal').dataset.note = note || '';
+  document.getElementById('checkinPickerModal').classList.add('show');
+}
+
+async function pickCheckin(stayKey) {
+  var note = document.getElementById('checkinPickerModal').dataset.note || '';
+  closeModal('checkinPickerModal');
+  btnLoad('roomStatusSaveBtn', true);
+  try {
+    await BookingData.checkinBooking(stayKey, { notes: note });
+    closeModal('roomStatusModal');
+    showToast('Room ' + statusRoom + ' → ' + (RC_LBL['checkedin'] || 'checkedin') + '.', 'success');
+    await refreshDataAndRender();
+  } catch (err) {
+    showToast(err.message || 'Failed to check in.', 'error');
+  } finally { btnLoad('roomStatusSaveBtn', false); }
+}
+
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function handleModalBackdrop(e, id) {
   if (e.target === document.getElementById(id)) closeModal(id);

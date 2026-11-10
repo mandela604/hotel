@@ -145,7 +145,7 @@
   `;
 
   function ensureFontAwesome() {
-    if (document.getElementById('bks-fa-css')) return;
+    if (document.getElementById('bks-fa-css') || document.querySelector('link[href*="font-awesome"]')) return;
     const link = document.createElement('link');
     link.id = 'bks-fa-css';
     link.rel = 'stylesheet';

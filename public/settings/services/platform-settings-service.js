@@ -61,6 +61,8 @@
   }
 
   const state = { settings: null, ready: false };
+  let loadedOk = false;      /* true once the API has answered at least once */
+  let inflight = null;       /* dedupes concurrent boot-time loadAll() calls */
   const listeners = [];
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(fn => { try { fn(state.settings, reason); } catch (e) { console.warn('[PlatformSettings] listener error', e); } }); }
@@ -83,16 +85,27 @@
   }
 
   async function loadAll() {
-    try {
-      const res = await apiFetch('?_=' + Date.now());
-      state.settings = normalize(res.data);
-    } catch (e) {
-      console.warn('[PlatformSettings] API load failed, using defaults:', e.message);
-      state.settings = seedDefaults();
-    }
-    state.ready = true;
-    emitChange('load');
-    return clone(state.settings);
+    /* Pages fetch settings several times in the same second (page init,
+       workspace init). Serve the first successful result from memory —
+       updateSettings() keeps it current, a fresh page load refetches it.
+       A failed load is NOT cached: the next caller retries. */
+    if (loadedOk && state.settings) return clone(state.settings);
+    if (inflight) return inflight;
+    inflight = (async function () {
+      try {
+        const res = await apiFetch('?_=' + Date.now());
+        state.settings = normalize(res.data);
+        loadedOk = true;
+      } catch (e) {
+        console.warn('[PlatformSettings] API load failed, using defaults:', e.message);
+        state.settings = seedDefaults();
+      }
+      state.ready = true;
+      inflight = null;
+      emitChange('load');
+      return clone(state.settings);
+    })();
+    return inflight;
   }
 
   async function getSettings() {

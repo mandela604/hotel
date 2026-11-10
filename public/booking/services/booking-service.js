@@ -108,7 +108,7 @@
   function getSession() { return _sessionCache; }
   function fetchSession() {
     if (_sessionPromise) return _sessionPromise;
-    _sessionPromise = fetch(CONFIG.API_BASE + '/api/auth/session', { credentials: 'include' })
+    _sessionPromise = fetch('/api/auth/session', { credentials: 'include' })
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(d) {
         var u = d && d.data ? d.data : d;
@@ -143,6 +143,12 @@
       const err = new Error((body && body.error) || ('Request failed (' + res.status + ')'));
       err.status = res.status;
       err.field = body && body.field;
+      // Stay-clash payloads: the caller needs the room/guest that caused
+      // the clash to show it to the desk.
+      if (body && body.code) err.code = body.code;
+      if (body && body.conflicts) err.conflicts = body.conflicts;
+      if (body && body.needsConfirm) err.needsConfirm = true;
+      if (body && body.needsPhone) err.needsPhone = true;
       throw err;
     }
     return body;
@@ -223,8 +229,8 @@
     return res.data;
   }
 
-  async function transferBooking(stayId, toRoom, note) {
-    const res = await post('/bookings/' + encodeURIComponent(stayId) + '/transfer', { toRoom, note: note || '' });
+  async function transferBooking(stayId, toRoom, note, confirmDuplicate) {
+    const res = await post('/bookings/' + encodeURIComponent(stayId) + '/transfer', { toRoom, note: note || '', confirmDuplicate: !!confirmDuplicate });
     return res.data;
   }
 

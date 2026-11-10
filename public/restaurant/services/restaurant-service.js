@@ -236,9 +236,8 @@ function getCategories() {
     });
   }
 
-  /* Sales-page scope: the WHOLE department, every staff member's sales.
-     Personal scoping belongs to Active Orders only. The date window comes
-     from the filter bar (today / 7d / 30d / custom / all time). */
+  /* Sales-page scope: waiter sees own sales only; staff/staff+ see whole dept sales.
+     Personal scoping happens in backend listSales filter based on privilege. */
   function getShiftSales(session, filterState) {
     var st = filterState || {};
     var sales = (state.sales || []).slice();
@@ -273,11 +272,14 @@ function getCategories() {
 
   function getShiftTableTitle(session, filterState) {
     var b = (filterState || {}).bounds || null;
-    return ((b && b.label) || 'All time') + ' — All staff';
+    var isWaiter = session && String(session.privilege || '').toLowerCase() === 'waiter';
+    var who = isWaiter ? 'Your' : 'All staff';
+    return ((b && b.label) || 'All time') + ' — ' + who;
   }
 
   function getShiftNoteText(session) {
-    return 'All restaurant staff';
+    var isWaiter = session && String(session.privilege || '').toLowerCase() === 'waiter';
+    return isWaiter ? 'Your sales' : 'All restaurant staff';
   }
 
   function getPaymentMethods() {
@@ -393,21 +395,19 @@ function dashboardKPIs() {
   function onChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i > -1) listeners.splice(i, 1); }; }
   function emitChange(reason) { listeners.forEach(function (fn) { try { fn(state, reason); } catch (e) { console.warn('[RestaurantService] listener error', e); } }); }
 
+  function isLoaded() { return !!state.ready; }
+
   async function loadAll() {
-    const [stockRes, salesRes, ordersRes, transfersRes, movementsRes, menuRes, reqRes] = await Promise.all([
+    const [stockRes, salesRes, ordersRes, transfersRes, movementsRes, menuRes, reqRes, catRes] = await Promise.all([
       get('/stock'), get('/sales'), get('/orders'), get('/transfers'), get('/movements'), get('/menu'), get('/requisitions'),
+      get('/categories').catch(function () { return { data: [] }; }),
     ]);
     state.stock = stockRes.data || [];
     state.sales = salesRes.data || [];
     state.orders = ordersRes.data || [];
     state.menu = menuRes.data || [];
-    try {
-      const catRes = await get('/categories');
-      state.extraCategories = (catRes && catRes.data) ? catRes.data : [];
-    } catch (e) { state.extraCategories = []; }
+    state.extraCategories = (catRes && catRes.data) ? catRes.data : [];
     const transfers = transfersRes.data || [];
-    console.log('[RestaurantService.loadAll] raw transfers from API:', transfers.length,
-      transfers.map(function(t){ return {no: t.transferNo, meal: t.meal, quantity: t.quantity, unit: t.unit, status: t.status, items: t.items}; }));
     // 'sent' = awaiting review (pending); everything else (accepted/
     // rejected/cancelled) is history — same status vocabulary as
     // Kitchen's Transfer model.
@@ -661,7 +661,7 @@ if (!res.ok) throw new Error((body && body.error) || 'Booking data unavailable')
 
   global.RestaurantService = {
     KEYS,
-    state, onChange, loadAll,
+    state, onChange, loadAll, isLoaded,
     fmtN, nowStamp, fmtStamp, parseStamp, dateOnly, todayDDMMYY,
     stockLevel, LEVEL_CHIP, LEVEL_LABEL, getLevelLabelsShort,
     getEmptyValuePlaceholder, getCurrencyConfig, getCategories,

@@ -147,7 +147,7 @@
   `;
 
   function ensureFontAwesome() {
-    if (document.getElementById('pbs-fa-css')) return;
+    if (document.getElementById('pbs-fa-css') || document.querySelector('link[href*="font-awesome"]')) return;
     const link = document.createElement('link');
     link.id = 'pbs-fa-css';
     link.rel = 'stylesheet';

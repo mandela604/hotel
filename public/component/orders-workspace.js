@@ -3030,22 +3030,38 @@
       // ── Preferred path: module service ──
       if (service) {
         try {
-          if (typeof service.loadAll === 'function') await service.loadAll();
+          // The orders pages already ran loadAll() during boot — don't
+          // repeat the whole API fan-out a second time on attach.
+          if (typeof service.loadAll === 'function' && !(typeof service.isLoaded === 'function' && service.isLoaded())) {
+            await service.loadAll();
+          }
           syncFromService();
           // Payment methods: prefer /api/settings (user-configured) over seed file
           try {
-            var settingsRes = await fetch('/api/settings', { credentials: 'include' });
-            var settingsJson = settingsRes.ok ? await settingsRes.json() : null;
-            if (settingsJson && settingsJson.data && Array.isArray(settingsJson.data.paymentMethods) && settingsJson.data.paymentMethods.length) {
-              applyPaymentMethods(settingsJson.data.paymentMethods);
-              // Also push into PlatformSettings state so shift functions can read shiftStartHour/shiftEndHour
-              if (global.PlatformSettings && PlatformSettings.state) {
-                PlatformSettings.state.settings = Object.assign(PlatformSettings.state.settings || {}, settingsJson.data);
-                PlatformSettings.state.ready = true;
+            if (global.PlatformSettings) {
+              // Cached from the page's boot call — no second network hit
+              // after a successful load (a failed boot load retries here).
+              const sm = await PlatformSettings.loadAll();
+              if (sm && Array.isArray(sm.paymentMethods) && sm.paymentMethods.length) {
+                applyPaymentMethods(sm.paymentMethods);
+              } else {
+                const fromSvc = resolvePaymentMethodsFromService();
+                if (fromSvc) applyPaymentMethods(fromSvc);
               }
             } else {
-              const fromSvc = resolvePaymentMethodsFromService();
-              if (fromSvc) applyPaymentMethods(fromSvc);
+              var settingsRes = await fetch('/api/settings', { credentials: 'include' });
+              var settingsJson = settingsRes.ok ? await settingsRes.json() : null;
+              if (settingsJson && settingsJson.data && Array.isArray(settingsJson.data.paymentMethods) && settingsJson.data.paymentMethods.length) {
+                applyPaymentMethods(settingsJson.data.paymentMethods);
+                // Also push into PlatformSettings state so shift functions can read shiftStartHour/shiftEndHour
+                if (global.PlatformSettings && PlatformSettings.state) {
+                  PlatformSettings.state.settings = Object.assign(PlatformSettings.state.settings || {}, settingsJson.data);
+                  PlatformSettings.state.ready = true;
+                }
+              } else {
+                const fromSvc = resolvePaymentMethodsFromService();
+                if (fromSvc) applyPaymentMethods(fromSvc);
+              }
             }
           } catch (e) {
             const fromSvc = resolvePaymentMethodsFromService();

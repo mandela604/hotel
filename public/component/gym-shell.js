@@ -161,7 +161,7 @@
   `;
 
   function ensureFontAwesome() {
-    if (document.getElementById('gym-fa-css')) return;
+    if (document.getElementById('gym-fa-css') || document.querySelector('link[href*="font-awesome"]')) return;
     const link = document.createElement('link');
     link.id = 'gym-fa-css';
     link.rel = 'stylesheet';

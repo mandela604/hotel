@@ -144,7 +144,7 @@
   `;
 
   function ensureFontAwesome() {
-    if (document.getElementById('khs-fa-css')) return;
+    if (document.getElementById('khs-fa-css') || document.querySelector('link[href*="font-awesome"]')) return;
     const link = document.createElement('link');
     link.id = 'khs-fa-css';
     link.rel = 'stylesheet';

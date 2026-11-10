@@ -454,6 +454,7 @@
   }
 
   /* ── Load everything from the real API ──────────────────────────── */
+  function isLoaded() { return !!state.ready; }
   async function loadAll() {
     const [stockRes, salesRes, ordersRes, reqRes, movRes, catRes] = await Promise.all([
       apiGet('/stock'),
@@ -997,6 +998,7 @@
     state,
     onChange,
     loadAll,
+    isLoaded,
     findStock,
     addStockItem, editStockItem, deleteStockItem, deductStock, adjustStock, printReceipt,
     recordSale, openTab, markServed, updateOrder, payOrder, cancelOrder, voidSale,

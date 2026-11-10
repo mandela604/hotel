@@ -4,11 +4,13 @@ const Guest = require('../models/Guest');
 const Sale = require('../models/Sale');
 const Order = require('../models/Order');
 const Activity = require('../models/Activity');
+const AuditLog = require('../models/AuditLog');
 const asyncHandler = require('../middleware/asyncHandler');
 const { STATUS_TRANSITIONS } = require('../middleware/bookingValidators');
 const { v4: uuidv4 } = require('uuid');
 const { emit } = require('../utils/emit');
 const { hasPermission } = require('../config/permissions');
+const { datesOverlap, roomOccupantConflict, guestStayNotice } = require('../utils/stayConflicts');
 
 function discountAllowed(user, module) {
   return hasPermission(user, module, 'canGiveDiscount');
@@ -450,13 +452,6 @@ exports.getActiveBookingForRoom = asyncHandler(async (req, res) => {
 // take a vacant room and assign a guest to it — same action whether it's
 // triggered from booking-list.html "New Booking" or booking-rooms.html
 // "Book" on a room card.
-/* helper: true if [a,b) overlaps [c,d) */
-function datesOverlap(aStart, aEnd, bStart, bEnd) {
-  if (!aStart || !aEnd || !bStart || !bEnd) return false;
-  const aS = new Date(aStart), aE = new Date(aEnd), bS = new Date(bStart), bE = new Date(bEnd);
-  if (isNaN(aS) || isNaN(aE) || isNaN(bS) || isNaN(bE)) return false;
-  return aS < bE && aE > bS;
-}
 async function nextBookingNo() {
   const year = new Date().getFullYear();
   const prefix = `BK-${year}-`;
@@ -509,12 +504,48 @@ exports.createBooking = asyncHandler(async (req, res) => {
   const roomDoc = await Room.findOne({ num: room });
   if (!roomDoc) return res.status(404).json({ success: false, error: `Room ${room} not found — add the room first` });
 
+  // RULE 1 — a guest checked into the room owns it until their checkout
+  // date. A new stay may only join from that date onwards.
+  const occupantClash = await roomOccupantConflict(room, checkin);
+  if (occupantClash) {
+    const byName = req.user ? req.user.name : '';
+    await auditBooking(room, 'conflict', byName, byName, byName, {
+      rule: 'roomOccupied', blocked: true, attempt: 'createBooking',
+      guest, checkin, checkout, conflicts: occupantClash.conflicts,
+    });
+    return res.status(409).json({
+      success: false,
+      code: occupantClash.code,
+      error: occupantClash.error,
+      conflicts: occupantClash.conflicts,
+    });
+  }
+
   // Check for overlapping ACTIVE stays (reserved/checkedin) for same room
   const activeStays = await Booking.find({ room, status: { $in: ['reserved', 'checkedin'] } });
   for (const s of activeStays) {
     if (datesOverlap(checkin, checkout, s.checkin, s.checkout)) {
       return res.status(409).json({ success: false, error: `Room ${room} already booked ${s.checkin} → ${s.checkout} (${s.guest})` });
     }
+  }
+
+  // RULE 2 — the same guest may hold many rooms, so this never refuses:
+  // it surfaces the other live stays and asks the desk to confirm.
+  const duplicate = await guestStayNotice({ guest, phone, checkin, checkout, targetRoom: room });
+  if (duplicate && !req.body.confirmDuplicate) {
+    const byName = req.user ? req.user.name : '';
+    await auditBooking(room, 'conflict', byName, byName, byName, {
+      rule: 'duplicateStay', blocked: true, attempt: 'createBooking',
+      guest, checkin, checkout, conflicts: duplicate.conflicts,
+    });
+    return res.status(409).json({
+      success: false,
+      code: duplicate.code,
+      error: duplicate.error,
+      conflicts: duplicate.conflicts,
+      needsConfirm: true,
+      needsPhone: !!duplicate.needsPhone,
+    });
   }
 
   try {
@@ -599,6 +630,15 @@ exports.createBooking = asyncHandler(async (req, res) => {
       checkout: booking.checkout,
       guests: booking.guest,
     });
+
+    // The desk confirmed this guest's other live stay — keep the clash on
+    // the record so the duplicate can be traced later.
+    if (duplicate && req.body.confirmDuplicate) {
+      await auditBooking(booking.room, 'conflict', byName, byName, byName, {
+        rule: 'duplicateStay', forced: true, attempt: 'createBooking',
+        guest: booking.guest, conflicts: duplicate.conflicts,
+      });
+    }
     
     emit(req, 'booking', 'booking:updated', { action: 'createBooking', room: booking.room, stayId: booking.stayId, data: booking });
     console.log('[Booking] CREATE SUCCESS', { room, guest: booking.guest, stayId: booking.stayId, bookingNo: booking.bookingNo, recordedBy: req.user?.name });
@@ -638,7 +678,32 @@ exports.updateBooking = asyncHandler(async (req, res) => {
   // If dates are being changed, ensure no overlap with other active stays for same room
   const newCheckin = req.body.checkin !== undefined ? req.body.checkin : booking.checkin;
   const newCheckout = req.body.checkout !== undefined ? req.body.checkout : booking.checkout;
-  if ((req.body.checkin !== undefined || req.body.checkout !== undefined) && newCheckin && newCheckout) {
+  const datesChanged = req.body.checkin !== undefined || req.body.checkout !== undefined;
+  const identityChanged = req.body.guest !== undefined || req.body.phone !== undefined;
+  const newGuest = req.body.guest !== undefined ? req.body.guest : booking.guest;
+  const newPhone = req.body.phone !== undefined ? req.body.phone : booking.phone;
+  let duplicate = null;
+
+  // RULE 1 — moving the stay's dates may push it into a room that a
+  // guest is currently checked into.
+  if (datesChanged) {
+    const occupantClash = await roomOccupantConflict(booking.room, newCheckin, booking);
+    if (occupantClash) {
+      const byName = req.user ? req.user.name : '';
+      await auditBooking(booking.room, 'conflict', byName, byName, byName, {
+        rule: 'roomOccupied', blocked: true, attempt: 'updateBooking',
+        guest: newGuest, checkin: newCheckin, checkout: newCheckout, conflicts: occupantClash.conflicts,
+      });
+      return res.status(409).json({
+        success: false,
+        code: occupantClash.code,
+        error: occupantClash.error,
+        conflicts: occupantClash.conflicts,
+      });
+    }
+  }
+
+  if (datesChanged && newCheckin && newCheckout) {
     const otherStays = await Booking.find({ room: booking.room, _id: { $ne: booking._id }, status: { $in: ['reserved', 'checkedin'] } });
     for (const s of otherStays) {
       if (datesOverlap(newCheckin, newCheckout, s.checkin, s.checkout)) {
@@ -650,6 +715,31 @@ exports.updateBooking = asyncHandler(async (req, res) => {
   // Discount grant/increase needs permission — unchanged existing discount stays untouched
   if (req.body.discount !== undefined && Number(req.body.discount) > Number(booking.discount || 0) && !discountAllowed(req.user, 'booking')) {
     return res.status(403).json({ success: false, error: 'You do not have permission to give discounts.' });
+  }
+
+  // RULE 2 — never refuses a guest holding many rooms; surfaces the
+  // other live stays and asks the desk to confirm.
+  if (datesChanged || identityChanged) {
+    duplicate = await guestStayNotice({
+      guest: newGuest, phone: newPhone,
+      checkin: newCheckin, checkout: newCheckout,
+      excludeStay: booking, targetRoom: booking.room,
+    });
+    if (duplicate && !req.body.confirmDuplicate) {
+      const byName = req.user ? req.user.name : '';
+      await auditBooking(booking.room, 'conflict', byName, byName, byName, {
+        rule: 'duplicateStay', blocked: true, attempt: 'updateBooking',
+        guest: newGuest, checkin: newCheckin, checkout: newCheckout, conflicts: duplicate.conflicts,
+      });
+      return res.status(409).json({
+        success: false,
+        code: duplicate.code,
+        error: duplicate.error,
+        conflicts: duplicate.conflicts,
+        needsConfirm: true,
+        needsPhone: !!duplicate.needsPhone,
+      });
+    }
   }
 
   const oldCheckin = booking.checkin;
@@ -729,6 +819,14 @@ exports.updateBooking = asyncHandler(async (req, res) => {
     newCheckout: booking.checkout,
   });
 
+  if (duplicate && req.body.confirmDuplicate) {
+    const byName = req.user ? req.user.name : '';
+    await auditBooking(booking.room, 'conflict', byName, byName, byName, {
+      rule: 'duplicateStay', forced: true, attempt: 'updateBooking',
+      guest: booking.guest, conflicts: duplicate.conflicts,
+    });
+  }
+
   emit(req, 'booking', 'booking:updated', { action: 'updateBooking', room: booking.room, stayId: booking.stayId, data: booking });
   res.json({ success: true, data: booking });
 });
@@ -742,6 +840,49 @@ exports.transferBooking = asyncHandler(async (req, res) => {
   const roomDoc = await Room.findOne({ num: toRoom });
   if (!roomDoc) return res.status(404).json({ success: false, error: `Room ${toRoom} not found` });
 
+  const fromRoom = booking.room;
+  const by = req.user ? req.user.name : 'System';
+
+  // RULE 1 — the target room must not have a guest checked in, unless
+  // this stay starts on or after that guest's checkout date.
+  const occupantClash = await roomOccupantConflict(toRoom, booking.checkin);
+  if (occupantClash) {
+    await auditBooking(toRoom, 'conflict', by, by, by, {
+      rule: 'roomOccupied', blocked: true, attempt: 'transferBooking',
+      fromRoom, toRoom, guest: booking.guest,
+      checkin: booking.checkin, checkout: booking.checkout,
+      conflicts: occupantClash.conflicts,
+    });
+    return res.status(409).json({
+      success: false,
+      code: occupantClash.code,
+      error: occupantClash.error,
+      conflicts: occupantClash.conflicts,
+    });
+  }
+
+  // RULE 2 — the same guest may hold many rooms, so this never refuses:
+  // it surfaces the other live stays and asks the desk to confirm.
+  const duplicate = await guestStayNotice({
+    guest: booking.guest, phone: booking.phone,
+    checkin: booking.checkin, checkout: booking.checkout,
+    excludeStay: booking, destRoom: toRoom,
+  });
+  if (duplicate && !req.body.confirmDuplicate) {
+    await auditBooking(toRoom, 'conflict', by, by, by, {
+      rule: 'duplicateStay', blocked: true, attempt: 'transferBooking',
+      fromRoom, toRoom, guest: booking.guest, conflicts: duplicate.conflicts,
+    });
+    return res.status(409).json({
+      success: false,
+      code: duplicate.code,
+      error: duplicate.error,
+      conflicts: duplicate.conflicts,
+      needsConfirm: true,
+      needsPhone: !!duplicate.needsPhone,
+    });
+  }
+
   const activeStays = await Booking.find({ room: toRoom, status: { $in: ['reserved', 'checkedin'] } });
   for (const s of activeStays) {
     if (String(s.stayId) === String(booking.stayId) || String(s._id) === String(booking._id)) continue;
@@ -750,12 +891,60 @@ exports.transferBooking = asyncHandler(async (req, res) => {
     }
   }
 
-  const fromRoom = booking.room;
-  const by = req.user ? req.user.name : 'System';
   const guestName = booking.guest || 'Guest';
   const now = Date.now();
+
+  // ── Clear the FROM room back to vacant ──────────────────────────────
+  // The booking doc is about to move to the new room. The old room needs
+  // its own vacant placeholder restored so it shows as Available again.
+  // If this is the ONLY doc for fromRoom we reset it in-place; otherwise
+  // we create/upsert a fresh vacant placeholder.
+  const fromRoomDoc = await Room.findOne({ num: fromRoom });
+  const fromRoomBookingsCount = await Booking.countDocuments({ room: fromRoom });
+
+  if (fromRoomBookingsCount <= 1) {
+    // This is the only doc — we're about to move it to toRoom, so we need
+    // a fresh vacant placeholder for fromRoom BEFORE we reassign the doc.
+    // Create it now so fromRoom is never left with zero booking docs.
+    try {
+      await Booking.create({
+        room: fromRoom,
+        type: fromRoomDoc ? fromRoomDoc.type : booking.type,
+        rate: fromRoomDoc ? Number(fromRoomDoc.rate) : 0,
+        status: 'vacant',
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (e) {
+      // Duplicate key on stayId (sparse unique) is fine — placeholder may already exist
+      if (e.code !== 11000) console.error('[transfer] Could not create vacant placeholder for', fromRoom, e.message);
+    }
+  } else {
+    // Multiple docs for fromRoom — find the existing vacant placeholder and make sure it's clean,
+    // or clear any stale checkedin/reserved doc that isn't this booking.
+    const fromVacant = await Booking.findOne({ room: fromRoom, status: 'vacant' });
+    if (fromVacant) {
+      clearStayFields(fromVacant);
+      if (fromRoomDoc) { fromVacant.rate = Number(fromRoomDoc.rate) || 0; fromVacant.type = fromRoomDoc.type || fromVacant.type; }
+      fromVacant.updatedAt = now;
+      await fromVacant.save();
+    } else {
+      // No vacant placeholder exists — find any other stale active doc for fromRoom and reset it
+      const stale = await Booking.findOne({ room: fromRoom, _id: { $ne: booking._id }, status: { $in: ['checkedin', 'reserved', 'cleaning'] } });
+      if (stale) {
+        clearStayFields(stale);
+        stale.status = 'vacant';
+        if (fromRoomDoc) { stale.rate = Number(fromRoomDoc.rate) || 0; stale.type = fromRoomDoc.type || stale.type; }
+        stale.updatedAt = now;
+        await stale.save();
+      }
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────
+
   booking.room = toRoom;
   booking.type = roomDoc.type || booking.type;
+  booking.rate = Number(roomDoc.rate) || booking.rate; // always sync to the new room's defined rate
   booking.transferLog = booking.transferLog || [];
   booking.transferLog.push({ from: fromRoom, to: toRoom, by, at: now, note: req.body.note || '', guest: guestName });
   booking.history = booking.history || [];
@@ -767,7 +956,14 @@ exports.transferBooking = asyncHandler(async (req, res) => {
   await logActivity('Booking', 'gold', `${booking.guest} transferred ${fromRoom}→${toRoom} by ${by}`, 'booking-rooms.html', req.user ? req.user.name : '');
   
   // Audit: transfer action
-  await auditBooking(booking.room, 'transfer', booking.recordedBy || origCreator, by, by, { fromRoom, toRoom, note: req.body.note || '' });
+  await auditBooking(booking.room, 'transfer', booking.recordedBy || booking.history?.[0]?.by || '', by, by, { fromRoom, toRoom, note: req.body.note || '' });
+
+  if (duplicate && req.body.confirmDuplicate) {
+    await auditBooking(booking.room, 'conflict', by, by, by, {
+      rule: 'duplicateStay', forced: true, attempt: 'transferBooking',
+      fromRoom, toRoom, guest: booking.guest, conflicts: duplicate.conflicts,
+    });
+  }
   
   emit(req, 'booking', 'booking:updated', { action: 'transferBooking', room: booking.room, stayId: booking.stayId, data: booking, fromRoom, toRoom });
   res.json({ success: true, data: booking });

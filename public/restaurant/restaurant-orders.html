@@ -111,25 +111,30 @@ function showGuestLoadError(msg) {
     return;
   }
 
-  // Load platform settings first for payment methods and shift hours
-  if (window.PlatformSettings) {
-    try {
-      await PlatformSettings.loadAll();
-    } catch (err) {
-      console.error('[restaurant-orders] Failed to load platform settings', err);
-    }
-  }
-
-  await RestaurantService.loadAll();
-
+  // Settings, service data and in-house guests are independent — fetch
+  // them together (was: three awaited calls back-to-back).
+  var loadErr = null;
   var guests = [];
-  try {
-    guests = await RestaurantService.getInHouseGuests();
-  } catch (err) {
-    console.error('[restaurant-orders] failed to load in-house guests', err);
-    showGuestLoadError('Could not load in-house guests for Room Charge — ' + ((err && err.message) || 'unknown error') + '. Room Charge search will show no results until this is fixed.');
+  await Promise.all([
+    window.PlatformSettings
+      ? PlatformSettings.loadAll().catch(function (err) {
+          console.error('[restaurant-orders] Failed to load platform settings', err);
+        })
+      : Promise.resolve(),
+    RestaurantService.loadAll().catch(function (err) { loadErr = err; }),
+    RestaurantService.getInHouseGuests()
+      .then(function (g) { guests = g; })
+      .catch(function (err) {
+        guests = [];
+        console.error('[restaurant-orders] failed to load in-house guests', err);
+        showGuestLoadError('Could not load in-house guests for Room Charge — ' + ((err && err.message) || 'unknown error') + '. Room Charge search will show no results until this is fixed.');
+      }),
+  ]);
+  if (loadErr) {
+    console.error('[restaurant-orders] service load failed', loadErr);
+    showToast('Failed to load restaurant data — ' + ((loadErr && loadErr.message) || 'unknown error'), 'error');
+    return;
   }
-  console.log('[restaurant-orders] guests for Room Charge:', guests.length, guests);
 
   OrdersWorkspace.attach('#ordersSlot', {
     module: 'restaurant',

@@ -447,7 +447,7 @@
             '</div>' +
             '<div class="bkm-row2">' +
               '<div class="bkm-fg"><label class="bkm-label">Type</label><input class="bkm-input" data-role="type" type="text" readonly></div>' +
-              '<div class="bkm-fg"><label class="bkm-label">Rate / night</label><input class="bkm-input" data-role="rate" type="number" min="0" step="500"></div>' +
+              '<div class="bkm-fg"><label class="bkm-label">Rate / night <span class="bkm-lock">Auto</span></label><input class="bkm-input" data-role="rate" type="number" min="0" step="500" readonly></div>' +
             '</div>' +
             '<div class="bkm-row2">' +
               '<div class="bkm-fg"><label class="bkm-label">Check-in</label><input class="bkm-input" data-role="checkin" type="date"></div>' +
@@ -588,13 +588,15 @@
       setTimeout(function () { t.remove(); }, 3400);
     }
 
-    function showConfirm(title, msg) {
+    function showConfirm(title, msg, confirmLabel) {
       return new Promise(function (resolve) {
         var ov = $('[data-role="confirmOv"]');
         var tEl = $('[data-role="confirmTitle"]');
         var mEl = $('[data-role="confirmMsg"]');
+        var yEl = $('[data-act="confirmYes"]');
         if (tEl) tEl.textContent = title || 'Are you sure?';
         if (mEl) mEl.textContent = msg || 'This action cannot be reversed.';
+        if (yEl) yEl.textContent = confirmLabel || 'Yes, continue';
         if (ov) ov.classList.add('show');
         root._confirmResolve = resolve;
       });
@@ -605,6 +607,31 @@
       var r = root._confirmResolve;
       root._confirmResolve = null;
       if (r) r(!!answer);
+    }
+
+    /* The backend refuses to guess when a guest already has a live stay.
+     * A guest may legitimately hold many rooms, so this never blocks —
+     * it makes the clash visible and lets the desk decide.
+     */
+    function conflictPrompt(err) {
+      var rooms = (err.conflicts || []).map(function (c) { return c.room; }).filter(Boolean);
+      var where = '';
+      if (rooms.length === 1) where = ' (Room ' + rooms[0] + ')';
+      else if (rooms.length > 1) where = ' (' + rooms.slice(0, 3).join(', ') + (rooms.length > 3 ? ' and ' + (rooms.length - 3) + ' more' : '') + ')';
+      var msg = err.message || '';
+      if (err.needsPhone) {
+        return showConfirm(
+          'Guest already has a stay' + where,
+          msg + ' Type a phone number in the Phone box to confirm this is the same guest, or continue without it.',
+          'Continue anyway'
+        );
+      }
+      if (!/\?\s*$/.test(msg)) msg += ' Save this booking anyway?';
+      return showConfirm(
+        'Guest already has a stay' + where,
+        msg,
+        'Save anyway'
+      );
     }
 
     function getStatusRadio() {
@@ -740,23 +767,45 @@
         try {
           var stayKey = editBooking.stayId || editBooking._id || editBooking.id || oldRoom;
           var updated = null;
-          if (service && service.transferBooking) {
-            updated = await service.transferBooking(stayKey, newRoom, '');
-          } else {
+          var transferOnce = async function (confirmDuplicate) {
+            if (service && service.transferBooking) {
+              return await service.transferBooking(stayKey, newRoom, '', confirmDuplicate);
+            }
             var res = await fetch('/api/booking/bookings/' + encodeURIComponent(stayKey) + '/transfer', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ toRoom: newRoom, note: '' })
+              body: JSON.stringify({ toRoom: newRoom, note: '', confirmDuplicate: !!confirmDuplicate })
             });
             var body = await res.json().catch(function(){ return {}; });
-            if (!res.ok) throw new Error((body && body.error) || 'Transfer failed');
-            updated = body.data || body;
+            if (!res.ok) {
+              var e = new Error((body && body.error) || 'Transfer failed');
+              if (body && body.code) e.code = body.code;
+              if (body && body.conflicts) e.conflicts = body.conflicts;
+              if (body && body.needsConfirm) e.needsConfirm = true;
+              if (body && body.needsPhone) e.needsPhone = true;
+              throw e;
+            }
+            return body.data || body;
+          };
+          try {
+            updated = await transferOnce(false);
+          } catch (tErr) {
+            if (!tErr || !tErr.needsConfirm) throw tErr;
+            var tOk = await conflictPrompt(tErr);
+            if (!tOk) {
+              populateRooms(oldRoom);
+              refreshCalcs();
+              var tLogCancel = $('[data-role="transferLog"]');
+              if (tLogCancel) { tLogCancel.style.display = 'none'; tLogCancel.innerHTML = ''; }
+              return;
+            }
+            updated = await transferOnce(true);
           }
           editBooking = updated;
-          // keep type/rate from new room
+          // keep type/rate from new room definition — never carry old booking's rate
           setVal('type', p[1] || editBooking.type || '');
-          setVal('rate', p[2] || editBooking.rate || '');
+          setVal('rate', p[2] || ''); // p[2] is the room's defined rate
           refreshCalcs();
           renderPayments();
           toast(guestName + ' transferred ' + oldRoom + '→' + newRoom + ' by ' + byName, 'success');
@@ -774,7 +823,7 @@
         return;
       }
       setVal('type', p[1] || '');
-      setVal('rate', p[2] || '');
+      setVal('rate', p[2] || ''); // always pull rate from room definition — not user-editable
       refreshCalcs();
     }
 
@@ -841,6 +890,7 @@
         var role = el.getAttribute('data-role');
         if (!role) return;
         if (role === 'type' || role === 'nightsDisp' || role === 'newPayBy') return;
+        if (role === 'rate') return; // always readonly — auto-populated from room definition
         if (role === 'discount') return;
         if (role === 'newPayAmount' || role === 'newPayMode') return;
         if (role === 'settleAmount' || role === 'settleMode') return;
@@ -1180,7 +1230,7 @@
       var entry = collectEntry();
       var isExtended = entry.checkin !== editBooking.checkin || entry.checkout !== editBooking.checkout || Number(entry.rate) !== Number(editBooking.rate) || Number(entry.discount) !== Number(editBooking.discount);
       if (isExtended) {
-        try { var saved = await service.saveBooking(entry); if (saved) editBooking = saved; } catch(e) { toast((e && e.message) || 'Failed to save extended dates before payment.', 'error'); return; }
+        try { var saved = await saveWithConflictRetry(entry); if (saved) editBooking = saved; } catch(e) { toast((e && e.message) || 'Failed to save extended dates before payment.', 'error'); return; }
         // recalc after save
         curBal = calcBal(editBooking);
         curTot = calcTotal(editBooking);
@@ -1505,7 +1555,7 @@
       applyEditability();
       console.log('[BookingModal] Attempting to save booking', { mode, room: entry.room, guest: entry.guest, checkin: entry.checkin, checkout: entry.checkout });
       try {
-        var row = await service.saveBooking(entry);
+        var row = await saveWithConflictRetry(entry);
         if (mode === 'new' && initialDeposit > 0 && row && (row.stayId || row._id || row.room)) {
           var depStay = row.stayId || row._id || row.id || row.room;
           row = await service.addBookingPayment(depStay, { amount: initialDeposit, mode: entry.payMethod, stayId: row.stayId || '' });
@@ -1515,11 +1565,39 @@
         close();
         onSaved(row || entry);
       } catch (err) {
+        if (err && err.cancelled) {
+          console.info('[BookingModal] Save cancelled by the desk');
+          return;
+        }
         console.error('[BookingModal] Save booking FAILED', { error: err?.message, errorDetails: err, entry: { room: entry.room, guest: entry.guest, checkin: entry.checkin, checkout: entry.checkout } });
         toast((err && err.message) || 'Failed to save booking.', 'error');
       } finally {
         saving = false;
         applyEditability();
+      }
+    }
+
+    /* Saves the stay; when the backend reports that this guest already
+     * has a live stay, ask the desk to confirm and resend once with
+     * confirmDuplicate so the clash is recorded instead of guessed. */
+    async function saveWithConflictRetry(entry) {
+      try {
+        return await service.saveBooking(entry);
+      } catch (err) {
+        if (!err || !err.needsConfirm) throw err;
+        console.warn('[BookingModal] Stay clash — asking the desk to confirm', { code: err.code, conflicts: err.conflicts });
+        var ok = await conflictPrompt(err);
+        if (!ok) {
+          var cancelled = new Error('Save cancelled');
+          cancelled.cancelled = true;
+          throw cancelled;
+        }
+        var retry = Object.assign({}, entry, { confirmDuplicate: true });
+        if (err.needsPhone) {
+          var phone = val('phone').trim();
+          if (phone) retry.phone = phone;
+        }
+        return await service.saveBooking(retry);
       }
     }
 
@@ -1647,7 +1725,11 @@
       setVal('idNum', booking.idNum || '');
       setVal('checkin', booking.checkin || '');
       setVal('checkout', booking.checkout || '');
-      setVal('rate', booking.rate || 0);
+      // Rate is always pulled from the room definition, not the stored booking value.
+      // This prevents manually-typed wrong rates from persisting.
+      var _origType = booking.type || '';
+      var _liveRoom = rooms.find(function(r){ return r.num === booking.room; });
+      var _origRate = _liveRoom ? (Number(_liveRoom.rate) || 0) : (Number(booking.rate) || 0);
       setVal('discount', booking.discount || 0);
       var pmEdit = getPayMethods();
       if (pmEdit.length) paintPayMethodDropdowns();
@@ -1656,10 +1738,8 @@
       setVal('children', booking.children || 0);
       setVal('notes', booking.notes || '');
       setStatusRadio(booking.status === 'checkedin' ? 'checkedin' : 'reserved');
-      var _origRate = booking.rate || 0;
-      var _origType = booking.type || '';
       populateRooms(booking.room);
-      // if booking has extension at new rate, show that rate (55k) not promo (50k)
+      // Always show the room's live rate. Extra-rate stays show the extension rate.
       if (Number(booking.extraRate) > 0) setVal('rate', String(booking.extraRate));
       else setVal('rate', String(_origRate));
       setVal('type', _origType);

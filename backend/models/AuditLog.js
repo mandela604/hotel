@@ -10,7 +10,7 @@ const mongoose = require('mongoose');
  */
 const auditLogSchema = new mongoose.Schema({
   bookingId: { type: String, required: true }, // room number or stayId
-  action:    { type: String, enum: ['create', 'update', 'delete', 'checkin', 'checkout', 'transfer', 'addPayment', 'cancelRefund', 'noShow'], required: true },
+  action:    { type: String, enum: ['create', 'update', 'delete', 'checkin', 'checkout', 'transfer', 'addPayment', 'cancelRefund', 'noShow', 'conflict'], required: true },
   createdAt: { type: Number, default: Date.now },
   createdBy: { type: String, default: '' },   // original author from server side when available
   recordedBy:{ type: String, default: '' },   // whoever wrote the document (submitter)

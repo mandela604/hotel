@@ -161,7 +161,7 @@ const shell = PoolBarShell.attach({
   topbarTarget:  '#topbarSlot',
   activeFile:    'poolbar-sales.html',
   pageTitle:     'Sales',
-  pageSubtitle:  'Your sales for today\u2019s shift',
+  pageSubtitle:  '', // Will be set dynamically based on user privilege
 });
 
 function currentShellTheme(){ return document.documentElement.getAttribute('data-theme') || 'dark'; }
@@ -334,6 +334,13 @@ async function init() {
 
     session = await (shell.sessionReady || waitForSession(800));
     if (!session) throw new Error('No session — please sign in again.');
+    
+    // Update subtitle based on user privilege: waiter sees "Your sales", others see "All staff"
+    var isWaiter = String(session.privilege || '').toLowerCase() === 'waiter';
+    var pageTitleText = isWaiter ? 'Your Sales' : 'All Staff Sales';
+    var pageSubtitleText = isWaiter ? 'Only your sales' : 'All waiters and your own sales';
+    if (shell.setTitle) shell.setTitle(pageTitleText, pageSubtitleText);
+    
     canVoid = !!svc.canVoidSale(session);
 
     const note = document.getElementById('shiftNote');

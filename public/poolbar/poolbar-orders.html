@@ -96,33 +96,33 @@ function showGuestWarn(message) {
 }
 
 async function init() {
-  // Load platform settings first for payment methods and shift hours
-  if (window.PlatformSettings) {
-    try {
-      await PlatformSettings.loadAll();
-    } catch (err) {
-      console.error('[poolbar-orders] Failed to load platform settings', err);
-    }
-  }
-
-  // PoolBarService owns all persistence — this page never touches
-  // localStorage or BookingData directly.
-  try {
-    await PoolBarService.loadAll();
-  } catch (err) {
-    showFatal(err && err.message ? err.message : 'Failed to load Pool Bar data.');
+  // Settings, order/stock/sales data and in-house guests are independent —
+  // fetch them together (was: three awaited calls back-to-back).
+  var fatal = null;
+  var guests = [];
+  await Promise.all([
+    // Payment methods + shift hours (cached after the first hit)
+    window.PlatformSettings
+      ? PlatformSettings.loadAll().catch(function (err) {
+          console.error('[poolbar-orders] Failed to load platform settings', err);
+        })
+      : Promise.resolve(),
+    // PoolBarService owns all persistence — this page never touches
+    // localStorage or BookingData directly.
+    PoolBarService.loadAll().catch(function (err) { fatal = err; }),
+    // In-house guests come only from PoolBarService.getInHouseGuests().
+    // It throws rather than falling back to fake data — Room Charge just
+    // becomes unavailable if it fails, the rest of the page still works.
+    PoolBarService.getInHouseGuests()
+      .then(function (g) { guests = g; })
+      .catch(function (err) {
+        guests = [];
+        showGuestWarn(err && err.message ? 'Room Charge guest lookup unavailable: ' + err.message : undefined);
+      }),
+  ]);
+  if (fatal) {
+    showFatal(fatal && fatal.message ? fatal.message : 'Failed to load Pool Bar data.');
     return;
-  }
-
-  // In-house guests come only from PoolBarService.getInHouseGuests().
-  // It throws rather than falling back to fake data — Room Charge just
-  // becomes unavailable if it fails, the rest of the page still works.
-  let guests = [];
-  try {
-    guests = await PoolBarService.getInHouseGuests();
-  } catch (err) {
-    guests = [];
-    showGuestWarn(err && err.message ? 'Room Charge guest lookup unavailable: ' + err.message : undefined);
   }
 
   // OrdersWorkspace requires a working service and throws synchronously

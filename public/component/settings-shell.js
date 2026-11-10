@@ -137,7 +137,7 @@
   `;
 
   function ensureFontAwesome() {
-    if (document.getElementById('sts-fa-css')) return;
+    if (document.getElementById('sts-fa-css') || document.querySelector('link[href*="font-awesome"]')) return;
     const link = document.createElement('link');
     link.id = 'sts-fa-css';
     link.rel = 'stylesheet';
