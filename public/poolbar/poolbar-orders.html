@@ -101,10 +101,12 @@ body{
 
 function showFatal(message) {
   var m = String(message || '');
-  // Say what actually went wrong; explain auth failures in plain words.
+  // Session gone → straight back to sign-in (login page explains why).
   if (/token required|invalid or expired|session ended|sign in again/i.test(m)) {
-    m = 'Your session has expired — sign in again, then press Reload. (' + m + ')';
+    window.location.href = '/login.html?reason=expired';
+    return;
   }
+  // Say what actually went wrong.
   document.getElementById('fatalMsg').textContent = m;
   document.getElementById('fatalBanner').classList.add('show');
   var slot = document.getElementById('ordersSlot');

@@ -235,6 +235,15 @@ body {
     setTimeout(() => t.remove(), 3200);
   }
 
+  /* ── Arrived here because a session expired mid-use ──
+     The sale/order pages redirect to /login.html?reason=expired when the
+     auth cookie is gone — tell the person why instead of a bare login. */
+  try {
+    if (new URLSearchParams(location.search).get('reason') === 'expired') {
+      setTimeout(() => showToast('Your session expired — please sign in again.', 'error'), 300);
+    }
+  } catch (e) {}
+
   function setBusy(btn, busyText) {
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner"></span> ${busyText}`;

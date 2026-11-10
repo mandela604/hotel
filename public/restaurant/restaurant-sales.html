@@ -443,8 +443,10 @@ async function init() {
 init().catch(function (e) {
   console.error('[restaurant-sales] init failed', e);
   var msg = (e && e.message) || 'unknown error';
+  // Session gone → straight back to sign-in (login page explains why).
   if (/token required|invalid or expired|session ended|sign in again/i.test(msg)) {
-    msg = 'Your session has expired — sign in again, then press Reload. (' + msg + ')';
+    window.location.href = '/login.html?reason=expired';
+    return;
   }
   var esc = String(msg).replace(/[&<>"]/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];

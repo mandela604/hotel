@@ -105,8 +105,10 @@ function showGuestLoadError(msg) {
 /* Full-page error box (replaces the skeleton): names the error and offers Reload. */
 function showPageError(msg) {
   var m = String(msg || 'Could not load this page.');
+  // Session gone → straight back to sign-in (login page explains why).
   if (/token required|invalid or expired|session ended|sign in again/i.test(m)) {
-    m = 'Your session has expired — sign in again, then press Reload. (' + m + ')';
+    window.location.href = '/login.html?reason=expired';
+    return;
   }
   var esc = m.replace(/[&<>"]/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
