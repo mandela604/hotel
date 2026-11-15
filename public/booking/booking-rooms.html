@@ -591,18 +591,21 @@ const STATUS_OPTS = {
 /* ═══════════════════════════════════════════════
    Data & Rendering
 ═══════════════════════════════════════════════ */
-async function refreshDataAndRender() {
+async function refreshDataAndRender(opts) {
   try {
-    const data = await BookingData.getBookingData();
+    const data = await BookingData.getBookingData(opts);
     allRooms = data.rooms;
     bookings = data.bookings;
     guests   = data.guests || [];
+    // Hand the fresh snapshot to the modal — opening a booking then needs
+    // no network round-trip at all.
+    bookingModal.prime({ rooms: data.rooms, bookings: data.bookings, guests: guests });
     // Update session in modal
     const session = getSession();
     bookingModal.setSession(session);
     renderRoomGrid(roomFilter);
   } catch (err) {
-    showToast(err.message || 'Failed to refresh data.', 'error');
+    if (!(opts && opts.silent)) showToast(err.message || 'Failed to refresh data.', 'error');
   }
 }
 
@@ -1187,6 +1190,7 @@ async function init() {
     allRooms = data.rooms;
     bookings = data.bookings;
     guests   = data.guests || [];
+    bookingModal.prime({ rooms: data.rooms, bookings: data.bookings, guests: guests });
     const session = getSession();
     bookingModal.setSession(session);
     renderRoomGrid('all');
@@ -1200,6 +1204,14 @@ async function init() {
     console.log('[BookingRooms] roomCategory:deleted received:', e.detail);
     refreshDataAndRender();
   });
+
+  // Keep the board fresh without hammering the API: one silent refresh a
+  // minute, paused while the tab is hidden or a modal is open.
+  setInterval(function () {
+    if (document.hidden) return;
+    if (document.body.style.overflow === 'hidden') return; // modal open
+    refreshDataAndRender({ force: true, silent: true });
+  }, 60000);
 }
 
 /* ── Cancel & Refund Modal ── */

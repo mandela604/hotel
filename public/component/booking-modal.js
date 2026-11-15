@@ -293,6 +293,17 @@
     var onCloseCb = typeof opts.onClose === 'function' ? opts.onClose : null;
     var externalSession = opts.session || null;
 
+    /* The page already holds rooms/bookings/guests from its own /data load.
+       prime() hands that snapshot in, so opening a booking needs no network
+       round-trip. Snapshots older than PRIME_TTL_MS are ignored. */
+    var primedData = null;
+    var contextAt = 0;
+    /* How long the page snapshot may be reused. Bookings only change when
+       someone writes (which invalidates the cache), and the rooms page
+       silently refreshes + re-primes every 60s, so a long window is safe. */
+    var PRIME_TTL_MS = 600000;      // 10 min
+    var STAY_REFRESH_MS = 120000;   // 2 min before re-reading one stay
+
     function nights(ci, co) {
       if (service && service.nights) return service.nights(ci, co);
       if (!ci || !co) return 0;
@@ -981,6 +992,8 @@
     var roomCategories = [];
 
     async function loadRoomCategories() {
+      // Categories only change in Settings — once per page load is enough.
+      if (roomCategories.length) return;
       try {
         var res = await fetch('/api/room-categories', { credentials: 'include' });
         var j = await res.json();
@@ -990,12 +1003,26 @@
     }
 
     async function loadContext() {
+      if (primedData && (Date.now() - (primedData.at || 0)) < PRIME_TTL_MS) {
+        rooms = primedData.rooms || rooms;
+        bookings = primedData.bookings || bookings;
+        guests = primedData.guests || [];
+        if (!externalSession && primedData.session) session = primedData.session;
+        contextAt = primedData.at || Date.now();
+        // populateRooms() filters rooms by category, so categories must be
+        // present before the form is filled; the fetch below is a no-op
+        // after the first load (mostly already warmed at modal creation).
+        await loadRoomCategories();
+        return;
+      }
+      primedData = null; // stale or absent — fall through to a real fetch
       if (service && typeof service.getBookingData === 'function') {
         var data = await service.getBookingData();
         rooms = data.rooms || [];
         bookings = data.bookings || [];
         guests = data.guests || [];
         if (!externalSession) session = data.session || session;
+        contextAt = Date.now();
       }
       await loadRoomCategories();
     }
@@ -1839,7 +1866,9 @@
       await loadContextSafe();
       var key = booking.stayId || booking._id || booking.id || booking.room;
       try {
-        editBooking = (service && service.getBooking)
+        // The page's snapshot already contains this stay; only ask the API
+        // for it again when that snapshot is stale (30s+).
+        editBooking = (service && service.getBooking && (Date.now() - contextAt) > STAY_REFRESH_MS)
           ? (await service.getBooking(key)) || booking
           : booking;
       } catch (e) {
@@ -1866,7 +1895,7 @@
       var vkey = booking.stayId || booking._id || booking.id || booking.room;
       var vIsHistorical = booking.status === 'checkout' || booking.status === 'cancelled' || booking.status === 'no-show';
       try {
-        editBooking = (!vIsHistorical && service && service.getBooking)
+        editBooking = (!vIsHistorical && service && service.getBooking && (Date.now() - contextAt) > STAY_REFRESH_MS)
           ? (await service.getBooking(vkey)) || booking
           : booking;
       } catch (e) {
@@ -1967,11 +1996,18 @@
       }
     });
 
+    // Warm the room-category list once so the first open never waits on it
+    // (populateRooms() filters the room dropdown by category).
+    loadRoomCategories();
+
     return {
       openNew: openNew,
       openEdit: openEdit,
       openView: openView,
       close: close,
+      prime: function (data) {
+        if (data) primedData = Object.assign({ at: Date.now() }, data);
+      },
       setSession: function (s) {
         session = s;
         applyDiscountLock();

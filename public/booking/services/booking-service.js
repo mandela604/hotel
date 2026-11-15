@@ -113,7 +113,7 @@
       .then(function(d) {
         var u = d && d.data ? d.data : d;
         if (u && u.role) {
-          _sessionCache = { name: u.name, role: u.role, privilege: (u.privileges && u.privileges.type) || u.privilege || null, initials: u.initials || '' };
+          _sessionCache = { name: u.name, role: u.role, privilege: (u.privileges && u.privileges.type) || u.privilege || null, department: u.department || '', initials: u.initials || '' };
         }
         return _sessionCache;
       })
@@ -151,6 +151,9 @@
       if (body && body.needsPhone) err.needsPhone = true;
       throw err;
     }
+    // Any successful write invalidates the cached /data snapshot, so the
+    // next read (page refresh or modal open) never serves stale rows.
+    if (options.method && options.method !== 'GET') invalidate();
     return body;
   }
   function get(path) { return apiFetch(path, { method: 'GET' }); }
@@ -162,13 +165,29 @@
   /* ══════════════════════════════════════════════════════════════
      Public API — window.BookingData
   ══════════════════════════════════════════════════════════════ */
-  async function getBookingData() {
+  /* /data is loaded once by the page and was previously re-downloaded on
+     every modal open. A short TTL cache removes those repeat round-trips;
+     every write through apiFetch() clears it, and callers can pass
+     { force: true } to bypass it (background refresh). */
+  var DATA_TTL_MS = 120000;
+  var _dataCache = null;
+  var _dataCacheAt = 0;
+  function invalidate() { _dataCache = null; _dataCacheAt = 0; }
+
+  async function getBookingData(opts) {
+    var force = !!(opts && opts.force);
+    if (!force && _dataCache && (Date.now() - _dataCacheAt) < DATA_TTL_MS) {
+      return _dataCache;
+    }
     await fetchSession();
     const res = await get('/data');
     // Backend's /data doesn't carry a session (that's what the JWT is
     // for) — attach the best-effort decoded one so pages reading
     // `data.session.name` keep working unchanged.
-    return Object.assign({}, res.data, { session: getSession() });
+    var out = Object.assign({}, res.data, { session: getSession() });
+    _dataCache = out;
+    _dataCacheAt = Date.now();
+    return out;
   }
 
   async function getBooking(roomOrStayId) {
@@ -305,7 +324,7 @@
 
   global.BookingData = {
     CONFIG,
-    getBookingData, getBooking,
+    getBookingData, getBooking, invalidate,
     saveBooking, addBookingPayment, deleteBooking,
     setRoomStatus, checkinBooking, checkoutBooking, transferBooking,
     saveRoom,

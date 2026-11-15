@@ -892,7 +892,7 @@ function renderPermGrid(){
       <tr>
         <td class="perm-row-label">${labelize(m)}</td>
         ${ALL_ACTIONS.map(a => {
-          const staffLike = { role: s.role, privilege: s.privilege, overrides: workingOverrides };
+          const staffLike = { role: s.role, privilege: s.privilege, dept: s.dept, overrides: workingOverrides };
           const on = getEffectivePermission(staffLike, m, a);
           const overridden = staffLike.overrides[m] && staffLike.overrides[m][a] !== undefined;
           return `<td class="perm-cell" onclick="togglePermCell('${m}','${a}')">

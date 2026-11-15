@@ -122,7 +122,7 @@ const PERMISSIONS = {
     booking: {
       admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canCheckin: true, canCheckout: true },
       manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canCheckin: true, canCheckout: true, canGiveDiscount: true },
-      supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canCheckin: false, canCheckout: false },
+      supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canCheckin: true, canCheckout: true },
     },
     procurement: {
       admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canReject: true },
@@ -227,6 +227,12 @@ function hasPermission(user, module, action) {
 
   /* staff — privilege-based */
   const base = Object.assign({}, PERMISSIONS.roles.staff);
+  // Front Desk department staff default to front_desk booking rights even
+  // when privileges.type is null or names another department.
+  const deptList = String(user.department || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  if (deptList.indexOf('front desk') !== -1 && PERMISSIONS.privileges.front_desk && PERMISSIONS.privileges.front_desk[module]) {
+    Object.assign(base, PERMISSIONS.privileges.front_desk[module]);
+  }
   if (privType && PERMISSIONS.privileges[privType]) {
     const privPerms = PERMISSIONS.privileges[privType];
     if (module && privPerms[module]) {

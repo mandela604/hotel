@@ -1151,7 +1151,7 @@ exports.cancelRefund = asyncHandler(async (req, res) => {
   await auditBooking(roomNum, 'cancelRefund', booking.recordedBy || '', cfBy, cfBy, {
     refundType,
     refundAmount,
-    refunded,
+    refund,
     reason,
   });
   
@@ -1173,14 +1173,32 @@ exports.autoCancelExpiredReservations = asyncHandler(async (req, res) => {
   if (res) res.json({ success: true, modified: result.modifiedCount });
 });
 
-// Also run auto-cancel as part of getBookingData so it fires on page load
+// Also run auto-cancel as part of getBookingData so it fires on page load,
+// but never block the read: the sweep is throttled to once a minute and
+// fired in the background, so /data is read-only on the hot path.
 const origGetBookingData = exports.getBookingData;
+let lastNoShowSweep = 0;
+let noShowSweepRunning = false;
+async function sweepNoShows() {
+  if (noShowSweepRunning) return;
+  noShowSweepRunning = true;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await Booking.updateMany(
+      { status: 'reserved', checkout: { $lt: today } },
+      { $set: { status: 'no-show', updatedAt: Date.now() } }
+    );
+  } catch (e) {
+    console.warn('[BookingData] no-show sweep failed:', e.message);
+  } finally {
+    noShowSweepRunning = false;
+  }
+}
 exports.getBookingData = asyncHandler(async (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
-  await Booking.updateMany(
-    { status: 'reserved', checkout: { $lt: today } },
-    { $set: { status: 'no-show', updatedAt: Date.now() } }
-  );
+  if (Date.now() - lastNoShowSweep > 60000) {
+    lastNoShowSweep = Date.now();
+    sweepNoShows(); // fire-and-forget; response does not wait for the write
+  }
   return origGetBookingData(req, res);
 });
 

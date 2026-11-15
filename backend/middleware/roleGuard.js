@@ -153,6 +153,12 @@ function privilegeGuard(module, action) {
       if (module && PERMISSIONS.modules[module] && PERMISSIONS.modules[module].staff) {
         Object.assign(base, PERMISSIONS.modules[module].staff);
       }
+      // Front Desk department staff get front_desk booking rights by default,
+      // even when privileges.type is null or points at another department.
+      const depts = String(req.user.department || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      if (depts.indexOf('front desk') !== -1 && PERMISSIONS.privileges.front_desk && PERMISSIONS.privileges.front_desk[module]) {
+        Object.assign(base, PERMISSIONS.privileges.front_desk[module]);
+      }
       if (privType && PERMISSIONS.privileges[privType] && PERMISSIONS.privileges[privType][module]) {
         Object.assign(base, PERMISSIONS.privileges[privType][module]);
       }

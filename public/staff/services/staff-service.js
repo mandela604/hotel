@@ -285,6 +285,14 @@
   function getBasePermission(staff, module, action) {
     if (staff.role === 'admin') return true;
     if (staff.role === 'manager') return !!(PERMISSIONS.roles.manager || {})[action];
+    // Front Desk department staff default to front_desk booking rights even
+    // when privileges.type is null or names another department.
+    var deptList = String(staff.dept || staff.department || '').toLowerCase().split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    if (deptList.indexOf('front desk') !== -1 && PERMISSIONS.privileges.front_desk && PERMISSIONS.privileges.front_desk[module]) {
+      if (PERMISSIONS.privileges.front_desk[module][action] !== undefined) {
+        return !!PERMISSIONS.privileges.front_desk[module][action];
+      }
+    }
     if (staff.privilege && PERMISSIONS.privileges[staff.privilege] && PERMISSIONS.privileges[staff.privilege][module]) {
       return !!PERMISSIONS.privileges[staff.privilege][module][action];
     }

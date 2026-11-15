@@ -133,7 +133,7 @@
     booking: {
       admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canCheckin: true, canCheckout: true },
       manager:    { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: true, canCheckin: true, canCheckout: true, canGiveDiscount: true },
-      supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canCheckin: false, canCheckout: false },
+      supervisor: { canView: true, canCreate: true, canEdit: true, canDelete: false, canApprove: false, canCheckin: true, canCheckout: true },
     },
       procurement: {
         admin:      { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canReject: true },
@@ -216,6 +216,12 @@
     }
 
     const base = Object.assign({}, PERMISSIONS.roles.staff);
+    // Front Desk department staff default to front_desk rights even when
+    // privileges.type is null or names another department.
+    var deptList = String((session && (session.department || session.dept)) || '').toLowerCase().split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    if (deptList.indexOf('front desk') !== -1 && PERMISSIONS.privileges.front_desk && PERMISSIONS.privileges.front_desk[module]) {
+      Object.assign(base, PERMISSIONS.privileges.front_desk[module]);
+    }
     if (privilege && PERMISSIONS.privileges[privilege]) {
       const privPerms = PERMISSIONS.privileges[privilege];
       if (module) {
