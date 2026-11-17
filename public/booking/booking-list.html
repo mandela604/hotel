@@ -398,7 +398,7 @@ function mountTable() {
 }
 
 function getRoomStatus(num) {
-  var cands = bookings.filter(function (r) { return r.room === num && !r.archived; });
+  var cands = bookings.filter(function (r) { return r.room === num && !r.archived && !r._history; });
   if (!cands.length) return 'available';
   var checked = cands.find(function (c) { return c.status === 'checkedin'; });
   if (checked) return 'checkedin';
@@ -511,9 +511,9 @@ async function confirmDelete() {
 }
 
 /* ═══ Merge guest stay history into bookings ═══ */
-function buildHistoryStays() {
+function buildHistoryStays(liveBookings) {
   var live = {};
-  bookings.forEach(function(b){ var k = b.stayId || b._id || b.id; if (k) live[k] = true; });
+  (liveBookings || []).forEach(function(b){ var k = b.stayId || b._id || b.id; if (k) live[k] = true; });
   var hist = [];
   (guestsData || []).forEach(function(g){
     (g.stays || []).forEach(function(s){
@@ -554,7 +554,7 @@ async function refreshAndRender() {
     var data = await BookingData.getBookingData();
     allRooms = data.rooms || [];
     guestsData = data.guests || [];
-    bookings = sortBookingsDesc(data.bookings.concat(buildHistoryStays()));
+    bookings = sortBookingsDesc(data.bookings.concat(buildHistoryStays(data.bookings)));
     bookingModal.setSession(getSession());
     applyPermissionsUI();
     filterBookings();
@@ -593,7 +593,7 @@ async function init() {
     var data = await BookingData.getBookingData();
     allRooms = data.rooms || [];
     guestsData = data.guests || [];
-    bookings = sortBookingsDesc(data.bookings.concat(buildHistoryStays()));
+    bookings = sortBookingsDesc(data.bookings.concat(buildHistoryStays(data.bookings)));
     bookingModal.setSession(getSession());
 
     mountTable();
