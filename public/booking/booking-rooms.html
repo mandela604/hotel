@@ -481,6 +481,9 @@ function btnLoad(id, on) {
 ═══════════════════════════════════════════════ */
 let allRooms = [];
 let bookings = [];
+// Archived docs are permanent guest-stay history. They must never decide
+// a room's live status — the room has its own vacant placeholder.
+const liveBookings = () => bookings.filter(b => !b.archived);
 let guests   = [];
 let roomCategories = [];
 let roomFilter = 'all';
@@ -547,7 +550,7 @@ function fmtDate(d) {
 }
 function fmtN(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
 function getRoomStatus(num) {
-  const cands = bookings.filter(r => r.room === num);
+  const cands = liveBookings().filter(r => r.room === num);
   if (!cands.length) return 'available';
   const checked = cands.find(c => c.status === 'checkedin');
   if (checked) return 'checkedin';
@@ -753,7 +756,7 @@ function closeStayPop() {
 function toggleStayPop(roomNum, primaryKey, anchor) {
   var existing = document.getElementById('stayPop');
   if (existing) { existing.remove(); return; }
-  var others = bookings.filter(function (b) {
+  var others = liveBookings().filter(function (b) {
     if (b.room !== roomNum) return false;
     if (b.status !== 'reserved' && b.status !== 'checkedin') return false;
     if (primaryKey && (String(b.stayId || '') === String(primaryKey) || String(b._id) === String(primaryKey))) return false;
@@ -795,7 +798,7 @@ function renderRoomGrid(filter) {
   // Reserved filter lists TODAY's reservations only (full list incl. future lives in All Bookings)
   if (filter === 'reserved') {
     var todayStrR = new Date().toISOString().split('T')[0];
-    var resList = bookings.filter(function(b){ return b.status === 'reserved' && b.guest && b.checkin === todayStrR; })
+    var resList = liveBookings().filter(function(b){ return b.status === 'reserved' && b.guest && b.checkin === todayStrR; })
       .sort(function(a,b){ return ((a.createdAt||0)-(b.createdAt||0)); });
     var resFiltered = resList.filter(function(bk){
       var r = allRooms.find(function(x){ return x.num === bk.room; });
@@ -814,7 +817,7 @@ function renderRoomGrid(filter) {
     } else {
       resGrid.innerHTML = resPage.map(function(bk){
         var r = allRooms.find(function(x){ return x.num === bk.room; }) || { num: bk.room, type: bk.type || '', rate: bk.rate || 0, notes: '' };
-        var cands = bookings.filter(function(b){ return b.room === bk.room; });
+        var cands = liveBookings().filter(function(b){ return b.room === bk.room; });
         return roomCardHtml(r, 'reserved', bk, cands, p);
       }).join('');
     }
@@ -825,7 +828,7 @@ function renderRoomGrid(filter) {
     updateStatPills();
     renderBell();
     if (shell.setPendingBadge) {
-      shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
+      shell.setPendingBadge(liveBookings().filter(b => b.status === 'reserved').length);
     }
     return;
   }
@@ -834,7 +837,7 @@ function renderRoomGrid(filter) {
     const st = getRoomStatus(r.num) || 'available';
     const mf = filter === 'all' || st === filter;
     const mt = !typeF || r.type === typeF;
-    const candsQ = bookings.filter(function(b){ return b.room === r.num; }).sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+    const candsQ = liveBookings().filter(function(b){ return b.room === r.num; }).sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
     const primaryQ = candsQ[0];
     const guestQ = primaryQ ? String(primaryQ.guest||'').toLowerCase() : '';
     const mq = !q || r.num.toLowerCase().includes(q) || guestQ.includes(q);
@@ -854,7 +857,7 @@ function renderRoomGrid(filter) {
   } else {
     grid.innerHTML = page.map(r => {
       const st = getRoomStatus(r.num) || 'available';  // fallback
-      const cands = bookings.filter(b => b.room === r.num).sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
+      const cands = liveBookings().filter(b => b.room === r.num).sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
       let bk = null;
       var todayStr2 = new Date().toISOString().split('T')[0];
       if (cands.length) {
@@ -885,7 +888,7 @@ function renderRoomGrid(filter) {
   updateStatPills();
   renderBell();
   if (shell.setPendingBadge) {
-    shell.setPendingBadge(bookings.filter(b => b.status === 'reserved').length);
+    shell.setPendingBadge(liveBookings().filter(b => b.status === 'reserved').length);
   }
 }
 
@@ -922,7 +925,7 @@ function openBookingFromCard(num) {
   console.log('[BookingRooms] openBookingFromCard called for room:', num);
   const session = getSession();
   console.log('[BookingRooms] session:', session);
-  const cands = bookings.filter(function(b){ return b.room === num; });
+  const cands = liveBookings().filter(function(b){ return b.room === num; });
   let bk = null;
   if (cands.length) {
     var checked2 = cands.filter(function(x){ return x.status==='checkedin'; });
@@ -962,7 +965,7 @@ function openBookingFromCard(num) {
 // Open one exact reservation (used by the Reserved filter cards)
 function openReservedBooking(key) {
   console.log('[BookingRooms] openReservedBooking called with key:', key);
-  const bk = bookings.find(function(b){ return String(b.stayId || b._id || b.id || b.room) === String(key); });
+  const bk = liveBookings().find(function(b){ return String(b.stayId || b._id || b.id || b.room) === String(key); });
   if (!bk) { console.warn('[BookingRooms] Reservation not found for key:', key); showToast('Reservation not found — refreshing.', 'info'); refreshDataAndRender(); return; }
   console.log('[BookingRooms] Found booking:', bk);
   bookingModal.setSession(getSession());
@@ -1055,7 +1058,7 @@ function openRoomStatusModal(num) {
   }
   statusRoom = num;
   const r   = allRooms.find(x => x.num === num);
-  const bk  = bookings.find(b => b.room === num);
+  const bk  = liveBookings().find(b => b.room === num);
   const cur = getRoomStatus(num);
   document.getElementById('rsRoomNum').textContent   = num;
   document.getElementById('rsRoomType').textContent  = (r && r.type) || '';
@@ -1087,18 +1090,18 @@ async function saveRoomStatus() {
       // two reservations due today the desk picks — guessing checked in
       // the wrong guest.
       var todayCI = new Date().toISOString().split('T')[0];
-      var ciReserved = bookings.filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; });
+      var ciReserved = liveBookings().filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; });
       var ciDueToday = ciReserved.filter(function(b){ return b.checkin === todayCI; });
       if (ciDueToday.length > 1) {
         btnLoad('roomStatusSaveBtn', false);
         openCheckinPicker(statusRoom, ciDueToday, note);
         return;
       }
-      var ciBk = ciDueToday[0] || ciReserved.sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || bookings.find(function(b){ return b.room === statusRoom; });
+      var ciBk = ciDueToday[0] || ciReserved.sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || liveBookings().find(function(b){ return b.room === statusRoom; });
       var ciKey = ciBk ? (ciBk.stayId || ciBk._id || ciBk.id || statusRoom) : statusRoom;
       await BookingData.checkinBooking(ciKey, { notes: note });
     } else if (newSt === 'no-show') {
-      var nsBk = bookings.filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; }).sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || bookings.find(function(b){ return b.room === statusRoom; });
+      var nsBk = liveBookings().filter(function(b){ return b.room === statusRoom && b.status === 'reserved'; }).sort(function(a,b){ return new Date(a.checkin)-new Date(b.checkin); })[0] || liveBookings().find(function(b){ return b.room === statusRoom; });
       var nsKey = nsBk ? (nsBk.stayId || nsBk._id || nsBk.id || statusRoom) : statusRoom;
       await fetch('/api/booking/bookings/' + encodeURIComponent(nsKey) + '/no-show', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({}) }).then(function(r){ return r.json(); }).then(function(d){ if(!d.success) throw new Error(d.error); });
     } else if (newSt === 'cancel-refund') {
@@ -1110,11 +1113,11 @@ async function saveRoomStatus() {
       // checkoutBooking() always lands the room on 'cleaning' itself —
       // staff can move it further (Available/Maintenance) afterward as
       // its own separate action, not bundled into checkout.
-      var coBk = bookings.find(function(b){ return b.room === statusRoom && b.status === 'checkedin'; }) || bookings.find(function(b){ return b.room === statusRoom; });
+      var coBk = liveBookings().find(function(b){ return b.room === statusRoom && b.status === 'checkedin'; }) || liveBookings().find(function(b){ return b.room === statusRoom; });
       var coKey = coBk ? (coBk.stayId || coBk._id || coBk.id || statusRoom) : statusRoom;
       await BookingData.checkoutBooking(coKey);
     } else {
-      var _bk = bookings.find(function(b){ return b.room === statusRoom && b.status === curSt; }) || bookings.find(function(b){ return b.room === statusRoom && b.status !== 'vacant'; }) || bookings.find(function(b){ return b.room === statusRoom; });
+      var _bk = liveBookings().find(function(b){ return b.room === statusRoom && b.status === curSt; }) || liveBookings().find(function(b){ return b.room === statusRoom && b.status !== 'vacant'; }) || liveBookings().find(function(b){ return b.room === statusRoom; });
       var _stay = _bk ? (_bk.stayId || _bk._id || _bk.id || '') : '';
       console.log('[status] send', { room: statusRoom, from: curSt, to: newSt, stayId: _stay, notes: note });
       var _res = await BookingData.setRoomStatus(statusRoom, newSt, { notes: note, stayId: _stay });
@@ -1217,7 +1220,7 @@ async function init() {
 /* ── Cancel & Refund Modal ── */
 var refundRoom = null;
 function openRefundModal(roomOrStay) {
-  var rbk = bookings.find(function(b){ return (b.stayId||b._id)===roomOrStay; }) || bookings.filter(function(b){ return b.room===roomOrStay; }).sort(function(a,b){return new Date(a.checkin)-new Date(b.checkin);})[0] || bookings.find(function(b){ return b.room === roomOrStay; });
+  var rbk = liveBookings().find(function(b){ return (b.stayId||b._id)===roomOrStay; }) || liveBookings().filter(function(b){ return b.room===roomOrStay; }).sort(function(a,b){return new Date(a.checkin)-new Date(b.checkin);})[0] || liveBookings().find(function(b){ return b.room === roomOrStay; });
   refundRoom = rbk ? (rbk.stayId || rbk._id || rbk.id || roomOrStay) : roomOrStay;
   var bk = rbk;
   if (!bk) return;

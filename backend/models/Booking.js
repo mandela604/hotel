@@ -35,6 +35,9 @@ const bookingSchema = new mongoose.Schema({
   adults:     { type: Number, default: 1 },
   children:   { type: Number, default: 0 },
   status:     { type: String, enum: ['vacant','reserved','checkedin','checkout','cleaning','maintenance','no-show','cancelled'], default: 'vacant' },
+  // An archived doc is a PERMANENT guest-stay record kept for history. It
+  // never blocks the room: the room always has its own vacant placeholder.
+  archived:   { type: Boolean, default: false },
   notes:      { type: String, default: '' },
   refunded:       { type: Number, default: 0 },
   refundDate:     { type: String, default: '' },

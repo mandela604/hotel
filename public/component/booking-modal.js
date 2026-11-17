@@ -374,7 +374,7 @@
       return !!(session && String(session.role).toLowerCase() === 'admin');
     }
     function roomStatus(bookingsArr, num) {
-      var b = (bookingsArr || []).find(function (r) { return r.room === num; });
+      var b = (bookingsArr || []).find(function (r) { return r.room === num && !r.archived; });
       if (!b || !b.status) return 'available';
       if (b.status === 'vacant') return 'available';
       if (b.status === 'reserved') {

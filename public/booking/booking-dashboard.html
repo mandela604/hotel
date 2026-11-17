@@ -234,7 +234,7 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 function getRoomStatus(num) {
-  const b = bookings.find(r => r.room === num);
+  const b = bookings.find(r => r.room === num && !r.archived);
   if (!b || !b.status) return 'available';
   if (b.status === 'vacant') return 'available';
   if (b.status === 'reserved') {

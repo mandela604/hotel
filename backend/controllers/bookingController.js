@@ -66,21 +66,110 @@ function payStatusFor(b) {
   return 'Deposit Paid';
 }
 
-/* Reset a booking doc to a clean vacant placeholder. Every stay-scoped
-   field is cleared so a reused doc can never leak a previous guest's
-   nights, money, or history into the next stay. Does NOT touch status
-   (caller sets it) or rate/type (caller syncs them from the Room doc). */
-function clearStayFields(booking) {
-  Object.assign(booking, {
-    guest: '', phone: '', email: '',
-    address: '', idNum: '', guestId: '',
-    checkin: '', checkout: '', discount: 0, payments: [], paid: 0,
-    payStatus: 'Pending', adults: 1, children: 0, notes: '',
-    extraNights: 0, extraRate: 0, comped: 0,
-    refunded: 0, refundDate: '', refundBy: '', refundReason: '',
-    _guestName: '', transferLog: [], history: [],
+/* ═══════════════════════════════════════════════════════════════════
+   STAY RETENTION — a guest stay is NEVER wiped.
+
+   A Booking doc is the permanent record of a stay: guest, dates, money,
+   transfer trail and history. The old "clearStayFields()" approach erased
+   all of that in place whenever a room was reset, a transfer moved a
+   booking out, or a new booking reused the vacant slot. That silently
+   destroyed paid stays (and bypassed the checkout snapshot). It is gone.
+
+   Only a doc with NO stay data is recyclable. A doc holding a real stay is
+   retired as 'checkout' history and a SEPARATE clean vacant placeholder is
+   created for the room. History therefore always remains with us.
+   ═══════════════════════════════════════════════════════════════════ */
+function hasStayData(booking) {
+  if (!booking) return false;
+  if (String(booking.guest || '').trim()) return true;
+  if (String(booking._guestName || '').trim()) return true;
+  if (booking.checkin || booking.checkout) return true;
+  if ((booking.payments || []).length) return true;
+  if (Number(booking.paid) || Number(booking.discount) || Number(booking.comped) || Number(booking.refunded)) return true;
+  if ((booking.history || []).length || (booking.transferLog || []).length) return true;
+  return false;
+}
+
+/* Mirror a stay onto the guest profile. Best-effort only — the Booking doc
+   itself is the authoritative, permanent record and is never deleted. */
+async function archiveStaySnapshot(booking, byName, reason) {
+  try {
+    const name = String(booking.guest || '').trim();
+    if (!name) return false;
+    const gp = await findOrCreateGuest({
+      name, phone: booking.phone, email: booking.email,
+      address: booking.address, idType: booking.idType, idNum: booking.idNum,
+    });
+    if (!gp) return false;
+    gp.stays = gp.stays || [];
+    const already = gp.stays.some(function (s) {
+      return s && s.stayId && booking.stayId && String(s.stayId) === String(booking.stayId);
+    });
+    if (!already) {
+      gp.stays.push({
+        stayId: booking.stayId || '', bookingNo: booking.bookingNo || '',
+        room: booking.room, type: booking.type,
+        checkin: booking.checkin || '', checkout: booking.checkout || '',
+        rate: Number(booking.rate) || 0, discount: Number(booking.discount) || 0,
+        extraNights: Number(booking.extraNights) || 0, extraRate: Number(booking.extraRate) || 0,
+        total: calcTotal(booking), paid: calcPaid(booking), payStatus: booking.payStatus || '',
+        payments: (booking.payments || []).map(function (p) {
+          return { id: p.id || '', amount: Number(p.amount) || 0, mode: p.mode || 'Cash', date: p.date || '', by: p.by || '', ts: p.ts || 0 };
+        }),
+        phone: booking.phone || '', email: booking.email || '',
+        payMethod: booking.payMethod || 'Cash', recordedBy: booking.recordedBy || '',
+        status: 'checkout', checkedOutAt: Date.now(), checkedOutBy: byName || '',
+      });
+      await gp.save();
+    }
+    return true;
+  } catch (e) { return false; }
+}
+
+/* Retire a doc WITHOUT destroying it. Returns true when a real stay was
+   preserved as history; an empty placeholder is simply returned to vacant. */
+async function retireStayDoc(booking, byName, reason) {
+  if (!booking) return false;
+  if (!hasStayData(booking)) {
+    booking.status = 'vacant';
+    booking.updatedAt = Date.now();
+    await booking.save();
+    return false;
+  }
+  if (booking.archived && booking.status === 'checkout') return true; // already retained
+  await archiveStaySnapshot(booking, byName, reason);
+  booking.history = booking.history || [];
+  booking.history.push({
+    date: new Date().toISOString().split('T')[0],
+    action: `Stay retained as history — ${reason}`,
+    by: byName || 'System', note: '', stage: 'checkout',
   });
-  return booking;
+  booking.status = 'checkout';
+  booking.archived = true;
+  booking.updatedAt = Date.now();
+  await booking.save();
+  return true;
+}
+
+/* The room still needs a clean vacant doc so it shows as Available and can
+   be booked again. Never recycle a doc that still holds a guest stay. */
+async function ensureVacantPlaceholder(room, { byName = 'System', now = Date.now() } = {}) {
+  const existing = await Booking.find({ room, status: 'vacant' });
+  const clean = existing.find(b => !hasStayData(b));
+  if (clean) return clean;
+  for (const doc of existing) {
+    if (hasStayData(doc)) await retireStayDoc(doc, byName, 'dirty vacant placeholder cleaned');
+  }
+  const roomDoc = await Room.findOne({ num: room });
+  return Booking.create({
+    room,
+    stayId: uuidv4(),
+    type: roomDoc ? roomDoc.type : 'Standard',
+    rate: roomDoc ? Number(roomDoc.rate) || 0 : 0,
+    status: 'vacant',
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 /* Resolve a booking strictly by booking id (stayId / _id).
@@ -328,17 +417,38 @@ exports.updateRoom = asyncHandler(async (req, res) => {
 });
 
 exports.deleteRoom = asyncHandler(async (req, res) => {
-  const booking = await Booking.findOne({ room: req.params.num });
-  if (booking && booking.status !== 'vacant') {
+  const roomNum = req.params.num;
+  const docs = await Booking.find({ room: roomNum });
+  const blocking = docs.find(b => ['reserved', 'checkedin', 'cleaning', 'maintenance'].includes(b.status));
+  if (blocking) {
     return res.status(400).json({ success: false, error: 'Cannot delete a room that is occupied, reserved, or under cleaning/maintenance. Set it to vacant first.' });
   }
 
-  const room = await Room.findOneAndDelete({ num: req.params.num });
+  const room = await Room.findOneAndDelete({ num: roomNum });
   if (!room) return res.status(404).json({ success: false, error: 'Room not found' });
 
-  await Booking.deleteOne({ room: req.params.num });
+  // Deleting a room must not destroy its guests' stay history. Keep every
+  // doc that holds a real stay as checkout history; remove only empty ones.
+  const byName = req.user ? req.user.name : '';
+  for (const doc of docs) {
+    if (!hasStayData(doc)) {
+      await Booking.deleteOne({ _id: doc._id });
+      continue;
+    }
+    await archiveStaySnapshot(doc, byName, 'room deleted');
+    doc.history = doc.history || [];
+    doc.history.push({
+      date: new Date().toISOString().split('T')[0],
+      action: 'Stay retained as history — room deleted',
+      by: byName || 'System', note: '', stage: 'checkout',
+    });
+    doc.status = 'checkout';
+    doc.archived = true;
+    doc.updatedAt = Date.now();
+    await doc.save();
+  }
   emit(req, 'booking', 'booking:updated', { action: 'deleteRoom', room: room.num });
-  res.json({ success: true, message: `Room ${room.num} deleted` });
+  res.json({ success: true, message: `Room ${room.num} deleted. Guest stay history retained.` });
 });
 
 // setRoomStatus — mirrors BookingData.setRoomStatus(num, status, {notes}).
@@ -393,18 +503,26 @@ exports.setRoomStatus = asyncHandler(async (req, res) => {
 
   booking.status = targetStatus;
 
-  // Clearing a room back to vacant (from checkout/maintenance/cleaning)
-  // wipes the previous occupant's details off the record.
+  // Making a room available must never erase a guest's stay. If the doc
+  // holds real data it is preserved as checkout history and a separate
+  // clean vacant placeholder is created for the room.
   if (targetStatus === 'vacant') {
-    clearStayFields(booking);
-    try {
-      const Room = require('../models/Room');
-      const roomDoc = await Room.findOne({ num: booking.room });
-      if (roomDoc) {
-        booking.rate = Number(roomDoc.rate) || 0;
-        booking.type = roomDoc.type || booking.type;
-      }
-    } catch (e) {}
+    const byName = req.user ? req.user.name : '';
+    const retired = await retireStayDoc(booking, byName, 'room marked available');
+    if (retired) {
+      await ensureVacantPlaceholder(num, { byName, now: Date.now() });
+      await auditBooking(num, 'update', booking.recordedBy || '', byName, byName, {
+        rule: 'stayRetained', reason: 'room marked available', guest: booking.guest,
+      });
+    } else {
+      try {
+        const roomDoc = await Room.findOne({ num: booking.room });
+        if (roomDoc) {
+          booking.rate = Number(roomDoc.rate) || 0;
+          booking.type = roomDoc.type || booking.type;
+        }
+      } catch (e) {}
+    }
   }
   if (notes !== undefined) booking.notes = notes;
   booking.updatedAt = Date.now();
@@ -550,12 +668,16 @@ exports.createBooking = asyncHandler(async (req, res) => {
 
   try {
     const bookingNo = await nextBookingNo();
-    // Reuse a vacant placeholder if one exists, otherwise create a new stay doc
+    const byName = req.user ? req.user.name : '';
+    // Reuse a vacant placeholder ONLY when it is genuinely empty. If it
+    // still holds a stay, retire it as permanent history and use a new doc.
     let booking = await Booking.findOne({ room, status: 'vacant' });
+    if (booking && hasStayData(booking)) {
+      await retireStayDoc(booking, byName, 'new booking in room');
+      booking = null;
+    }
     const isReuse = !!booking;
     if (isReuse) {
-      // Start clean even if the placeholder was left dirty
-      clearStayFields(booking);
       Object.assign(booking, {
         stayId: uuidv4(),
         bookingNo,
@@ -620,7 +742,6 @@ exports.createBooking = asyncHandler(async (req, res) => {
       await booking.save();
     }
 
-    const byName = req.user ? req.user.name : '';
     await logActivity('Booking', 'gold', `${booking.guest} booked into Room ${room}`, 'booking-list.html', byName);
     
     // Audit: create action — store original author (whoever server thinks wrote it) alongside current session name
@@ -894,52 +1015,11 @@ exports.transferBooking = asyncHandler(async (req, res) => {
   const guestName = booking.guest || 'Guest';
   const now = Date.now();
 
-  // ── Clear the FROM room back to vacant ──────────────────────────────
-  // The booking doc is about to move to the new room. The old room needs
-  // its own vacant placeholder restored so it shows as Available again.
-  // If this is the ONLY doc for fromRoom we reset it in-place; otherwise
-  // we create/upsert a fresh vacant placeholder.
-  const fromRoomDoc = await Room.findOne({ num: fromRoom });
-  const fromRoomBookingsCount = await Booking.countDocuments({ room: fromRoom });
-
-  if (fromRoomBookingsCount <= 1) {
-    // This is the only doc — we're about to move it to toRoom, so we need
-    // a fresh vacant placeholder for fromRoom BEFORE we reassign the doc.
-    // Create it now so fromRoom is never left with zero booking docs.
-    try {
-      await Booking.create({
-        room: fromRoom,
-        type: fromRoomDoc ? fromRoomDoc.type : booking.type,
-        rate: fromRoomDoc ? Number(fromRoomDoc.rate) : 0,
-        status: 'vacant',
-        createdAt: now,
-        updatedAt: now,
-      });
-    } catch (e) {
-      // Duplicate key on stayId (sparse unique) is fine — placeholder may already exist
-      if (e.code !== 11000) console.error('[transfer] Could not create vacant placeholder for', fromRoom, e.message);
-    }
-  } else {
-    // Multiple docs for fromRoom — find the existing vacant placeholder and make sure it's clean,
-    // or clear any stale checkedin/reserved doc that isn't this booking.
-    const fromVacant = await Booking.findOne({ room: fromRoom, status: 'vacant' });
-    if (fromVacant) {
-      clearStayFields(fromVacant);
-      if (fromRoomDoc) { fromVacant.rate = Number(fromRoomDoc.rate) || 0; fromVacant.type = fromRoomDoc.type || fromVacant.type; }
-      fromVacant.updatedAt = now;
-      await fromVacant.save();
-    } else {
-      // No vacant placeholder exists — find any other stale active doc for fromRoom and reset it
-      const stale = await Booking.findOne({ room: fromRoom, _id: { $ne: booking._id }, status: { $in: ['checkedin', 'reserved', 'cleaning'] } });
-      if (stale) {
-        clearStayFields(stale);
-        stale.status = 'vacant';
-        if (fromRoomDoc) { stale.rate = Number(fromRoomDoc.rate) || 0; stale.type = fromRoomDoc.type || stale.type; }
-        stale.updatedAt = now;
-        await stale.save();
-      }
-    }
-  }
+  // ── Keep the FROM room bookable ─────────────────────────────────────
+  // The booking doc is about to move to toRoom. The old room only needs a
+  // clean vacant placeholder. NEVER clear or delete another doc here —
+  // it may hold a real guest stay that must remain with us as history.
+  await ensureVacantPlaceholder(fromRoom, { byName: by, now });
   // ────────────────────────────────────────────────────────────────────
 
   booking.room = toRoom;
@@ -969,39 +1049,48 @@ exports.transferBooking = asyncHandler(async (req, res) => {
   res.json({ success: true, data: booking });
 });
 
-// Delete = clear the booking and return the room to vacant, matching
-// booking-list.html's confirmDelete() toast: "Booking deleted. Room
-// marked as Available."
+// Delete: a real stay is NEVER deleted — it is archived as checkout history
+// and the room gets a separate vacant placeholder. Only an empty placeholder
+// may actually be removed.
 exports.deleteBooking = asyncHandler(async (req, res) => {
   const booking = await resolveBooking(req);
   if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
 
   const guestName = booking.guest;
   const roomNum = booking.room;
+  const delUser = req.user ? req.user.name : '';
+
+  const preserved = await retireStayDoc(booking, delUser, 'booking delete requested');
+  if (preserved) {
+    // The guest's stay stays with us permanently as checkout history.
+    await ensureVacantPlaceholder(roomNum, { byName: delUser, now: Date.now() });
+    await logActivity('Booking', 'amber', `Booking for ${guestName || 'room ' + roomNum} archived — stay history retained`, 'booking-list.html', delUser);
+    await auditBooking(roomNum, 'delete', booking.recordedBy || '', delUser, delUser, {
+      preserved: true, guest: guestName, reason: 'stay history retained',
+    });
+    emit(req, 'booking', 'booking:updated', { action: 'deleteBooking', room: roomNum, stayId: booking.stayId, preserved: true });
+    return res.json({ success: true, preserved: true, message: 'Stay preserved as history. Room marked as Available.', data: booking });
+  }
+
+  // Empty placeholder only — safe to remove or reset.
   const countForRoom = await Booking.countDocuments({ room: roomNum });
   if (countForRoom > 1) {
     await Booking.deleteOne({ _id: booking._id });
   } else {
-    clearStayFields(booking);
-    booking.status = 'vacant';
     try {
-      const Room = require('../models/Room');
-      const roomDoc = await Room.findOne({ num: booking.room });
+      const roomDoc = await Room.findOne({ num: roomNum });
       if (roomDoc) {
         booking.rate = Number(roomDoc.rate) || 0;
         booking.type = roomDoc.type || booking.type;
       }
     } catch (e) {}
+    booking.status = 'vacant';
     booking.updatedAt = Date.now();
     await booking.save();
   }
 
-  await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + roomNum} deleted — room marked available`, 'booking-list.html', req.user ? req.user.name : '');
-  
-  // Audit: delete action
-  const delUser = req.user ? req.user.name : '';
+  await logActivity('Booking', 'red', `Booking for ${guestName || 'room ' + roomNum} deleted — room marked available`, 'booking-list.html', delUser);
   await auditBooking(roomNum, 'delete', booking.recordedBy || '', delUser, delUser, {});
-  
   emit(req, 'booking', 'booking:updated', { action: 'deleteBooking', room: roomNum, stayId: booking.stayId });
   res.json({ success: true, message: 'Booking deleted. Room marked as Available.', data: booking });
 });
@@ -1051,34 +1140,11 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
   booking.updatedAt = Date.now();
   await booking.save();
 
-  // Snapshot the completed stay onto the guest profile so stays/spend/
-  // history survive the later vacant wipe of this booking doc
-  try {
-    const gp = await findOrCreateGuest({ name: booking.guest, phone: booking.phone, email: booking.email, address: booking.address, idType: booking.idType, idNum: booking.idNum });
-    if (gp) {
-      gp.stays = gp.stays || [];
-      const already = gp.stays.some(function (s) { return s && s.stayId && booking.stayId && String(s.stayId) === String(booking.stayId); });
-      if (!already) {
-        gp.stays.push({
-          stayId: booking.stayId || '', bookingNo: booking.bookingNo || '',
-          room: booking.room, type: booking.type,
-          checkin: booking.checkin, checkout: booking.checkout,
-          rate: Number(booking.rate) || 0, discount: Number(booking.discount) || 0,
-          extraNights: Number(booking.extraNights) || 0, extraRate: Number(booking.extraRate) || 0,
-          total: calcTotal(booking), paid: calcPaid(booking), payStatus: booking.payStatus || '',
-          payments: (booking.payments || []).map(function (p) {
-            return { id: p.id || '', amount: Number(p.amount) || 0, mode: p.mode || 'Cash', date: p.date || '', by: p.by || '', ts: p.ts || 0 };
-          }),
-          phone: booking.phone || '', email: booking.email || '',
-          payMethod: booking.payMethod || 'Cash', recordedBy: booking.recordedBy || '',
-          status: 'checkout', checkedOutAt: Date.now(), checkedOutBy: req.user ? req.user.name : '',
-        });
-        await gp.save();
-      }
-    }
-  } catch (e) { /* history is best-effort, never block checkout */ }
-
   const coBy = req.user ? req.user.name : '';
+  // Mirror the completed stay onto the guest profile (best-effort). The
+  // Booking doc itself is retained permanently as checkout history.
+  await archiveStaySnapshot(booking, coBy, 'checkout');
+
   await logActivity('Booking', 'red', `${booking.guest} checked out — Room ${booking.room}`, 'booking-rooms.html', coBy);
   
   // Audit: checkout action

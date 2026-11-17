@@ -398,7 +398,7 @@ function mountTable() {
 }
 
 function getRoomStatus(num) {
-  var cands = bookings.filter(function (r) { return r.room === num; });
+  var cands = bookings.filter(function (r) { return r.room === num && !r.archived; });
   if (!cands.length) return 'available';
   var checked = cands.find(function (c) { return c.status === 'checkedin'; });
   if (checked) return 'checkedin';
@@ -503,7 +503,7 @@ async function confirmDelete() {
     await BookingData.deleteBooking(delKey);
     closeModal('deleteModal');
     deleteIdx = null;
-    showToast('Booking deleted. Room marked as Available.', 'info');
+    showToast('Stay archived — history retained. Room marked as Available.', 'info');
     await refreshAndRender();
   } catch (err) {
     showToast((err && err.message) || 'Failed to delete booking.', 'error');
