@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+/* Configurable room-discount rules. Weekdays use JS numbering: 0=Sun … 6=Sat.
+   rooms: [] means every room. from/to are optional YYYY-MM-DD bounds. */
+const discountRuleSchema = new mongoose.Schema({
+  name:     { type: String, default: 'Discount rule' },
+  rooms:    { type: [String], default: [] },
+  weekdays: { type: [Number], default: [] },
+  amount:   { type: Number, default: 0 },
+  from:     { type: String, default: '' },
+  to:       { type: String, default: '' },
+  active:   { type: Boolean, default: true },
+}, { _id: true });
+
 const configSchema = new mongoose.Schema({
   hotelName:            { type: String, default: 'Boston Leisure Hotel and Apartments' },
   hotelAddress:         { type: String, default: 'Idi Close, Km 75, Auchi-Benin Expressway, Ujoelen, Ekpoma, Edo State' },
@@ -20,6 +32,7 @@ const configSchema = new mongoose.Schema({
   disabledDepartments:  { type: [String], default: [] },
   accentColor:          { type: String, default: '#2f6fed' },
   departments:          { type: mongoose.Schema.Types.Mixed, default: {} },
+  bookingDiscountRules: { type: [discountRuleSchema], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Config', configSchema);

@@ -14,6 +14,7 @@ exports.get = asyncHandler(async (req, res) => {
   }
   if (typeof config.shiftStartHour !== 'number') { config.shiftStartHour = 9; dirty = true; }
   if (typeof config.shiftEndHour !== 'number') { config.shiftEndHour = 8; dirty = true; }
+  if (!Array.isArray(config.bookingDiscountRules)) { config.bookingDiscountRules = []; dirty = true; }
   if (dirty) await config.save();
   res.json({ success: true, data: config });
 });

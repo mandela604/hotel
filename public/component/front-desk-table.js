@@ -253,8 +253,23 @@
     const calcNights = (options.calc && options.calc.nights) || (BD && BD.nights) || defaultNights;
     const calcTotal = (options.calc && options.calc.total) || (BD && BD.calcTotal) || function (b) {
       if (!b.checkin || !b.checkout) return 0;
-      const n = calcNights(b.checkin, b.checkout) || 1;
-      return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
+      const extraN = Number(b.extraNights) || 0;
+      const extraR = Number(b.extraRate) || 0;
+      const snap = (b.discountNights || []).filter(x => x && x.date);
+      const map = {};
+      snap.forEach(x => { map[x.date] = Number(x.amount) || 0; });
+      let total = 0;
+      const start = new Date(b.checkin + 'T00:00:00Z');
+      const end = new Date(b.checkout + 'T00:00:00Z');
+      const n = Math.max(0, Math.round((end - start) / 86400000)) || 1;
+      for (let i = 0; i < n; i++) {
+        const date = new Date(start.getTime() + i * 86400000).toISOString().slice(0, 10);
+        const isExtra = extraN > 0 && i >= n - extraN;
+        const rate = isExtra && extraR > 0 ? extraR : (Number(b.rate) || 0);
+        const disc = isExtra ? 0 : (snap.length ? (map[date] || 0) : (Number(b.discount) || 0));
+        total += Math.max(0, rate - disc);
+      }
+      return Math.max(0, total);
     };
     const calcPaid = (options.calc && options.calc.paid) || (BD && BD.calcPaid) || function (b) {
       if (Array.isArray(b.payments) && b.payments.length) {

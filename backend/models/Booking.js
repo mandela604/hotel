@@ -26,6 +26,9 @@ const bookingSchema = new mongoose.Schema({
   checkout:   { type: String, default: '' },
   rate:       { type: Number, default: 0 },
   discount:   { type: Number, default: 0 },
+  // Date-scoped snapshot of which nights carry a discount. A night not in
+  // this list (e.g. an extension day) is always charged at full rate.
+  discountNights: { type: [{ date: String, amount: Number, rule: String }], default: [] },
   payments:   { type: [paymentEntrySchema], default: [] },
   paid:       { type: Number, default: 0 },
   payMethod:  { type: String, default: 'Cash' },

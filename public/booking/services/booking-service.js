@@ -64,10 +64,34 @@
     const n = (new Date(co) - new Date(ci)) / 86400000;
     return n > 0 ? n : 0;
   }
+  function stayDates(ci, co) {
+    if (!ci || !co) return [];
+    const start = new Date(ci + 'T00:00:00Z');
+    const end = new Date(co + 'T00:00:00Z');
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
+    const out = [];
+    for (let t = start.getTime(); t < end.getTime(); t += 86400000) {
+      out.push(new Date(t).toISOString().slice(0, 10));
+    }
+    return out;
+  }
   function calcTotal(b) {
     if (!b.checkin || !b.checkout) return 0;
-    const n = nights(b.checkin, b.checkout) || 1;
-    return Math.max(0, ((b.rate || 0) - (b.discount || 0)) * n);
+    const dates = stayDates(b.checkin, b.checkout);
+    const n = dates.length || 1;
+    const extraN = Number(b.extraNights) || 0;
+    const extraR = Number(b.extraRate) || 0;
+    const snapshot = (b.discountNights || []).filter(x => x && x.date);
+    const discMap = {};
+    snapshot.forEach(x => { discMap[x.date] = Number(x.amount) || 0; });
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      const isExtra = extraN > 0 && i >= n - extraN;
+      const rate = isExtra && extraR > 0 ? extraR : (Number(b.rate) || 0);
+      const disc = isExtra ? 0 : (snapshot.length ? (discMap[dates[i]] || 0) : (Number(b.discount) || 0));
+      total += Math.max(0, rate - disc);
+    }
+    return Math.max(0, total);
   }
   function calcPaid(b) {
     var raw = 0;

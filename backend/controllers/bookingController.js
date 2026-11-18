@@ -1,6 +1,7 @@
 const Room = require('../models/Room');
 const Booking = require('../models/Booking');
 const Guest = require('../models/Guest');
+const Config = require('../models/Config');
 const Sale = require('../models/Sale');
 const Order = require('../models/Order');
 const Activity = require('../models/Activity');
@@ -27,6 +28,53 @@ function nights(ci, co) {
   const n = (new Date(co) - new Date(ci)) / 86400000;
   return n > 0 ? n : 0;
 }
+
+/* ── Date-scoped discounts ───────────────────────────────────────────
+   A discount belongs to specific nights, not to the whole stay. Rules are
+   configurable in Settings; a booking snapshots the nights that matched
+   at creation time so extensions are always charged at full rate. */
+function stayDates(ci, co) {
+  if (!ci || !co) return [];
+  const start = new Date(ci + 'T00:00:00Z');
+  const end = new Date(co + 'T00:00:00Z');
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
+  const out = [];
+  for (let t = start.getTime(); t < end.getTime(); t += 86400000) {
+    out.push(new Date(t).toISOString().slice(0, 10));
+  }
+  return out;
+}
+function activeDiscountRules(config) {
+  return ((config && config.bookingDiscountRules) || []).filter(r =>
+    r && r.active !== false && Number(r.amount) > 0);
+}
+function ruleMatchesNight(rule, room, date) {
+  const rooms = (rule.rooms || []).map(String);
+  if (rooms.length && rooms.indexOf(String(room)) === -1) return false;
+  const wds = (rule.weekdays || []).map(Number);
+  if (wds.length && wds.indexOf(new Date(date + 'T00:00:00Z').getUTCDay()) === -1) return false;
+  if (rule.from && date < rule.from) return false;
+  if (rule.to && date > rule.to) return false;
+  return true;
+}
+function buildDiscountNights(room, ci, co, rules, maxNights) {
+  const dates = stayDates(ci, co);
+  const limit = maxNights === undefined ? dates.length : Math.min(dates.length, Math.max(0, maxNights));
+  const out = [];
+  for (let i = 0; i < limit; i++) {
+    const date = dates[i];
+    let best = null;
+    (rules || []).forEach(r => {
+      if (!ruleMatchesNight(r, room, date)) return;
+      const amount = Number(r.amount) || 0;
+      if (!best || amount > best.amount) {
+        best = { date, amount, rule: r.name || 'Discount rule' };
+      }
+    });
+    if (best) out.push(best);
+  }
+  return out;
+}
 const NO_SHOW_FIELDS = {
   guest: '', phone: '', email: '', address: '', idNum: '',
   checkin: '', checkout: '', discount: 0, adults: 1, children: 0,
@@ -34,20 +82,24 @@ const NO_SHOW_FIELDS = {
 };
 function calcTotal(b) {
   if (!b.checkin || !b.checkout) return 0;
-  const rawN = nights(b.checkin, b.checkout);
-  const n = rawN || 1;
-  const disc = Number(b.discount) || 0;
+  const dates = stayDates(b.checkin, b.checkout);
+  const n = dates.length || 1;
   const baseRate = Number(b.rate) || 0;
   const extraN = Number(b.extraNights) || 0;
   const extraR = Number(b.extraRate) || 0;
-  if (extraN > rawN) {
-    console.warn(`[booking] extraNights (${extraN}) exceeds real nights (${rawN}) — room ${b.room || '?'} stayId ${b.stayId || b._id || '?'}`);
+  const discMap = {};
+  const snapshot = (b.discountNights || []).filter(x => x && x.date);
+  snapshot.forEach(x => { discMap[x.date] = Number(x.amount) || 0; });
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const isExtra = extraN > 0 && i >= n - extraN;
+    const rate = isExtra && extraR > 0 ? extraR : baseRate;
+    // Discounts live only on their snapshot dates, and NEVER on extra nights.
+    const disc = isExtra ? 0
+      : (snapshot.length ? (discMap[dates[i]] || 0) : (Number(b.discount) || 0));
+    total += Math.max(0, rate - disc);
   }
-  if (extraN > 0 && extraR > 0) {
-    const baseN = Math.max(0, n - extraN);
-    return Math.max(0, baseN * (baseRate - disc) + extraN * (extraR - disc));
-  }
-  return Math.max(0, (baseRate - disc) * n);
+  return Math.max(0, total);
 }
 function calcPaid(b) {
   const raw = (b.payments || []).reduce((s, p) => s + (p.amount || 0), 0) || b.paid || 0;
@@ -623,6 +675,31 @@ exports.createBooking = asyncHandler(async (req, res) => {
   const roomDoc = await Room.findOne({ num: room });
   if (!roomDoc) return res.status(404).json({ success: false, error: `Room ${room} not found — add the room first` });
 
+  // Snapshot which nights carry a discount. Configurable rules supply the
+  // promo nights; a manually entered discount (permission-gated above)
+  // fills any remaining nights of the ORIGINAL stay.
+  const config = await Config.findOne().lean();
+  const rules = activeDiscountRules(config);
+  let discountNights = buildDiscountNights(room, checkin, checkout, rules);
+  const manualDiscount = Number(discount) || 0;
+  if (manualDiscount > 0) {
+    const byDate = {};
+    discountNights.forEach(x => { byDate[x.date] = x; });
+    stayDates(checkin, checkout).forEach(date => {
+      if (!byDate[date]) {
+        const entry = { date, amount: manualDiscount, rule: 'Manual' };
+        discountNights.push(entry);
+        byDate[date] = entry;
+      } else if (Number(byDate[date].amount) < manualDiscount) {
+        byDate[date].amount = manualDiscount;
+        byDate[date].rule = 'Manual';
+      }
+    });
+  }
+  const effectiveDiscount = discountNights.length
+    ? Math.max.apply(null, discountNights.map(x => Number(x.amount) || 0))
+    : manualDiscount;
+
   // RULE 1 — a guest checked into the room owns it until their checkout
   // date. A new stay may only join from that date onwards.
   const occupantClash = await roomOccupantConflict(room, checkin);
@@ -692,7 +769,8 @@ exports.createBooking = asyncHandler(async (req, res) => {
         checkin: checkin || '',
         checkout: checkout || '',
         rate: rate !== undefined ? Number(rate) : booking.rate,
-        discount: discount !== undefined ? Number(discount) : 0,
+        discount: effectiveDiscount,
+        discountNights,
         payments: [],
         paid: 0,
         payMethod: payMethod || 'Cash',
@@ -721,7 +799,8 @@ exports.createBooking = asyncHandler(async (req, res) => {
         checkin: checkin || '',
         checkout: checkout || '',
         rate: rate !== undefined ? Number(rate) : roomDoc.rate || 0,
-        discount: discount !== undefined ? Number(discount) : 0,
+        discount: effectiveDiscount,
+        discountNights,
         payments: [],
         paid: 0,
         payMethod: payMethod || 'Cash',
@@ -869,6 +948,9 @@ exports.updateBooking = asyncHandler(async (req, res) => {
   const oldRate = Number(booking.rate) || 0;
   const oldExtraN = Number(booking.extraNights) || 0;
   const oldExtraR = Number(booking.extraRate) || 0;
+  const oldDiscount = Number(booking.discount) || 0;
+  const cfg = await Config.findOne().lean();
+  const rules = activeDiscountRules(cfg);
 
   const fields = ['type', 'guest', 'phone', 'email', 'address', 'idType', 'idNum',
     'checkin', 'checkout', 'rate', 'discount', 'payMethod', 'adults', 'children', 'notes'];
@@ -907,6 +989,39 @@ exports.updateBooking = asyncHandler(async (req, res) => {
       booking.extraRate = 0;
     }
   } catch(e) {}
+
+  // Keep the discount anchored to its ORIGINAL nights. Extension nights are
+  // new dates with no snapshot entry, so they are always charged full rate —
+  // even when an extra night happens to fall on a promo weekday.
+  const originalNights = Math.max(0, nights(booking.checkin, booking.checkout) - (Number(booking.extraNights) || 0));
+  const originalDates = stayDates(booking.checkin, booking.checkout).slice(0, originalNights);
+  if (booking.checkin !== oldCheckin) {
+    booking.discountNights = buildDiscountNights(booking.room, booking.checkin, booking.checkout, rules, originalNights);
+  } else if (!(booking.discountNights || []).length) {
+    booking.discountNights = originalDates.map(date => ({ date, amount: Number(booking.discount) || 0, rule: 'Legacy discount' }));
+  } else {
+    const valid = new Set(originalDates);
+    booking.discountNights = booking.discountNights.filter(x => x && valid.has(x.date));
+  }
+  const manualNow = Number(booking.discount) || 0;
+  if (manualNow > 0 && (manualNow > oldDiscount || booking.checkin !== oldCheckin)) {
+    const byDate = {};
+    booking.discountNights.forEach(x => { byDate[x.date] = x; });
+    originalDates.forEach(date => {
+      if (!byDate[date]) {
+        const entry = { date, amount: manualNow, rule: 'Manual' };
+        booking.discountNights.push(entry);
+        byDate[date] = entry;
+      } else if (Number(byDate[date].amount) < manualNow) {
+        byDate[date].amount = manualNow;
+        byDate[date].rule = 'Manual';
+      }
+    });
+  }
+  booking.discount = booking.discountNights.length
+    ? Math.max.apply(null, booking.discountNights.map(x => Number(x.amount) || 0))
+    : manualNow;
+
   // Admin-only: allow backdating createdAt — also moves payment dates so revenue buckets to the backdated day
   if (req.body.createdAt && req.user && req.user.role === 'admin') {
     const d = new Date(req.body.createdAt);
@@ -1817,6 +1932,24 @@ exports.getRoomIncome = asyncHandler(async (req, res) => {
       page: pageNum, pages: totalPages, total: totalCount,
     },
   });
+});
+
+/* ── One-time migration: anchor flat discounts to their original nights ── */
+exports.migrateDiscountNights = asyncHandler(async (req, res) => {
+  const bookings = await Booking.find({ discount: { $gt: 0 } });
+  let modified = 0;
+  for (const b of bookings) {
+    if ((b.discountNights || []).length) continue;
+    const originalNights = Math.max(0, nights(b.checkin, b.checkout) - (Number(b.extraNights) || 0));
+    const dates = stayDates(b.checkin, b.checkout).slice(0, originalNights);
+    if (!dates.length) continue;
+    b.discountNights = dates.map(date => ({ date, amount: Number(b.discount) || 0, rule: 'Legacy discount' }));
+    b.payStatus = payStatusFor(b);
+    b.updatedAt = Date.now();
+    await b.save();
+    modified++;
+  }
+  res.json({ success: true, modified, total: bookings.length });
 });
 
 /* ── One-time migration: clear Guest.stays[] (Booking is now single source) ── */

@@ -205,6 +205,40 @@
         </div>
       </div>
 
+      <!-- Discount Rules -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i class="fa-solid fa-percent"></i> Room Discount Rules</div>
+            <div class="panel-sub">A discount applies only to the nights that match the rule. Extending a stay never carries it onto extra days.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="discountRuleList"></div>
+          <div class="field-row" style="flex-wrap:wrap;gap:8px;margin-top:12px;">
+            <input type="text" id="drName" placeholder="Rule name (e.g. Mon/Tue promo)" maxlength="60" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;flex:1;min-width:180px;">
+            <input type="text" id="drRooms" placeholder="Rooms e.g. 4050,4051 — blank = all rooms" maxlength="200" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;flex:1;min-width:200px;">
+            <input type="number" id="drAmount" placeholder="₦ off per night" min="1" step="100" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;width:150px;">
+          </div>
+          <div class="field-row" style="flex-wrap:wrap;gap:10px;margin-top:10px;align-items:center;">
+            <span style="font-size:12px;color:var(--text3);">Days:</span>
+            <label><input type="checkbox" class="dr-day" value="0"> Sun</label>
+            <label><input type="checkbox" class="dr-day" value="1"> Mon</label>
+            <label><input type="checkbox" class="dr-day" value="2"> Tue</label>
+            <label><input type="checkbox" class="dr-day" value="3"> Wed</label>
+            <label><input type="checkbox" class="dr-day" value="4"> Thu</label>
+            <label><input type="checkbox" class="dr-day" value="5"> Fri</label>
+            <label><input type="checkbox" class="dr-day" value="6"> Sat</label>
+          </div>
+          <div class="field-row" style="flex-wrap:wrap;gap:8px;margin-top:10px;">
+            <input type="date" id="drFrom" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;">
+            <input type="date" id="drTo" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;">
+            <button class="btn btn-primary" id="addDiscountRuleBtn"><i class="fa-solid fa-plus"></i> Add rule</button>
+          </div>
+          <div class="hint">Leave dates blank for an ongoing rule. A night is discounted only if it matches the rule; extra days added by an extension are always full price.</div>
+        </div>
+      </div>
+
       <!-- Departments -->
       <div class="panel">
         <div class="panel-head">
@@ -497,6 +531,56 @@ document.getElementById('saveThresholdBtn').addEventListener('click', async () =
   }
 });
 
+const DR_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function renderDiscountRules() {
+  const list = document.getElementById('discountRuleList');
+  if (!list) return;
+  const rules = (settings && settings.bookingDiscountRules) || [];
+  list.innerHTML = rules.length ? rules.map(function (r, i) {
+    const days = (r.weekdays || []).map(d => DR_DAYS[d]).filter(Boolean).join(', ') || 'any day';
+    const rooms = (r.rooms && r.rooms.length) ? r.rooms.join(', ') : 'all rooms';
+    const dates = (r.from || r.to) ? ((r.from || 'any') + ' → ' + (r.to || 'any')) : 'ongoing';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--surface2);">' +
+      '<div style="font-size:12px;color:var(--text);"><strong>' + escHtml(r.name || 'Rule') + '</strong> — ₦' + Number(r.amount || 0).toLocaleString('en-NG') + ' off · ' + escHtml(days) + ' · ' + escHtml(rooms) + ' · ' + escHtml(dates) + (r.active === false ? ' · OFF' : '') + '</div>' +
+      '<button class="btn btn-outline" data-dr-i="' + i + '" title="Remove rule"><i class="fa-solid fa-trash"></i></button></div>';
+  }).join('') : '<div class="hint">No discount rules configured.</div>';
+  list.querySelectorAll('button[data-dr-i]').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      const next = ((settings && settings.bookingDiscountRules) || []).slice();
+      next.splice(Number(btn.dataset.drI), 1);
+      try {
+        settings = await PlatformSettings.updateSettings({ bookingDiscountRules: next });
+        renderDiscountRules();
+        showToast('Rule removed. Applies to new bookings from now on.', 'success');
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+  });
+}
+document.getElementById('addDiscountRuleBtn')?.addEventListener('click', async function () {
+  const btn = this;
+  const name = document.getElementById('drName').value.trim() || 'Discount rule';
+  const rooms = document.getElementById('drRooms').value.split(',').map(s => s.trim()).filter(Boolean);
+  const amount = Number(document.getElementById('drAmount').value);
+  const weekdays = Array.from(document.querySelectorAll('.dr-day:checked')).map(x => Number(x.value));
+  const from = document.getElementById('drFrom').value;
+  const to = document.getElementById('drTo').value;
+  if (!(amount > 0)) { showToast('Enter the ₦ amount to take off per night.', 'error'); return; }
+  if (!weekdays.length && !from && !to) { showToast('Pick at least one day or a date range.', 'error'); return; }
+  const next = ((settings && settings.bookingDiscountRules) || []).concat([{ name, rooms, weekdays, amount, from, to, active: true }]);
+  btn.disabled = true;
+  try {
+    settings = await PlatformSettings.updateSettings({ bookingDiscountRules: next });
+    renderDiscountRules();
+    ['drName','drRooms','drAmount','drFrom','drTo'].forEach(id => { document.getElementById(id).value = ''; });
+    document.querySelectorAll('.dr-day:checked').forEach(x => { x.checked = false; });
+    showToast('Rule saved. It applies to new bookings from now on.', 'success');
+  } catch (err) { showToast(err.message, 'error'); }
+  finally { btn.disabled = false; }
+});
+
 function waitForShellSession(maxMs){
   maxMs = maxMs || 2000;
   return new Promise(function(resolve){
@@ -518,6 +602,7 @@ async function init() {
   // admin/manager must never be read-only — explicit fallback if Permissions not loaded
   if (!canEdit && sess && /^(admin|manager)$/i.test(sess.role||'')) canEdit = true;
   renderPaymentChips();
+  renderDiscountRules();
   renderDeptList();
   renderShiftHourSelect();
   renderSessionTimeoutSelect();

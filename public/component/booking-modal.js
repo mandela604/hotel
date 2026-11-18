@@ -310,21 +310,35 @@
       var n = (new Date(co) - new Date(ci)) / 86400000;
       return n > 0 ? n : 0;
     }
+    function stayDates(ci, co) {
+      if (!ci || !co) return [];
+      var start = new Date(ci + 'T00:00:00Z');
+      var end = new Date(co + 'T00:00:00Z');
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
+      var out = [];
+      for (var t = start.getTime(); t < end.getTime(); t += 86400000) {
+        out.push(new Date(t).toISOString().slice(0, 10));
+      }
+      return out;
+    }
     function calcTotal(bk) {
       if (!bk.checkin || !bk.checkout) return 0;
-      var rawN = nights(bk.checkin, bk.checkout);
-      var n = rawN || 1;
-      var disc = Number(bk.discount) || 0;
+      if (service && service.calcTotal) return service.calcTotal(bk);
+      var dates = stayDates(bk.checkin, bk.checkout);
+      var n = dates.length || 1;
       var extraN = Number(bk.extraNights) || 0;
       var extraR = Number(bk.extraRate) || 0;
-      if (extraN > rawN) {
-        try { console.warn('[booking] extraNights (' + extraN + ') exceeds real nights (' + rawN + ') — room ' + (bk.room || '?') + ' stayId ' + (bk.stayId || bk._id || bk.id || '?')); } catch (e) {}
+      var snapshot = (bk.discountNights || []).filter(function (x) { return x && x.date; });
+      var discMap = {};
+      snapshot.forEach(function (x) { discMap[x.date] = Number(x.amount) || 0; });
+      var total = 0;
+      for (var i = 0; i < n; i++) {
+        var isExtra = extraN > 0 && i >= n - extraN;
+        var rate = isExtra && extraR > 0 ? extraR : (Number(bk.rate) || 0);
+        var disc = isExtra ? 0 : (snapshot.length ? (discMap[dates[i]] || 0) : (Number(bk.discount) || 0));
+        total += Math.max(0, rate - disc);
       }
-      if (extraN > 0 && extraR > 0) {
-        var baseN = Math.max(0, n - extraN);
-        return Math.max(0, baseN * ((bk.rate || 0) - disc) + extraN * (extraR - disc));
-      }
-      return Math.max(0, ((bk.rate || 0) - disc) * n);
+      return Math.max(0, total);
     }
     function calcPaid(bk) {
       if (service && service.calcPaid) return service.calcPaid(bk);
