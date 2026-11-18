@@ -338,6 +338,7 @@ exports.addRoom = asyncHandler(async (req, res) => {
 
       await Booking.create([{
         room: room.num,
+        stayId: uuidv4(), // must be unique — empty string collides on the second room
         type: room.type,
         rate: room.rate,
         status: 'vacant',
@@ -355,7 +356,7 @@ exports.addRoom = asyncHandler(async (req, res) => {
         notes: notes || '',
       });
       try {
-        await Booking.create({ room: room.num, type: room.type, rate: room.rate, status: 'vacant' });
+        await Booking.create({ room: room.num, stayId: uuidv4(), type: room.type, rate: room.rate, status: 'vacant' });
       } catch (bookingErr) {
         await Room.findByIdAndDelete(room._id); // roll back the orphan manually
         throw bookingErr;
