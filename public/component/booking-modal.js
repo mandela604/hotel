@@ -1570,9 +1570,15 @@
         var ok = await showConfirm('Change created date?', 'You are about to change the booking created date from ' + originalCreatedAt + ' to ' + entry.createdAt + '. Proceed?');
         if (!ok) return;
       }
-      if ((entry.discount || 0) > 0 && !canDiscount(session)) {
+      // Match the backend: only a NEW or INCREASED discount needs permission.
+      // Keeping the discount already on an old booking is allowed, so staff can
+      // still extend/fix that stay — the field is read-only when they lack the
+      // privilege (see applyDiscountLock()).
+      var oldDiscount = mode === 'edit' && editBooking ? (Number(editBooking.discount) || 0) : 0;
+      var newDiscount = Number(entry.discount) || 0;
+      if (newDiscount > oldDiscount && !canDiscount(session)) {
         toast("You don't have permission to apply discounts.", 'error');
-        console.error('[BookingModal] Save failed: No permission to discount', { user: session?.name, role: session?.role, discount: entry.discount });
+        console.error('[BookingModal] Save failed: No permission to discount', { user: session?.name, role: session?.role, oldDiscount: oldDiscount, discount: newDiscount });
         return;
       }
 

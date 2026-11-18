@@ -355,7 +355,11 @@
       if (module && ov[module] && typeof ov[module].canGiveDiscount === 'boolean') return ov[module].canGiveDiscount;
       if (typeof ov.canGiveDiscount === 'boolean') return ov.canGiveDiscount;
     }
-    return !!(session && String(session.role || '').toLowerCase() === 'admin' && hasPermission(session, 'canGiveDiscount', module));
+    // Mirror the backend hasPermission(): admin and manager (and any role
+    // whose module matrix grants it) pass. Explicit overrides were handled
+    // above so a scoped supervisor's override is still honoured.
+    // Front Desk staff stay denied — discounts are a separate privilege.
+    return hasPermission(session, 'canGiveDiscount', module);
   }
 
   global.Permissions = {
