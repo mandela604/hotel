@@ -69,18 +69,22 @@
 
   function normalize(cfg) {
     if (!cfg) return seedDefaults();
+    // Spread first so newer server fields (e.g. bookingDiscountRules) are
+    // never silently dropped by this client-side normalizer.
     return {
-      paymentMethods: Array.isArray(cfg.paymentMethods) ? cfg.paymentMethods : seedDefaults().paymentMethods,
+      ...cfg,
+      paymentMethods: Array.isArray(cfg.paymentMethods) && cfg.paymentMethods.length
+        ? cfg.paymentMethods
+        : ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'],
       shiftStartHour: typeof cfg.shiftStartHour === 'number' ? cfg.shiftStartHour : 9,
       shiftEndHour: typeof cfg.shiftEndHour === 'number' ? cfg.shiftEndHour : 8,
       mdApprovalThreshold: typeof cfg.mdApprovalThreshold === 'number' ? cfg.mdApprovalThreshold : 100000,
-      departments: Array.isArray(cfg.departments) ? cfg.departments : seedDefaults().departments,
       disabledDepartments: Array.isArray(cfg.disabledDepartments) ? cfg.disabledDepartments : [],
+      bookingDiscountRules: Array.isArray(cfg.bookingDiscountRules) ? cfg.bookingDiscountRules : [],
       hotelName: cfg.hotelName || 'Boston Leisure Hotel and Apartments',
       hotelAddress: cfg.hotelAddress || '',
       hotelPhone: cfg.hotelPhone || '',
       hotelEmail: cfg.hotelEmail || '',
-      paymentMethods: Array.isArray(cfg.paymentMethods) && cfg.paymentMethods.length ? cfg.paymentMethods : ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'],
     };
   }
 
