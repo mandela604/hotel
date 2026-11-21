@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const DEPARTMENTS = [
   'Management', 'Front Desk', 'Housekeeping', 'Laundry', 'Restaurant',
   'Kitchen', 'Pool Bar', 'Gym', 'Store', 'Procurement', 'Accounts', 'Barbeque',
+  'Shisha',
 ];
 
 const userSchema = new mongoose.Schema({

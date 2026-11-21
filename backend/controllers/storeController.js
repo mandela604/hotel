@@ -28,7 +28,7 @@ async function logStoreMovement(item, qtyIn, qtyOut, balance, reason) {
   } catch (e) { /* ledger is best-effort, never block the request */ }
 }
 
-const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', Restaurant: 'RREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR', Barbeque: 'BBQ' };
+const DEPT_PREFIX = { Kitchen: 'KREQ', Housekeeping: 'HREQ', Laundry: 'LREQ', Restaurant: 'RREQ', 'Pool Bar': 'BREQ', 'Front Desk': 'FREQ', Gym: 'GREQ', Store: 'PR', Barbeque: 'BBQ', Shisha: 'SHA' };
 
 // Depts that can collect directly at the store counter
 // (POST /department-issues) with the receiving staff member's password.

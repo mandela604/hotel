@@ -562,7 +562,8 @@ function onPrivilegeChange(){
       sel.innerHTML = '<option value="">Select department</option>' +
         '<option value="Pool Bar">Pool Bar</option>' +
         '<option value="Restaurant">Restaurant</option>' +
-        '<option value="Pool Bar, Restaurant">Both (Pool Bar + Restaurant)</option>';
+        '<option value="Pool Bar, Restaurant">Both (Pool Bar + Restaurant)</option>' +
+        '<option value="Shisha">Shisha</option>';
       deptEl.parentNode.replaceChild(sel, deptEl);
     }
     if (curVal) document.getElementById('fsDept').value = curVal;
