@@ -1014,34 +1014,52 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   }
   if (items !== undefined) {
     const oldItems = order.items || [];
-    order.items = items.map(it => ({ name: (it.name || '').trim(), qty: Number(it.qty), price: Number(it.price) }));
+    // Keep the stock identity on each edited line. Dropping stockId here was
+    // the bug: the "restore" loop then restored the full old qty (thinking
+    // the item was removed) and the "adjust" loop added the new qty back as
+    // if it were a new item — stock went UP instead of staying deducted.
+    order.items = items.map(it => {
+      const nm = (it.name || '').trim();
+      const lk = nm.toLowerCase();
+      const prev = oldItems.find(o => (o.name || '').trim().toLowerCase() === lk);
+      return {
+        name: nm,
+        qty: Number(it.qty),
+        price: Number(it.price),
+        stockId: it.stockId || (prev && prev.stockId) || '',
+        procurementId: it.procurementId || (prev && prev.procurementId) || '',
+        recipeId: it.recipeId || (prev && prev.recipeId) || '',
+      };
+    });
     order.subtotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);
-    /* Stock was deducted when the tab was opened (non-COO) — re-true it
-       against the edited item list so clearing an item returns its qty. */
+    /* Stock was deducted when the tab was opened (non-COO). Re-true it by
+       DELTA only: removed lines give back their qty, changed lines adjust by
+       new-minus-old. Never restore-then-re-add the same line. */
     if (order.stockDeducted && !order.cooId) {
+      const foodSetEdit = await require('../utils/food').foodNameSet();
+      // Lines that disappeared entirely — return their qty to stock.
       for (const oldIt of oldItems) {
-        const stillThere = items.some(n => {
-          const nName = (n.name || '').trim().toLowerCase();
-          return nName === (oldIt.name || '').trim().toLowerCase() &&
-            (oldIt.stockId ? n.stockId === oldIt.stockId : true);
-        });
+        const lkOld = (oldIt.name || '').trim().toLowerCase();
+        if (foodSetEdit.has(lkOld)) continue;
+        const stillThere = order.items.some(n => (n.name || '').trim().toLowerCase() === lkOld);
         if (stillThere) continue;
         const stockItem = oldIt.stockId
           ? await RestaurantStock.findOne({ id: oldIt.stockId })
           : await RestaurantStock.findOne({ name: new RegExp(`^${(oldIt.name || '').trim()}$`, 'i') });
         if (!stockItem) continue;
-        stockItem.qty += Number(oldIt.qty) || 0;
+        const qty = Number(oldIt.qty) || 0;
+        if (qty <= 0) continue;
+        stockItem.qty += qty;
         await stockItem.save();
-        await RestaurantMovement.create({ date: nowStamp(), item: stockItem.name, qtyIn: Number(oldIt.qty) || 0, qtyOut: 0, balance: stockItem.qty, reason: `Tab ${order.id} edited — stock restored` });
+        await RestaurantMovement.create({ date: nowStamp(), item: stockItem.name, qtyIn: qty, qtyOut: 0, balance: stockItem.qty, reason: `Tab ${order.id} edited — stock restored` });
       }
-      for (const nIt of items) {
-        const oldIt = oldItems.find(o => {
-          if ((o.name || '').trim().toLowerCase() !== (nIt.name || '').trim().toLowerCase()) return false;
-          return !o.stockId || !nIt.stockId || o.stockId === nIt.stockId;
-        });
+      // Lines still present — adjust by delta (new qty minus old qty).
+      for (const nIt of order.items) {
+        const lk = (nIt.name || '').trim().toLowerCase();
+        if (foodSetEdit.has(lk)) continue;
+        const oldIt = oldItems.find(o => (o.name || '').trim().toLowerCase() === lk);
         const oldQty = oldIt ? (Number(oldIt.qty) || 0) : 0;
-        const newQty = Number(nIt.qty) || 0;
-        const delta = newQty - oldQty;
+        const delta = (Number(nIt.qty) || 0) - oldQty;
         if (delta === 0) continue;
         const stockItem = nIt.stockId
           ? await RestaurantStock.findOne({ id: nIt.stockId })
