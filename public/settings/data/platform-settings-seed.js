@@ -22,7 +22,7 @@
   // shift. Used across Accounting for shift keys/reconciliation.
   const DEFAULT_SHIFT_START_HOUR = 9;
 
-  const DEFAULT_DEPARTMENTS = ['Rooms', 'Restaurant', 'Pool Bar', 'Kitchen', 'Shisha'];
+  const DEFAULT_DEPARTMENTS = ['Rooms', 'Restaurant', 'Pool Bar', 'Kitchen', 'Milkshake'];
 
   const DEFAULT_SETTINGS = {
     paymentMethods: DEFAULT_PAYMENT_METHODS,

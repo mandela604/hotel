@@ -56,7 +56,7 @@
 
   function seedDefaults() {
     const s = global.PlatformSettingsSeed;
-    if (!s) return { paymentMethods: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'], shiftStartHour: 9, departments: ['Rooms', 'Restaurant', 'Pool Bar', 'Gym', 'Laundry', 'Events', 'Shisha'] };
+    if (!s) return { paymentMethods: ['Cash', 'POS', 'Transfer', 'Room Charge', 'Complimentary'], shiftStartHour: 9, departments: ['Rooms', 'Restaurant', 'Pool Bar', 'Gym', 'Laundry', 'Events', 'Milkshake'] };
     return clone(s.DEFAULT_SETTINGS);
   }
 
