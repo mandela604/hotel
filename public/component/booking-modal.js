@@ -1455,6 +1455,8 @@
           '<div class="row sub"><span>' + esc(p.date || '') + '</span><span class="r">' + esc(p.by || '') + '</span></div>';
       });
 
+      // Contact line shows the phone only (no email) — bold number.
+      var phoneOnly = String(brand.hotelPhone || (brand.contactLine || '').split(' / ')[0] || '').trim();
       var html = '<!DOCTYPE html><html><head><title>Receipt - Room ' + esc(b.room) + '</title><style>' +
         '*{margin:0;padding:0;box-sizing:border-box;}' +
         'body{font-family:"Courier New",Courier,monospace;width:80mm;padding:2mm 3mm 1mm;color:#000;font-size:13px;line-height:1.40;font-weight:600;}' +
@@ -1475,7 +1477,8 @@
         '.footer{border-top:1px dashed #000;margin-top:3px;padding-top:3px;font-size:10px;color:#000;font-weight:600;}' +
         '@media print{body{padding:2mm 2mm 1mm;width:80mm;} html,body{height:auto;} *{overflow:visible !important;} @page{margin:0; size:auto;}}' +
         '</style></head><body>' +
-        '<div class="hdr c"><h1>' + esc(brand.hotelNameUpper || brand.hotelName) + '</h1><p class="ph">' + esc(brand.hotelAddress) + '</p><p class="ph">' + esc(brand.contactLine) + '</p><p class="ph" style="margin-top:2px;font-weight:800;">Handbook Rule Apply</p></div>' +
+        '<div class="hdr c"><h1>' + esc(brand.hotelNameUpper || brand.hotelName) + '</h1><p class="ph">' + esc(brand.hotelAddress) + '</p><p class="ph" style="font-weight:900;">' + esc(phoneOnly) + '</p><p class="ph" style="margin-top:2px;font-weight:800;">Handbook Rules Apply</p></div>' +
+        '<div class="row"><span class="lbl">Check-in/Out</span><span class="val r">12pm/2pm</span></div>' +
         '<div class="row"><span class="lbl">Room</span><span class="val">' + esc(b.room) + ' · ' + esc(b.type || '') + '</span></div>' +
         '<div class="row"><span class="lbl">Guest</span><span class="val">' + esc(b.guest || '—') + '</span></div>' +
         '<div class="row"><span class="lbl">Phone</span><span class="val">' + esc(b.phone || '—') + '</span></div>' +
